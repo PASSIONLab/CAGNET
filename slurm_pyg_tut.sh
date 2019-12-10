@@ -18,7 +18,7 @@
 #SBATCH --cpus-per-task=2
 #
 # Wall clock limit:
-#SBATCH --time=00:10:00
+#SBATCH --time=00:20:00
 
 ## Run command
 module load python/3.6
@@ -31,5 +31,6 @@ source gnn/bin/activate
 
 nvidia-smi
 
-python tut-recsys.py
+python gnn_exp.py
+# python tut-recsys.py
 # python pytorch_geometric/examples/gcn.py

@@ -175,7 +175,7 @@ class Net(torch.nn.Module):
 
         x = F.relu(self.conv1(x, edge_index))
 
-        x, edge_index, _, batch, _ = self.pool1(x, edge_index, None, batch)
+        # x, edge_index, _, batch, _ = self.pool1(x, edge_index, None, batch)
         x1 = torch.cat([gmp(x, batch), gap(x, batch)], dim=1)
 
         x = F.relu(self.conv2(x, edge_index))
@@ -209,11 +209,9 @@ def train():
     model.train()
 
     loss_all = 0
-    iter_count = 0
     for data in train_loader:
         data = data.to(device)
         optimizer.zero_grad()
-        print(data)
         output = model(data)
         label = data.y.to(device)
         loss = crit(output, label)
@@ -244,6 +242,7 @@ def evaluate(loader):
     return roc_auc_score(labels, predictions)
 
 for epoch in range(1):
+    print("Training Epoch: {:03d}", format(epoch))
     loss = train()
     train_acc = evaluate(train_loader)
     val_acc = evaluate(val_loader)    
