@@ -34,13 +34,8 @@ class GCNConv(MessagePassing):
     def message(self, x_j, edge_index, size):
         # x_j has shape [E, out_channels]
 
-        # Step 3: Normalize node features.
-        row, col = edge_index
-        deg = degree(row, size[0], dtype=x_j.dtype)
-        deg_inv_sqrt = deg.pow(-0.5)
-        norm = deg_inv_sqrt[row] * deg_inv_sqrt[col]
-
-        return norm.view(-1, 1) * x_j
+        # No normalization just to make things easier
+        return x_j
 
     def update(self, aggr_out):
         # aggr_out has shape [N, out_channels]
@@ -48,11 +43,39 @@ class GCNConv(MessagePassing):
         # Step 5: Return new node embeddings.
         return aggr_out
 
+# device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+device = torch.device('cuda')
+
+in_channels = dataset.num_features
+out_channels = 16
+
+lin = torch.nn.Linear(in_channels, out_channels, bias=False)
+lin = lin.to(device)
+
+class GCNFunc(torch.autograd.Function):
+    
+    @staticmethod
+    def forward(ctx, *args):
+        x, edge_index = args[0], args[1]
+
+        edge_index, _ = add_self_loops(edge_index, num_nodes=x.size(0))
+        x = lin(x)
+
+        ctx.save_for_backward(x)
+        return x
+    
+    @staticmethod
+    def backward(ctx, grad_output):
+        z = ctx.saved_tensors
+        
+        return z  
+
+        
 class Net(torch.nn.Module):
     def __init__(self):
         super(Net, self).__init__()
         self.conv1 = GCNConv(dataset.num_features, 16)
-        self.conv2 = GCNConv(16, dataset.num_classes)
+        # self.conv2 = GCNConv(16, dataset.num_classes)
         # self.conv1 = GCNConv(dataset.num_features, 16, cached=True)
         # self.conv2 = GCNConv(16, dataset.num_classes, cached=True)
         # self.conv1 = ChebConv(data.num_features, 16, K=2)
@@ -60,22 +83,25 @@ class Net(torch.nn.Module):
 
     def forward(self):
         x, edge_index = data.x, data.edge_index
+        """
         x = F.relu(self.conv1(x, edge_index))
-        x = F.dropout(x, training=self.training)
-        x = self.conv2(x, edge_index)
-        return F.log_softmax(x, dim=1)
+        # No dropout just to make things easier
+        # x = F.dropout(x, training=self.training)
+        # x = self.conv2(x, edge_index)
+        # return F.log_softmax(x, dim=1)
+        return x
+        """
+        x = x.to(device)
+        edge_index = edge_index.to(device)
+        return GCNFunc.apply(x, edge_index, dataset.num_features, 16)
 
-
-# device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-device = torch.device('cuda')
 model, data = Net().to(device), data.to(device)
 optimizer = torch.optim.Adam(model.parameters(), lr=0.01, weight_decay=5e-4)
-
 
 def train():
     model.train()
     optimizer.zero_grad()
-    F.nll_loss(model()[data.train_mask], data.y[data.train_mask]).backward()
+    # F.nll_loss(model()[data.train_mask], data.y[data.train_mask]).backward()
     optimizer.step()
 
 
