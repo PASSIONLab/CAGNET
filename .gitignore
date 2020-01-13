@@ -3,3 +3,4 @@ gnn/
 outputs/
 processed/
 .*.swp
+.*.swo
