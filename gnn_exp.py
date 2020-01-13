@@ -70,12 +70,12 @@ class GCNFunc(torch.autograd.Function):
     
     @staticmethod
     def backward(ctx, grad_output):
-        print("in backprop?????")
         z = ctx.saved_tensors
         print(z)
         print(z[0].size())
         
-        return z  
+        # return z[0], z[0], None
+        return torch.cuda.FloatTensor(2708, 1433).fill_(0), z[0], None
 
         
 class Net(torch.nn.Module):
