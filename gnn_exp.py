@@ -6,7 +6,7 @@ from torch_geometric.datasets import Planetoid
 import torch_geometric.transforms as T
 from torch_geometric.nn import GCNConv, ChebConv, MessagePassing  # noqa
 # from torch_geometric.nn import ChebConv, MessagePassing  # noqa
-from torch_geometric.utils import add_self_loops, degree
+from torch_geometric.utils import add_self_loops, degree, to_dense_adj
 
 dataset = 'Cora'
 path = osp.join(osp.dirname(osp.realpath(__file__)), '..', 'data', dataset)
@@ -49,15 +49,13 @@ device = torch.device('cuda')
 in_channels = dataset.num_features
 out_channels = dataset.num_classes
 
-print(type(data.x))
-
 class GCNFunc(torch.autograd.Function):
     
     @staticmethod
     def forward(ctx, *args):
-        x, edge_index, func = args[0], args[1], args[2]
+        x, adj_matrix, func = args[0], args[1], args[2]
 
-        edge_index, _ = add_self_loops(edge_index, num_nodes=x.size(0))
+        # adj_matrix, _ = add_self_loops(adj_matrix, num_nodes=x.size(0))
         
         lin = torch.nn.Linear(in_channels, out_channels, bias=False)
         lin = lin.to(device)
@@ -71,9 +69,6 @@ class GCNFunc(torch.autograd.Function):
     @staticmethod
     def backward(ctx, grad_output):
         z = ctx.saved_tensors
-        print(z)
-        print(z[0].size())
-        
         # return z[0], z[0], None
         return torch.cuda.FloatTensor(2708, 1433).fill_(0), z[0], None
 
@@ -89,8 +84,7 @@ class Net(torch.nn.Module):
         # self.conv1 = ChebConv(data.num_features, 16, K=2)
         # self.conv2 = ChebConv(16, data.num_features, K=2)
 
-    def forward(self, x):
-        edge_index = data.edge_index
+    def forward(self, x, adj_matrix):
         """
         x = F.relu(self.conv1(x, edge_index))
         # No dropout just to make things easier
@@ -99,26 +93,26 @@ class Net(torch.nn.Module):
         return F.log_softmax(x, dim=1)
         return x
         """
-        x = x.to(device)
-        edge_index = edge_index.to(device)
-        return GCNFunc.apply(x, edge_index, self.func)
+        return GCNFunc.apply(x, adj_matrix, self.func)
 
 criterion = torch.nn.CrossEntropyLoss()
 model, data = Net(criterion).to(device), data.to(device)
 optimizer = torch.optim.Adam(model.parameters(), lr=0.01, weight_decay=5e-4)
 
-print(data.y.size())
-print(dataset.num_classes)
-print(data.y)
-print(torch.max(data.y))
-
 data.x.requires_grad = True
+inputs = data.x.to(device)
+
+edge_index = data.edge_index
+edge_index, _ = add_self_loops(edge_index, num_nodes=data.x.size(0))
+
+adj_matrix = to_dense_adj(edge_index)[0].to(device)
+print("adj_matrix size: " + str(adj_matrix.size()))
+print(adj_matrix)
 
 def train():
     model.train()
     optimizer.zero_grad()
-    outputs = model(data.x)
-    print(outputs.size())
+    outputs = model(inputs, adj_matrix)
     loss = criterion(outputs, data.y)
     loss.backward()
     # F.nll_loss(model()[data.train_mask], data.y[data.train_mask]).backward()
@@ -128,7 +122,7 @@ def train():
 def test():
     model.eval()
     # logits, accs = model(), []
-    logits, accs = model(data.x), []
+    logits, accs = model(inputs, adj_matrix), []
     for _, mask in data('train_mask', 'val_mask', 'test_mask'):
         pred = logits[mask].max(1)[1]
         acc = pred.eq(data.y[mask]).sum().item() / mask.sum().item()
