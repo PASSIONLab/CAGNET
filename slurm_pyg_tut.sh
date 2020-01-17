@@ -31,6 +31,6 @@ source gnn/bin/activate
 
 nvidia-smi
 
-python gnn_exp.py
+# python gnn_exp.py
 # python tut-recsys.py
 # python pytorch_geometric/examples/gcn.py

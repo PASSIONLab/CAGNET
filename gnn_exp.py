@@ -1,6 +1,9 @@
 import os.path as osp
 
 import torch
+import torch.distributed
+from torch.multiprocessing import Process
+
 import torch.nn.functional as F
 from torch_geometric.datasets import Planetoid
 import torch_geometric.transforms as T
@@ -47,7 +50,8 @@ class GCNFunc(torch.autograd.Function):
 
 
         
-criterion = torch.nn.CrossEntropyLoss()
+# criterion = torch.nn.CrossEntropyLoss()
+criterion = torch.nn.NLLLoss()
 data = data.to(device)
 
 data.x.requires_grad = True
@@ -64,21 +68,29 @@ adj_matrix = to_dense_adj(edge_index)[0].to(device)
 print("adj_matrix size: " + str(adj_matrix.size()))
 print(adj_matrix)
 
+learning_rate = 0.01
 # learning_rate = 1e-6
-learning_rate = 1e4
-for epoch in range(500):
+# for epoch in range(201):
+for epoch in range(2):
     outputs = GCNFunc.apply(inputs, weight, adj_matrix)
-    final_outputs = torch.argmax(outputs, dim=1)
+    # logits = torch.argmax(outputs, dim=1)
 
     loss = criterion(outputs, data.y)
     loss.backward()
-    print("Epoch: " + str(epoch) + " Loss: " + str(loss))
-    final_outputs = torch.argmax(outputs, dim=1)
 
-    diff = final_outputs - data.y
-    diff = torch.abs(diff)
-    diff_count = torch.sum(diff)
-    print("diff_count: " + str(diff_count))
+    # acc = outputs.eq(data.y).sum().item()
+    # acc = acc / list(data.y.size())[0]
+
+    accs = [] 
+    for _, mask in data('train_mask', 'val_mask', 'test_mask'):
+        print(mask)
+        pred = outputs[mask].max(1)[1]
+        acc = pred.eq(data.y[mask]).sum().item()
+        acc = acc / mask.sum().item()
+        accs.append(acc)
+
+    log = 'Epoch: {:03d}, Train: {:.4f}, Val: {:.4f}, Test: {:.4f}'
+    print(log.format(epoch, accs[0], accs[1], accs[2]))
 
     with torch.no_grad():
         weight -= learning_rate * weight.grad
