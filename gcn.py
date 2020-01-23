@@ -4,7 +4,7 @@ import torch
 import torch.nn.functional as F
 from torch_geometric.datasets import Planetoid
 import torch_geometric.transforms as T
-from torch_geometric.nn import GCNConv, ChebConv  # noqa
+from torch_geometric.nn import GCNConv, SAGEConv, ChebConv  # noqa
 
 dataset = 'Cora'
 path = osp.join(osp.dirname(osp.realpath(__file__)), '..', 'data', dataset)
@@ -15,8 +15,10 @@ data = dataset[0]
 class Net(torch.nn.Module):
     def __init__(self):
         super(Net, self).__init__()
-        self.conv1 = GCNConv(dataset.num_features, 16, cached=True)
-        self.conv2 = GCNConv(16, dataset.num_classes, cached=True)
+        self.conv1 = SAGEConv(dataset.num_features, 16, normalize=True)
+        self.conv2 = SAGEConv(16, dataset.num_classes, normalize=True)
+        # self.conv1 = GCNConv(dataset.num_features, 16, cached=True)
+        # self.conv2 = GCNConv(16, dataset.num_classes, cached=True)
         # self.conv1 = ChebConv(data.num_features, 16, K=2)
         # self.conv2 = ChebConv(16, data.num_features, K=2)
 
@@ -35,9 +37,6 @@ torch.manual_seed(0)
 
 model, data = Net().to(device), data.to(device)
 optimizer = torch.optim.Adam(model.parameters(), lr=0.01, weight_decay=5e-4)
-
-for W in model.parameters():
-    print(W)
 
 def train():
     model.train()

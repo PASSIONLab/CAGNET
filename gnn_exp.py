@@ -9,7 +9,7 @@ import torch.nn.functional as F
 
 from torch_geometric.datasets import Planetoid
 import torch_geometric.transforms as T
-from torch_geometric.nn import GCNConv, ChebConv, MessagePassing  # noqa
+from torch_geometric.nn import GCNConv, SAGEConv, MessagePassing  # noqa
 from torch_geometric.utils import add_self_loops, degree, to_dense_adj
 
 dataset = 'Cora'
@@ -17,7 +17,7 @@ path = osp.join(osp.dirname(osp.realpath(__file__)), '..', 'data', dataset)
 dataset = Planetoid(path, dataset, T.NormalizeFeatures())
 data = dataset[0]
 
-KipfWelling = False
+SAGE = False
 
 # device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 device = torch.device('cuda')
@@ -31,11 +31,15 @@ print("in: " + str(in_channels) + " out: " + str(out_channels))
 class Net(torch.nn.Module):
     def __init__(self):
         super(Net, self).__init__()
-        self.conv1 = GCNConv(dataset.num_features, 16, cached=True, bias=False)
-        self.conv2 = GCNConv(16, dataset.num_classes, cached=True, bias=False)
+        # self.conv1 = GCNConv(dataset.num_features, 16, cached=True, bias=False)
+        # self.conv2 = GCNConv(16, dataset.num_classes, cached=True, bias=False)
+        self.conv1 = SAGEConv(dataset.num_features, 16, normalize=False, bias=False)
+        self.conv2 = SAGEConv(16, dataset.num_classes, normalize=False, bias=False)
         with torch.no_grad():
             self.conv1.weight = Parameter(weight1.clone())
             self.conv2.weight = Parameter(weight2.clone())
+        self.conv1.aggr="add"
+        self.conv2.aggr="add"
 
     def forward(self):
         x, edge_index = data.x, data.edge_index
@@ -60,8 +64,10 @@ class GCNFunc(torch.autograd.Function):
         agg_feats = torch.mm(adj_matrix, inputs)
 
         z = torch.mm(agg_feats, weight)
+        # degree = list(adj_matrix.size())[0] - (adj_matrix == 0).sum(dim=1)
 
         return z
+        # return z / degree.view(list(adj_matrix.size())[0], 1).float()
     
     @staticmethod
     def backward(ctx, grad_output):
@@ -76,6 +82,7 @@ class GCNFunc(torch.autograd.Function):
         
 # criterion = torch.nn.CrossEntropyLoss()
 
+# torch.set_printoptions(profile="full")
 criterion = torch.nn.NLLLoss()
 data = data.to(device)
 # optimizer = torch.optim.Adam(model.parameters(), lr=0.01, weight_decay=5e-4)
@@ -104,17 +111,22 @@ print("adj_matrix size: " + str(adj_matrix.size()))
 learning_rate = 1e-1
 # learning_rate = 1e-6
 best_val_acc = test_acc = 0
-# for epoch in range(201):
-for epoch in range(1):
-    if KipfWelling:
+for epoch in range(201):
+# for epoch in range(1):
+    if SAGE:
         model.train()
-        F.nll_loss(model()[data.train_mask], data.y[data.train_mask]).backward()
+        model.zero_grad()
 
-        for W in model.parameters():
-            W.data -= learning_rate * W.grad.data
+        outputs = model()
+        F.nll_loss(outputs[data.train_mask], data.y[data.train_mask]).backward()
+
+        with torch.no_grad():
+            for W in model.parameters():
+                W.data -= learning_rate * W.grad.data
 
         model.eval()
-        logits, accs = model(), []
+        # logits, accs = model(), []
+        logits, accs = outputs, []
         # accs = [] 
         for _, mask in data('train_mask', 'val_mask', 'test_mask'):
             # pred = outputs[mask].max(1)[1]
@@ -132,10 +144,10 @@ for epoch in range(1):
             test_acc = tmp_test_acc
 
         log = 'Epoch: {:03d}, Train: {:.4f}, Val: {:.4f}, Test: {:.4f}'
-        print(log.format(epoch, train_acc, best_val_acc, test_acc))
+        # print(log.format(epoch, train_acc, best_val_acc, test_acc))
     else:
-        tmp_out = GCNFunc.apply(inputs, weight1, adj_matrix)
-        outputs = GCNFunc.apply(tmp_out, weight2, adj_matrix)
+        outputs = GCNFunc.apply(inputs, weight1, adj_matrix)
+        outputs = GCNFunc.apply(outputs, weight2, adj_matrix)
 
         # loss = criterion(outputs, data.y)
         # loss.backward()
@@ -164,5 +176,11 @@ for epoch in range(1):
             test_acc = tmp_test_acc
 
         log = 'Epoch: {:03d}, Train: {:.4f}, Val: {:.4f}, Test: {:.4f}'
-        print(log.format(epoch, train_acc, best_val_acc, test_acc))
+        # print(log.format(epoch, train_acc, best_val_acc, test_acc))
 
+if SAGE:
+    for W in model.parameters():
+        print(W.data)
+else:
+    print(weight1)
+    print(weight2)
