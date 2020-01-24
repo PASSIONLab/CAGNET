@@ -60,7 +60,7 @@ weight2 = weight2.to(device)
 
 model, data = Net().to(device), data.to(device)
 optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
-
+print(model.parameters())
 
 def train():
     model.train()
