@@ -4,10 +4,13 @@ import argparse
 import torch
 from torch.nn import Parameter
 import torch.nn.functional as F
+
 from torch_geometric.datasets import Planetoid
-import torch_geometric.transforms as T
 from torch_geometric.nn import GCNConv, ChebConv  # noqa
-from torch_geometric.utils import add_self_loops, degree, to_dense_adj
+import torch_geometric.transforms as T
+from torch_geometric.utils import add_self_loops, add_remaining_self_loops, degree, to_dense_adj
+
+from torch_scatter import scatter_add
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--use_gdc', action='store_true',
@@ -28,6 +31,23 @@ if args.use_gdc:
                 sparsification_kwargs=dict(method='topk', k=128,
                                            dim=0), exact=True)
     data = gdc(data)
+
+def norm(edge_index, num_nodes, edge_weight=None, improved=False,
+         dtype=None):
+    if edge_weight is None:
+        edge_weight = torch.ones((edge_index.size(1), ), dtype=dtype,
+                                 device=edge_index.device)
+
+    fill_value = 1 if not improved else 2
+    edge_index, edge_weight = add_remaining_self_loops(
+        edge_index, edge_weight, fill_value, num_nodes)
+
+    row, col = edge_index
+    deg = scatter_add(edge_weight, row, dim=0, dim_size=num_nodes)
+    deg_inv_sqrt = deg.pow(-0.5)
+    deg_inv_sqrt[deg_inv_sqrt == float('inf')] = 0
+
+    return edge_index, deg_inv_sqrt[row] * edge_weight * deg_inv_sqrt[col]
 
 class GCNFunc(torch.autograd.Function):
     @staticmethod
@@ -56,13 +76,13 @@ class GCNFunc(torch.autograd.Function):
 device = torch.device('cuda')
 
 torch.manual_seed(seed)
-weight1 = torch.rand(dataset.num_features, 16, requires_grad=True)
-weight1 = weight1.to(device)
-weight1.retain_grad()
+weight1_nonleaf = torch.rand(dataset.num_features, 16, requires_grad=True)
+weight1_nonleaf = weight1_nonleaf.to(device)
+weight1_nonleaf.retain_grad()
 
-weight2 = torch.rand(16, dataset.num_classes, requires_grad=True)
-weight2 = weight2.to(device)
-weight2.retain_grad()
+weight2_nonleaf = torch.rand(16, dataset.num_classes, requires_grad=True)
+weight2_nonleaf = weight2_nonleaf.to(device)
+weight2_nonleaf.retain_grad()
 
 # model, data = Net().to(device), data.to(device)
 data = data.to(device)
@@ -70,13 +90,12 @@ data.x.requires_grad = True
 inputs = data.x.to(device)
 
 edge_index = data.edge_index
-edge_index, _ = add_self_loops(edge_index, num_nodes=data.x.size(0))
 adj_matrix = to_dense_adj(edge_index)[0].to(device)
 
+weight1 = Parameter(weight1_nonleaf)
+weight2 = Parameter(weight2_nonleaf)
 # optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
-optimizer = torch.optim.Adam([Parameter(weight1), Parameter(weight2)], lr=0.01)
-
-learning_rate = 1e-1
+optimizer = torch.optim.Adam([weight1, weight2], lr=0.01)
 
 def train():
     outputs = GCNFunc.apply(inputs, weight1, adj_matrix)
@@ -84,7 +103,6 @@ def train():
     optimizer.zero_grad()
     F.nll_loss(outputs[data.train_mask], data.y[data.train_mask]).backward()
     optimizer.step()
-
 
     return outputs
 
@@ -98,7 +116,9 @@ def test(outputs):
 
 
 best_val_acc = test_acc = 0
+outputs = None
 for epoch in range(1, 201):
+# for epoch in range(1):
     outputs = train()
     train_acc, val_acc, tmp_test_acc = test(outputs)
     if val_acc > best_val_acc:
@@ -106,4 +126,3 @@ for epoch in range(1, 201):
         test_acc = tmp_test_acc
     log = 'Epoch: {:03d}, Train: {:.4f}, Val: {:.4f}, Test: {:.4f}'
     print(log.format(epoch, train_acc, best_val_acc, test_acc))
-

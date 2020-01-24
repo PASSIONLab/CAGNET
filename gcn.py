@@ -32,8 +32,11 @@ if args.use_gdc:
 class Net(torch.nn.Module):
     def __init__(self):
         super(Net, self).__init__()
-        self.conv1 = GCNConv(dataset.num_features, 16, cached=True)
-        self.conv2 = GCNConv(16, dataset.num_classes, cached=True)
+        self.conv1 = GCNConv(dataset.num_features, 16, cached=True, normalize=True, bias=False)
+        self.conv2 = GCNConv(16, dataset.num_classes, cached=True, normalize=True, bias=False)
+
+        self.conv1.node_dim = 0
+        self.conv2.node_dim = 0
 
         with torch.no_grad():
             self.conv1.weight = Parameter(weight1)
@@ -43,8 +46,11 @@ class Net(torch.nn.Module):
 
     def forward(self):
         x, edge_index = data.x, data.edge_index
-        x = F.relu(self.conv1(x, edge_index))
-        x = F.dropout(x, training=self.training)
+        # x = F.relu(self.conv1(x, edge_index))
+        # x = F.dropout(x, training=self.training)
+        # x = self.conv2(x, edge_index)
+        # return F.log_softmax(x, dim=1)
+        x = self.conv1(x, edge_index)
         x = self.conv2(x, edge_index)
         return F.log_softmax(x, dim=1)
 
@@ -60,19 +66,18 @@ weight2 = weight2.to(device)
 
 model, data = Net().to(device), data.to(device)
 optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
-print(model.parameters())
 
 def train():
     model.train()
     optimizer.zero_grad()
-    F.nll_loss(model()[data.train_mask], data.y[data.train_mask]).backward()
+    outputs = model()
+    F.nll_loss(outputs[data.train_mask], data.y[data.train_mask]).backward()
     optimizer.step()
+    return outputs
 
-
-
-def test():
+def test(outputs):
     model.eval()
-    logits, accs = model(), []
+    logits, accs = outputs, []
     for _, mask in data('train_mask', 'val_mask', 'test_mask'):
         pred = logits[mask].max(1)[1]
         acc = pred.eq(data.y[mask]).sum().item() / mask.sum().item()
@@ -81,12 +86,13 @@ def test():
 
 
 best_val_acc = test_acc = 0
+outputs = None
 for epoch in range(1, 201):
-    train()
-    train_acc, val_acc, tmp_test_acc = test()
+# for epoch in range(1):
+    outputs = train()
+    train_acc, val_acc, tmp_test_acc = test(outputs)
     if val_acc > best_val_acc:
         best_val_acc = val_acc
         test_acc = tmp_test_acc
     log = 'Epoch: {:03d}, Train: {:.4f}, Val: {:.4f}, Test: {:.4f}'
     print(log.format(epoch, train_acc, best_val_acc, test_acc))
-
