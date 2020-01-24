@@ -2,6 +2,7 @@ import os.path as osp
 import argparse
 
 import torch
+from torch.nn import Parameter
 import torch.nn.functional as F
 from torch_geometric.datasets import Planetoid
 import torch_geometric.transforms as T
@@ -17,6 +18,8 @@ path = osp.join(osp.dirname(osp.realpath(__file__)), '..', 'data', dataset)
 dataset = Planetoid(path, dataset, T.NormalizeFeatures())
 data = dataset[0]
 
+seed = 0
+
 if args.use_gdc:
     gdc = T.GDC(self_loop_weight=1, normalization_in='sym',
                 normalization_out='col',
@@ -31,11 +34,12 @@ class Net(torch.nn.Module):
         super(Net, self).__init__()
         self.conv1 = GCNConv(dataset.num_features, 16, cached=True)
         self.conv2 = GCNConv(16, dataset.num_classes, cached=True)
+
+        with torch.no_grad():
+            self.conv1.weight = Parameter(weight1)
+            self.conv2.weight = Parameter(weight2)
         # self.conv1 = ChebConv(data.num_features, 16, K=2)
         # self.conv2 = ChebConv(16, data.num_features, K=2)
-
-        self.reg_params = self.conv1.parameters()
-        self.non_reg_params = self.conv2.parameters()
 
     def forward(self):
         x, edge_index = data.x, data.edge_index
@@ -46,11 +50,16 @@ class Net(torch.nn.Module):
 
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+torch.manual_seed(seed)
+weight1 = torch.rand(dataset.num_features, 16)
+weight1 = weight1.to(device)
+
+weight2 = torch.rand(16, dataset.num_classes)
+weight2 = weight2.to(device)
+
 model, data = Net().to(device), data.to(device)
-optimizer = torch.optim.Adam([
-    dict(params=model.reg_params, weight_decay=5e-4),
-    dict(params=model.non_reg_params, weight_decay=0)
-], lr=0.01)
+optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
 
 
 def train():
@@ -58,6 +67,7 @@ def train():
     optimizer.zero_grad()
     F.nll_loss(model()[data.train_mask], data.y[data.train_mask]).backward()
     optimizer.step()
+
 
 
 def test():
