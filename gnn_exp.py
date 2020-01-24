@@ -34,12 +34,12 @@ class Net(torch.nn.Module):
         # self.conv1 = GCNConv(dataset.num_features, 16, cached=True, bias=False)
         # self.conv2 = GCNConv(16, dataset.num_classes, cached=True, bias=False)
         self.conv1 = SAGEConv(dataset.num_features, 16, normalize=False, bias=False)
-        self.conv2 = SAGEConv(16, dataset.num_classes, normalize=False, bias=False)
+        # self.conv2 = SAGEConv(16, dataset.num_classes, normalize=False, bias=False)
         with torch.no_grad():
             self.conv1.weight = Parameter(weight1.clone())
-            self.conv2.weight = Parameter(weight2.clone())
+            # self.conv2.weight = Parameter(weight2.clone())
         self.conv1.aggr="add"
-        self.conv2.aggr="add"
+        # self.conv2.aggr="add"
 
     def forward(self):
         x, edge_index = data.x, data.edge_index
@@ -48,35 +48,61 @@ class Net(torch.nn.Module):
         # x = self.conv2(x, edge_index)
         # return F.log_softmax(x, dim=1)
         x = self.conv1(x, edge_index)
-        x = self.conv2(x, edge_index)
-        return x
+        # x = self.conv2(x, edge_index)
+        # return x
+        return F.log_softmax(x, dim=1)
 
 class GCNFunc(torch.autograd.Function):
     
     @staticmethod
-    def forward(ctx, inputs, weight, adj_matrix):
+    def forward(ctx, inputs, weight, adj_matrix, func):
         # inputs: H
         # adj_matrix: A
         # weight: W
+        # func: sigma
 
         ctx.save_for_backward(inputs, weight, adj_matrix)
+        ctx.func = func
 
         agg_feats = torch.mm(adj_matrix, inputs)
 
         z = torch.mm(agg_feats, weight)
         # degree = list(adj_matrix.size())[0] - (adj_matrix == 0).sum(dim=1)
+        z.requires_grad = True
+        ctx.z = z
 
-        return z
+        if func is not None:
+            if func is F.log_softmax:
+                h = func(z, dim=1)
+            else:
+                print("ERROR: UNKNOWN FUNC")
+        else:
+            h = z
+
+        return h
         # return z / degree.view(list(adj_matrix.size())[0], 1).float()
     
     @staticmethod
     def backward(ctx, grad_output):
         inputs, weight, adj_matrix = ctx.saved_tensors
+        func = ctx.func
+        z = ctx.z
+
+        if func is F.log_softmax:
+            with torch.set_grad_enabled(True):
+                func_eval = func(z, dim=1)
+
+                z_dim0 = list(z.size())[0]
+                z_dim1 = list(z.size())[1]
+
+                id_tensor = torch.ones(z_dim0, z_dim1).to(device)
+
+                sigmap = torch.autograd.grad(func_eval, z, id_tensor, allow_unused=True)[0]
+                grad_output = grad_output * sigmap
 
         grad_input = torch.mm(torch.mm(adj_matrix, grad_output), weight.t())
         grad_weight = torch.mm(torch.mm(inputs.t(), adj_matrix), grad_output)
-
-        return grad_input, grad_weight, None
+        return grad_input, grad_weight, None, None
 
 
         
@@ -111,8 +137,8 @@ print("adj_matrix size: " + str(adj_matrix.size()))
 learning_rate = 1e-1
 # learning_rate = 1e-6
 best_val_acc = test_acc = 0
-for epoch in range(201):
-# for epoch in range(1):
+# for epoch in range(201):
+for epoch in range(1):
     if SAGE:
         model.train()
         model.zero_grad()
@@ -122,6 +148,7 @@ for epoch in range(201):
 
         with torch.no_grad():
             for W in model.parameters():
+                print(W.grad)
                 W.data -= learning_rate * W.grad.data
 
         model.eval()
@@ -144,21 +171,22 @@ for epoch in range(201):
             test_acc = tmp_test_acc
 
         log = 'Epoch: {:03d}, Train: {:.4f}, Val: {:.4f}, Test: {:.4f}'
-        # print(log.format(epoch, train_acc, best_val_acc, test_acc))
+        print(log.format(epoch, train_acc, best_val_acc, test_acc))
     else:
-        outputs = GCNFunc.apply(inputs, weight1, adj_matrix)
-        outputs = GCNFunc.apply(outputs, weight2, adj_matrix)
+        outputs = GCNFunc.apply(inputs, weight1, adj_matrix, F.log_softmax)
+        # outputs = GCNFunc.apply(outputs, weight2, adj_matrix, F.log_softmax)
 
         # loss = criterion(outputs, data.y)
         # loss.backward()
         F.nll_loss(outputs[data.train_mask], data.y[data.train_mask]).backward()
 
+        print(weight1.grad)
         with torch.no_grad():
             weight1 -= learning_rate * weight1.grad
             weight1.grad.zero_()
 
-            weight2 -= learning_rate * weight2.grad
-            weight2.grad.zero_()
+            # weight2 -= learning_rate * weight2.grad
+            # weight2.grad.zero_()
 
         accs = [] 
         for _, mask in data('train_mask', 'val_mask', 'test_mask'):
@@ -176,11 +204,5 @@ for epoch in range(201):
             test_acc = tmp_test_acc
 
         log = 'Epoch: {:03d}, Train: {:.4f}, Val: {:.4f}, Test: {:.4f}'
-        # print(log.format(epoch, train_acc, best_val_acc, test_acc))
+        print(log.format(epoch, train_acc, best_val_acc, test_acc))
 
-if SAGE:
-    for W in model.parameters():
-        print(W.data)
-else:
-    print(weight1)
-    print(weight2)
