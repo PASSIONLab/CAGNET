@@ -52,7 +52,7 @@ class Net(torch.nn.Module):
         # return F.log_softmax(x, dim=1)
         x = self.conv1(x, edge_index)
         x = self.conv2(x, edge_index)
-        return F.log_softmax(x, dim=1)
+        return x
 
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
