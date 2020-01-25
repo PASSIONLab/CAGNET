@@ -2,5 +2,7 @@ yoochoose-dats/
 gnn/
 outputs/
 processed/
-.*.swp
+.*.swm
+.*.swn
 .*.swo
+.*.swp

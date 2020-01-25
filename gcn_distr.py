@@ -51,26 +51,46 @@ def norm(edge_index, num_nodes, edge_weight=None, improved=False,
 
 class GCNFunc(torch.autograd.Function):
     @staticmethod
-    def forward(ctx, inputs, weight, adj_matrix):
+    def forward(ctx, inputs, weight, adj_matrix, func):
         # inputs: H
         # adj_matrix: A
         # weight: W
         # func: sigma
 
         ctx.save_for_backward(inputs, weight, adj_matrix)
+        ctx.func = func
 
         agg_feats = torch.mm(adj_matrix, inputs)
         z = torch.mm(agg_feats, weight)
+        z.requires_grad = True
+        ctx.z = z
 
-        return z
-    
+        if func is F.log_softmax:
+            h = func(z, dim=1)
+        else:
+            h = z
+
+        return h
+
     @staticmethod
     def backward(ctx, grad_output):
         inputs, weight, adj_matrix = ctx.saved_tensors
 
+        func = ctx.func
+        z = ctx.z
+
+        if func is F.log_softmax:
+            with torch.set_grad_enabled(True):
+                func_eval = func(z, dim=1)
+
+                id_tensor = torch.ones(z.size()).to(device)
+
+                sigmap = torch.autograd.grad(func_eval, z, grad_outputs=id_tensor)[0]
+                grad_output = grad_output * sigmap
+
         grad_input = torch.mm(torch.mm(adj_matrix, grad_output), weight.t())
         grad_weight = torch.mm(torch.mm(inputs.t(), adj_matrix), grad_output)
-        return grad_input, grad_weight, None
+        return grad_input, grad_weight, None, None
 
 # device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 device = torch.device('cuda')
@@ -98,8 +118,8 @@ weight2 = Parameter(weight2_nonleaf)
 optimizer = torch.optim.Adam([weight1, weight2], lr=0.01)
 
 def train():
-    outputs = GCNFunc.apply(inputs, weight1, adj_matrix)
-    outputs = GCNFunc.apply(outputs, weight2, adj_matrix)
+    outputs = GCNFunc.apply(inputs, weight1, adj_matrix, None)
+    outputs = GCNFunc.apply(outputs, weight2, adj_matrix, F.log_softmax)
     optimizer.zero_grad()
     F.nll_loss(outputs[data.train_mask], data.y[data.train_mask]).backward()
     optimizer.step()
