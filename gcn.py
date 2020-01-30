@@ -53,9 +53,11 @@ class Net(torch.nn.Module):
         x = self.conv1(x, edge_index)
         x = self.conv2(x, edge_index)
         return x
+        # return F.log_softmax(x, dim=1)
 
 
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+# device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+device = torch.device('cpu')
 
 torch.manual_seed(seed)
 weight1 = torch.rand(dataset.num_features, 16)

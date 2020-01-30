@@ -10,6 +10,7 @@ from torch_geometric.nn import GCNConv, ChebConv  # noqa
 from torch_geometric.utils import add_self_loops, add_remaining_self_loops, degree, to_dense_adj
 import torch_geometric.transforms as T
 
+import torch.multiprocessing as mp
 from torch.multiprocessing import Process
 
 from torch.nn import Parameter
@@ -57,16 +58,17 @@ class GCNFunc(torch.autograd.Function):
         grad_weight = torch.mm(torch.mm(inputs.t(), adj_matrix), grad_output)
         return grad_input, grad_weight, None, None
 
-def train():
+def train(inputs, weight1, weight2, adj_matrix, optimizer, data):
     outputs = GCNFunc.apply(inputs, weight1, adj_matrix)
     outputs = GCNFunc.apply(outputs, weight2, adj_matrix)
     optimizer.zero_grad()
-    F.nll_loss(outputs[data.train_mask], data.y[data.train_mask]).backward()
+    loss = F.nll_loss(outputs[data.train_mask], data.y[data.train_mask])
+    loss.backward()
     optimizer.step()
 
     return outputs
 
-def test(outputs):
+def test(outputs, data):
     logits, accs = outputs, []
     for _, mask in data('train_mask', 'val_mask', 'test_mask'):
         pred = logits[mask].max(1)[1]
@@ -75,24 +77,25 @@ def test(outputs):
     return accs
 
 
-def run(rank, size):
+def run(rank, size, inputs, weight1, weight2, adj_matrix, optimizer, data):
     best_val_acc = test_acc = 0
     outputs = None
-    for epoch in range(1, 201):
-    # for epoch in range(1):
-        outputs = train()
-        train_acc, val_acc, tmp_test_acc = test(outputs)
+    # for epoch in range(1, 201):
+    for epoch in range(1):
+        outputs = train(inputs, weight1, weight2, adj_matrix, optimizer, data)
+        train_acc, val_acc, tmp_test_acc = test(outputs, data)
         if val_acc > best_val_acc:
             best_val_acc = val_acc
             test_acc = tmp_test_acc
         log = 'Epoch: {:03d}, Train: {:.4f}, Val: {:.4f}, Test: {:.4f}'
         print(log.format(epoch, train_acc, best_val_acc, test_acc))
 
-def init_process(rank, rsize, fn, backend='mpi'):
+def init_process(rank, size, inputs, weight1, weight2, adj_matrix, optimizer, data, fn, 
+                            backend='gloo'):
     os.environ['MASTER_ADDR'] = '127.0.0.1'
     os.environ['MASTER_PORT'] = '29500'
     dist.init_process_group(backend, rank=rank, world_size=size)
-    fn(rank, size)
+    fn(rank, size, inputs, weight1, weight2, adj_matrix, optimizer, data)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -125,8 +128,9 @@ if __name__ == '__main__':
 
     # device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     # device = torch.device('cuda')
-    device = torch.device('cuda')
+    device = torch.device('cpu')
 
+    mp.set_start_method('spawn')
     torch.manual_seed(seed)
     weight1_nonleaf = torch.rand(dataset.num_features, 16, requires_grad=True)
     weight1_nonleaf = weight1_nonleaf.to(device)
@@ -140,6 +144,7 @@ if __name__ == '__main__':
     data = data.to(device)
     data.x.requires_grad = True
     inputs = data.x.to(device)
+    data.y = data.y.to(device)
 
     edge_index = data.edge_index
     adj_matrix = to_dense_adj(edge_index)[0].to(device)
@@ -149,10 +154,10 @@ if __name__ == '__main__':
     # optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
     optimizer = torch.optim.Adam([weight1, weight2], lr=0.01)
 
-    size = 2
     processes = []
-    for rank in range(size):
-        p = Process(target=init_process, args=(rank, size, run))
+    for rank in range(P):
+        p = Process(target=init_process, args=(rank, P, inputs, weight1, weight2, adj_matrix, 
+                        optimizer, data, run))
         p.start()
         processes.append(p)
 
