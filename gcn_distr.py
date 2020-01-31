@@ -45,7 +45,7 @@ class GCNFunc(torch.autograd.Function):
 
         ctx.save_for_backward(inputs, weight, adj_matrix)
 
-        agg_feats = torch.mm(adj_matrix, inputs)
+        agg_feats = torch.mm(adj_matrix.t(), inputs)
         z = torch.mm(agg_feats, weight)
 
         return z
@@ -83,6 +83,10 @@ def run(rank, size, inputs, weight1, weight2, adj_matrix, optimizer, data):
 
     # Scatter partitions to the different processes
     # It probably makes more sense to read the partitions as inputs but will change later.
+    print(adj_matrix.size())
+    print(inputs.size())
+
+
     # for epoch in range(1, 201):
     for epoch in range(1):
         outputs = train(inputs, weight1, weight2, adj_matrix, optimizer, data)
