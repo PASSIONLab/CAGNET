@@ -80,6 +80,9 @@ def test(outputs, data):
 def run(rank, size, inputs, weight1, weight2, adj_matrix, optimizer, data):
     best_val_acc = test_acc = 0
     outputs = None
+
+    # Scatter partitions to the different processes
+    # It probably makes more sense to read the partitions as inputs but will change later.
     # for epoch in range(1, 201):
     for epoch in range(1):
         outputs = train(inputs, weight1, weight2, adj_matrix, optimizer, data)

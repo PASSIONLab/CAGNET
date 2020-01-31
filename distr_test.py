@@ -4,20 +4,26 @@ import torch.distributed as dist
 from torch.multiprocessing import Process
 
 def run(rank, size):
-    """ Distributed function to be implemented later. """
-    tensor = torch.zeros(1)
-    req = None
+    group = dist.new_group([0, 1])
+    tensors = [None, None]
+    tensors[0] = torch.zeros(2, 2)
+    tensors[1] = torch.ones(2, 2)
+
+    output_tensor = torch.ones(2, 2)
     if rank == 0:
-        tensor += 1
-        # Send the tensor to process 1
-        req = dist.isend(tensor=tensor, dst=1)
-        print('Rank 0 started sending')
+        output_tensor += 1
+        dist.scatter(output_tensor, src=0, scatter_list=tensors, group=group)
     else:
-        # Receive tensor from process 0
-        req = dist.irecv(tensor=tensor, src=0)
-        print('Rank 1 started receiving')
-    req.wait()
-    print('Rank ', rank, ' has data ', tensor[0])
+        dist.scatter(output_tensor, src=0, group=group)
+
+    if rank == 1:
+        output_tensor += 5
+        print(output_tensor)
+
+    if rank == 0:
+        print(tensors[1])
+
+    print('Rank ', rank, ' has data ', output_tensor)
 
 def init_process(rank, size, fn, backend='gloo'):
     """ Initialize the distributed environment. """
