@@ -35,9 +35,42 @@ def norm(edge_index, num_nodes, edge_weight=None, improved=False,
 
     return edge_index, deg_inv_sqrt[row] * edge_weight * deg_inv_sqrt[col]
 
+def blockRow(adj_matrix, inputs, weight, rank, size):
+    n_per_proc = int(adj_matrix.size(1) / size)
+    am_partitions = list(torch.split(adj_matrix, n_per_proc, dim=1))
+
+    z_loc = torch.zeros(n_per_proc, inputs.size(1))
+    
+    inputs_recv = torch.zeros(inputs.size())
+
+    for i in range(size):
+        part_id = (rank + i) % size
+
+        z_loc += torch.mm(am_partitions[part_id], inputs) 
+
+        if i == size - 1:
+            continue
+
+        dst = (rank + 1) % size
+        src = rank - 1
+        if src < 0:
+            src = size - 1
+
+        if rank == 0:
+            dist.send(tensor=inputs, dst=dst)
+            dist.recv(tensor=inputs_recv, src=src)
+        else:
+            dist.recv(tensor=inputs_recv, src=src)
+            dist.send(tensor=inputs, dst=dst)
+        
+        inputs = inputs_recv
+
+    z_loc = torch.mm(z_loc, weight)
+    return z_loc
+
 class GCNFunc(torch.autograd.Function):
     @staticmethod
-    def forward(ctx, inputs, weight, adj_matrix):
+    def forward(ctx, inputs, weight, adj_matrix, rank, size):
         # inputs: H
         # adj_matrix: A
         # weight: W
@@ -45,9 +78,19 @@ class GCNFunc(torch.autograd.Function):
 
         ctx.save_for_backward(inputs, weight, adj_matrix)
 
-        agg_feats = torch.mm(adj_matrix.t(), inputs)
-        z = torch.mm(agg_feats, weight)
+        # agg_feats = torch.mm(adj_matrix.t(), inputs)
+        # z = torch.mm(agg_feats, weight)
 
+        z = blockRow(adj_matrix.t(), inputs, weight, rank, size)
+
+        z_other = torch.zeros(z.size())
+        if rank == 0:
+            dist.recv(tensor=z_other, src=1)
+        else:
+            dist.send(tensor=z, dst=0)
+        
+        z_total = torch.cat((z, z_other), dim=0)
+        print(z_total)
         return z
 
     @staticmethod
@@ -58,9 +101,12 @@ class GCNFunc(torch.autograd.Function):
         grad_weight = torch.mm(torch.mm(inputs.t(), adj_matrix), grad_output)
         return grad_input, grad_weight, None, None
 
-def train(inputs, weight1, weight2, adj_matrix, optimizer, data):
-    outputs = GCNFunc.apply(inputs, weight1, adj_matrix)
-    outputs = GCNFunc.apply(outputs, weight2, adj_matrix)
+def train(inputs, weight1, weight2, adj_matrix, optimizer, data, rank, size):
+    outputs = GCNFunc.apply(inputs, weight1, adj_matrix, rank, size)
+    outputs = GCNFunc.apply(outputs, weight2, adj_matrix, rank, size)
+    if rank == 0:
+        print(outputs)
+        print(outputs.size())
     optimizer.zero_grad()
     loss = F.nll_loss(outputs[data.train_mask], data.y[data.train_mask])
     loss.backward()
@@ -80,16 +126,39 @@ def test(outputs, data):
 def run(rank, size, inputs, weight1, weight2, adj_matrix, optimizer, data):
     best_val_acc = test_acc = 0
     outputs = None
+    group = dist.new_group(list(range(size)))
 
+    adj_matrix_loc = torch.rand(adj_matrix.size(0), int(adj_matrix.size(1) / size))
+    inputs_loc = torch.rand(int(inputs.size(0) / size), inputs.size(1))
+
+    am_partitions = None
     # Scatter partitions to the different processes
     # It probably makes more sense to read the partitions as inputs but will change later.
-    print(adj_matrix.size())
-    print(inputs.size())
+    if rank == 0:
+        # TODO: Maybe I do want grad here. Unsure.
+        with torch.no_grad():
+            am_partitions = torch.split(adj_matrix, int(adj_matrix.size(0) / size), dim=1)
+            input_partitions = torch.split(inputs, int(inputs.size(0) / size), dim=0)
+            am_partitions = list(am_partitions)
+            am_partitions[0] = am_partitions[0].contiguous()
+            am_partitions[1] = am_partitions[1].contiguous()
+            input_partitions = list(input_partitions)
+            input_partitions[0] = input_partitions[0].contiguous()
+            input_partitions[1] = input_partitions[1].contiguous()
 
+        for i in range(size):
+            input_partitions[i].requires_grad = True
+
+        dist.scatter(adj_matrix_loc, src=0, scatter_list=am_partitions, group=group)
+        dist.scatter(inputs_loc, src=0, scatter_list=input_partitions, group=group)
+    else:
+        dist.scatter(adj_matrix_loc, src=0, group=group)
+        dist.scatter(inputs_loc, src=0, group=group)
 
     # for epoch in range(1, 201):
     for epoch in range(1):
-        outputs = train(inputs, weight1, weight2, adj_matrix, optimizer, data)
+        # outputs = train(inputs, weight1, weight2, adj_matrix, optimizer, data, rank, size)
+        outputs = train(inputs_loc, weight1, weight2, adj_matrix_loc, optimizer, data, rank, size)
         train_acc, val_acc, tmp_test_acc = test(outputs, data)
         if val_acc > best_val_acc:
             best_val_acc = val_acc
@@ -137,7 +206,6 @@ if __name__ == '__main__':
     # device = torch.device('cuda')
     device = torch.device('cpu')
 
-    mp.set_start_method('spawn')
     torch.manual_seed(seed)
     weight1_nonleaf = torch.rand(dataset.num_features, 16, requires_grad=True)
     weight1_nonleaf = weight1_nonleaf.to(device)
