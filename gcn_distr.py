@@ -35,7 +35,7 @@ def norm(edge_index, num_nodes, edge_weight=None, improved=False,
 
     return edge_index, deg_inv_sqrt[row] * edge_weight * deg_inv_sqrt[col]
 
-def blockRow(adj_matrix, inputs, weight, rank, size):
+def block_row(adj_matrix, inputs, weight, rank, size):
     n_per_proc = int(adj_matrix.size(1) / size)
     am_partitions = list(torch.split(adj_matrix, n_per_proc, dim=1))
 
@@ -68,48 +68,120 @@ def blockRow(adj_matrix, inputs, weight, rank, size):
     z_loc = torch.mm(z_loc, weight)
     return z_loc
 
+def outer_product(adj_matrix, grad_output, weight, rank, size, group):
+    n_per_proc = adj_matrix.size(1)
+    
+    # A * G^l
+    ag = torch.mm(adj_matrix, grad_output)
+
+    # reduction on A * G^l low-rank matrices
+    dist.all_reduce(ag, op=dist.reduce_op.SUM, group=group)
+
+    # partition A * G^l by block rows and get block row for this process
+    red_partitions = list(torch.split(ag, n_per_proc, dim=0))
+    ag_part = red_partitions[rank]
+
+    grad_input = torch.mm(ag_part, weight)
+    return grad_input
+
 class GCNFunc(torch.autograd.Function):
     @staticmethod
-    def forward(ctx, inputs, weight, adj_matrix, rank, size):
+    def forward(ctx, inputs, weight, adj_matrix, rank, size, group):
         # inputs: H
         # adj_matrix: A
         # weight: W
         # func: sigma
 
         ctx.save_for_backward(inputs, weight, adj_matrix)
+        ctx.rank = rank
+        ctx.size = size
+        ctx.group = group
 
         # agg_feats = torch.mm(adj_matrix.t(), inputs)
         # z = torch.mm(agg_feats, weight)
 
-        z = blockRow(adj_matrix.t(), inputs, weight, rank, size)
+        z = block_row(adj_matrix.t(), inputs, weight, rank, size)
 
-        z_other = torch.zeros(z.size())
-        if rank == 0:
-            dist.recv(tensor=z_other, src=1)
-        else:
-            dist.send(tensor=z, dst=0)
-        
-        z_total = torch.cat((z, z_other), dim=0)
-        print(z_total)
         return z
 
     @staticmethod
     def backward(ctx, grad_output):
         inputs, weight, adj_matrix = ctx.saved_tensors
+        rank = ctx.rank
+        size = ctx.size
+        group = ctx.group
 
-        grad_input = torch.mm(torch.mm(adj_matrix, grad_output), weight.t())
+        # grad_input = torch.mm(torch.mm(adj_matrix, grad_output), weight.t())
+        grad_input = outer_product(adj_matrix, grad_output, weight.t(), rank, size, group)
+
+        if size == 2:
+            grad_input_recv = torch.zeros(grad_input.size())
+            inputs_recv = torch.zeros(inputs.size())
+            adj_matrix_recv = torch.zeros(adj_matrix.size())
+            grad_output_recv = torch.zeros(grad_output.size())
+
+            if rank == 0:
+                dist.recv(tensor=grad_input_recv, src=1)
+                dist.recv(tensor=inputs_recv, src=1)
+                dist.recv(tensor=adj_matrix_recv, src=1)
+                dist.recv(tensor=grad_output_recv, src=1)
+
+                dist.send(tensor=grad_input, dst=1)
+                dist.send(tensor=inputs, dst=1)
+                dist.send(tensor=adj_matrix, dst=1)
+                dist.send(tensor=grad_output, dst=1)
+            else:
+                dist.send(tensor=grad_input, dst=0)
+                dist.send(tensor=inputs, dst=0)
+                dist.send(tensor=adj_matrix, dst=0)
+                dist.send(tensor=grad_output, dst=0)
+
+                dist.recv(tensor=grad_input_recv, src=0)
+                dist.recv(tensor=inputs_recv, src=0)
+                dist.recv(tensor=adj_matrix_recv, src=0)
+                dist.recv(tensor=grad_output_recv, src=0)
+
+            if rank == 0:
+                grad_input_tmp = torch.cat((grad_input, grad_input_recv), dim=0)
+                inputs = torch.cat((inputs, inputs_recv), dim=0)
+                adj_matrix = torch.cat((adj_matrix, adj_matrix_recv), dim=1)
+                grad_output = torch.cat((grad_output, grad_output_recv), dim=0)
+            else:
+                grad_input_tmp = torch.cat((grad_input_recv, grad_input), dim=0)
+                inputs = torch.cat((inputs_recv, inputs), dim=0)
+                adj_matrix = torch.cat((adj_matrix_recv, adj_matrix), dim=1)
+                grad_output = torch.cat((grad_output_recv, grad_output), dim=0)
+
         grad_weight = torch.mm(torch.mm(inputs.t(), adj_matrix), grad_output)
-        return grad_input, grad_weight, None, None
+        return grad_input, grad_weight, None, None, None, None
 
-def train(inputs, weight1, weight2, adj_matrix, optimizer, data, rank, size):
-    outputs = GCNFunc.apply(inputs, weight1, adj_matrix, rank, size)
-    outputs = GCNFunc.apply(outputs, weight2, adj_matrix, rank, size)
-    if rank == 0:
-        print(outputs)
-        print(outputs.size())
+def train(inputs, weight1, weight2, adj_matrix, optimizer, data, rank, size, group):
+    outputs = GCNFunc.apply(inputs, weight1, adj_matrix, rank, size, group)
+    outputs = GCNFunc.apply(outputs, weight2, adj_matrix, rank, size, group)
+
+    # TODO: fix this part for additional processes
+    # Sync outputs between the (two) processes for now
+    if size == 2:
+        outputs_recv = torch.zeros(outputs.size())
+        if rank == 0:
+            dist.recv(tensor=outputs_recv, src=1)
+            dist.send(tensor=outputs, dst=1)
+        else:
+            dist.send(tensor=outputs, dst=0)
+            dist.recv(tensor=outputs_recv, src=0)
+
+        if rank == 0:
+            outputs = torch.cat((outputs, outputs_recv), dim=0)
+        else:
+            outputs = torch.cat((outputs_recv, outputs), dim=0)
+
     optimizer.zero_grad()
     loss = F.nll_loss(outputs[data.train_mask], data.y[data.train_mask])
     loss.backward()
+
+    if rank == 0:
+        print(weight1.grad)
+        print(weight2.grad)
     optimizer.step()
 
     return outputs
@@ -123,7 +195,7 @@ def test(outputs, data):
     return accs
 
 
-def run(rank, size, inputs, weight1, weight2, adj_matrix, optimizer, data):
+def run(rank, size, inputs, adj_matrix, data, features, classes, device):
     best_val_acc = test_acc = 0
     outputs = None
     group = dist.new_group(list(range(size)))
@@ -131,23 +203,36 @@ def run(rank, size, inputs, weight1, weight2, adj_matrix, optimizer, data):
     adj_matrix_loc = torch.rand(adj_matrix.size(0), int(adj_matrix.size(1) / size))
     inputs_loc = torch.rand(int(inputs.size(0) / size), inputs.size(1))
 
+    torch.manual_seed(0)
+    weight1_nonleaf = torch.ones(features, 16, requires_grad=True)
+    weight1_nonleaf = weight1_nonleaf.to(device)
+    weight1_nonleaf.retain_grad()
+
+    weight2_nonleaf = torch.ones(16, classes, requires_grad=True)
+    weight2_nonleaf = weight2_nonleaf.to(device)
+    weight2_nonleaf.retain_grad()
+
+    weight1 = Parameter(weight1_nonleaf)
+    weight2 = Parameter(weight2_nonleaf)
+
+    optimizer = torch.optim.Adam([weight1, weight2], lr=0.01)
+
     am_partitions = None
     # Scatter partitions to the different processes
     # It probably makes more sense to read the partitions as inputs but will change later.
     if rank == 0:
         # TODO: Maybe I do want grad here. Unsure.
-        with torch.no_grad():
-            am_partitions = torch.split(adj_matrix, int(adj_matrix.size(0) / size), dim=1)
-            input_partitions = torch.split(inputs, int(inputs.size(0) / size), dim=0)
-            am_partitions = list(am_partitions)
-            am_partitions[0] = am_partitions[0].contiguous()
-            am_partitions[1] = am_partitions[1].contiguous()
-            input_partitions = list(input_partitions)
-            input_partitions[0] = input_partitions[0].contiguous()
-            input_partitions[1] = input_partitions[1].contiguous()
+        am_partitions = torch.split(adj_matrix, int(adj_matrix.size(0) / size), dim=1)
+        input_partitions = torch.split(inputs, int(inputs.size(0) / size), dim=0)
+        am_partitions = list(am_partitions)
+        input_partitions = list(input_partitions)
 
         for i in range(size):
-            input_partitions[i].requires_grad = True
+            am_partitions[i] = am_partitions[i].contiguous()
+            input_partitions[i] = input_partitions[i].contiguous()
+
+        # for i in range(size):
+            # input_partitions[i].requires_grad = True
 
         dist.scatter(adj_matrix_loc, src=0, scatter_list=am_partitions, group=group)
         dist.scatter(inputs_loc, src=0, scatter_list=input_partitions, group=group)
@@ -158,7 +243,7 @@ def run(rank, size, inputs, weight1, weight2, adj_matrix, optimizer, data):
     # for epoch in range(1, 201):
     for epoch in range(1):
         # outputs = train(inputs, weight1, weight2, adj_matrix, optimizer, data, rank, size)
-        outputs = train(inputs_loc, weight1, weight2, adj_matrix_loc, optimizer, data, rank, size)
+        outputs = train(inputs_loc, weight1, weight2, adj_matrix_loc, optimizer, data, rank, size, group)
         train_acc, val_acc, tmp_test_acc = test(outputs, data)
         if val_acc > best_val_acc:
             best_val_acc = val_acc
@@ -166,12 +251,12 @@ def run(rank, size, inputs, weight1, weight2, adj_matrix, optimizer, data):
         log = 'Epoch: {:03d}, Train: {:.4f}, Val: {:.4f}, Test: {:.4f}'
         print(log.format(epoch, train_acc, best_val_acc, test_acc))
 
-def init_process(rank, size, inputs, weight1, weight2, adj_matrix, optimizer, data, fn, 
+def init_process(rank, size, inputs, adj_matrix, data, features, classes, device, fn, 
                             backend='gloo'):
     os.environ['MASTER_ADDR'] = '127.0.0.1'
     os.environ['MASTER_PORT'] = '29500'
     dist.init_process_group(backend, rank=rank, world_size=size)
-    fn(rank, size, inputs, weight1, weight2, adj_matrix, optimizer, data)
+    fn(rank, size, inputs, adj_matrix, data, features, classes, device)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -206,33 +291,23 @@ if __name__ == '__main__':
     # device = torch.device('cuda')
     device = torch.device('cpu')
 
-    torch.manual_seed(seed)
-    weight1_nonleaf = torch.rand(dataset.num_features, 16, requires_grad=True)
-    weight1_nonleaf = weight1_nonleaf.to(device)
-    weight1_nonleaf.retain_grad()
-
-    weight2_nonleaf = torch.rand(16, dataset.num_classes, requires_grad=True)
-    weight2_nonleaf = weight2_nonleaf.to(device)
-    weight2_nonleaf.retain_grad()
-
+    mp.set_start_method('spawn')
     # model, data = Net().to(device), data.to(device)
     data = data.to(device)
     data.x.requires_grad = True
     inputs = data.x.to(device)
+    inputs.requires_grad = True
     data.y = data.y.to(device)
 
     edge_index = data.edge_index
     adj_matrix = to_dense_adj(edge_index)[0].to(device)
 
-    weight1 = Parameter(weight1_nonleaf)
-    weight2 = Parameter(weight2_nonleaf)
     # optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
-    optimizer = torch.optim.Adam([weight1, weight2], lr=0.01)
 
     processes = []
     for rank in range(P):
-        p = Process(target=init_process, args=(rank, P, inputs, weight1, weight2, adj_matrix, 
-                        optimizer, data, run))
+        p = Process(target=init_process, args=(rank, P, inputs, adj_matrix, 
+                        data, dataset.num_features, dataset.num_classes, device, run))
         p.start()
         processes.append(p)
 
