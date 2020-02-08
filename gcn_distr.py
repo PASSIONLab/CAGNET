@@ -68,7 +68,7 @@ def block_row(adj_matrix, inputs, weight, rank, size):
     z_loc = torch.mm(z_loc, weight)
     return z_loc
 
-def outer_product(adj_matrix, grad_output, weight, rank, size, group):
+def outer_product(adj_matrix, grad_output, rank, size, group):
     n_per_proc = adj_matrix.size(1)
     
     # A * G^l
@@ -78,11 +78,20 @@ def outer_product(adj_matrix, grad_output, weight, rank, size, group):
     dist.all_reduce(ag, op=dist.reduce_op.SUM, group=group)
 
     # partition A * G^l by block rows and get block row for this process
+    # TODO: this might not be space-efficient
     red_partitions = list(torch.split(ag, n_per_proc, dim=0))
-    ag_part = red_partitions[rank]
+    grad_input = red_partitions[rank]
 
-    grad_input = torch.mm(ag_part, weight)
     return grad_input
+
+def outer_product2(inputs, ag, rank, size, group):
+    # (H^(l-1))^T * (A * G^l)
+    grad_weight = torch.mm(inputs, ag)
+
+    # reduction on grad_weight low-rank matrices
+    dist.all_reduce(grad_weight, op=dist.reduce_op.SUM, group=group)
+
+    return grad_weight
 
 class GCNFunc(torch.autograd.Function):
     @staticmethod
@@ -112,47 +121,15 @@ class GCNFunc(torch.autograd.Function):
         group = ctx.group
 
         # grad_input = torch.mm(torch.mm(adj_matrix, grad_output), weight.t())
-        grad_input = outer_product(adj_matrix, grad_output, weight.t(), rank, size, group)
+        # First backprop equation
+        ag = outer_product(adj_matrix, grad_output, rank, size, group)
+        grad_input = torch.mm(ag, weight.t())
 
-        if size == 2:
-            grad_input_recv = torch.zeros(grad_input.size())
-            inputs_recv = torch.zeros(inputs.size())
-            adj_matrix_recv = torch.zeros(adj_matrix.size())
-            grad_output_recv = torch.zeros(grad_output.size())
 
-            if rank == 0:
-                dist.recv(tensor=grad_input_recv, src=1)
-                dist.recv(tensor=inputs_recv, src=1)
-                dist.recv(tensor=adj_matrix_recv, src=1)
-                dist.recv(tensor=grad_output_recv, src=1)
+        # Second backprop equation (reuses the A * G^l computation)
+        # grad_weight = torch.mm(torch.mm(inputs.t(), adj_matrix), grad_output)
+        grad_weight = outer_product2(inputs.t(), ag, rank, size, group)
 
-                dist.send(tensor=grad_input, dst=1)
-                dist.send(tensor=inputs, dst=1)
-                dist.send(tensor=adj_matrix, dst=1)
-                dist.send(tensor=grad_output, dst=1)
-            else:
-                dist.send(tensor=grad_input, dst=0)
-                dist.send(tensor=inputs, dst=0)
-                dist.send(tensor=adj_matrix, dst=0)
-                dist.send(tensor=grad_output, dst=0)
-
-                dist.recv(tensor=grad_input_recv, src=0)
-                dist.recv(tensor=inputs_recv, src=0)
-                dist.recv(tensor=adj_matrix_recv, src=0)
-                dist.recv(tensor=grad_output_recv, src=0)
-
-            if rank == 0:
-                grad_input_tmp = torch.cat((grad_input, grad_input_recv), dim=0)
-                inputs = torch.cat((inputs, inputs_recv), dim=0)
-                adj_matrix = torch.cat((adj_matrix, adj_matrix_recv), dim=1)
-                grad_output = torch.cat((grad_output, grad_output_recv), dim=0)
-            else:
-                grad_input_tmp = torch.cat((grad_input_recv, grad_input), dim=0)
-                inputs = torch.cat((inputs_recv, inputs), dim=0)
-                adj_matrix = torch.cat((adj_matrix_recv, adj_matrix), dim=1)
-                grad_output = torch.cat((grad_output_recv, grad_output), dim=0)
-
-        grad_weight = torch.mm(torch.mm(inputs.t(), adj_matrix), grad_output)
         return grad_input, grad_weight, None, None, None, None
 
 def train(inputs, weight1, weight2, adj_matrix, optimizer, data, rank, size, group):
@@ -179,9 +156,6 @@ def train(inputs, weight1, weight2, adj_matrix, optimizer, data, rank, size, gro
     loss = F.nll_loss(outputs[data.train_mask], data.y[data.train_mask])
     loss.backward()
 
-    if rank == 0:
-        print(weight1.grad)
-        print(weight2.grad)
     optimizer.step()
 
     return outputs
@@ -204,11 +178,11 @@ def run(rank, size, inputs, adj_matrix, data, features, classes, device):
     inputs_loc = torch.rand(int(inputs.size(0) / size), inputs.size(1))
 
     torch.manual_seed(0)
-    weight1_nonleaf = torch.ones(features, 16, requires_grad=True)
+    weight1_nonleaf = torch.rand(features, 16, requires_grad=True)
     weight1_nonleaf = weight1_nonleaf.to(device)
     weight1_nonleaf.retain_grad()
 
-    weight2_nonleaf = torch.ones(16, classes, requires_grad=True)
+    weight2_nonleaf = torch.rand(16, classes, requires_grad=True)
     weight2_nonleaf = weight2_nonleaf.to(device)
     weight2_nonleaf.retain_grad()
 
@@ -240,8 +214,8 @@ def run(rank, size, inputs, adj_matrix, data, features, classes, device):
         dist.scatter(adj_matrix_loc, src=0, group=group)
         dist.scatter(inputs_loc, src=0, group=group)
 
-    # for epoch in range(1, 201):
-    for epoch in range(1):
+    for epoch in range(1, 201):
+    # for epoch in range(1):
         # outputs = train(inputs, weight1, weight2, adj_matrix, optimizer, data, rank, size)
         outputs = train(inputs_loc, weight1, weight2, adj_matrix_loc, optimizer, data, rank, size, group)
         train_acc, val_acc, tmp_test_acc = test(outputs, data)
@@ -250,6 +224,7 @@ def run(rank, size, inputs, adj_matrix, data, features, classes, device):
             test_acc = tmp_test_acc
         log = 'Epoch: {:03d}, Train: {:.4f}, Val: {:.4f}, Test: {:.4f}'
         print(log.format(epoch, train_acc, best_val_acc, test_acc))
+    print(outputs)
 
 def init_process(rank, size, inputs, adj_matrix, data, features, classes, device, fn, 
                             backend='gloo'):
