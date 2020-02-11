@@ -136,26 +136,20 @@ def train(inputs, weight1, weight2, adj_matrix, optimizer, data, rank, size, gro
     outputs = GCNFunc.apply(inputs, weight1, adj_matrix, rank, size, group)
     outputs = GCNFunc.apply(outputs, weight2, adj_matrix, rank, size, group)
 
-    # TODO: fix this part for additional processes
-    # Sync outputs between the (two) processes for now
-    if size == 2:
-        outputs_recv = torch.zeros(outputs.size())
-        if rank == 0:
-            dist.recv(tensor=outputs_recv, src=1)
-            dist.send(tensor=outputs, dst=1)
-        else:
-            dist.send(tensor=outputs, dst=0)
-            dist.recv(tensor=outputs_recv, src=0)
+    output_parts = [torch.zeros(outputs.size())] * size
+    output_parts = []
+    for i in range(size):
+        output_parts.append(torch.zeros(outputs.size()))
 
-        if rank == 0:
-            outputs = torch.cat((outputs, outputs_recv), dim=0)
-        else:
-            outputs = torch.cat((outputs_recv, outputs), dim=0)
+    dist.all_gather(output_parts, outputs)
+
+    output_parts[rank] = outputs
+    outputs = torch.cat(output_parts, dim=0)
 
     optimizer.zero_grad()
     loss = F.nll_loss(outputs[data.train_mask], data.y[data.train_mask])
     loss.backward()
-
+    
     optimizer.step()
 
     return outputs
@@ -215,7 +209,7 @@ def run(rank, size, inputs, adj_matrix, data, features, classes, device):
         dist.scatter(inputs_loc, src=0, group=group)
 
     for epoch in range(1, 201):
-    # for epoch in range(1):
+    # for epoch in range(3):
         # outputs = train(inputs, weight1, weight2, adj_matrix, optimizer, data, rank, size)
         outputs = train(inputs_loc, weight1, weight2, adj_matrix_loc, optimizer, data, rank, size, group)
         train_acc, val_acc, tmp_test_acc = test(outputs, data)

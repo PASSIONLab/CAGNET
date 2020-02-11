@@ -25,23 +25,12 @@ def run(rank, size):
 
     print('Rank ', rank, ' has data ', output_tensor)
 
-def run_p2p(rank, size):
-    tensor = torch.zeros(1)
-    if rank == 0:
-        tensor += 1
-        # Send the tensor to process 1
-        dist.send(tensor=tensor, dst=1)
-    else:
-        # Receive tensor from process 0
-        dist.recv(tensor=tensor, src=0)
-    print('Rank ', rank, ' has data ', tensor[0])
-
 def init_process(rank, size, fn, backend='gloo'):
     """ Initialize the distributed environment. """
     os.environ['MASTER_ADDR'] = '127.0.0.1'
     os.environ['MASTER_PORT'] = '29500'
     dist.init_process_group(backend, rank=rank, world_size=size)
-    fn(rank, size)
+    fn(rank, :ize)
 
 
 if __name__ == "__main__":

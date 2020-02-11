@@ -73,6 +73,7 @@ def train():
     model.train()
     optimizer.zero_grad()
     outputs = model()
+    
     F.nll_loss(outputs[data.train_mask], data.y[data.train_mask]).backward()
 
     optimizer.step()
@@ -91,7 +92,7 @@ def test(outputs):
 best_val_acc = test_acc = 0
 outputs = None
 for epoch in range(1, 201):
-# for epoch in range(1):
+# for epoch in range(3):
     outputs = train()
     train_acc, val_acc, tmp_test_acc = test(outputs)
     if val_acc > best_val_acc:
