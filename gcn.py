@@ -91,8 +91,8 @@ def test(outputs):
 
 best_val_acc = test_acc = 0
 outputs = None
-for epoch in range(1, 201):
-# for epoch in range(3):
+# for epoch in range(1, 201):
+for epoch in range(1):
     outputs = train()
     train_acc, val_acc, tmp_test_acc = test(outputs)
     if val_acc > best_val_acc:
@@ -100,4 +100,4 @@ for epoch in range(1, 201):
         test_acc = tmp_test_acc
     log = 'Epoch: {:03d}, Train: {:.4f}, Val: {:.4f}, Test: {:.4f}'
     print(log.format(epoch, train_acc, best_val_acc, test_acc))
-print(outputs)
+# print(outputs)

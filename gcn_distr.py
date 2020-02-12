@@ -48,13 +48,13 @@ def block_row(adj_matrix, inputs, weight, rank, size):
 
         z_loc += torch.mm(am_partitions[part_id], inputs) 
 
-        if i == size - 1:
-            continue
+        src = (rank + 1) % size
+        dst = rank - 1
+        if dst < 0:
+            dst = size - 1
 
-        dst = (rank + 1) % size
-        src = rank - 1
-        if src < 0:
-            src = size - 1
+        if size == 1:
+            continue
 
         if rank == 0:
             dist.send(tensor=inputs, dst=dst)
@@ -63,7 +63,7 @@ def block_row(adj_matrix, inputs, weight, rank, size):
             dist.recv(tensor=inputs_recv, src=src)
             dist.send(tensor=inputs, dst=dst)
         
-        inputs = inputs_recv
+        inputs = inputs_recv.clone()
 
     z_loc = torch.mm(z_loc, weight)
     return z_loc
@@ -209,7 +209,7 @@ def run(rank, size, inputs, adj_matrix, data, features, classes, device):
         dist.scatter(inputs_loc, src=0, group=group)
 
     for epoch in range(1, 201):
-    # for epoch in range(3):
+    # for epoch in range(1):
         # outputs = train(inputs, weight1, weight2, adj_matrix, optimizer, data, rank, size)
         outputs = train(inputs_loc, weight1, weight2, adj_matrix_loc, optimizer, data, rank, size, group)
         train_acc, val_acc, tmp_test_acc = test(outputs, data)
