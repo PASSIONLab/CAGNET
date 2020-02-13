@@ -96,7 +96,7 @@ def outer_product2(inputs, ag, rank, size, group):
 
 class GCNFunc(torch.autograd.Function):
     @staticmethod
-    def forward(ctx, inputs, weight, adj_matrix, rank, size, group):
+    def forward(ctx, inputs, weight, adj_matrix, rank, size, group, func):
         # inputs: H
         # adj_matrix: A
         # weight: W
@@ -107,12 +107,23 @@ class GCNFunc(torch.autograd.Function):
         ctx.size = size
         ctx.group = group
 
+        ctx.func = func
+
         # agg_feats = torch.mm(adj_matrix.t(), inputs)
         # z = torch.mm(agg_feats, weight)
 
         z = block_row(adj_matrix.t(), inputs, weight, rank, size)
+        z.requires_grad = True
+        ctx.z = z
 
-        return z
+        if func is F.log_softmax:
+            h = func(z, dim=1)
+        elif func is F.relu:
+            h = func(z)
+        else:
+            h = z
+
+        return h
 
     @staticmethod
     def backward(ctx, grad_output):
@@ -120,6 +131,20 @@ class GCNFunc(torch.autograd.Function):
         rank = ctx.rank
         size = ctx.size
         group = ctx.group
+
+        func = ctx.func
+        z = ctx.z
+
+        with torch.set_grad_enabled(True):
+            if func is F.log_softmax:
+                func_eval = func(z, dim=1)
+            elif func is F.relu:
+                func_eval = func(z)
+            else:
+                func_eval = z
+
+            sigmap = torch.autograd.grad(outputs=func_eval, inputs=z, grad_outputs=grad_output)[0]
+            grad_output = sigmap
 
         # grad_input = torch.mm(torch.mm(adj_matrix, grad_output), weight.t())
         # First backprop equation
@@ -131,11 +156,11 @@ class GCNFunc(torch.autograd.Function):
         # grad_weight = torch.mm(torch.mm(inputs.t(), adj_matrix), grad_output)
         grad_weight = outer_product2(inputs.t(), ag, rank, size, group)
 
-        return grad_input, grad_weight, None, None, None, None
+        return grad_input, grad_weight, None, None, None, None, None
 
 def train(inputs, weight1, weight2, adj_matrix, optimizer, data, rank, size, group):
-    outputs = GCNFunc.apply(inputs, weight1, adj_matrix, rank, size, group)
-    outputs = GCNFunc.apply(outputs, weight2, adj_matrix, rank, size, group)
+    outputs = GCNFunc.apply(inputs, weight1, adj_matrix, rank, size, group, None)
+    outputs = GCNFunc.apply(outputs, weight2, adj_matrix, rank, size, group, F.log_softmax)
 
     output_parts = [torch.zeros(outputs.size())] * size
     output_parts = []
@@ -209,8 +234,8 @@ def run(rank, size, inputs, adj_matrix, data, features, classes, device):
         dist.scatter(adj_matrix_loc, src=0, group=group)
         dist.scatter(inputs_loc, src=0, group=group)
 
-    # for epoch in range(1, 201):
-    for epoch in range(1):
+    for epoch in range(1, 201):
+    # for epoch in range(1):
         # outputs = train(inputs, weight1, weight2, adj_matrix, optimizer, data, rank, size)
         outputs = train(inputs_loc, weight1, weight2, adj_matrix_loc, optimizer, data, rank, size, group)
         train_acc, val_acc, tmp_test_acc = test(outputs, data)
@@ -219,6 +244,7 @@ def run(rank, size, inputs, adj_matrix, data, features, classes, device):
             test_acc = tmp_test_acc
         log = 'Epoch: {:03d}, Train: {:.4f}, Val: {:.4f}, Test: {:.4f}'
         print(log.format(epoch, train_acc, best_val_acc, test_acc))
+    print(outputs)
     return outputs
 
 def init_process(rank, size, inputs, adj_matrix, data, features, classes, device, outputs, fn, 

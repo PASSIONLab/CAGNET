@@ -12,7 +12,7 @@ def main():
 
     print(outputs_gcn)
     print(outputs_gcn_distr)
-    print(torch.allclose(outputs_gcn_distr, outputs_gcn, atol=1e-06, rtol=1e-06))
+    print(torch.allclose(outputs_gcn_distr, outputs_gcn, atol=1e-03, rtol=1e-03))
 
 if __name__ == '__main__':
     main()

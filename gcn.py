@@ -52,8 +52,8 @@ class Net(torch.nn.Module):
         # return F.log_softmax(x, dim=1)
         x = self.conv1(x, edge_index)
         x = self.conv2(x, edge_index)
-        return x
-        # return F.log_softmax(x, dim=1)
+        # return x
+        return F.log_softmax(x, dim=1)
 
 
 # device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -92,8 +92,8 @@ def test(outputs):
 def main(): 
     best_val_acc = test_acc = 0
     outputs = None
-    # for epoch in range(1, 201):
-    for epoch in range(1):
+    for epoch in range(1, 201):
+    # for epoch in range(1):
         outputs = train()
         train_acc, val_acc, tmp_test_acc = test(outputs)
         if val_acc > best_val_acc:
