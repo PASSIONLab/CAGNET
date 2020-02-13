@@ -11,7 +11,7 @@ from torch_geometric.utils import add_self_loops, add_remaining_self_loops, degr
 import torch_geometric.transforms as T
 
 import torch.multiprocessing as mp
-from torch.multiprocessing import Process
+from torch.multiprocessing import Manager, Process
 
 from torch.nn import Parameter
 import torch.nn.functional as F
@@ -208,8 +208,8 @@ def run(rank, size, inputs, adj_matrix, data, features, classes, device):
         dist.scatter(adj_matrix_loc, src=0, group=group)
         dist.scatter(inputs_loc, src=0, group=group)
 
-    for epoch in range(1, 201):
-    # for epoch in range(1):
+    # for epoch in range(1, 201):
+    for epoch in range(1):
         # outputs = train(inputs, weight1, weight2, adj_matrix, optimizer, data, rank, size)
         outputs = train(inputs_loc, weight1, weight2, adj_matrix_loc, optimizer, data, rank, size, group)
         train_acc, val_acc, tmp_test_acc = test(outputs, data)
@@ -218,29 +218,19 @@ def run(rank, size, inputs, adj_matrix, data, features, classes, device):
             test_acc = tmp_test_acc
         log = 'Epoch: {:03d}, Train: {:.4f}, Val: {:.4f}, Test: {:.4f}'
         print(log.format(epoch, train_acc, best_val_acc, test_acc))
-    print(outputs)
+    return outputs
 
-def init_process(rank, size, inputs, adj_matrix, data, features, classes, device, fn, 
+def init_process(rank, size, inputs, adj_matrix, data, features, classes, device, outputs, fn, 
                             backend='gloo'):
     os.environ['MASTER_ADDR'] = '127.0.0.1'
     os.environ['MASTER_PORT'] = '29500'
     dist.init_process_group(backend, rank=rank, world_size=size)
-    fn(rank, size, inputs, adj_matrix, data, features, classes, device)
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--use_gdc', action='store_true',
-                        help='Use GDC preprocessing.')
-    parser.add_argument('--processes', metavar='P', type=int,
-                        help='Number of processes')
-    args = parser.parse_args()
-    print(args)
-    P = args.processes
-    if P is None:
-        P = 1
-    
-    print("Processes: " + str(P))
+    run_outputs = fn(rank, size, inputs, adj_matrix, data, features, classes, device)
+    if outputs is not None:
+        outputs[rank] = run_outputs.detach()
 
+def main(P, correctnesss_check):
     dataset = 'Cora'
     path = osp.join(osp.dirname(osp.realpath(__file__)), '..', 'data', dataset)
     dataset = Planetoid(path, dataset, T.NormalizeFeatures())
@@ -274,11 +264,43 @@ if __name__ == '__main__':
     # optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
 
     processes = []
+    outputs = None
     for rank in range(P):
+        if correctness_check and rank == 0:
+            manager = Manager()
+            outputs = manager.dict()
+
         p = Process(target=init_process, args=(rank, P, inputs, adj_matrix, 
-                        data, dataset.num_features, dataset.num_classes, device, run))
+                        data, dataset.num_features, dataset.num_classes, device, outputs, run))
         p.start()
         processes.append(p)
 
     for p in processes:
         p.join()
+
+    if outputs is not None:
+        return outputs[0]
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--use_gdc', action='store_true',
+                        help='Use GDC preprocessing.')
+    parser.add_argument('--processes', metavar='P', type=int,
+                        help='Number of processes')
+    parser.add_argument('--correctness', metavar='C', type=str,
+                        help='Run correctness check')
+    args = parser.parse_args()
+    print(args)
+    P = args.processes
+    correctness_check = args.correctness
+    if P is None:
+        P = 1
+
+    if correctness_check is None or correctness_check == "nocheck":
+        correctness_check = False
+    else:
+        correctness_check = True
+    
+    print("Processes: " + str(P))
+    print("Correctness: " + str(correctness_check))
+    print(main(P, correctness_check))
