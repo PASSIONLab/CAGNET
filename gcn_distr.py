@@ -11,6 +11,7 @@ from torch_geometric.utils import add_self_loops, add_remaining_self_loops, degr
 import torch_geometric.transforms as T
 
 import torch.multiprocessing as mp
+
 from torch.multiprocessing import Manager, Process
 
 from torch.nn import Parameter
@@ -230,7 +231,7 @@ def init_process(rank, size, inputs, adj_matrix, data, features, classes, device
     if outputs is not None:
         outputs[rank] = run_outputs.detach()
 
-def main(P, correctnesss_check):
+def main(P, correctness_check):
     dataset = 'Cora'
     path = osp.join(osp.dirname(osp.realpath(__file__)), '..', 'data', dataset)
     dataset = Planetoid(path, dataset, T.NormalizeFeatures())
@@ -238,19 +239,12 @@ def main(P, correctnesss_check):
 
     seed = 0
 
-    if args.use_gdc:
-        gdc = T.GDC(self_loop_weight=1, normalization_in='sym',
-                    normalization_out='col',
-                    diffusion_kwargs=dict(method='ppr', alpha=0.05),
-                    sparsification_kwargs=dict(method='topk', k=128,
-                                               dim=0), exact=True)
-        data = gdc(data)
+    mp.set_start_method('spawn')
 
     # device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     # device = torch.device('cuda')
     device = torch.device('cpu')
 
-    mp.set_start_method('spawn')
     # model, data = Net().to(device), data.to(device)
     data = data.to(device)
     data.x.requires_grad = True
