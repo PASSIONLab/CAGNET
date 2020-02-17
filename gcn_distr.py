@@ -40,7 +40,7 @@ def block_row(adj_matrix, inputs, weight, rank, size):
     n_per_proc = int(adj_matrix.size(1) / size)
     am_partitions = list(torch.split(adj_matrix, n_per_proc, dim=1))
 
-    z_loc = torch.zeros(n_per_proc, inputs.size(1))
+    z_loc = torch.cuda.FloatTensor(n_per_proc, inputs.size(1)).fill_(0)
     
     inputs_recv = torch.zeros(inputs.size())
 
@@ -94,6 +94,24 @@ def outer_product2(inputs, ag, rank, size, group):
 
     return grad_weight
 
+def broad_func(adj_matrix, inputs, rank, size, group):
+    n_per_proc = int(adj_matrix.size(1) / size)
+    am_partitions = list(torch.split(adj_matrix, n_per_proc, dim=1))
+
+    z_loc = torch.cuda.FloatTensor(n_per_proc, inputs.size(1)).fill_(0)
+    
+    inputs_recv = torch.cuda.FloatTensor(inputs.size())
+
+    for i in range(size):
+        if i == rank:
+            inputs_recv = inputs.clone()
+
+        dist.broadcast(inputs_recv, src=i, group=group)
+
+        z_loc += torch.mm(am_partitions[i], inputs_recv) 
+
+    return z_loc
+
 class GCNFunc(torch.autograd.Function):
     @staticmethod
     def forward(ctx, inputs, weight, adj_matrix, rank, size, group, func):
@@ -112,7 +130,10 @@ class GCNFunc(torch.autograd.Function):
         # agg_feats = torch.mm(adj_matrix.t(), inputs)
         # z = torch.mm(agg_feats, weight)
 
-        z = block_row(adj_matrix.t(), inputs, weight, rank, size)
+        # z = block_row(adj_matrix.t(), inputs, weight, rank, size)
+        z = broad_func(adj_matrix.t(), inputs, rank, size, group)
+        z = torch.mm(z, weight)
+
         z.requires_grad = True
         ctx.z = z
 
@@ -149,6 +170,7 @@ class GCNFunc(torch.autograd.Function):
         # grad_input = torch.mm(torch.mm(adj_matrix, grad_output), weight.t())
         # First backprop equation
         ag = outer_product(adj_matrix, grad_output, rank, size, group)
+        # ag = broad_func(adj_matrix, grad_output, rank, size, group)
         grad_input = torch.mm(ag, weight.t())
 
 
@@ -165,7 +187,7 @@ def train(inputs, weight1, weight2, adj_matrix, optimizer, data, rank, size, gro
     output_parts = [torch.zeros(outputs.size())] * size
     output_parts = []
     for i in range(size):
-        output_parts.append(torch.zeros(outputs.size()))
+        output_parts.append(torch.cuda.FloatTensor(outputs.size()).fill_(0))
 
     dist.all_gather(output_parts, outputs)
 
@@ -215,25 +237,17 @@ def run(rank, size, inputs, adj_matrix, data, features, classes, device):
     am_partitions = None
     # Scatter partitions to the different processes
     # It probably makes more sense to read the partitions as inputs but will change later.
-    if rank == 0:
-        # TODO: Maybe I do want grad here. Unsure.
+
+    # TODO: Maybe I do want grad here. Unsure.
+    with torch.no_grad():
         am_partitions = torch.split(adj_matrix, int(adj_matrix.size(0) / size), dim=1)
         input_partitions = torch.split(inputs, int(inputs.size(0) / size), dim=0)
-        am_partitions = list(am_partitions)
-        input_partitions = list(input_partitions)
 
-        for i in range(size):
-            am_partitions[i] = am_partitions[i].contiguous()
-            input_partitions[i] = input_partitions[i].contiguous()
+        adj_matrix_loc = am_partitions[rank]
+        inputs_loc = input_partitions[rank]
 
-        # for i in range(size):
-            # input_partitions[i].requires_grad = True
-
-        dist.scatter(adj_matrix_loc, src=0, scatter_list=am_partitions, group=group)
-        dist.scatter(inputs_loc, src=0, scatter_list=input_partitions, group=group)
-    else:
-        dist.scatter(adj_matrix_loc, src=0, group=group)
-        dist.scatter(inputs_loc, src=0, group=group)
+    # for i in range(size):
+        # input_partitions[i].requires_grad = True
 
     for epoch in range(1, 201):
     # for epoch in range(1):
@@ -249,7 +263,7 @@ def run(rank, size, inputs, adj_matrix, data, features, classes, device):
     return outputs
 
 def init_process(rank, size, inputs, adj_matrix, data, features, classes, device, outputs, fn, 
-                            backend='gloo'):
+                            backend='nccl'):
     os.environ['MASTER_ADDR'] = '127.0.0.1'
     os.environ['MASTER_PORT'] = '29500'
     dist.init_process_group(backend, rank=rank, world_size=size)
@@ -269,7 +283,7 @@ def main(P, correctness_check):
     mp.set_start_method('spawn', force=True)
     # device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     # device = torch.device('cuda')
-    device = torch.device('cpu')
+    device = torch.device('cuda')
 
     # model, data = Net().to(device), data.to(device)
     data = data.to(device)
