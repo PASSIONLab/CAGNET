@@ -159,7 +159,7 @@ class GCNFunc(torch.autograd.Function):
         return grad_input, grad_weight, None, None, None, None, None
 
 def train(inputs, weight1, weight2, adj_matrix, optimizer, data, rank, size, group):
-    outputs = GCNFunc.apply(inputs, weight1, adj_matrix, rank, size, group, None)
+    outputs = GCNFunc.apply(inputs, weight1, adj_matrix, rank, size, group, F.relu)
     outputs = GCNFunc.apply(outputs, weight2, adj_matrix, rank, size, group, F.log_softmax)
 
     output_parts = [torch.zeros(outputs.size())] * size
@@ -173,7 +173,8 @@ def train(inputs, weight1, weight2, adj_matrix, optimizer, data, rank, size, gro
     outputs = torch.cat(output_parts, dim=0)
 
     optimizer.zero_grad()
-    loss = F.nll_loss(outputs[data.train_mask], data.y[data.train_mask])
+    # Note: bool type removes warnings, unsure of perf penalty
+    loss = F.nll_loss(outputs[data.train_mask.bool()], data.y[data.train_mask.bool()])
     loss.backward()
     
     optimizer.step()
@@ -265,8 +266,7 @@ def main(P, correctness_check):
 
     seed = 0
 
-    mp.set_start_method('spawn')
-
+    mp.set_start_method('spawn', force=True)
     # device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     # device = torch.device('cuda')
     device = torch.device('cpu')

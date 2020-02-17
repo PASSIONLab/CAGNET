@@ -51,6 +51,7 @@ class Net(torch.nn.Module):
         # x = self.conv2(x, edge_index)
         # return F.log_softmax(x, dim=1)
         x = self.conv1(x, edge_index)
+        x = F.relu(x)
         x = self.conv2(x, edge_index)
         # return x
         return F.log_softmax(x, dim=1)
@@ -74,7 +75,8 @@ def train():
     optimizer.zero_grad()
     outputs = model()
     
-    F.nll_loss(outputs[data.train_mask], data.y[data.train_mask]).backward()
+    # Note: bool type removes warnings, unsure of perf penalty
+    F.nll_loss(outputs[data.train_mask.bool()], data.y[data.train_mask.bool()]).backward()
 
     optimizer.step()
     return outputs
