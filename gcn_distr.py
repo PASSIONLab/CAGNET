@@ -253,24 +253,26 @@ def run(rank, size, inputs, adj_matrix, data, features, classes, device):
     # for epoch in range(1):
         # outputs = train(inputs, weight1, weight2, adj_matrix, optimizer, data, rank, size)
         outputs = train(inputs_loc, weight1, weight2, adj_matrix_loc, optimizer, data, rank, size, group)
+        print("Epoch: {:03d}".format(epoch))
 
-        output_parts = [torch.zeros(outputs.size())] * size
-        output_parts = []
-        for i in range(size):
-            output_parts.append(torch.cuda.FloatTensor(outputs.size()).fill_(0))
-            # output_parts.append(torch.zeros(outputs.size()))
+    output_parts = [torch.zeros(outputs.size())] * size
+    output_parts = []
+    for i in range(size):
+        output_parts.append(torch.cuda.FloatTensor(outputs.size()).fill_(0))
+        # output_parts.append(torch.zeros(outputs.size()))
 
-        dist.all_gather(output_parts, outputs)
+    dist.all_gather(output_parts, outputs)
 
-        output_parts[rank] = outputs
-        outputs = torch.cat(output_parts, dim=0)
+    output_parts[rank] = outputs
+    outputs = torch.cat(output_parts, dim=0)
 
-        train_acc, val_acc, tmp_test_acc = test(outputs, data)
-        if val_acc > best_val_acc:
-            best_val_acc = val_acc
-            test_acc = tmp_test_acc
-        log = 'Epoch: {:03d}, Train: {:.4f}, Val: {:.4f}, Test: {:.4f}'
-        print(log.format(epoch, train_acc, best_val_acc, test_acc))
+    train_acc, val_acc, tmp_test_acc = test(outputs, data)
+    if val_acc > best_val_acc:
+        best_val_acc = val_acc
+        test_acc = tmp_test_acc
+    log = 'Epoch: {:03d}, Train: {:.4f}, Val: {:.4f}, Test: {:.4f}'
+
+    print(log.format(200, train_acc, best_val_acc, test_acc))
     print(outputs)
     return outputs
 
