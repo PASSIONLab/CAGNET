@@ -99,8 +99,10 @@ def broad_func(adj_matrix, inputs, rank, size, group):
     am_partitions = list(torch.split(adj_matrix, n_per_proc, dim=1))
 
     z_loc = torch.cuda.FloatTensor(n_per_proc, inputs.size(1)).fill_(0)
+    # z_loc = torch.zeros(n_per_proc, inputs.size(1))
     
     inputs_recv = torch.cuda.FloatTensor(inputs.size())
+    # inputs_recv = torch.zeros(inputs.size())
 
     for i in range(size):
         if i == rank:
@@ -184,21 +186,19 @@ def train(inputs, weight1, weight2, adj_matrix, optimizer, data, rank, size, gro
     outputs = GCNFunc.apply(inputs, weight1, adj_matrix, rank, size, group, F.relu)
     outputs = GCNFunc.apply(outputs, weight2, adj_matrix, rank, size, group, F.log_softmax)
 
-    output_parts = [torch.zeros(outputs.size())] * size
-    output_parts = []
-    for i in range(size):
-        output_parts.append(torch.cuda.FloatTensor(outputs.size()).fill_(0))
-
-    dist.all_gather(output_parts, outputs)
-
-    output_parts[rank] = outputs
-    outputs = torch.cat(output_parts, dim=0)
-
     optimizer.zero_grad()
+    rank_train_mask = torch.split(data.train_mask.bool(), outputs.size(0), dim=0)[rank]
+    datay_rank = torch.split(data.y, outputs.size(0), dim=0)[rank]
+
     # Note: bool type removes warnings, unsure of perf penalty
-    loss = F.nll_loss(outputs[data.train_mask.bool()], data.y[data.train_mask.bool()])
-    loss.backward()
-    
+    # loss = F.nll_loss(outputs[data.train_mask.bool()], data.y[data.train_mask.bool()])
+    if list(datay_rank[rank_train_mask].size())[0] > 0:
+        loss = F.nll_loss(outputs[rank_train_mask], datay_rank[rank_train_mask])
+        loss.backward()
+    else:
+        fake_loss = (outputs * torch.cuda.FloatTensor(outputs.size()).fill_(0)).sum()
+        fake_loss.backward()
+
     optimizer.step()
 
     return outputs
@@ -253,6 +253,18 @@ def run(rank, size, inputs, adj_matrix, data, features, classes, device):
     # for epoch in range(1):
         # outputs = train(inputs, weight1, weight2, adj_matrix, optimizer, data, rank, size)
         outputs = train(inputs_loc, weight1, weight2, adj_matrix_loc, optimizer, data, rank, size, group)
+
+        output_parts = [torch.zeros(outputs.size())] * size
+        output_parts = []
+        for i in range(size):
+            output_parts.append(torch.cuda.FloatTensor(outputs.size()).fill_(0))
+            # output_parts.append(torch.zeros(outputs.size()))
+
+        dist.all_gather(output_parts, outputs)
+
+        output_parts[rank] = outputs
+        outputs = torch.cat(output_parts, dim=0)
+
         train_acc, val_acc, tmp_test_acc = test(outputs, data)
         if val_acc > best_val_acc:
             best_val_acc = val_acc
@@ -282,7 +294,7 @@ def main(P, correctness_check):
 
     mp.set_start_method('spawn', force=True)
     # device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    # device = torch.device('cuda')
+    # device = torch.device('cpu')
     device = torch.device('cuda')
 
     # model, data = Net().to(device), data.to(device)
