@@ -2,6 +2,8 @@ import os
 import os.path as osp
 import argparse
 
+import math
+
 import torch
 import torch.distributed as dist
 
@@ -70,7 +72,8 @@ def block_row(adj_matrix, inputs, weight, rank, size):
     return z_loc
 
 def outer_product(adj_matrix, grad_output, rank, size, group):
-    n_per_proc = adj_matrix.size(1)
+    # n_per_proc = adj_matrix.size(1)
+    n_per_proc = math.ceil(float(adj_matrix.size(0)) / size)
     
     # A * G^l
     ag = torch.mm(adj_matrix, grad_output)
@@ -88,25 +91,28 @@ def outer_product(adj_matrix, grad_output, rank, size, group):
 def outer_product2(inputs, ag, rank, size, group):
     # (H^(l-1))^T * (A * G^l)
     grad_weight = torch.mm(inputs, ag)
-
+    
     # reduction on grad_weight low-rank matrices
     dist.all_reduce(grad_weight, op=dist.reduce_op.SUM, group=group)
 
     return grad_weight
 
 def broad_func(adj_matrix, inputs, rank, size, group):
-    n_per_proc = int(adj_matrix.size(1) / size)
+    # n_per_proc = int(adj_matrix.size(1) / size)
+    n_per_proc = math.ceil(float(adj_matrix.size(1)) / size)
     am_partitions = list(torch.split(adj_matrix, n_per_proc, dim=1))
 
-    z_loc = torch.cuda.FloatTensor(n_per_proc, inputs.size(1)).fill_(0)
+    z_loc = torch.cuda.FloatTensor(adj_matrix.size(0), inputs.size(1)).fill_(0)
     # z_loc = torch.zeros(n_per_proc, inputs.size(1))
     
-    inputs_recv = torch.cuda.FloatTensor(inputs.size())
+    inputs_recv = torch.cuda.FloatTensor(n_per_proc, inputs.size(1))
     # inputs_recv = torch.zeros(inputs.size())
 
     for i in range(size):
         if i == rank:
             inputs_recv = inputs.clone()
+        elif i == size - 1:
+            inputs_recv = torch.cuda.FloatTensor(list(am_partitions[i].size())[1], inputs.size(1))
 
         dist.broadcast(inputs_recv, src=i, group=group)
 
@@ -170,7 +176,6 @@ class GCNFunc(torch.autograd.Function):
         ag = outer_product(adj_matrix, grad_output, rank, size, group)
         grad_input = torch.mm(ag, weight.t())
 
-
         # Second backprop equation (reuses the A * G^l computation)
         grad_weight = outer_product2(inputs.t(), ag, rank, size, group)
 
@@ -198,11 +203,19 @@ def train(inputs, weight1, weight2, adj_matrix, optimizer, data, rank, size, gro
 
     return outputs
 
-def test(outputs, data):
+def test(outputs, data, vertex_count, rank):
     logits, accs = outputs, []
+    datay_rank = torch.split(data.y, vertex_count)[rank]
     for _, mask in data('train_mask', 'val_mask', 'test_mask'):
-        pred = logits[mask].max(1)[1]
-        acc = pred.eq(data.y[mask]).sum().item() / mask.sum().item()
+        mask_rank = torch.split(mask, vertex_count)[rank]
+        count = mask_rank.nonzero().size(0)
+        if count > 0:
+            pred = logits[mask_rank].max(1)[1]
+            acc = pred.eq(datay_rank[mask_rank]).sum().item() / mask_rank.sum().item()
+            # pred = logits[mask].max(1)[1]
+            # acc = pred.eq(data.y[mask]).sum().item() / mask.sum().item()
+        else:
+            acc = -1
         accs.append(acc)
     return accs
 
@@ -212,8 +225,8 @@ def run(rank, size, inputs, adj_matrix, data, features, classes, device):
     outputs = None
     group = dist.new_group(list(range(size)))
 
-    adj_matrix_loc = torch.rand(adj_matrix.size(0), int(adj_matrix.size(1) / size))
-    inputs_loc = torch.rand(int(inputs.size(0) / size), inputs.size(1))
+    adj_matrix_loc = torch.rand(adj_matrix.size(0), math.ceil(float(adj_matrix.size(1)) / size))
+    inputs_loc = torch.rand(math.ceil(float(inputs.size(0)) / size), inputs.size(1))
 
     torch.manual_seed(0)
     weight1_nonleaf = torch.rand(features, 16, requires_grad=True)
@@ -234,8 +247,8 @@ def run(rank, size, inputs, adj_matrix, data, features, classes, device):
     # Compute the adj_matrix and inputs partitions for this process
     # TODO: Maybe I do want grad here. Unsure.
     with torch.no_grad():
-        am_partitions = torch.split(adj_matrix, int(adj_matrix.size(0) / size), dim=1)
-        input_partitions = torch.split(inputs, int(inputs.size(0) / size), dim=0)
+        am_partitions = torch.split(adj_matrix, math.ceil(float(adj_matrix.size(0)) / size), dim=1)
+        input_partitions = torch.split(inputs, math.ceil(float(inputs.size(0)) / size), dim=0)
 
         adj_matrix_loc = am_partitions[rank]
         inputs_loc = input_partitions[rank]
@@ -244,24 +257,22 @@ def run(rank, size, inputs, adj_matrix, data, features, classes, device):
     # for epoch in range(1):
         outputs = train(inputs_loc, weight1, weight2, adj_matrix_loc, optimizer, data, rank, size, group)
         print("Epoch: {:03d}".format(epoch))
-
+    
     # All-gather outputs to test accuracy
-    output_parts = [torch.zeros(outputs.size())] * size
-    output_parts = []
-    for i in range(size):
-        output_parts.append(torch.cuda.FloatTensor(outputs.size()).fill_(0))
+    # output_parts = []
+    # for i in range(size):
+    #     output_parts.append(torch.cuda.FloatTensor(am_partitions[0].size(1), classes).fill_(0))
 
-    dist.all_gather(output_parts, outputs)
-    outputs = torch.cat(output_parts, dim=0)
+    # dist.all_gather(output_parts, outputs)
+    # outputs = torch.cat(output_parts, dim=0)
 
-    train_acc, val_acc, tmp_test_acc = test(outputs, data)
+    train_acc, val_acc, tmp_test_acc = test(outputs, data, am_partitions[0].size(1), rank)
     if val_acc > best_val_acc:
         best_val_acc = val_acc
         test_acc = tmp_test_acc
     log = 'Epoch: {:03d}, Train: {:.4f}, Val: {:.4f}, Test: {:.4f}'
 
     print(log.format(200, train_acc, best_val_acc, test_acc))
-    print(outputs)
     return outputs
 
 def init_process(rank, size, inputs, adj_matrix, data, features, classes, device, outputs, fn, 
