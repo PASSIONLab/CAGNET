@@ -129,9 +129,6 @@ class GCNFunc(torch.autograd.Function):
 
         ctx.func = func
 
-        # agg_feats = torch.mm(adj_matrix.t(), inputs)
-        # z = torch.mm(agg_feats, weight)
-
         # z = block_row(adj_matrix.t(), inputs, weight, rank, size)
         z = broad_func(adj_matrix.t(), inputs, rank, size, group)
         z = torch.mm(z, weight)
@@ -169,15 +166,12 @@ class GCNFunc(torch.autograd.Function):
             sigmap = torch.autograd.grad(outputs=func_eval, inputs=z, grad_outputs=grad_output)[0]
             grad_output = sigmap
 
-        # grad_input = torch.mm(torch.mm(adj_matrix, grad_output), weight.t())
         # First backprop equation
         ag = outer_product(adj_matrix, grad_output, rank, size, group)
-        # ag = broad_func(adj_matrix, grad_output, rank, size, group)
         grad_input = torch.mm(ag, weight.t())
 
 
         # Second backprop equation (reuses the A * G^l computation)
-        # grad_weight = torch.mm(torch.mm(inputs.t(), adj_matrix), grad_output)
         grad_weight = outer_product2(inputs.t(), ag, rank, size, group)
 
         return grad_input, grad_weight, None, None, None, None, None
@@ -197,6 +191,7 @@ def train(inputs, weight1, weight2, adj_matrix, optimizer, data, rank, size, gro
         loss.backward()
     else:
         fake_loss = (outputs * torch.cuda.FloatTensor(outputs.size()).fill_(0)).sum()
+        # fake_loss = (outputs * torch.zeros(outputs.size())).sum()
         fake_loss.backward()
 
     optimizer.step()
@@ -235,9 +230,8 @@ def run(rank, size, inputs, adj_matrix, data, features, classes, device):
     optimizer = torch.optim.Adam([weight1, weight2], lr=0.01)
 
     am_partitions = None
-    # Scatter partitions to the different processes
-    # It probably makes more sense to read the partitions as inputs but will change later.
 
+    # Compute the adj_matrix and inputs partitions for this process
     # TODO: Maybe I do want grad here. Unsure.
     with torch.no_grad():
         am_partitions = torch.split(adj_matrix, int(adj_matrix.size(0) / size), dim=1)
@@ -246,24 +240,18 @@ def run(rank, size, inputs, adj_matrix, data, features, classes, device):
         adj_matrix_loc = am_partitions[rank]
         inputs_loc = input_partitions[rank]
 
-    # for i in range(size):
-        # input_partitions[i].requires_grad = True
-
     for epoch in range(1, 201):
     # for epoch in range(1):
-        # outputs = train(inputs, weight1, weight2, adj_matrix, optimizer, data, rank, size)
         outputs = train(inputs_loc, weight1, weight2, adj_matrix_loc, optimizer, data, rank, size, group)
         print("Epoch: {:03d}".format(epoch))
 
+    # All-gather outputs to test accuracy
     output_parts = [torch.zeros(outputs.size())] * size
     output_parts = []
     for i in range(size):
         output_parts.append(torch.cuda.FloatTensor(outputs.size()).fill_(0))
-        # output_parts.append(torch.zeros(outputs.size()))
 
     dist.all_gather(output_parts, outputs)
-
-    output_parts[rank] = outputs
     outputs = torch.cat(output_parts, dim=0)
 
     train_acc, val_acc, tmp_test_acc = test(outputs, data)
@@ -295,11 +283,9 @@ def main(P, correctness_check):
     seed = 0
 
     mp.set_start_method('spawn', force=True)
-    # device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     # device = torch.device('cpu')
     device = torch.device('cuda')
 
-    # model, data = Net().to(device), data.to(device)
     data = data.to(device)
     data.x.requires_grad = True
     inputs = data.x.to(device)
@@ -308,8 +294,6 @@ def main(P, correctness_check):
 
     edge_index = data.edge_index
     adj_matrix = to_dense_adj(edge_index)[0].to(device)
-
-    # optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
 
     processes = []
     outputs = None
