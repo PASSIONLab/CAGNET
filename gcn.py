@@ -4,7 +4,7 @@ import argparse
 import torch
 from torch.nn import Parameter
 import torch.nn.functional as F
-from torch_geometric.datasets import Planetoid
+from torch_geometric.datasets import Planetoid, PPI, Reddit
 import torch_geometric.transforms as T
 from torch_geometric.nn import GCNConv, ChebConv  # noqa
 
@@ -16,6 +16,8 @@ args = parser.parse_args()
 dataset = 'Cora'
 path = osp.join(osp.dirname(osp.realpath(__file__)), '..', 'data', dataset)
 dataset = Planetoid(path, dataset, T.NormalizeFeatures())
+# dataset = PPI(path, 'train', T.NormalizeFeatures())
+# dataset = Reddit(path, T.NormalizeFeatures())
 data = dataset[0]
 
 seed = 0
@@ -32,8 +34,8 @@ if args.use_gdc:
 class Net(torch.nn.Module):
     def __init__(self):
         super(Net, self).__init__()
-        self.conv1 = GCNConv(dataset.num_features, 16, cached=True, normalize=False, bias=False)
-        self.conv2 = GCNConv(16, dataset.num_classes, cached=True, normalize=False, bias=False)
+        self.conv1 = GCNConv(dataset.num_features, 16, cached=True, normalize=True, bias=False)
+        self.conv2 = GCNConv(16, dataset.num_classes, cached=True, normalize=True, bias=False)
 
         self.conv1.node_dim = 0
         self.conv2.node_dim = 0
@@ -58,7 +60,7 @@ class Net(torch.nn.Module):
 
 
 # device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-device = torch.device('cuda')
+device = torch.device('cpu')
 
 torch.manual_seed(seed)
 weight1 = torch.rand(dataset.num_features, 16)
@@ -67,7 +69,9 @@ weight1 = weight1.to(device)
 weight2 = torch.rand(16, dataset.num_classes)
 weight2 = weight2.to(device)
 
+data.y = data.y.type(torch.LongTensor)
 model, data = Net().to(device), data.to(device)
+
 optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
 
 def train():
@@ -77,6 +81,7 @@ def train():
     
     # Note: bool type removes warnings, unsure of perf penalty
     F.nll_loss(outputs[data.train_mask.bool()], data.y[data.train_mask.bool()]).backward()
+    # F.nll_loss(outputs, data.y).backward()
 
     optimizer.step()
     return outputs

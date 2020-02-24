@@ -7,7 +7,7 @@ import math
 import torch
 import torch.distributed as dist
 
-from torch_geometric.datasets import Planetoid
+from torch_geometric.datasets import Planetoid, Reddit
 from torch_geometric.nn import GCNConv, ChebConv  # noqa
 from torch_geometric.utils import add_self_loops, add_remaining_self_loops, degree, to_dense_adj
 import torch_geometric.transforms as T
@@ -21,22 +21,28 @@ import torch.nn.functional as F
 
 from torch_scatter import scatter_add
 
-def norm(edge_index, num_nodes, edge_weight=None, improved=False,
-         dtype=None):
-    if edge_weight is None:
-        edge_weight = torch.ones((edge_index.size(1), ), dtype=dtype,
-                                 device=edge_index.device)
-
-    fill_value = 1 if not improved else 2
-    edge_index, edge_weight = add_remaining_self_loops(
-        edge_index, edge_weight, fill_value, num_nodes)
-
-    row, col = edge_index
-    deg = scatter_add(edge_weight, row, dim=0, dim_size=num_nodes)
-    deg_inv_sqrt = deg.pow(-0.5)
-    deg_inv_sqrt[deg_inv_sqrt == float('inf')] = 0
-
-    return edge_index, deg_inv_sqrt[row] * edge_weight * deg_inv_sqrt[col]
+# def normalize(edge_index, num_nodes, edge_weight=None, improved=False,
+#          dtype=None):
+#     if edge_weight is None:
+#         edge_weight = torch.ones((edge_index.size(1), ), dtype=dtype,
+#                                  device=edge_index.device)
+# 
+#     fill_value = 1 if not improved else 2
+#     edge_index, edge_weight = add_remaining_self_loops(
+#         edge_index, edge_weight, fill_value, num_nodes)
+# 
+#     row, col = edge_index
+#     deg = scatter_add(edge_weight, row, dim=0, dim_size=num_nodes)
+#     deg_inv_sqrt = deg.pow(-0.5)
+#     deg_inv_sqrt[deg_inv_sqrt == float('inf')] = 0
+# 
+#     return edge_index, deg_inv_sqrt[row] * edge_weight * deg_inv_sqrt[col]
+def normalize(adj_matrix):
+    adj_matrix = adj_matrix + torch.eye(adj_matrix.size(0))
+    d = torch.sum(adj_matrix, dim=1)
+    d = torch.rsqrt(d)
+    d = torch.diag(d)
+    return torch.mm(d, torch.mm(adj_matrix, d))
 
 def block_row(adj_matrix, inputs, weight, rank, size):
     n_per_proc = int(adj_matrix.size(1) / size)
@@ -102,17 +108,18 @@ def broad_func(adj_matrix, inputs, rank, size, group):
     n_per_proc = math.ceil(float(adj_matrix.size(1)) / size)
     am_partitions = list(torch.split(adj_matrix, n_per_proc, dim=1))
 
-    z_loc = torch.cuda.FloatTensor(adj_matrix.size(0), inputs.size(1)).fill_(0)
-    # z_loc = torch.zeros(n_per_proc, inputs.size(1))
+    # z_loc = torch.cuda.FloatTensor(adj_matrix.size(0), inputs.size(1)).fill_(0)
+    z_loc = torch.zeros(n_per_proc, inputs.size(1))
     
-    inputs_recv = torch.cuda.FloatTensor(n_per_proc, inputs.size(1))
-    # inputs_recv = torch.zeros(inputs.size())
+    # inputs_recv = torch.cuda.FloatTensor(n_per_proc, inputs.size(1))
+    inputs_recv = torch.zeros(inputs.size())
 
     for i in range(size):
         if i == rank:
             inputs_recv = inputs.clone()
         elif i == size - 1:
-            inputs_recv = torch.cuda.FloatTensor(list(am_partitions[i].size())[1], inputs.size(1))
+            # inputs_recv = torch.cuda.FloatTensor(list(am_partitions[i].size())[1], inputs.size(1))
+            inputs_recv = torch.zeros(list(am_partitions[i].size())[1], inputs.size(1))
 
         dist.broadcast(inputs_recv, src=i, group=group)
 
@@ -195,8 +202,8 @@ def train(inputs, weight1, weight2, adj_matrix, optimizer, data, rank, size, gro
         loss = F.nll_loss(outputs[rank_train_mask], datay_rank[rank_train_mask])
         loss.backward()
     else:
-        fake_loss = (outputs * torch.cuda.FloatTensor(outputs.size()).fill_(0)).sum()
-        # fake_loss = (outputs * torch.zeros(outputs.size())).sum()
+        # fake_loss = (outputs * torch.cuda.FloatTensor(outputs.size()).fill_(0)).sum()
+        fake_loss = (outputs * torch.zeros(outputs.size())).sum()
         fake_loss.backward()
 
     optimizer.step()
@@ -273,10 +280,11 @@ def run(rank, size, inputs, adj_matrix, data, features, classes, device):
     log = 'Epoch: {:03d}, Train: {:.4f}, Val: {:.4f}, Test: {:.4f}'
 
     print(log.format(200, train_acc, best_val_acc, test_acc))
+    print(outputs)
     return outputs
 
 def init_process(rank, size, inputs, adj_matrix, data, features, classes, device, outputs, fn, 
-                            backend='nccl'):
+                            backend='gloo'):
     os.environ['MASTER_ADDR'] = '127.0.0.1'
     os.environ['MASTER_PORT'] = '29500'
     dist.init_process_group(backend, rank=rank, world_size=size)
@@ -289,13 +297,14 @@ def main(P, correctness_check):
     dataset = 'Cora'
     path = osp.join(osp.dirname(osp.realpath(__file__)), '..', 'data', dataset)
     dataset = Planetoid(path, dataset, T.NormalizeFeatures())
+    # dataset = Reddit(path, T.NormalizeFeatures())
     data = dataset[0]
 
     seed = 0
 
     mp.set_start_method('spawn', force=True)
-    # device = torch.device('cpu')
-    device = torch.device('cuda')
+    device = torch.device('cpu')
+    # device = torch.device('cuda')
 
     data = data.to(device)
     data.x.requires_grad = True
@@ -305,6 +314,8 @@ def main(P, correctness_check):
 
     edge_index = data.edge_index
     adj_matrix = to_dense_adj(edge_index)[0].to(device)
+    adj_matrix = normalize(adj_matrix)
+    print(adj_matrix.size())
 
     processes = []
     outputs = None
