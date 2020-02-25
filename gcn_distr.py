@@ -9,7 +9,7 @@ import torch.distributed as dist
 
 from torch_geometric.datasets import Planetoid, Reddit
 from torch_geometric.nn import GCNConv, ChebConv  # noqa
-from torch_geometric.utils import add_self_loops, add_remaining_self_loops, degree, to_dense_adj
+from torch_geometric.utils import add_remaining_self_loops, to_dense_adj, dense_to_sparse, to_scipy_sparse_matrix
 import torch_geometric.transforms as T
 
 import torch.multiprocessing as mp
@@ -103,33 +103,36 @@ def outer_product2(inputs, ag, rank, size, group):
 
     return grad_weight
 
-def broad_func(adj_matrix, inputs, rank, size, group):
+def broad_func(adj_matrix, am_partitions, inputs, rank, size, group):
     # n_per_proc = int(adj_matrix.size(1) / size)
     n_per_proc = math.ceil(float(adj_matrix.size(1)) / size)
-    am_partitions = list(torch.split(adj_matrix, n_per_proc, dim=1))
+    # am_partitions = list(torch.split(adj_matrix, n_per_proc, dim=1))
+    # NOTE: below only works with 1 process
+    # am_partitions = [adj_matrix]
 
     # z_loc = torch.cuda.FloatTensor(adj_matrix.size(0), inputs.size(1)).fill_(0)
-    z_loc = torch.zeros(n_per_proc, inputs.size(1))
+    z_loc = torch.zeros(adj_matrix.size(0), inputs.size(1))
     
     # inputs_recv = torch.cuda.FloatTensor(n_per_proc, inputs.size(1))
-    inputs_recv = torch.zeros(inputs.size())
+    inputs_recv = torch.zeros(n_per_proc, inputs.size(1))
 
     for i in range(size):
         if i == rank:
             inputs_recv = inputs.clone()
         elif i == size - 1:
             # inputs_recv = torch.cuda.FloatTensor(list(am_partitions[i].size())[1], inputs.size(1))
-            inputs_recv = torch.zeros(list(am_partitions[i].size())[1], inputs.size(1))
+            inputs_recv = torch.zeros(list(am_partitions[i].t().size())[1], inputs.size(1))
 
         dist.broadcast(inputs_recv, src=i, group=group)
 
-        z_loc += torch.mm(am_partitions[i], inputs_recv) 
+        # z_loc += torch.mm(am_partitions[i], inputs_recv) 
+        z_loc += torch.mm(am_partitions[i].t(), inputs_recv) 
 
     return z_loc
 
 class GCNFunc(torch.autograd.Function):
     @staticmethod
-    def forward(ctx, inputs, weight, adj_matrix, rank, size, group, func):
+    def forward(ctx, inputs, weight, adj_matrix, am_partitions, rank, size, group, func):
         # inputs: H
         # adj_matrix: A
         # weight: W
@@ -143,7 +146,7 @@ class GCNFunc(torch.autograd.Function):
         ctx.func = func
 
         # z = block_row(adj_matrix.t(), inputs, weight, rank, size)
-        z = broad_func(adj_matrix.t(), inputs, rank, size, group)
+        z = broad_func(adj_matrix.t(), am_partitions, inputs, rank, size, group)
         z = torch.mm(z, weight)
 
         z.requires_grad = True
@@ -180,17 +183,18 @@ class GCNFunc(torch.autograd.Function):
             grad_output = sigmap
 
         # First backprop equation
+        # ag = outer_product(adj_matrix, grad_output, rank, size, group)
         ag = outer_product(adj_matrix, grad_output, rank, size, group)
         grad_input = torch.mm(ag, weight.t())
 
         # Second backprop equation (reuses the A * G^l computation)
         grad_weight = outer_product2(inputs.t(), ag, rank, size, group)
 
-        return grad_input, grad_weight, None, None, None, None, None
+        return grad_input, grad_weight, None, None, None, None, None, None
 
-def train(inputs, weight1, weight2, adj_matrix, optimizer, data, rank, size, group):
-    outputs = GCNFunc.apply(inputs, weight1, adj_matrix, rank, size, group, F.relu)
-    outputs = GCNFunc.apply(outputs, weight2, adj_matrix, rank, size, group, F.log_softmax)
+def train(inputs, weight1, weight2, adj_matrix, am_partitions, optimizer, data, rank, size, group):
+    outputs = GCNFunc.apply(inputs, weight1, adj_matrix, am_partitions, rank, size, group, F.relu)
+    outputs = GCNFunc.apply(outputs, weight2, adj_matrix, am_partitions, rank, size, group, F.log_softmax)
 
     optimizer.zero_grad()
     rank_train_mask = torch.split(data.train_mask.bool(), outputs.size(0), dim=0)[rank]
@@ -227,13 +231,46 @@ def test(outputs, data, vertex_count, rank):
     return accs
 
 
+def split_coo(adj_matrix, node_count, n_per_proc, dim):
+    # sort edges by src / dst
+    # am_aug = adj_matrix.select(0, dim) * node_count + adj_matrix.select(0, 1)
+    # ind = am_aug.sort().indices
+    # adj_matrix = adj_matrix.index_select(1, ind)
+    # print("dim: " + str(dim) + " " + str(adj_matrix))
+
+    # am_partitions = []
+    # for i in range(len(vtx_indices) - 1):
+    #     min_idx = ((adj_matrix[dim] == vtx_indices[i]).nonzero()[0]).item()
+    #     print((vtx_indices[i + 1] - 1))
+    #     max_idx = ((adj_matrix[dim] == (vtx_indices[i + 1] - 1)).nonzero()[-1]).item() + 1
+    #     print(str(min_idx) + " " + str(max_idx))
+    #     am_part = adj_matrix.narrow(dim=1, start=min_idx, length=(max_idx - min_idx)).clone()
+    #     am_part[dim] -= vtx_indices[i]
+    #     am_partitions.append(am_part)
+
+    # return am_partitions, vtx_indices
+    vtx_indices = list(range(0, node_count, n_per_proc))
+    vtx_indices.append(node_count)
+
+    am_partitions = []
+    for i in range(len(vtx_indices) - 1):
+        am_part = adj_matrix[:,(adj_matrix[dim,:] >= vtx_indices[i]).nonzero().squeeze(1)]
+        am_part = am_part[:,(am_part[dim,:] < vtx_indices[i + 1]).nonzero().squeeze(1)]
+        am_part[dim] -= vtx_indices[i]
+        am_partitions.append(am_part)
+
+    return am_partitions, vtx_indices
+
 def run(rank, size, inputs, adj_matrix, data, features, classes, device):
+    node_count = inputs.size(0)
+    n_per_proc = math.ceil(float(node_count) / size)
+
     best_val_acc = test_acc = 0
     outputs = None
     group = dist.new_group(list(range(size)))
 
-    adj_matrix_loc = torch.rand(adj_matrix.size(0), math.ceil(float(adj_matrix.size(1)) / size))
-    inputs_loc = torch.rand(math.ceil(float(inputs.size(0)) / size), inputs.size(1))
+    adj_matrix_loc = torch.rand(node_count, n_per_proc)
+    inputs_loc = torch.rand(n_per_proc, inputs.size(1))
 
     torch.manual_seed(0)
     weight1_nonleaf = torch.rand(features, 16, requires_grad=True)
@@ -250,11 +287,33 @@ def run(rank, size, inputs, adj_matrix, data, features, classes, device):
     optimizer = torch.optim.Adam([weight1, weight2], lr=0.01)
 
     am_partitions = None
+    am_pbyp = None
 
     # Compute the adj_matrix and inputs partitions for this process
     # TODO: Maybe I do want grad here. Unsure.
     with torch.no_grad():
-        am_partitions = torch.split(adj_matrix, math.ceil(float(adj_matrix.size(0)) / size), dim=1)
+        # am_partitions = torch.split(adj_matrix, math.ceil(float(adj_matrix.size(0)) / size), dim=1)
+        am_partitions, vtx_indices = split_coo(adj_matrix, node_count, n_per_proc, 1)
+
+        proc_node_count = vtx_indices[rank + 1] - vtx_indices[rank]
+        am_pbyp, _ = split_coo(am_partitions[rank], node_count, n_per_proc, 0)
+        for i in range(len(am_pbyp)):
+            if i == size - 1:
+                am_pbyp[i] = torch.sparse_coo_tensor(am_pbyp[i], torch.ones(am_pbyp[i].size(1)), 
+                                                        size=(proc_node_count, proc_node_count),
+                                                        requires_grad=False)
+            else:
+                am_pbyp[i] = torch.sparse_coo_tensor(am_pbyp[i], torch.ones(am_pbyp[i].size(1)), 
+                                                        size=(n_per_proc, proc_node_count),
+                                                        requires_grad=False)
+
+        # am_partitions = [adj_matrix]
+
+        for i in range(len(am_partitions)):
+            proc_node_count = vtx_indices[i + 1] - vtx_indices[i]
+            am_partitions[i] = torch.sparse_coo_tensor(am_partitions[i], torch.ones(am_partitions[i].size(1)), 
+                                                    size=(node_count, proc_node_count), 
+                                                    requires_grad=False)
         input_partitions = torch.split(inputs, math.ceil(float(inputs.size(0)) / size), dim=0)
 
         adj_matrix_loc = am_partitions[rank]
@@ -262,7 +321,8 @@ def run(rank, size, inputs, adj_matrix, data, features, classes, device):
 
     for epoch in range(1, 201):
     # for epoch in range(1):
-        outputs = train(inputs_loc, weight1, weight2, adj_matrix_loc, optimizer, data, rank, size, group)
+        outputs = train(inputs_loc, weight1, weight2, adj_matrix_loc, am_pbyp, optimizer, data, 
+                                rank, size, group)
         print("Epoch: {:03d}".format(epoch))
     
     # All-gather outputs to test accuracy
@@ -280,7 +340,7 @@ def run(rank, size, inputs, adj_matrix, data, features, classes, device):
     log = 'Epoch: {:03d}, Train: {:.4f}, Val: {:.4f}, Test: {:.4f}'
 
     print(log.format(200, train_acc, best_val_acc, test_acc))
-    print(outputs)
+    print("rank: " + str(rank) + " " +  str(outputs))
     return outputs
 
 def init_process(rank, size, inputs, adj_matrix, data, features, classes, device, outputs, fn, 
@@ -313,9 +373,12 @@ def main(P, correctness_check):
     data.y = data.y.to(device)
 
     edge_index = data.edge_index
-    adj_matrix = to_dense_adj(edge_index)[0].to(device)
-    adj_matrix = normalize(adj_matrix)
-    print(adj_matrix.size())
+    adj_matrix = edge_index
+    # adj_matrix = to_dense_adj(edge_index)[0].to(device)
+    # adj_matrix = torch.sparse_coo_tensor(edge_index, torch.ones(10556), size=(2708, 2708), requires_grad=False)
+    # print(adj_matrix)
+    # print(adj_matrix.size())
+    # adj_matrix = normalize(adj_matrix)
 
     processes = []
     outputs = None
