@@ -1,0 +1,45 @@
+#!/bin/bash
+#SBATCH --qos=debug
+#SBATCH --time=00:05:00
+#SBATCH --nodes=2
+#SBATCH --tasks-per-node=1
+#SBATCH --constraint=knl
+
+# srun -l python distr_slurm_test.py
+srun -l python gcn_distr.py
+# srun python -m torch.distributed.launch --nnodes=$SLURM_JOB_NUM_NODES --nproc_per_node=1 --node_rank=0 distr_slurm_test.py
+
+# source activate gcn
+# #Number of processes per node to launch (20 for CPU, 2 for GPU)
+# NPROC_PER_NODE=1
+# 
+# #This command to run your pytorch script
+# #You will want to replace this
+# COMMAND="$HOME/gnn_training/distr_slurm_test.py"
+# 
+# #We want names of master and slave nodes
+# MASTER=`/bin/hostname -s`
+# SLAVES=`scontrol show hostnames $SLURM_JOB_NODELIST | grep -v $MASTER`
+# #Make sure this node (MASTER) comes first
+# HOSTLIST="$MASTER $SLAVES"
+# 
+# #Get a random unused port on this host(MASTER) between 2000 and 9999
+# #First line gets list of unused ports
+# #2nd line restricts between 2000 and 9999
+# #3rd line gets single random port from the list
+# MPORT=`ss -tan | awk '{print $4}' | cut -d':' -f2 | \
+# 	grep "[2-9][0-9]\{3,3\}" | grep -v "[0-9]\{5,5\}" | \
+# 	sort | uniq | shuf`
+# 
+# 
+# 
+# #Launch the pytorch processes, first on master (first in $HOSTLIST) then
+# #on the slaves
+# RANK=0
+# for node in $HOSTLIST; do
+# 	ssh -q $node \
+# 		python -m torch.distributed.launch --nnodes=$SLURM_JOB_NUM_NODES --nproc_per_node=$NPROC_PER_NODE                                                    --node_rank=$RANK --master_addr="$MASTER"                                                                         --master_port="$MPORT" $COMMAND &
+# 	RANK=$((RANK+1))
+# done
+# wait
+# # srun python -W ignore gcn_distr.py --processes 2

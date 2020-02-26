@@ -21,6 +21,8 @@ import torch.nn.functional as F
 
 from torch_scatter import scatter_add
 
+import socket
+
 # def normalize(edge_index, num_nodes, edge_weight=None, improved=False,
 #          dtype=None):
 #     if edge_weight is None:
@@ -345,15 +347,16 @@ def run(rank, size, inputs, adj_matrix, data, features, classes, device):
 
 def init_process(rank, size, inputs, adj_matrix, data, features, classes, device, outputs, fn, 
                             backend='gloo'):
-    os.environ['MASTER_ADDR'] = '127.0.0.1'
-    os.environ['MASTER_PORT'] = '29500'
-    dist.init_process_group(backend, rank=rank, world_size=size)
+    # os.environ['MASTER_ADDR'] = '127.0.0.1'
+    # os.environ['MASTER_PORT'] = '29500'
+    # dist.init_process_group(backend, rank=rank, world_size=size)
 
     run_outputs = fn(rank, size, inputs, adj_matrix, data, features, classes, device)
     if outputs is not None:
         outputs[rank] = run_outputs.detach()
 
 def main(P, correctness_check):
+    print(socket.gethostname())
     dataset = 'Cora'
     path = osp.join(osp.dirname(osp.realpath(__file__)), '..', 'data', dataset)
     dataset = Planetoid(path, dataset, T.NormalizeFeatures())
@@ -380,20 +383,25 @@ def main(P, correctness_check):
     # print(adj_matrix.size())
     # adj_matrix = normalize(adj_matrix)
 
-    processes = []
+
     outputs = None
-    for rank in range(P):
-        if correctness_check and rank == 0:
-            manager = Manager()
-            outputs = manager.dict()
+    dist.init_process_group(backend='mpi')
+    rank = dist.get_rank()
+    size = dist.get_world_size()
+    init_process(rank, size, inputs, adj_matrix, data, dataset.num_features, dataset.num_classes, device, outputs, run)
+    # processes = []
+    # for rank in range(P):
+    #     if correctness_check and rank == 0:
+    #         manager = Manager()
+    #         outputs = manager.dict()
 
-        p = Process(target=init_process, args=(rank, P, inputs, adj_matrix, 
-                        data, dataset.num_features, dataset.num_classes, device, outputs, run))
-        p.start()
-        processes.append(p)
+    #     p = Process(target=init_process, args=(rank, P, inputs, adj_matrix, 
+    #                     data, dataset.num_features, dataset.num_classes, device, outputs, run))
+    #     p.start()
+    #     processes.append(p)
 
-    for p in processes:
-        p.join()
+    # for p in processes:
+    #     p.join()
 
     if outputs is not None:
         return outputs[0]
