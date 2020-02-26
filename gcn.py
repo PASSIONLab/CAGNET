@@ -99,8 +99,8 @@ def test(outputs):
 def main(): 
     best_val_acc = test_acc = 0
     outputs = None
-    for epoch in range(1, 201):
-    # for epoch in range(1):
+    # for epoch in range(1, 201):
+    for epoch in range(1):
         outputs = train()
         train_acc, val_acc, tmp_test_acc = test(outputs)
         if val_acc > best_val_acc:

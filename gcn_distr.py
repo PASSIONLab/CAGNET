@@ -263,6 +263,23 @@ def split_coo(adj_matrix, node_count, n_per_proc, dim):
 
     return am_partitions, vtx_indices
 
+def scale_elements(adj_matrix, adj_part, row_vtx, col_vtx):
+    # Scale each edge (u, v) by 1 / (sqrt(u) * sqrt(v))
+    indices = adj_part._indices()
+    values = adj_part._values()
+
+    for i in range(adj_part._nnz()):
+        u = indices[0][i] + row_vtx
+        v = indices[1][i] + col_vtx
+
+        degu = (adj_matrix[0] == u).sum().item()
+        degv = (adj_matrix[0] == v).sum().item()
+
+        if degu == 0 or degv == 0:
+            print("AHH no degree??? " + str(u) + " " + str(v))
+        values[i] = values[i] / (math.sqrt(degu) * math.sqrt(degv))
+
+
 def run(rank, size, inputs, adj_matrix, data, features, classes, device):
     node_count = inputs.size(0)
     n_per_proc = math.ceil(float(node_count) / size)
@@ -304,18 +321,22 @@ def run(rank, size, inputs, adj_matrix, data, features, classes, device):
                 am_pbyp[i] = torch.sparse_coo_tensor(am_pbyp[i], torch.ones(am_pbyp[i].size(1)), 
                                                         size=(proc_node_count, proc_node_count),
                                                         requires_grad=False)
+
+                scale_elements(adj_matrix, am_pbyp[i], vtx_indices[i], vtx_indices[rank])
             else:
                 am_pbyp[i] = torch.sparse_coo_tensor(am_pbyp[i], torch.ones(am_pbyp[i].size(1)), 
                                                         size=(n_per_proc, proc_node_count),
                                                         requires_grad=False)
 
-        # am_partitions = [adj_matrix]
+                scale_elements(adj_matrix, am_pbyp[i], vtx_indices[i], vtx_indices[rank])
 
         for i in range(len(am_partitions)):
             proc_node_count = vtx_indices[i + 1] - vtx_indices[i]
             am_partitions[i] = torch.sparse_coo_tensor(am_partitions[i], torch.ones(am_partitions[i].size(1)), 
                                                     size=(node_count, proc_node_count), 
                                                     requires_grad=False)
+            scale_elements(adj_matrix, am_partitions[i], 0, vtx_indices[i])
+
         input_partitions = torch.split(inputs, math.ceil(float(inputs.size(0)) / size), dim=0)
 
         adj_matrix_loc = am_partitions[rank]
@@ -376,13 +397,13 @@ def main(P, correctness_check):
     data.y = data.y.to(device)
 
     edge_index = data.edge_index
-    adj_matrix = edge_index
+    adj_matrix, _ = add_remaining_self_loops(edge_index)
+
     # adj_matrix = to_dense_adj(edge_index)[0].to(device)
     # adj_matrix = torch.sparse_coo_tensor(edge_index, torch.ones(10556), size=(2708, 2708), requires_grad=False)
     # print(adj_matrix)
     # print(adj_matrix.size())
     # adj_matrix = normalize(adj_matrix)
-
 
     outputs = None
     dist.init_process_group(backend='mpi')
