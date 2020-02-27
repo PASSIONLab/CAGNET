@@ -22,6 +22,7 @@ import torch.nn.functional as F
 from torch_scatter import scatter_add
 
 import socket
+import time
 
 def normalize(adj_matrix):
     adj_matrix = adj_matrix + torch.eye(adj_matrix.size(0))
@@ -307,11 +308,23 @@ def run(rank, size, inputs, adj_matrix, data, features, classes, device):
         adj_matrix_loc = am_partitions[rank]
         inputs_loc = input_partitions[rank]
 
+    dist.barrier(group)
+    tstart = 0.0
+    tstop = 0.0
+    if rank == 0:
+        tstart = time.time()
+
     for epoch in range(1, 201):
     # for epoch in range(1):
         outputs = train(inputs_loc, weight1, weight2, adj_matrix_loc, am_pbyp, optimizer, data, 
                                 rank, size, group)
-        print("Epoch: {:03d}".format(epoch))
+        # print("Epoch: {:03d}".format(epoch))
+
+    dist.barrier(group)
+    if rank == 0:
+        tstop = time.time()
+
+    print("Time: " + str(tstop - tstart))
     
     # All-gather outputs to test accuracy
     # output_parts = []
@@ -364,6 +377,8 @@ def main(P, correctness_check):
     dist.init_process_group(backend='mpi')
     rank = dist.get_rank()
     size = dist.get_world_size()
+    print("Processes: " + str(size))
+
     init_process(rank, size, inputs, adj_matrix, data, dataset.num_features, dataset.num_classes, device, outputs, run)
 
     if outputs is not None:
@@ -389,6 +404,5 @@ if __name__ == '__main__':
     else:
         correctness_check = True
     
-    print("Processes: " + str(P))
     print("Correctness: " + str(correctness_check))
     print(main(P, correctness_check))
