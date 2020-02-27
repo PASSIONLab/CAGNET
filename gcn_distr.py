@@ -23,22 +23,6 @@ from torch_scatter import scatter_add
 
 import socket
 
-# def normalize(edge_index, num_nodes, edge_weight=None, improved=False,
-#          dtype=None):
-#     if edge_weight is None:
-#         edge_weight = torch.ones((edge_index.size(1), ), dtype=dtype,
-#                                  device=edge_index.device)
-# 
-#     fill_value = 1 if not improved else 2
-#     edge_index, edge_weight = add_remaining_self_loops(
-#         edge_index, edge_weight, fill_value, num_nodes)
-# 
-#     row, col = edge_index
-#     deg = scatter_add(edge_weight, row, dim=0, dim_size=num_nodes)
-#     deg_inv_sqrt = deg.pow(-0.5)
-#     deg_inv_sqrt[deg_inv_sqrt == float('inf')] = 0
-# 
-#     return edge_index, deg_inv_sqrt[row] * edge_weight * deg_inv_sqrt[col]
 def normalize(adj_matrix):
     adj_matrix = adj_matrix + torch.eye(adj_matrix.size(0))
     d = torch.sum(adj_matrix, dim=1)
@@ -80,7 +64,6 @@ def block_row(adj_matrix, inputs, weight, rank, size):
     return z_loc
 
 def outer_product(adj_matrix, grad_output, rank, size, group):
-    # n_per_proc = adj_matrix.size(1)
     n_per_proc = math.ceil(float(adj_matrix.size(0)) / size)
     
     # A * G^l
@@ -106,12 +89,7 @@ def outer_product2(inputs, ag, rank, size, group):
     return grad_weight
 
 def broad_func(adj_matrix, am_partitions, inputs, rank, size, group):
-    # n_per_proc = int(adj_matrix.size(1) / size)
     n_per_proc = math.ceil(float(adj_matrix.size(1)) / size)
-    print(n_per_proc, flush=True)
-    # am_partitions = list(torch.split(adj_matrix, n_per_proc, dim=1))
-    # NOTE: below only works with 1 process
-    # am_partitions = [adj_matrix]
 
     # z_loc = torch.cuda.FloatTensor(adj_matrix.size(0), inputs.size(1)).fill_(0)
     z_loc = torch.zeros(adj_matrix.size(0), inputs.size(1))
@@ -120,14 +98,12 @@ def broad_func(adj_matrix, am_partitions, inputs, rank, size, group):
     inputs_recv = torch.zeros(n_per_proc, inputs.size(1))
 
     for i in range(size):
-        print("i: " + str(i), flush=True)
         if i == rank:
             inputs_recv = inputs.clone()
         elif i == size - 1:
             # inputs_recv = torch.cuda.FloatTensor(list(am_partitions[i].size())[1], inputs.size(1))
             inputs_recv = torch.zeros(list(am_partitions[i].t().size())[1], inputs.size(1))
 
-        print(inputs_recv.size(), flush=True)
         dist.broadcast(inputs_recv, src=i, group=group)
 
         # z_loc += torch.mm(am_partitions[i], inputs_recv) 
@@ -188,7 +164,6 @@ class GCNFunc(torch.autograd.Function):
             grad_output = sigmap
 
         # First backprop equation
-        # ag = outer_product(adj_matrix, grad_output, rank, size, group)
         ag = outer_product(adj_matrix, grad_output, rank, size, group)
         grad_input = torch.mm(ag, weight.t())
 
@@ -236,24 +211,9 @@ def test(outputs, data, vertex_count, rank):
     return accs
 
 
+# Split a COO into partitions of size n_per_proc
+# Basically torch.split but for Sparse Tensors since pytorch doesn't support that.
 def split_coo(adj_matrix, node_count, n_per_proc, dim):
-    # sort edges by src / dst
-    # am_aug = adj_matrix.select(0, dim) * node_count + adj_matrix.select(0, 1)
-    # ind = am_aug.sort().indices
-    # adj_matrix = adj_matrix.index_select(1, ind)
-    # print("dim: " + str(dim) + " " + str(adj_matrix))
-
-    # am_partitions = []
-    # for i in range(len(vtx_indices) - 1):
-    #     min_idx = ((adj_matrix[dim] == vtx_indices[i]).nonzero()[0]).item()
-    #     print((vtx_indices[i + 1] - 1))
-    #     max_idx = ((adj_matrix[dim] == (vtx_indices[i + 1] - 1)).nonzero()[-1]).item() + 1
-    #     print(str(min_idx) + " " + str(max_idx))
-    #     am_part = adj_matrix.narrow(dim=1, start=min_idx, length=(max_idx - min_idx)).clone()
-    #     am_part[dim] -= vtx_indices[i]
-    #     am_partitions.append(am_part)
-
-    # return am_partitions, vtx_indices
     vtx_indices = list(range(0, node_count, n_per_proc))
     vtx_indices.append(node_count)
 
@@ -266,6 +226,7 @@ def split_coo(adj_matrix, node_count, n_per_proc, dim):
 
     return am_partitions, vtx_indices
 
+# Normalize all elements according to KW's normalization rule
 def scale_elements(adj_matrix, adj_part, row_vtx, col_vtx):
     # Scale each edge (u, v) by 1 / (sqrt(u) * sqrt(v))
     indices = adj_part._indices()
@@ -372,10 +333,6 @@ def run(rank, size, inputs, adj_matrix, data, features, classes, device):
 
 def init_process(rank, size, inputs, adj_matrix, data, features, classes, device, outputs, fn, 
                             backend='gloo'):
-    # os.environ['MASTER_ADDR'] = '127.0.0.1'
-    # os.environ['MASTER_PORT'] = '29500'
-    # dist.init_process_group(backend, rank=rank, world_size=size)
-
     run_outputs = fn(rank, size, inputs, adj_matrix, data, features, classes, device)
     if outputs is not None:
         outputs[rank] = run_outputs.detach()
@@ -403,30 +360,11 @@ def main(P, correctness_check):
     edge_index = data.edge_index
     adj_matrix, _ = add_remaining_self_loops(edge_index)
 
-    # adj_matrix = to_dense_adj(edge_index)[0].to(device)
-    # adj_matrix = torch.sparse_coo_tensor(edge_index, torch.ones(10556), size=(2708, 2708), requires_grad=False)
-    # print(adj_matrix)
-    # print(adj_matrix.size())
-    # adj_matrix = normalize(adj_matrix)
-
     outputs = None
     dist.init_process_group(backend='mpi')
     rank = dist.get_rank()
     size = dist.get_world_size()
     init_process(rank, size, inputs, adj_matrix, data, dataset.num_features, dataset.num_classes, device, outputs, run)
-    # processes = []
-    # for rank in range(P):
-    #     if correctness_check and rank == 0:
-    #         manager = Manager()
-    #         outputs = manager.dict()
-
-    #     p = Process(target=init_process, args=(rank, P, inputs, adj_matrix, 
-    #                     data, dataset.num_features, dataset.num_classes, device, outputs, run))
-    #     p.start()
-    #     processes.append(p)
-
-    # for p in processes:
-    #     p.join()
 
     if outputs is not None:
         return outputs[0]
