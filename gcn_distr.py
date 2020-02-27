@@ -108,6 +108,7 @@ def outer_product2(inputs, ag, rank, size, group):
 def broad_func(adj_matrix, am_partitions, inputs, rank, size, group):
     # n_per_proc = int(adj_matrix.size(1) / size)
     n_per_proc = math.ceil(float(adj_matrix.size(1)) / size)
+    print(n_per_proc, flush=True)
     # am_partitions = list(torch.split(adj_matrix, n_per_proc, dim=1))
     # NOTE: below only works with 1 process
     # am_partitions = [adj_matrix]
@@ -119,12 +120,14 @@ def broad_func(adj_matrix, am_partitions, inputs, rank, size, group):
     inputs_recv = torch.zeros(n_per_proc, inputs.size(1))
 
     for i in range(size):
+        print("i: " + str(i), flush=True)
         if i == rank:
             inputs_recv = inputs.clone()
         elif i == size - 1:
             # inputs_recv = torch.cuda.FloatTensor(list(am_partitions[i].size())[1], inputs.size(1))
             inputs_recv = torch.zeros(list(am_partitions[i].t().size())[1], inputs.size(1))
 
+        print(inputs_recv.size(), flush=True)
         dist.broadcast(inputs_recv, src=i, group=group)
 
         # z_loc += torch.mm(am_partitions[i], inputs_recv) 
@@ -318,8 +321,9 @@ def run(rank, size, inputs, adj_matrix, data, features, classes, device):
         am_pbyp, _ = split_coo(am_partitions[rank], node_count, n_per_proc, 0)
         for i in range(len(am_pbyp)):
             if i == size - 1:
+                last_node_count = vtx_indices[i + 1] - vtx_indices[i]
                 am_pbyp[i] = torch.sparse_coo_tensor(am_pbyp[i], torch.ones(am_pbyp[i].size(1)), 
-                                                        size=(proc_node_count, proc_node_count),
+                                                        size=(last_node_count, proc_node_count),
                                                         requires_grad=False)
 
                 scale_elements(adj_matrix, am_pbyp[i], vtx_indices[i], vtx_indices[rank])
