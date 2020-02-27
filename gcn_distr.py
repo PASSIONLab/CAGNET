@@ -31,26 +31,29 @@ def normalize(adj_matrix):
     d = torch.diag(d)
     return torch.mm(d, torch.mm(adj_matrix, d))
 
-def block_row(adj_matrix, inputs, weight, rank, size):
-    n_per_proc = int(adj_matrix.size(1) / size)
-    am_partitions = list(torch.split(adj_matrix, n_per_proc, dim=1))
+def block_row(adj_matrix, am_partitions, inputs, weight, rank, size):
+    n_per_proc = math.ceil(float(adj_matrix.size(1)) / size)
+    # n_per_proc = int(adj_matrix.size(1) / size)
+    # am_partitions = list(torch.split(adj_matrix, n_per_proc, dim=1))
 
-    z_loc = torch.cuda.FloatTensor(n_per_proc, inputs.size(1)).fill_(0)
+    # z_loc = torch.cuda.FloatTensor(n_per_proc, inputs.size(1)).fill_(0)
+    z_loc = torch.zeros(adj_matrix.size(0), inputs.size(1))
     
     inputs_recv = torch.zeros(inputs.size())
 
-    for i in range(size):
+    part_id = rank % size
+
+    z_loc += torch.mm(am_partitions[part_id].t(), inputs) 
+
+    for i in range(1, size):
         part_id = (rank + i) % size
 
-        z_loc += torch.mm(am_partitions[part_id], inputs) 
+        inputs_recv = torch.zeros(am_partitions[part_id].size(0), inputs.size(1))
 
         src = (rank + 1) % size
         dst = rank - 1
         if dst < 0:
             dst = size - 1
-
-        if size == 1:
-            continue
 
         if rank == 0:
             dist.send(tensor=inputs, dst=dst)
@@ -61,7 +64,11 @@ def block_row(adj_matrix, inputs, weight, rank, size):
         
         inputs = inputs_recv.clone()
 
-    z_loc = torch.mm(z_loc, weight)
+        # z_loc += torch.mm(am_partitions[part_id], inputs) 
+        z_loc += torch.mm(am_partitions[part_id].t(), inputs) 
+
+
+    # z_loc = torch.mm(z_loc, weight)
     return z_loc
 
 def outer_product(adj_matrix, grad_output, rank, size, group):
@@ -127,8 +134,8 @@ class GCNFunc(torch.autograd.Function):
 
         ctx.func = func
 
-        # z = block_row(adj_matrix.t(), inputs, weight, rank, size)
-        z = broad_func(adj_matrix.t(), am_partitions, inputs, rank, size, group)
+        z = block_row(adj_matrix.t(), am_partitions, inputs, weight, rank, size)
+        # z = broad_func(adj_matrix.t(), am_partitions, inputs, rank, size, group)
         z = torch.mm(z, weight)
 
         z.requires_grad = True
@@ -240,8 +247,6 @@ def scale_elements(adj_matrix, adj_part, row_vtx, col_vtx):
         degu = (adj_matrix[0] == u).sum().item()
         degv = (adj_matrix[0] == v).sum().item()
 
-        if degu == 0 or degv == 0:
-            print("AHH no degree??? " + str(u) + " " + str(v))
         values[i] = values[i] / (math.sqrt(degu) * math.sqrt(degv))
 
 
@@ -253,8 +258,8 @@ def run(rank, size, inputs, adj_matrix, data, features, classes, device):
     outputs = None
     group = dist.new_group(list(range(size)))
 
-    adj_matrix_loc = torch.rand(node_count, n_per_proc)
-    inputs_loc = torch.rand(n_per_proc, inputs.size(1))
+    # adj_matrix_loc = torch.rand(node_count, n_per_proc)
+    # inputs_loc = torch.rand(n_per_proc, inputs.size(1))
 
     torch.manual_seed(0)
     weight1_nonleaf = torch.rand(features, 16, requires_grad=True)
@@ -318,7 +323,7 @@ def run(rank, size, inputs, adj_matrix, data, features, classes, device):
     # for epoch in range(1):
         outputs = train(inputs_loc, weight1, weight2, adj_matrix_loc, am_pbyp, optimizer, data, 
                                 rank, size, group)
-        # print("Epoch: {:03d}".format(epoch))
+        print("Epoch: {:03d}".format(epoch), flush=True)
 
     dist.barrier(group)
     if rank == 0:
