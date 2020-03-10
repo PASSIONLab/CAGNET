@@ -1,8 +1,10 @@
 __pycache__/
 yoochoose-dats/
 gnn/
-outputs/
+outputs*/
 processed/
+embeddings/
+reddit_coo/
 .*.swk
 .*.swl
 .*.swm
