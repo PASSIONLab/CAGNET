@@ -6,4 +6,4 @@
 #SBATCH --constraint=knl
 
 conda activate gcn
-srun -l python gcn_distr.py
+srun -l python gcn_distr_2d.py
