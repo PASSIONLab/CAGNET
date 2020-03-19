@@ -31,6 +31,7 @@ import time
 import numpy as np
 
 normalization = False
+no_occur_val = 42.1234
 
 def normalize(adj_matrix):
     adj_matrix = adj_matrix + torch.eye(adj_matrix.size(0))
@@ -127,42 +128,8 @@ def broad_func(adj_matrix, am_partitions, inputs, rank, size, group):
 
     return z_loc
 
-def summa_sparse(adj_matrix, inputs, rank, row, col, size, row_groups, col_groups):
-    proc_row = proc_row_size(size)
-    proc_col = proc_col_size(size)
 
-    acol = torch.sparse.FloatTensor(adj_matrix.size())
-
-    brow = torch.FloatTensor(inputs.size())
-    z_loc = torch.zeros(adj_matrix.size(0), inputs.size(1))
-
-    for k in range(proc_col):
-
-        for i in range(proc_row):
-            if row == i and col == k:
-                acol = adj_matrix.clone()
-            else:
-                acol = torch.sparse.FloatTensor(adj_matrix.size())
-            acol = acol.coalesce()
-
-            dist.broadcast(acol.indices(), rank, row_groups[i])
-            dist.broadcast(acol.values(), rank, row_groups[i])
-
-            acol.size = adj_matrix.size()
-            acol.nnz = len(acol.values())
-
-        for j in range(proc_col):
-            if row == k and col == j:
-                brow = inputs.clone()
-            else:
-                brow = torch.FloatTensor(inputs.size())
-            dist.broadcast(brow, rank, col_groups[j])
-
-        z_loc += torch.mm(acol, brow)
-
-    return z_loc
-
-def transpose(mat, row, col, size):
+def transpose(mat, row, col, height, width, size):
     proc_row = proc_row_size(size)
     proc_col = proc_col_size(size)
 
@@ -172,7 +139,16 @@ def transpose(mat, row, col, size):
     if rank == rank_t:
         return mat.t()
 
-    mat_recv = torch.FloatTensor(mat.size(1), mat.size(0))
+    height_recv = math.ceil(float(width) / proc_row)
+    width_recv  = math.ceil(float(height) / proc_col)
+
+    if row == proc_row - 1:
+        height_recv -= proc_row * height_recv - width
+
+    if col == proc_col - 1:
+        width_recv -= proc_col * width_recv - height
+
+    mat_recv = torch.FloatTensor(height_recv, width_recv)
 
     if rank < rank_t:
         dist.send(tensor=mat.t().contiguous(), dst=rank_t)
@@ -182,7 +158,6 @@ def transpose(mat, row, col, size):
         dist.send(tensor=mat.t().contiguous(), dst=rank_t)
 
     return mat_recv
-
 
 def summa(adj_matrix, inputs, rank, row, col, size, row_groups, col_groups, height, middim, 
             width, transpose):
@@ -233,7 +208,89 @@ def summa(adj_matrix, inputs, rank, row, col, size, row_groups, col_groups, heig
 
         dist.broadcast(brow, col_src_rank, col_groups[col])
 
-        z_loc += torch.mm(acol, brow)
+        z_loc += torch.mm(acol.float(), brow)
+
+    return z_loc
+
+def summa_sparse(adj_matrix, inputs, rank, row, col, size, row_groups, col_groups, height, middim, 
+                    width, transpose):
+
+    proc_row = proc_row_size(size)
+    proc_col = proc_col_size(size)
+
+    height_per_proc = math.ceil(float(height) / proc_row)
+    width_per_proc  = math.ceil(float(width) / proc_col)
+
+    # TODO: Not sure how to handle this w/o square grid
+    middim_per_proc = math.ceil(float(middim) / proc_row)
+
+    if row == proc_row - 1:
+        height_per_proc -= proc_row * height_per_proc - height
+
+    if row == proc_row - 1:
+        middim_per_proc -= proc_row * middim_per_proc - middim
+
+    if col == proc_col - 1:
+        width_per_proc -= proc_col * width_per_proc - width
+
+    acol = torch.sparse.FloatTensor(height_per_proc, middim_per_proc)
+
+    brow = torch.FloatTensor(middim_per_proc, width_per_proc)
+
+    z_loc = torch.zeros(height_per_proc, width_per_proc, dtype=torch.float)
+
+    adj_matrix = adj_matrix.coalesce()
+
+    for k in range(proc_col):
+
+        if transpose:
+            row_src_rank = k * proc_row + row
+            col_src_rank = k * proc_col + col
+        else:
+            row_src_rank = k + proc_col * row
+            col_src_rank = k * proc_col + col
+
+        if row_src_rank == rank:
+            # acol = adj_matrix.clone()
+            acol_indices_len = torch.tensor(len(adj_matrix.indices()[0]))
+            acol_values_len = torch.tensor(len(adj_matrix.values()))
+        else:
+            # acol = torch.sparse.FloatTensor(height_per_proc, middim_per_proc)
+            acol_indices_len = torch.tensor(0)
+            acol_values_len = torch.tensor(0)
+
+        dist.broadcast(acol_indices_len, row_src_rank, row_groups[row])
+        dist.broadcast(acol_values_len, row_src_rank, row_groups[row])
+
+        acol_indices_len = acol_indices_len.item()
+        acol_values_len = acol_values_len.item()
+
+        if row_src_rank == rank:
+            acol_indices = adj_matrix.indices().contiguous().long()
+            acol_values = adj_matrix.values().contiguous().float()
+        else:
+            acol_indices = torch.zeros(2, acol_indices_len, dtype=torch.int64) 
+            acol_values = torch.zeros(acol_values_len, dtype=torch.float32) 
+        
+        dist.broadcast(acol_indices[0], row_src_rank, row_groups[row])
+        dist.broadcast(acol_indices[1], row_src_rank, row_groups[row])
+        dist.broadcast(acol_values, row_src_rank, row_groups[row])
+
+        if row_src_rank == rank:
+            acol = adj_matrix.clone()
+        else:
+            acol = torch.sparse.FloatTensor(acol_indices, acol_values, 
+                                            torch.Size([height_per_proc, middim_per_proc]))
+
+        if col_src_rank == rank:
+            brow = inputs.clone()
+        else:
+            brow = torch.FloatTensor(middim_per_proc, width_per_proc)
+
+        dist.broadcast(brow, col_src_rank, col_groups[col])
+
+        z_tmp = torch.mm(acol.float(), brow)
+        z_loc += z_tmp
 
     return z_loc
 
@@ -333,8 +390,6 @@ class GCNFunc(torch.autograd.Function):
         rank_row = int(rank / proc_col)
         rank_col = rank % proc_col
 
-        adj_matrix = adj_matrix.to_dense()
-
         ctx.save_for_backward(inputs, weight, adj_matrix)
         ctx.rank = rank
         ctx.size = size
@@ -342,14 +397,14 @@ class GCNFunc(torch.autograd.Function):
 
         ctx.func = func
 
-        adj_matrix_t = transpose(adj_matrix, rank_row, rank_col, size)
+        adj_matrix_t = adj_matrix # Only true for undirected graphs
         row_groups, col_groups = get_proc_groups(rank, size, transpose=False)
 
-        # col_groups twice because of transpose
         # TODO: will need to change height argument when n % sqrt(P) != 0 and non-square grid
-        z = summa(adj_matrix_t, inputs, rank, rank_row, rank_col, size, row_groups, col_groups, 
-                    adj_matrix.size(0) * proc_row_size(size), 
-                    adj_matrix.size(0) * proc_row_size(size), weight.size(0), transpose=False);
+        z = summa_sparse(adj_matrix_t, inputs, rank, rank_row, rank_col, size, row_groups, 
+                            col_groups, adj_matrix.size(0) * proc_row_size(size), 
+                            adj_matrix.size(0) * proc_row_size(size), weight.size(0), 
+                            transpose=False);
 
         weight_rows = torch.split(weight, math.ceil(float(weight.size(0)) / proc_row), dim=0)
         weight_parts = []
@@ -404,51 +459,129 @@ class GCNFunc(torch.autograd.Function):
         rank_row = int(rank / proc_col)
         rank_col = rank % proc_col
             
-        row_groups, col_groups = get_proc_groups(rank, size, transpose=True)
+        row_groups, col_groups = get_proc_groups(rank, size, transpose=False)
 
         # First backprop equation
         # TODO: will need to change height argument when n % sqrt(P) != 0 and non-square grid
-        ag = summa(adj_matrix, grad_output, rank, rank_row, rank_col, size, row_groups, 
+        ag = summa_sparse(adj_matrix, grad_output, rank, rank_row, rank_col, size, row_groups, 
                             col_groups, adj_matrix.size(0) * proc_row_size(size), 
                             adj_matrix.size(0) * proc_row_size(size), weight.t().size(0), 
                             transpose=False);
 
-        grad_input = torch.mm(ag, weight.t())
+        weight_rows = torch.split(weight.t(), math.ceil(float(weight.t().size(0)) / proc_row), 
+                                        dim=0)
+        weight_parts = []
+        for i in weight_rows:
+            weight_cols = torch.split(i, math.ceil(float(weight.t().size(1)) / proc_col), dim=1)
+            weight_parts.extend(weight_cols)
+
+        # grad_input = torch.mm(ag, weight.t())
+        grad_input = summa_loc(ag, weight_parts, rank, rank_row, rank_col, size, row_groups, 
+                                    col_groups, adj_matrix.size(0) * proc_row_size(size), 
+                                    weight.t().size(0), weight.t().size(1), transpose=False)
 
         # Second backprop equation (reuses the A * G^l computation)
         # col_groups twice because of transpose
         # TODO: will need to change height argument when n % sqrt(P) != 0 and non-square grid
 
-        inputs_t = transpose(inputs, rank_row, rank_col, size)
+        inputs_t = transpose(inputs, rank_row, rank_col, adj_matrix.size(0) * proc_row, 
+                                        weight.size(0), size)
 
         grad_weight = summa(inputs_t, ag, rank, rank_row, rank_col, size, row_groups, col_groups, 
                                 weight.size(0), adj_matrix.size(0) * proc_row_size(size), 
                                 weight.size(1), transpose=False)
 
-        return grad_input, grad_weight, None, None, None, None, None, None
+        # Collect grad_weight's across processes
+        grad_weight_recv = []
+        for i in range(size):
+            grad_weight_recv.append(torch.Tensor(math.ceil(float(weight.size(0)) / proc_row),
+                                                math.ceil(float(weight.size(1)) / proc_col)))
+
+        pad_row = math.ceil(float(weight.size(0)) / proc_row) - grad_weight.size(0)
+        pad_col = math.ceil(float(weight.size(1)) / proc_col) - grad_weight.size(1)
+
+        # TODO: make this part less hacky
+        grad_weight = torch.cat((grad_weight, 
+                                torch.Tensor(pad_row, grad_weight.size(1)).fill_(no_occur_val)), 
+                                dim=0) 
+        grad_weight = torch.cat((grad_weight, 
+                                torch.Tensor(grad_weight.size(0), pad_col).fill_(no_occur_val)), 
+                                dim=1) 
+
+        dist.all_gather(grad_weight_recv, grad_weight, group)
+
+        for i in range(len(grad_weight_recv)):
+            grad_weight_recv[i] = grad_weight_recv[i][(grad_weight_recv[i][:, 0] != no_occur_val)
+                                                                .nonzero().squeeze(1)]
+
+            grad_weight_recv_t = grad_weight_recv[i].t()
+            grad_weight_recv_t = grad_weight_recv_t[(grad_weight_recv_t[:, 0] != no_occur_val)
+                                                                .nonzero().squeeze(1)]
+
+            grad_weight_recv[i] = grad_weight_recv_t.t()
+        
+        grad_weight_fin = torch.Tensor()
+        for i in range(proc_row):
+            grad_weight_row = torch.Tensor()
+            for j in range(proc_col):
+                rank_wt = i * proc_row + j
+                grad_weight_row = torch.cat((grad_weight_row, grad_weight_recv[rank_wt]), dim=1)
+            grad_weight_fin = torch.cat((grad_weight_fin, grad_weight_row), dim=0)
+
+        return grad_input, grad_weight_fin, None, None, None, None, None, None
 
 def train(inputs, weight1, weight2, adj_matrix, am_partitions, optimizer, data, rank, size, group):
     outputs = GCNFunc.apply(inputs, weight1, adj_matrix, am_partitions, rank, size, group, F.relu)
     outputs = GCNFunc.apply(outputs, weight2, adj_matrix, am_partitions, rank, size, group, 
                                     F.log_softmax)
 
-    print("outputs: " + str(outputs), flush=True)
+    proc_row = proc_row_size(size)
+    proc_col = proc_col_size(size)
+
+    rank_row = int(rank / proc_col)
+    rank_col = rank % proc_col
+
     optimizer.zero_grad()
-    rank_train_mask = torch.split(data.train_mask.bool(), outputs.size(0), dim=0)[rank]
-    datay_rank = torch.split(data.y, outputs.size(0), dim=0)[rank]
+    rank_train_mask = torch.split(data.train_mask.bool(), outputs.size(0), dim=0)[rank_row]
+    datay_rank = torch.split(data.y, outputs.size(0), dim=0)[rank_row]
+
+    total_classes = weight2.size(1)
+    class_per_rank = math.ceil(float(total_classes) / proc_col)
+
+    min_class = rank * class_per_rank
+    max_class = min((rank + 1) * class_per_rank, total_classes)
 
     # Note: bool type removes warnings, unsure of perf penalty
     # loss = F.nll_loss(outputs[data.train_mask.bool()], data.y[data.train_mask.bool()])
     if list(datay_rank[rank_train_mask].size())[0] > 0:
     # if datay_rank.size(0) > 0:
-        loss = F.nll_loss(outputs[rank_train_mask], datay_rank[rank_train_mask])
-        # loss = F.nll_loss(outputs, torch.max(datay_rank, 1)[1])
-        loss.backward()
+        # datay_ids = datay_rank[rank_train_mask].long().view(-1, 1)
+        datay_ids = datay_rank[rank_train_mask].long()
+        indicesl = torch.nonzero((datay_ids >= min_class) * torch.ones(datay_ids.size()))
+        indicesr = torch.nonzero((datay_ids <  max_class) * torch.ones(datay_ids.size()))
+        indices = torch.from_numpy(np.intersect1d(indicesl, indicesr))
+
+        datay_ids = datay_rank[rank_train_mask].long().view(-1, 1)
+
+        datay_ids = datay_ids.index_select(0, indices)
+        datay_ids -= min_class
+        outputs_ids = outputs.index_select(0, indices)
+
+        # classes = torch.gather(outputs[rank_train_mask], 1, datay_ids)
+        classes = torch.gather(outputs_ids, 1, datay_ids)
+        loss_calc = -torch.mean(classes)
+        loss_calc.backward()
+        # print("loss_calc: " + str(loss_calc), flush=True)
+        # loss = F.nll_loss(outputs[rank_train_mask], datay_rank[rank_train_mask])
+        # loss.backward()
+        # print("loss: " + str(loss), flush=True)
     else:
         # fake_loss = (outputs * torch.cuda.FloatTensor(outputs.size()).fill_(0)).sum()
         fake_loss = (outputs * torch.zeros(outputs.size())).sum()
         fake_loss.backward()
 
+    print(weight1.grad)
+    print(weight2.grad)
     optimizer.step()
 
     return outputs
@@ -631,7 +764,7 @@ def run(rank, size, inputs, adj_matrix, data, features, classes, device):
     if rank == 0:
         tstart = time.time()
 
-    # for epoch in range(1, 201):
+    # for epoch in range(1, 101):
     for epoch in range(1):
         outputs = train(inputs_loc, weight1, weight2, adj_matrix_loc, am_pbyp, optimizer, data, 
                                 rank, size, group)

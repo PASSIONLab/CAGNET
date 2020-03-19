@@ -183,11 +183,14 @@ class GCNFunc(torch.autograd.Function):
         # Second backprop equation (reuses the A * G^l computation)
         grad_weight = outer_product2(inputs.t(), ag, rank, size, group)
 
+        print(grad_input)
         return grad_input, grad_weight, None, None, None, None, None, None
 
 def train(inputs, weight1, weight2, adj_matrix, am_partitions, optimizer, data, rank, size, group):
-    outputs = GCNFunc.apply(inputs, weight1, adj_matrix, am_partitions, rank, size, group, F.relu)
-    outputs = GCNFunc.apply(outputs, weight2, adj_matrix, am_partitions, rank, size, group, F.log_softmax)
+    # outputs = GCNFunc.apply(inputs, weight1, adj_matrix, am_partitions, rank, size, group, F.relu)
+    # outputs = GCNFunc.apply(outputs, weight2, adj_matrix, am_partitions, rank, size, group, F.log_softmax)
+    outputs = GCNFunc.apply(inputs, weight1, adj_matrix, am_partitions, rank, size, group, None)
+    outputs = GCNFunc.apply(outputs, weight2, adj_matrix, am_partitions, rank, size, group, None)
 
     optimizer.zero_grad()
     rank_train_mask = torch.split(data.train_mask.bool(), outputs.size(0), dim=0)[rank]
@@ -364,8 +367,8 @@ def run(rank, size, inputs, adj_matrix, data, features, classes, device):
     if rank == 0:
         tstart = time.time()
 
-    for epoch in range(1, 201):
-    # for epoch in range(2):
+    # for epoch in range(1, 201):
+    for epoch in range(1):
         outputs = train(inputs_loc, weight1, weight2, adj_matrix_loc, am_pbyp, optimizer, data, 
                                 rank, size, group)
         print("Epoch: {:03d}".format(epoch), flush=True)

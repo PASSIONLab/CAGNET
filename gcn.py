@@ -81,11 +81,14 @@ def train():
     model.train()
     optimizer.zero_grad()
     outputs = model()
-    print(outputs, flush=True)
     
     # Note: bool type removes warnings, unsure of perf penalty
     F.nll_loss(outputs[data.train_mask.bool()], data.y[data.train_mask.bool()]).backward()
     # F.nll_loss(outputs, torch.max(data.y, 1)[1]).backward()
+
+    for W in model.parameters():
+        if W.grad is not None:
+            print(W.grad)
 
     optimizer.step()
     return outputs
@@ -106,7 +109,7 @@ def main():
 
     tstart = time.time()
 
-    # for epoch in range(1, 201):
+    # for epoch in range(1, 101):
     for epoch in range(1):
         outputs = train()
         # train_acc, val_acc, tmp_test_acc = test(outputs)
