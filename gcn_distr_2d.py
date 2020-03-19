@@ -551,6 +551,8 @@ def train(inputs, weight1, weight2, adj_matrix, am_partitions, optimizer, data, 
     min_class = rank * class_per_rank
     max_class = min((rank + 1) * class_per_rank, total_classes)
 
+    row_groups, _ = get_proc_groups(rank, size, transpose=False)
+
     # Note: bool type removes warnings, unsure of perf penalty
     # loss = F.nll_loss(outputs[data.train_mask.bool()], data.y[data.train_mask.bool()])
     if list(datay_rank[rank_train_mask].size())[0] > 0:
@@ -569,7 +571,13 @@ def train(inputs, weight1, weight2, adj_matrix, am_partitions, optimizer, data, 
 
         # classes = torch.gather(outputs[rank_train_mask], 1, datay_ids)
         classes = torch.gather(outputs_ids, 1, datay_ids)
-        loss_calc = -torch.mean(classes)
+        loss_calc = torch.sum(classes)
+
+        dist.all_reduce(loss_calc, op=dist.reduce_op.SUM, group=row_groups[rank_row])
+
+        vertex_train_count = (data.train_mask.size(0) - (data.train_mask == 0).sum(dim=0))
+        loss_calc = -loss_calc / vertex_train_count
+
         loss_calc.backward()
         # print("loss_calc: " + str(loss_calc), flush=True)
         # loss = F.nll_loss(outputs[rank_train_mask], datay_rank[rank_train_mask])
@@ -762,8 +770,8 @@ def run(rank, size, inputs, adj_matrix, data, features, classes, device):
     if rank == 0:
         tstart = time.time()
 
-    # for epoch in range(1, 101):
-    for epoch in range(1):
+    for epoch in range(1, 101):
+    # for epoch in range(1):
         outputs = train(inputs_loc, weight1, weight2, adj_matrix_loc, am_pbyp, optimizer, data, 
                                 rank, size, group)
         print("Epoch: {:03d}".format(epoch), flush=True)
