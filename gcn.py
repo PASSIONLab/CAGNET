@@ -86,10 +86,6 @@ def train():
     F.nll_loss(outputs[data.train_mask.bool()], data.y[data.train_mask.bool()]).backward()
     # F.nll_loss(outputs, torch.max(data.y, 1)[1]).backward()
 
-    for W in model.parameters():
-        if W.grad is not None:
-            print(W.grad)
-
     optimizer.step()
     return outputs
 

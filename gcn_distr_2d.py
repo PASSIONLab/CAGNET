@@ -580,8 +580,6 @@ def train(inputs, weight1, weight2, adj_matrix, am_partitions, optimizer, data, 
         fake_loss = (outputs * torch.zeros(outputs.size())).sum()
         fake_loss.backward()
 
-    print(weight1.grad)
-    print(weight2.grad)
     optimizer.step()
 
     return outputs
