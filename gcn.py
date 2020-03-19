@@ -106,7 +106,7 @@ def main():
     tstart = time.time()
 
     for epoch in range(1, 101):
-    # for epoch in range(1):
+    # for epoch in range(2):
         outputs = train()
         # train_acc, val_acc, tmp_test_acc = test(outputs)
         # if val_acc > best_val_acc:

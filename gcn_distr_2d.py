@@ -173,9 +173,6 @@ def summa(adj_matrix, inputs, rank, row, col, size, row_groups, col_groups, heig
     if row == proc_row - 1:
         height_per_proc -= proc_row * height_per_proc - height
 
-    if row == proc_row - 1:
-        middim_per_proc -= proc_row * middim_per_proc - middim
-
     if col == proc_col - 1:
         width_per_proc -= proc_col * width_per_proc - width
 
@@ -193,6 +190,9 @@ def summa(adj_matrix, inputs, rank, row, col, size, row_groups, col_groups, heig
         else:
             row_src_rank = k + proc_col * row
             col_src_rank = k * proc_col + col
+
+        if k == proc_col - 1:
+            middim_per_proc -= proc_col * middim_per_proc - middim
 
         if row_src_rank == rank:
             acol = adj_matrix.clone()
@@ -222,13 +222,10 @@ def summa_sparse(adj_matrix, inputs, rank, row, col, size, row_groups, col_group
     width_per_proc  = math.ceil(float(width) / proc_col)
 
     # TODO: Not sure how to handle this w/o square grid
-    middim_per_proc = math.ceil(float(middim) / proc_row)
+    middim_per_proc = math.ceil(float(middim) / proc_col)
 
     if row == proc_row - 1:
         height_per_proc -= proc_row * height_per_proc - height
-
-    if row == proc_row - 1:
-        middim_per_proc -= proc_row * middim_per_proc - middim
 
     if col == proc_col - 1:
         width_per_proc -= proc_col * width_per_proc - width
@@ -249,6 +246,9 @@ def summa_sparse(adj_matrix, inputs, rank, row, col, size, row_groups, col_group
         else:
             row_src_rank = k + proc_col * row
             col_src_rank = k * proc_col + col
+
+        if k == proc_col - 1:
+            middim_per_proc -= proc_col * middim_per_proc - middim
 
         if row_src_rank == rank:
             # acol = adj_matrix.clone()
@@ -289,7 +289,7 @@ def summa_sparse(adj_matrix, inputs, rank, row, col, size, row_groups, col_group
 
         dist.broadcast(brow, col_src_rank, col_groups[col])
 
-        z_tmp = torch.mm(acol.float(), brow)
+        z_tmp = torch.sparse.mm(acol.float(), brow)
         z_loc += z_tmp
 
     return z_loc
@@ -309,9 +309,6 @@ def summa_loc(mata, matb, rank, row, col, size, row_groups, col_groups,
         height_per_proc -= proc_row * height_per_proc - height
 
     if col == proc_col - 1:
-        middim_per_proc -= proc_col * middim_per_proc - middim
-
-    if col == proc_col - 1:
         width_per_proc -= proc_col * width_per_proc - width
 
     acol = torch.FloatTensor(height_per_proc, middim_per_proc)
@@ -328,6 +325,9 @@ def summa_loc(mata, matb, rank, row, col, size, row_groups, col_groups,
         else:
             row_src_rank = k + proc_col * row
             col_src_rank = k * proc_col + col
+
+        if k == proc_col - 1:
+            middim_per_proc -= proc_col * middim_per_proc - middim
 
         if row_src_rank == rank:
             acol = mata.clone()
@@ -378,7 +378,8 @@ def get_proc_groups(rank, size, transpose):
 
 class GCNFunc(torch.autograd.Function):
     @staticmethod
-    def forward(ctx, inputs, weight, adj_matrix, am_partitions, rank, size, group, func):
+    def forward(ctx, inputs, weight, node_count, adj_matrix, am_partitions, rank, size, group, 
+                        func):
         # inputs: H
         # adj_matrix: A
         # weight: W
@@ -391,6 +392,7 @@ class GCNFunc(torch.autograd.Function):
         rank_col = rank % proc_col
 
         ctx.save_for_backward(inputs, weight, adj_matrix)
+        ctx.node_count = node_count
         ctx.rank = rank
         ctx.size = size
         ctx.group = group
@@ -402,9 +404,7 @@ class GCNFunc(torch.autograd.Function):
 
         # TODO: will need to change height argument when n % sqrt(P) != 0 and non-square grid
         z = summa_sparse(adj_matrix_t, inputs, rank, rank_row, rank_col, size, row_groups, 
-                            col_groups, adj_matrix.size(0) * proc_row_size(size), 
-                            adj_matrix.size(0) * proc_row_size(size), weight.size(0), 
-                            transpose=False);
+                            col_groups, node_count, node_count, weight.size(0), transpose=False)
 
         weight_rows = torch.split(weight, math.ceil(float(weight.size(0)) / proc_row), dim=0)
         weight_parts = []
@@ -414,8 +414,7 @@ class GCNFunc(torch.autograd.Function):
 
         # z = torch.mm(z, weight)
         z = summa_loc(z, weight_parts, rank, rank_row, rank_col, size, row_groups, col_groups, 
-                        adj_matrix.size(0) * proc_row_size(size), weight.size(0), weight.size(1), 
-                        transpose=False)
+                        node_count, weight.size(0), weight.size(1), transpose=False)
 
         z.requires_grad = True
         ctx.z = z
@@ -437,6 +436,7 @@ class GCNFunc(torch.autograd.Function):
         rank = ctx.rank
         size = ctx.size
         group = ctx.group
+        node_count = ctx.node_count
 
         func = ctx.func
         z = ctx.z
@@ -464,9 +464,8 @@ class GCNFunc(torch.autograd.Function):
         # First backprop equation
         # TODO: will need to change height argument when n % sqrt(P) != 0 and non-square grid
         ag = summa_sparse(adj_matrix, grad_output, rank, rank_row, rank_col, size, row_groups, 
-                            col_groups, adj_matrix.size(0) * proc_row_size(size), 
-                            adj_matrix.size(0) * proc_row_size(size), weight.t().size(0), 
-                            transpose=False);
+                            col_groups, node_count, node_count, weight.t().size(0), 
+                            transpose=False)
 
         weight_rows = torch.split(weight.t(), math.ceil(float(weight.t().size(0)) / proc_row), 
                                         dim=0)
@@ -477,19 +476,17 @@ class GCNFunc(torch.autograd.Function):
 
         # grad_input = torch.mm(ag, weight.t())
         grad_input = summa_loc(ag, weight_parts, rank, rank_row, rank_col, size, row_groups, 
-                                    col_groups, adj_matrix.size(0) * proc_row_size(size), 
-                                    weight.t().size(0), weight.t().size(1), transpose=False)
+                                    col_groups, node_count, weight.t().size(0), weight.t().size(1),
+                                    transpose=False)
 
         # Second backprop equation (reuses the A * G^l computation)
         # col_groups twice because of transpose
         # TODO: will need to change height argument when n % sqrt(P) != 0 and non-square grid
 
-        inputs_t = transpose(inputs, rank_row, rank_col, adj_matrix.size(0) * proc_row, 
-                                        weight.size(0), size)
+        inputs_t = transpose(inputs, rank_row, rank_col, node_count, weight.size(0), size)
 
         grad_weight = summa(inputs_t, ag, rank, rank_row, rank_col, size, row_groups, col_groups, 
-                                weight.size(0), adj_matrix.size(0) * proc_row_size(size), 
-                                weight.size(1), transpose=False)
+                                weight.size(0), node_count, weight.size(1), transpose=False)
 
         # Collect grad_weight's across processes
         grad_weight_recv = []
@@ -528,12 +525,15 @@ class GCNFunc(torch.autograd.Function):
                 grad_weight_row = torch.cat((grad_weight_row, grad_weight_recv[rank_wt]), dim=1)
             grad_weight_fin = torch.cat((grad_weight_fin, grad_weight_row), dim=0)
 
-        return grad_input, grad_weight_fin, None, None, None, None, None, None
+        return grad_input, grad_weight_fin, None, None, None, None, None, None, None
 
-def train(inputs, weight1, weight2, adj_matrix, am_partitions, optimizer, data, rank, size, group):
-    outputs = GCNFunc.apply(inputs, weight1, adj_matrix, am_partitions, rank, size, group, F.relu)
-    outputs = GCNFunc.apply(outputs, weight2, adj_matrix, am_partitions, rank, size, group, 
-                                    F.log_softmax)
+def train(inputs, weight1, weight2, node_count, adj_matrix, am_partitions, optimizer, data, rank, 
+                size, group):
+
+    outputs = GCNFunc.apply(inputs, weight1, node_count, adj_matrix, am_partitions, rank, size, 
+                                    group, F.relu)
+    outputs = GCNFunc.apply(outputs, weight2, node_count, adj_matrix, am_partitions, rank, size, 
+                                    group, F.log_softmax)
 
     proc_row = proc_row_size(size)
     proc_col = proc_col_size(size)
@@ -701,7 +701,7 @@ def twod_partition(rank, size, inputs, adj_matrix, data, features, classes, devi
         proc_node_count = vtx_indices[rank_col + 1] - vtx_indices[rank_col]
         am_pbyp, _ = split_coo(am_partitions[rank_col], node_count, n_per_proc, 0)
         for i in range(len(am_pbyp)):
-            if i == size - 1:
+            if i == proc_row - 1:
                 last_node_count = vtx_indices[i + 1] - vtx_indices[i]
                 am_pbyp[i] = torch.sparse_coo_tensor(am_pbyp[i], torch.ones(am_pbyp[i].size(1)), 
                                                         size=(last_node_count, proc_node_count),
@@ -771,9 +771,9 @@ def run(rank, size, inputs, adj_matrix, data, features, classes, device):
         tstart = time.time()
 
     for epoch in range(1, 101):
-    # for epoch in range(1):
-        outputs = train(inputs_loc, weight1, weight2, adj_matrix_loc, am_pbyp, optimizer, data, 
-                                rank, size, group)
+    # for epoch in range(2):
+        outputs = train(inputs_loc, weight1, weight2, inputs.size(0), adj_matrix_loc, am_pbyp, 
+                                optimizer, data, rank, size, group)
         print("Epoch: {:03d}".format(epoch), flush=True)
 
     dist.barrier(group)
