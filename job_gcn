@@ -1,9 +1,10 @@
 #!/bin/bash
 #SBATCH --qos=debug
 #SBATCH --time=00:30:00
-#SBATCH --nodes=16
+#SBATCH --nodes=36
 #SBATCH --tasks-per-node=1
 #SBATCH --constraint=knl
 
 conda activate gcn
+module load pytorch/v1.4.0
 srun -l python gcn_distr_2d.py

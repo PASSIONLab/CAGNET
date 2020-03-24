@@ -40,20 +40,6 @@ def normalize(adj_matrix):
     d = torch.diag(d)
     return torch.mm(d, torch.mm(adj_matrix, d))
 
-def start_time(group, rank):
-    dist.barrier(group)
-    tstart = 0.0
-    if rank == 0:
-        tstart = time.time()
-    return tstart
-
-def stop_time(group, rank, tstart):
-    dist.barrier(group)
-    tstop = 0.0
-    if rank == 0:
-        tstop = time.time()
-    return tstop - tstart
-
 def block_row(adj_matrix, am_partitions, inputs, weight, rank, size):
     n_per_proc = math.ceil(float(adj_matrix.size(1)) / size)
     # n_per_proc = int(adj_matrix.size(1) / size)
@@ -209,18 +195,18 @@ def summa(adj_matrix, inputs, rank, row, col, size, row_groups, col_groups, heig
             middim_per_proc -= proc_col * middim_per_proc - middim
 
         if row_src_rank == rank:
-            acol = adj_matrix
+            acol = adj_matrix.clone()
         else:
             acol = torch.FloatTensor(height_per_proc, middim_per_proc)
         
-        dist.broadcast(acol.contiguous(), row_src_rank, row_groups[row])
+        dist.broadcast(acol, row_src_rank, row_groups[row])
 
         if col_src_rank == rank:
-            brow = inputs
+            brow = inputs.clone()
         else:
             brow = torch.FloatTensor(middim_per_proc, width_per_proc)
 
-        dist.broadcast(brow.contiguous(), col_src_rank, col_groups[col])
+        dist.broadcast(brow, col_src_rank, col_groups[col])
 
         z_loc += torch.mm(acol.float(), brow)
 
@@ -249,6 +235,8 @@ def summa_sparse(adj_matrix, inputs, rank, row, col, size, row_groups, col_group
     brow = torch.FloatTensor(middim_per_proc, width_per_proc)
 
     z_loc = torch.zeros(height_per_proc, width_per_proc, dtype=torch.float)
+
+    adj_matrix = adj_matrix.coalesce()
 
     for k in range(proc_col):
 
@@ -289,20 +277,19 @@ def summa_sparse(adj_matrix, inputs, rank, row, col, size, row_groups, col_group
         dist.broadcast(acol_values, row_src_rank, row_groups[row])
 
         if row_src_rank == rank:
-            acol = adj_matrix
+            acol = adj_matrix.clone()
         else:
             acol = torch.sparse.FloatTensor(acol_indices, acol_values, 
                                             torch.Size([height_per_proc, middim_per_proc]))
 
         if col_src_rank == rank:
-            brow = inputs
+            brow = inputs.clone()
         else:
             brow = torch.FloatTensor(middim_per_proc, width_per_proc)
 
-        dist.broadcast(brow.contiguous(), col_src_rank, col_groups[col])
-        
-        z_tmp = torch.sparse.mm(acol.float(), brow)
+        dist.broadcast(brow, col_src_rank, col_groups[col])
 
+        z_tmp = torch.sparse.mm(acol.float(), brow)
         z_loc += z_tmp
 
     return z_loc
@@ -343,11 +330,11 @@ def summa_loc(mata, matb, rank, row, col, size, row_groups, col_groups,
             middim_per_proc -= proc_col * middim_per_proc - middim
 
         if row_src_rank == rank:
-            acol = mata
+            acol = mata.clone()
         else:
             acol = torch.FloatTensor(height_per_proc, matb[col_src_rank].size(0))
         
-        dist.broadcast(acol.contiguous(), row_src_rank, row_groups[row])
+        dist.broadcast(acol, row_src_rank, row_groups[row])
 
         # if col_src_rank == rank:
         #     brow = matb.clone()
@@ -432,16 +419,25 @@ class GCNFunc(torch.autograd.Function):
         z.requires_grad = True
         ctx.z = z
 
-        # Worry about activation later
-        # if func is F.log_softmax:
-        #     h = func(z, dim=1)
-        # elif func is F.relu:
-        #     h = func(z)
-        # else:
-        #     h = z
+        if func is F.log_softmax:
+            h = torch.log(F.softmax(z, dim=1))
+            print("h after: " + str(h))
+            # means = torch.mean(z, dim=1, keepdim=True)
+            # print("z before: " + str(z))
+            # print("means before: " + str(means))
+            # z = z - means
+            # h = torch.exp(z)
+            # print("h after: " + str(h))
+            # sm_sum = torch.sum(h, dim=1, keepdim=True)
+            # # dist.all_reduce(sm_sum, op=dist.reduce_op.SUM, group=row_groups[rank_row])
+            # h = h / sm_sum
+            # h = torch.log(h)
+        elif func is F.relu:
+            h = func(z)
+        else:
+            h = z
 
-        # return h
-        return z
+        return h
 
     @staticmethod
     def backward(ctx, grad_output):
@@ -454,17 +450,24 @@ class GCNFunc(torch.autograd.Function):
         func = ctx.func
         z = ctx.z
 
-        # Worry about activation later
         # with torch.set_grad_enabled(True):
         #     if func is F.log_softmax:
-        #         func_eval = func(z, dim=1)
+        #         # h = func(z, dim=1)
+        #         maxes = torch.max(z, dim=1, keepdim=True)[0]
+        #         func_eval = torch.exp(z - maxes)
+        #         sm_sum = torch.sum(func_eval, dim=1, keepdim=True)
+        #         # dist.all_reduce(sm_sum, op=dist.reduce_op.SUM, group=row_groups[rank_row])
+        #         func_eval = func_eval / sm_sum
+        #         func_eval = torch.log(func_eval)
         #     elif func is F.relu:
         #         func_eval = func(z)
         #     else:
         #         func_eval = z
 
+        #     print("func_eval: " + str(func_eval))
         #     sigmap = torch.autograd.grad(outputs=func_eval, inputs=z,grad_outputs=grad_output)[0]
         #     grad_output = sigmap
+        #     print("grad_output: " + str(grad_output))
 
         proc_row = proc_row_size(size)
         proc_col = proc_col_size(size)
@@ -777,27 +780,23 @@ def run(rank, size, inputs, adj_matrix, data, features, classes, device):
     inputs_loc, adj_matrix_loc, am_pbyp = twod_partition(rank, size, inputs, adj_matrix, data, 
                                                                 features, classes, device)
 
-    adj_matrix_loc = adj_matrix_loc.coalesce()
-
-    # dist.barrier(group)
-    # tstart = 0.0
-    # tstop = 0.0
-    # if rank == 0:
-    #     tstart = time.time()
-    tstart = start_time(group, rank)
+    dist.barrier(group)
+    tstart = 0.0
+    tstop = 0.0
+    if rank == 0:
+        tstart = time.time()
 
     # for epoch in range(1, 101):
-    for epoch in range(2):
+    for epoch in range(1):
         outputs = train(inputs_loc, weight1, weight2, inputs.size(0), adj_matrix_loc, am_pbyp, 
                                 optimizer, data, rank, size, group)
         print("Epoch: {:03d}".format(epoch), flush=True)
 
-    # dist.barrier(group)
-    # if rank == 0:
-    #     tstop = time.time()
+    dist.barrier(group)
+    if rank == 0:
+        tstop = time.time()
 
-    dur = stop_time(group, rank, tstart)
-    print("Time: " + str(dur))
+    print("Time: " + str(tstop - tstart))
     
     # All-gather outputs to test accuracy
     # output_parts = []
@@ -824,11 +823,11 @@ def init_process(rank, size, inputs, adj_matrix, data, features, classes, device
 
 def main(P, correctness_check):
     print(socket.gethostname())
-    dataset = 'Reddit'
+    dataset = 'Cora'
     path = osp.join(osp.dirname(osp.realpath(__file__)), '..', 'data', dataset)
-    # dataset = Planetoid(path, dataset, T.NormalizeFeatures())
+    dataset = Planetoid(path, dataset, T.NormalizeFeatures())
     # dataset = PPI(path, 'train', T.NormalizeFeatures())
-    dataset = Reddit(path, T.NormalizeFeatures())
+    # dataset = Reddit(path, T.NormalizeFeatures())
     data = dataset[0]
 
     seed = 0

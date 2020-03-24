@@ -2,6 +2,7 @@ __pycache__/
 yoochoose-dats/
 gnn/
 outputs*/
+prof*/
 processed/
 embeddings/
 reddit_coo/

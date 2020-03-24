@@ -125,13 +125,12 @@ def broad_func(adj_matrix, am_partitions, inputs, rank, size, group):
 class GCNFunc(torch.autograd.Function):
     @staticmethod
     def forward(ctx, inputs, weight, adj_matrix, am_partitions, rank, size, group, func):
-        print("in forward", flush=True)
         # inputs: H
         # adj_matrix: A
         # weight: W
         # func: sigma
 
-        adj_matrix = adj_matrix.to_dense()
+        # adj_matrix = adj_matrix.to_dense()
         ctx.save_for_backward(inputs, weight, adj_matrix)
         ctx.rank = rank
         ctx.size = size
@@ -165,16 +164,16 @@ class GCNFunc(torch.autograd.Function):
         func = ctx.func
         z = ctx.z
 
-        with torch.set_grad_enabled(True):
-            if func is F.log_softmax:
-                func_eval = func(z, dim=1)
-            elif func is F.relu:
-                func_eval = func(z)
-            else:
-                func_eval = z
+        # with torch.set_grad_enabled(True):
+        #     if func is F.log_softmax:
+        #         func_eval = func(z, dim=1)
+        #     elif func is F.relu:
+        #         func_eval = func(z)
+        #     else:
+        #         func_eval = z
 
-            sigmap = torch.autograd.grad(outputs=func_eval, inputs=z, grad_outputs=grad_output)[0]
-            grad_output = sigmap
+        #     sigmap = torch.autograd.grad(outputs=func_eval, inputs=z, grad_outputs=grad_output)[0]
+        #     grad_output = sigmap
 
         # First backprop equation
         ag = outer_product(adj_matrix, grad_output, rank, size, group)
@@ -183,7 +182,6 @@ class GCNFunc(torch.autograd.Function):
         # Second backprop equation (reuses the A * G^l computation)
         grad_weight = outer_product2(inputs.t(), ag, rank, size, group)
 
-        print(grad_input)
         return grad_input, grad_weight, None, None, None, None, None, None
 
 def train(inputs, weight1, weight2, adj_matrix, am_partitions, optimizer, data, rank, size, group):
@@ -359,8 +357,8 @@ def run(rank, size, inputs, adj_matrix, data, features, classes, device):
 
     optimizer = torch.optim.Adam([weight1, weight2], lr=0.01)
 
-    inputs_loc, adj_matrix_loc, am_pbyp = oned_partition(rank, size, inputs, adj_matrix, data, features, 
-                                                                classes, device)
+    inputs_loc, adj_matrix_loc, am_pbyp = oned_partition(rank, size, inputs, adj_matrix, data, 
+                                                                features, classes, device)
     dist.barrier(group)
     tstart = 0.0
     tstop = 0.0
@@ -368,7 +366,7 @@ def run(rank, size, inputs, adj_matrix, data, features, classes, device):
         tstart = time.time()
 
     # for epoch in range(1, 201):
-    for epoch in range(1):
+    for epoch in range(2):
         outputs = train(inputs_loc, weight1, weight2, adj_matrix_loc, am_pbyp, optimizer, data, 
                                 rank, size, group)
         print("Epoch: {:03d}".format(epoch), flush=True)
@@ -404,11 +402,11 @@ def init_process(rank, size, inputs, adj_matrix, data, features, classes, device
 
 def main(P, correctness_check):
     print(socket.gethostname())
-    dataset = 'Cora'
+    dataset = 'Reddit'
     path = osp.join(osp.dirname(osp.realpath(__file__)), '..', 'data', dataset)
-    dataset = Planetoid(path, dataset, T.NormalizeFeatures())
+    # dataset = Planetoid(path, dataset, T.NormalizeFeatures())
     # dataset = PPI(path, 'train', T.NormalizeFeatures())
-    # dataset = Reddit(path, T.NormalizeFeatures())
+    dataset = Reddit(path, T.NormalizeFeatures())
     data = dataset[0]
 
     seed = 0
@@ -436,8 +434,8 @@ def main(P, correctness_check):
     size = dist.get_world_size()
     print("Processes: " + str(size))
 
-    init_process(rank, size, inputs, adj_matrix, data, dataset.num_features, dataset.num_classes, device, 
-                        outputs, run)
+    init_process(rank, size, inputs, adj_matrix, data, dataset.num_features, dataset.num_classes, 
+                    device, outputs, run)
 
     if outputs is not None:
         return outputs[0]
