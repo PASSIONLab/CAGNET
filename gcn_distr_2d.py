@@ -787,7 +787,7 @@ def run(rank, size, inputs, adj_matrix, data, features, classes, device):
     tstart = start_time(group, rank)
 
     # for epoch in range(1, 101):
-    for epoch in range(2):
+    for epoch in range(1):
         outputs = train(inputs_loc, weight1, weight2, inputs.size(0), adj_matrix_loc, am_pbyp, 
                                 optimizer, data, rank, size, group)
         print("Epoch: {:03d}".format(epoch), flush=True)
@@ -824,11 +824,11 @@ def init_process(rank, size, inputs, adj_matrix, data, features, classes, device
 
 def main(P, correctness_check):
     print(socket.gethostname())
-    dataset = 'Reddit'
+    dataset = 'Cora'
     path = osp.join(osp.dirname(osp.realpath(__file__)), '..', 'data', dataset)
-    # dataset = Planetoid(path, dataset, T.NormalizeFeatures())
+    dataset = Planetoid(path, dataset, T.NormalizeFeatures())
     # dataset = PPI(path, 'train', T.NormalizeFeatures())
-    dataset = Reddit(path, T.NormalizeFeatures())
+    # dataset = Reddit(path, T.NormalizeFeatures())
     data = dataset[0]
 
     seed = 0
@@ -851,7 +851,7 @@ def main(P, correctness_check):
         adj_matrix = edge_index
 
     outputs = None
-    dist.init_process_group(backend='mpi')
+    dist.init_process_group(backend='gloo')
     rank = dist.get_rank()
     size = dist.get_world_size()
     print("Processes: " + str(size))
