@@ -30,6 +30,9 @@ import socket
 import time
 import numpy as np
 
+comp_time = 0.0
+comm_time = 0.0
+
 normalization = False
 no_occur_val = 42.1234
 
@@ -176,6 +179,9 @@ def transpose(mat, row, col, height, width, size):
 def summa(adj_matrix, inputs, rank, row, col, size, row_groups, col_groups, height, middim, 
             width, transpose):
 
+    global comm_time
+    global comp_time
+
     proc_row = proc_row_size(size)
     proc_col = proc_col_size(size)
 
@@ -213,21 +219,39 @@ def summa(adj_matrix, inputs, rank, row, col, size, row_groups, col_groups, heig
         else:
             acol = torch.FloatTensor(height_per_proc, middim_per_proc)
         
+        tstart = start_time(row_groups[row], rank)
+
         dist.broadcast(acol.contiguous(), row_src_rank, row_groups[row])
+
+        dur = stop_time(row_groups[row], rank, tstart)
+        comm_time += dur
 
         if col_src_rank == rank:
             brow = inputs
         else:
             brow = torch.FloatTensor(middim_per_proc, width_per_proc)
 
+        tstart = start_time(col_groups[col], rank)
+
         dist.broadcast(brow.contiguous(), col_src_rank, col_groups[col])
 
+        dur = stop_time(col_groups[col], rank, tstart)
+        comm_time += dur
+
+        tstart = start_time(col_groups[0], rank)
+
         z_loc += torch.mm(acol.float(), brow)
+
+        dur = stop_time(col_groups[0], rank, tstart)
+        comp_time += dur
 
     return z_loc
 
 def summa_sparse(adj_matrix, inputs, rank, row, col, size, row_groups, col_groups, height, middim, 
                     width, transpose):
+
+    global comm_time
+    global comp_time
 
     proc_row = proc_row_size(size)
     proc_col = proc_col_size(size)
@@ -284,9 +308,14 @@ def summa_sparse(adj_matrix, inputs, rank, row, col, size, row_groups, col_group
             acol_indices = torch.zeros(2, acol_indices_len, dtype=torch.int64) 
             acol_values = torch.zeros(acol_values_len, dtype=torch.float32) 
         
+        tstart = start_time(row_groups[row], rank)
+
         dist.broadcast(acol_indices[0], row_src_rank, row_groups[row])
         dist.broadcast(acol_indices[1], row_src_rank, row_groups[row])
         dist.broadcast(acol_values, row_src_rank, row_groups[row])
+
+        dur = stop_time(row_groups[row], rank, tstart)
+        comm_time += dur
 
         if row_src_rank == rank:
             acol = adj_matrix
@@ -299,9 +328,19 @@ def summa_sparse(adj_matrix, inputs, rank, row, col, size, row_groups, col_group
         else:
             brow = torch.FloatTensor(middim_per_proc, width_per_proc)
 
+        tstart = start_time(col_groups[col], rank)
+
         dist.broadcast(brow.contiguous(), col_src_rank, col_groups[col])
+
+        dur = stop_time(col_groups[col], rank, tstart)
+        comm_time += dur
         
+        tstart = start_time(col_groups[0], rank)
+
         z_tmp = torch.sparse.mm(acol.float(), brow)
+
+        dur = stop_time(col_groups[0], rank, tstart)
+        comp_time += dur
 
         z_loc += z_tmp
 
@@ -309,6 +348,9 @@ def summa_sparse(adj_matrix, inputs, rank, row, col, size, row_groups, col_group
 
 def summa_loc(mata, matb, rank, row, col, size, row_groups, col_groups, 
                     height, middim, width, transpose):
+
+    global comm_time
+    global comp_time
 
     proc_row = proc_row_size(size)
     proc_col = proc_col_size(size)
@@ -348,7 +390,12 @@ def summa_loc(mata, matb, rank, row, col, size, row_groups, col_groups,
         else:
             acol = torch.FloatTensor(height_per_proc, matb[col_src_rank].size(0))
         
+        tstart = start_time(row_groups[row], rank)
+
         dist.broadcast(acol.contiguous(), row_src_rank, row_groups[row])
+
+        dur = stop_time(row_groups[row], rank, tstart)
+        comm_time += dur
 
         # if col_src_rank == rank:
         #     brow = matb.clone()
@@ -358,7 +405,13 @@ def summa_loc(mata, matb, rank, row, col, size, row_groups, col_groups,
         # dist.broadcast(brow, col_src_rank, col_groups[col])
 
         brow = matb[col_src_rank]
+
+        tstart = start_time(row_groups[0], rank)
+
         z_loc += torch.mm(acol, brow)
+
+        dur = stop_time(row_groups[0], rank, tstart)
+        comp_time += dur
 
     return z_loc
 
@@ -751,6 +804,9 @@ def twod_partition(rank, size, inputs, adj_matrix, data, features, classes, devi
     return inputs_loc, adj_matrix_loc, am_pbyp
 
 def run(rank, size, inputs, adj_matrix, data, features, classes, device):
+    global comm_time
+    global comp_time
+
     best_val_acc = test_acc = 0
     outputs = None
     group = dist.new_group(list(range(size)))
@@ -796,6 +852,10 @@ def run(rank, size, inputs, adj_matrix, data, features, classes, device):
 
     dur = stop_time(group, rank, tstart)
     print("Time: " + str(dur))
+
+    if rank == 0:
+        print("comm_time: " + str(comm_time))
+        print("comp_time: " + str(comp_time))
     
     # All-gather outputs to test accuracy
     # output_parts = []
@@ -822,11 +882,11 @@ def init_process(rank, size, inputs, adj_matrix, data, features, classes, device
 
 def main(P, correctness_check):
     print(socket.gethostname())
-    dataset = 'Cora'
+    dataset = 'Reddit'
     path = osp.join(osp.dirname(osp.realpath(__file__)), '..', 'data', dataset)
-    dataset = Planetoid(path, dataset, T.NormalizeFeatures())
+    # dataset = Planetoid(path, dataset, T.NormalizeFeatures())
     # dataset = PPI(path, 'train', T.NormalizeFeatures())
-    # dataset = Reddit(path, T.NormalizeFeatures())
+    dataset = Reddit(path, T.NormalizeFeatures())
     data = dataset[0]
 
     seed = 0
