@@ -147,6 +147,7 @@ def broad_func(adj_matrix, am_partitions, inputs, rank, size, group):
 
 
 def transpose(mat, row, col, height, width, size):
+    print("in transpose", flush=True)
     proc_row = proc_row_size(size)
     proc_col = proc_col_size(size)
 
@@ -160,65 +161,271 @@ def transpose(mat, row, col, height, width, size):
     log_part_rowsize = int(math.ceil(mat.size(0) / k_pr))
     log_part_colsize = int(math.ceil(mat.size(1) / k_pc))
 
-    mat_part = list(torch.split(mat, log_part_rowsize, dim=0))
+    height_per_col = int(math.ceil(height / log_dim))
+    width_per_row = int(math.ceil(width / log_dim))
+
+    mat = mat.t()
+    mat_part = list(torch.split(mat, log_part_colsize, dim=0))
     
     for i in range(len(mat_part)):
-        mat_part[i] = list(torch.split(mat_part[i], log_part_colsize, dim=1))
+        mat_part[i] = list(torch.split(mat_part[i], log_part_rowsize, dim=1))
 
     log_part_rowc = len(mat_part)
     log_part_colc = len(mat_part[0])
-
-    dst_procs = [[0] * log_part_colc for _ in range(log_part_rowc)]
     
-    for i in range(log_part_rowc):
-        for j in range(log_part_colc):
-           log_row = row * log_part_rowc + i
-           log_col = col * log_part_colc + j
-           
-           rank_row_t = log_col // log_part_rowc
-           rank_col_t = log_row // log_part_colc
+    # dst_procs = [[0] * log_part_colc for _ in range(log_part_rowc)]
+    dst_procs = [[0] * log_dim for _ in range(log_dim)]
+
+    min_row = col * int(math.ceil(width / proc_col))
+    min_col = row * int(math.ceil(height / proc_row))
+
+    log_min_rows = [0] * (log_part_rowc + 1)
+    log_min_cols = [0] * (log_part_colc + 1)
+
+    curr_min_row = min_row
+    log_min_rows[0] = min_row
+    for i in range(1, log_part_rowc + 1):
+        curr_min_row += mat_part[i - 1][0].size(0)
+        log_min_rows[i] = curr_min_row
+
+    curr_min_col = min_col
+    log_min_cols[0] = min_col
+    for i in range(1, log_part_colc + 1):
+        curr_min_col += mat_part[0][i - 1].size(1)
+        log_min_cols[i] = curr_min_col
+
+    print("log_min_rows: " + str(log_min_rows), flush=True)
+    print("log_min_cols: " + str(log_min_cols), flush=True)
+
+    proc_min_rows = [0] * (log_part_colc + 1)
+    proc_min_cols = [0] * (log_part_rowc + 1)
+
+    height_per_proc = int(math.ceil(height) / proc_col)
+    width_per_proc = int(math.ceil(width) / proc_row)
+
+    if row == proc_row - 1:
+        width_per_proc -= width_per_proc * proc_row - width
+
+    if col == proc_col - 1:
+        height_per_proc -= height_per_proc * proc_col - height
+
+    min_row = row * int(math.ceil(width / proc_row))
+    curr_min_row = min_row
+    proc_min_rows[0] = min_row
+    for i in range(1, log_part_colc + 1):
+        curr_min_row = min(width, curr_min_row + int(math.ceil(width_per_proc / k_pr)))
+        proc_min_rows[i] = curr_min_row
+
+    min_col = col * int(math.ceil(height / proc_col))
+    curr_min_col = min_col
+    proc_min_cols[0] = min_col
+    for i in range(1, log_part_rowc + 1):
+        curr_min_col = min(height, curr_min_col + int(math.ceil(height_per_proc / k_pc)))
+        proc_min_cols[i] = curr_min_col
+
+    print("proc_min_rows: " + str(proc_min_rows), flush=True)
+    print("proc_min_cols: " + str(proc_min_cols), flush=True)
+
+    # proc id's for transposed process grid
+    for i in range(log_dim):
+        for j in range(log_dim):
+           rank_row_t = j // log_part_colc
+           rank_col_t = i // log_part_rowc
            
            dst_procs[i][j] = rank_row_t * proc_col + rank_col_t 
-
-    recv_procs = []
-    for i in range(log_part_rowc):
-        recv_procs.append([])
-
-    for i in range(log_part_rowc):
-        for j in range(log_part_colc):
-            log_col_t = row * log_part_rowc + i
-            log_row_t = col * log_part_colc + j
-
-            recv_rowsize = int(math.ceil(width / log_dim))
-            recv_colsize = int(math.ceil(height / log_dim))
-
-            if log_col_t == log_dim - 1:
-                recv_rowsize -= log_dim * recv_rowsize  - width
-            if log_row_t == log_dim - 1:
-                recv_colsize -= log_dim * recv_colsize - height
-
-            recv_procs[i].append(torch.Tensor(recv_rowsize, recv_colsize))
-
-    for i in range(log_part_rowc):
-        for j in range(log_part_colc):
-            dst_proc = dst_procs[i][j]
-
-            if rank == dst_proc:
-                recv_procs[i][j] = mat_part[i][j].t().contiguous()
-            elif rank < dst_proc:
-                dist.send(tensor=mat_part[i][j].t().contiguous(), dst=dst_proc)
-                dist.recv(tensor=recv_procs[i][j].contiguous(), src=dst_proc)
-            else:
-                dist.recv(tensor=recv_procs[i][j], src=dst_proc)
-                dist.send(tensor=mat_part[i][j].t().contiguous(), dst=dst_proc)
     
+
+    mat_recv_grid = [[None] * log_part_rowc for _ in range(log_part_colc)]
+
+    # Iterate over final logical grid
+    for i in range(log_part_colc):
+        for j in range(log_part_rowc):
+            # Send data sizes to receive to dst_procs
+            log_row = row * log_part_colc + i
+            log_col = col * log_part_rowc + j
+
+            # min_row_t = torch.tensor(log_row * width_per_row)
+            # max_row_t = torch.tensor(min(width, (log_row + 1) * width_per_row))
+
+            # min_col_t = torch.tensor(log_col * height_per_col)
+            # max_col_t = torch.tensor(min(height, (log_col + 1) * height_per_col))
+           
+            min_row_t = torch.tensor(proc_min_rows[i])
+            max_row_t = torch.tensor(proc_min_rows[i + 1])
+            min_col_t = torch.tensor(proc_min_cols[j])
+            max_col_t = torch.tensor(proc_min_cols[j + 1])
+
+            dst_proc = dst_procs[log_row][log_col]
+
+            log_mat_recv = torch.Tensor((max_row_t - min_row_t), (max_col_t - min_col_t))
+
+            send_min_row_t = torch.tensor(0)
+            send_max_row_t = torch.tensor(0)
+            send_min_col_t = torch.tensor(0)
+            send_max_col_t = torch.tensor(0)
+
+            print("data sending... " + str(dst_proc), flush=True)
+            if rank == dst_proc:
+                send_min_row_t = min_row_t
+                send_max_row_t = max_row_t
+                send_min_col_t = min_col_t
+                send_max_col_t = max_col_t
+            elif rank < dst_proc:
+                dist.send(tensor=min_row_t, dst=dst_proc)
+                dist.send(tensor=max_row_t, dst=dst_proc)
+                dist.send(tensor=min_col_t, dst=dst_proc)
+                dist.send(tensor=max_col_t, dst=dst_proc)
+
+                dist.recv(tensor=send_min_row_t, src=dst_proc)
+                dist.recv(tensor=send_max_row_t, src=dst_proc)
+                dist.recv(tensor=send_min_col_t, src=dst_proc)
+                dist.recv(tensor=send_max_col_t, src=dst_proc)
+            else:
+                dist.recv(tensor=send_min_row_t, src=dst_proc)
+                dist.recv(tensor=send_max_row_t, src=dst_proc)
+                dist.recv(tensor=send_min_col_t, src=dst_proc)
+                dist.recv(tensor=send_max_col_t, src=dst_proc)
+
+                dist.send(tensor=min_row_t, dst=dst_proc)
+                dist.send(tensor=max_row_t, dst=dst_proc)
+                dist.send(tensor=min_col_t, dst=dst_proc)
+                dist.send(tensor=max_col_t, dst=dst_proc)
+
+            send_min_row_t = send_min_row_t.item()
+            send_max_row_t = send_max_row_t.item()
+            send_min_col_t = send_min_col_t.item()
+            send_max_col_t = send_max_col_t.item()
+            print("done data sending", flush=True)
+           
+            print("rank: " + str(rank) + " dst_proc: " + str(dst_proc), flush=True)
+            print(str(log_row) + " " + str(log_col) + " " + str(i) + " " + str(j), flush=True)
+            print(str(send_min_row_t) + " " + str(send_max_row_t) + " " + str(send_min_col_t) + " " + str(send_max_col_t), flush=True)
+
+            curr_min_row_t = log_min_rows[j]
+            curr_max_row_t = log_min_rows[j + 1]
+            curr_min_col_t = log_min_cols[i]
+            curr_max_col_t = log_min_cols[i + 1]
+
+            print(str(curr_min_row_t) + " " + str(curr_max_row_t) + " " + str(curr_min_col_t) + " " + str(curr_max_col_t), flush=True)
+            print("row sending...", flush=True)
+            recv_row_min = None
+            recv_row_max = None
+            recv_col_min = None
+            recv_col_max = None
+            if send_min_row_t > curr_min_row_t and j == 0:
+                row_diff = send_min_row_t - curr_min_row_t
+                send_tensor = mat_part[j][i][0:row_diff].contiguous()
+                dist.send(tensor=send_tensor, dst=rank - 1)
+
+            if send_max_row_t < curr_max_row_t and j == log_part_rowc - 1:
+                row_diff = curr_max_row_t - send_max_row_t
+                send_tensor = mat_part[j][i][-row_diff:].contiguous()
+                dist.send(tensor=send_tensor, dst=rank + 1)
+
+            if send_min_row_t < curr_min_row_t:
+                row_diff = curr_min_row_t - send_min_row_t
+                if j > 0:
+                    recv_tensor = mat_part[j - 1][i][-row_diff:].contiguous()
+                    recv_row_min = recv_tensor
+                else:
+                    recv_tensor = torch.Tensor(row_diff, mat_part[j][i].size(1))
+                    dist.recv(tensor=recv_tensor, src=rank - 1)
+                    recv_row_min = recv_tensor
+
+            if send_max_row_t > curr_max_row_t:
+                row_diff = send_max_row_t - curr_max_row_t
+                if j < log_part_rowc - 1:
+                    recv_tensor = mat_part[j + 1][i][0:row_diff].contiguous()
+                    recv_row_max = recv_tensor
+                else:
+                    recv_tensor = torch.Tensor(row_diff, mat_part[j][i].size(1))
+                    dist.recv(tensor=recv_tensor, src=rank + 1)
+                    recv_row_max = recv_tensor
+
+            print("col sending...", flush=True)
+            if send_min_col_t > curr_min_col_t and i == 0:
+                col_diff = send_min_col_t - curr_min_col_t
+                send_tensor = mat_part[j][i][:,0:col_diff].contiguous()
+                dist.send(tensor=send_tensor, dst=rank - proc_col)
+
+            if send_max_col_t < curr_max_col_t and i == log_part_colc - 1:
+                col_diff = curr_max_col_t - send_max_col_t
+                send_tensor = mat_part[j][i][:,-col_diff:].contiguous()
+                dist.send(tensor=send_tensor, dst=rank + proc_col)
+
+            if send_min_col_t < curr_min_col_t:
+                col_diff = curr_min_col_t - send_min_col_t
+                if i > 0:
+                    recv_tensor = mat_part[j][i - 1][:,-col_diff:].contiguous()
+                    recv_col_min = recv_tensor
+                else:
+                    recv_tensor = torch.Tensor(mat_part[j][i].size(0), col_diff)
+                    dist.recv(tensor=recv_tensor, src=rank - proc_col)
+                    recv_col_min = recv_tensor
+
+            if send_max_col_t > curr_max_col_t:
+                col_diff = send_max_col_t - curr_max_col_t
+                if i < log_part_colc - 1:
+                    recv_tensor = mat_part[j][i + 1][:,0:col_diff].contiguous()
+                    recv_col_max = recv_tensor
+                else:
+                    recv_tensor = torch.Tensor(mat_part[j][i].size(1), col_diff)
+                    dist.recv(tensor=recv_tensor, src=rank + proc_col)
+                    recv_col_max = recv_tensor
+
+            print(str(recv_row_min is None) + " " + str(recv_row_max is None) + " " + str(recv_col_min is None) + " " + str(recv_col_max is None), flush=True)
+
+            log_mat_send = mat_part[j][i]
+            if recv_row_min is not None:
+                log_mat_send = torch.cat((recv_row_min, log_mat_send), dim=0)
+
+            if recv_row_max is not None:
+                log_mat_send = torch.cat((log_mat_send, recv_row_max), dim=0)
+
+            if recv_col_min is not None:
+                log_mat_send = torch.cat((recv_col_min, log_mat_send), dim=1)
+
+            if recv_col_max is not None:
+                log_mat_send = torch.cat((log_mat_send, recv_col_max), dim=1)
+
+
+            # Slice off unneeded rows/cols
+            if curr_min_row_t < send_min_row_t:
+                row_diff = send_min_row_t - curr_min_row_t
+                log_mat_send = log_mat_send[row_diff:]
+
+            if curr_max_row_t > send_max_row_t:
+                row_diff = curr_max_row_t - send_max_row_t
+                log_mat_send = log_mat_send[:-row_diff]
+
+            if curr_min_col_t < send_min_col_t:
+                col_diff = send_min_col_t - curr_min_col_t
+                log_mat_send = log_mat_send[:,col_diff:]
+
+            if curr_max_col_t > send_max_col_t:
+                col_diff = curr_max_col_t - send_max_col_t
+                log_mat_send = log_mat_send[:,:-col_diff]
+
+            print("log_mat_send.size: " + str(log_mat_send.size()) + " " + str(dst_proc), flush=True)
+            print("log_mat_recv.size: " + str(log_mat_recv.size()), flush=True)
+            if rank == dst_proc:
+                log_mat_recv = log_mat_send
+            elif rank < dst_proc:
+                dist.send(tensor=log_mat_send.contiguous(), dst=dst_proc)
+                dist.recv(tensor=log_mat_recv, src=dst_proc)
+            else:
+                dist.recv(tensor=log_mat_recv, src=dst_proc)
+                dist.send(tensor=log_mat_send.contiguous(), dst=dst_proc)
+
+            mat_recv_grid[i][j] = log_mat_recv
+
     mat_recv_rows = []
-    for i in range(log_part_rowc):
-        print("recv_procs: " + str(len(recv_procs[i])), flush=True)
-        mat_recv_rows.append(torch.cat(tuple(recv_procs[i]), dim=1))
+    for i in range(len(mat_recv_grid)):
+        mat_recv_rows.append(torch.cat(tuple(mat_recv_grid[i]), dim=1))
 
     mat_recv = torch.cat(tuple(mat_recv_rows), dim=0)
-    
+
+    print("mat_recv.size: " + str(mat_recv.size()), flush=True)
     return mat_recv
 
 def summa(adj_matrix, inputs, rank, row, col, size, row_groups, col_groups, height, middim, 
@@ -286,7 +493,7 @@ def summa_rect(adj_matrix, inputs, rank, row, col, size, row_groups, col_groups,
     middim_per_row  = int(math.ceil(float(middim) / proc_row))
     middim_per_col  = int(math.ceil(float(middim) / proc_col))
 
-    block_size = 1
+    block_size = math.gcd(middim_per_row, middim_per_col)
 
     if row == proc_row - 1:
         height_per_proc -= proc_row * height_per_proc - height
@@ -300,13 +507,16 @@ def summa_rect(adj_matrix, inputs, rank, row, col, size, row_groups, col_groups,
 
     z_loc = torch.zeros(height_per_proc, width_per_proc)
 
-    for k in range(middim):
+    if middim % block_size != 0:
+        print("ERROR middim: " + str(middim) + " block_size: " + str(block_size))
 
-        row_src_rank = row * proc_col + int(k / middim_per_col)
-        col_src_rank = col + int(k / middim_per_row) * proc_col
+    for k in range(int(middim / block_size)):
+
+        row_src_rank = row * proc_col + int((k * block_size) / middim_per_col)
+        col_src_rank = col + int((k * block_size) / middim_per_row) * proc_col
 
         if row_src_rank == rank:
-            local_k = k % middim_per_col
+            local_k = (k * block_size) % middim_per_col
             acol = adj_matrix.narrow(1, local_k, block_size)
         else:
             acol = torch.FloatTensor(height_per_proc, block_size)
@@ -314,7 +524,7 @@ def summa_rect(adj_matrix, inputs, rank, row, col, size, row_groups, col_groups,
         dist.broadcast(acol.contiguous(), row_src_rank, row_groups[row])
 
         if col_src_rank == rank:
-            local_k = k % middim_per_row
+            local_k = (k * block_size) % middim_per_row
             brow = inputs.narrow(0, local_k, block_size)
         else:
             brow = torch.FloatTensor(block_size, width_per_proc)
@@ -601,6 +811,7 @@ class GCNFunc(torch.autograd.Function):
         # TODO: will need to change height argument when n % sqrt(P) != 0 and non-square grid
 
         inputs_t = transpose(inputs, rank_row, rank_col, node_count, weight.size(0), size)
+        print("inputs_t.size: " + str(inputs_t.size()), flush=True)
 
         # grad_weight = summa(inputs_t, ag, rank, rank_row, rank_col, size, row_groups, col_groups, 
         #                         weight.size(0), node_count, weight.size(1), transpose=False)

@@ -16,11 +16,11 @@ parser.add_argument('--use_gdc', action='store_true',
                     help='Use GDC preprocessing.')
 args = parser.parse_args()
 
-dataset = 'Cora'
+dataset = 'Reddit'
 path = osp.join(osp.dirname(osp.realpath(__file__)), '..', 'data', dataset)
-dataset = Planetoid(path, dataset, T.NormalizeFeatures())
+# dataset = Planetoid(path, dataset, T.NormalizeFeatures())
 # dataset = PPI(path, 'train', T.NormalizeFeatures())
-# dataset = Reddit(path, T.NormalizeFeatures())
+dataset = Reddit(path, T.NormalizeFeatures())
 data = dataset[0]
 
 seed = 0
