@@ -1,10 +1,12 @@
 #!/bin/bash
-#SBATCH --qos=debug
-#SBATCH --time=00:30:00
-#SBATCH --nodes=36
-#SBATCH --tasks-per-node=1
-#SBATCH --constraint=knl
+#BSUB -P BIF115
+#BSUB -W 2:00
+#BSUB -nnodes 1
+#BSUB -alloc_flags gpumps
+#BSUB -J distr-gnn
+#BSUB -o distr-gnn.%J
+#BSUB -e distr-gnn.%J
 
-conda activate gcn
-module load pytorch/v1.4.0
-srun -l python gcn_distr_2d.py
+conda activate gnn
+python -m torch.distributed.launch --nproc_per_node=1 gcn_distr_2d.py --local_rank=0
+# ddlrun -accelerators 1 python gcn_distr_2d.py 
