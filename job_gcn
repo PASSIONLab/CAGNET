@@ -1,12 +1,14 @@
 #!/bin/bash
 #BSUB -P BIF115
-#BSUB -W 2:00
-#BSUB -nnodes 1
+#BSUB -W 0:30
+#BSUB -nnodes 4
 #BSUB -alloc_flags gpumps
 #BSUB -J distr-gnn
 #BSUB -o distr-gnn.%J
 #BSUB -e distr-gnn.%J
 
 conda activate gnn
-python -m torch.distributed.launch --nproc_per_node=1 gcn_distr_2d.py --local_rank=0
-# ddlrun -accelerators 1 python gcn_distr_2d.py 
+
+hostarr=(${LSB_HOSTS})
+echo ${hostarr[1]}
+ddlrun -x WORLD_SIZE=4 -x MASTER_ADDR=${hostarr[1]} -x MASTER_PORT=1234 -accelerators 1 python gcn_distr_2d_gpu.py

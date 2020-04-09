@@ -7,8 +7,6 @@ import math
 import torch
 import torch.distributed as dist
 
-import horovod as hvd
-
 from torch_geometric.datasets import Planetoid, PPI, Reddit
 from torch_geometric.nn import GCNConv, ChebConv  # noqa
 from torch_geometric.utils import (
@@ -167,16 +165,28 @@ def transpose(mat, row, col, height, width, size):
     if col == proc_col - 1:
         width_recv -= proc_col * width_recv - height
 
-    mat_recv = torch.FloatTensor(height_recv, width_recv)
+    mat_recv = torch.cuda.FloatTensor(height_recv, width_recv)
+
+    # if rank < rank_t:
+    #     dist.send(tensor=mat.t().contiguous(), dst=rank_t)
+    #     dist.recv(tensor=mat_recv, src=rank_t)
+    # else:
+    #     dist.recv(tensor=mat_recv, src=rank_t)
+    #     dist.send(tensor=mat.t().contiguous(), dst=rank_t)
+
+    transpose_group = dist.new_group([rank, rank_t])
+
+    mat_recvs = [mat.t().contiguous(), mat_recv]
 
     if rank < rank_t:
-        dist.send(tensor=mat.t().contiguous(), dst=rank_t)
-        dist.recv(tensor=mat_recv, src=rank_t)
+        dist.broadcast(mat_recvs[0], src=rank, group=transpose_group)
+        dist.broadcast(mat_recvs[1], src=rank_t, group=transpose_group)
     else:
-        dist.recv(tensor=mat_recv, src=rank_t)
-        dist.send(tensor=mat.t().contiguous(), dst=rank_t)
+        dist.broadcast(mat_recvs[1], src=rank_t, group=transpose_group)
+        dist.broadcast(mat_recvs[0], src=rank, group=transpose_group)
 
-    return mat_recv
+
+    return mat_recvs[1]
 
 def summa(adj_matrix, inputs, rank, row, col, size, row_groups, col_groups, height, middim, 
             width, transpose):
@@ -198,9 +208,9 @@ def summa(adj_matrix, inputs, rank, row, col, size, row_groups, col_groups, heig
     if col == proc_col - 1:
         width_per_proc -= proc_col * width_per_proc - width
 
-    acol = torch.FloatTensor(height_per_proc, middim_per_proc)
+    acol = torch.cuda.FloatTensor(height_per_proc, middim_per_proc)
 
-    brow = torch.FloatTensor(middim_per_proc, width_per_proc)
+    brow = torch.cuda.FloatTensor(middim_per_proc, width_per_proc)
 
     z_loc = torch.cuda.FloatTensor(height_per_proc, width_per_proc).fill_(0)
 
@@ -219,7 +229,7 @@ def summa(adj_matrix, inputs, rank, row, col, size, row_groups, col_groups, heig
         if row_src_rank == rank:
             acol = adj_matrix
         else:
-            acol = torch.FloatTensor(height_per_proc, middim_per_proc)
+            acol = torch.cuda.FloatTensor(height_per_proc, middim_per_proc)
         
         tstart = start_time(row_groups[row], rank)
 
@@ -231,7 +241,7 @@ def summa(adj_matrix, inputs, rank, row, col, size, row_groups, col_groups, heig
         if col_src_rank == rank:
             brow = inputs
         else:
-            brow = torch.FloatTensor(middim_per_proc, width_per_proc)
+            brow = torch.cuda.FloatTensor(middim_per_proc, width_per_proc)
 
         tstart = start_time(col_groups[col], rank)
 
@@ -240,11 +250,11 @@ def summa(adj_matrix, inputs, rank, row, col, size, row_groups, col_groups, heig
         dur = stop_time(col_groups[col], rank, tstart)
         comm_time += dur
 
-        tstart = start_time(col_groups[0], rank)
+        tstart = start_time(row_groups[0], rank)
 
         z_loc += torch.mm(acol.float(), brow)
 
-        dur = stop_time(col_groups[0], rank, tstart)
+        dur = stop_time(row_groups[0], rank, tstart)
         comp_time += dur
 
     return z_loc
@@ -270,7 +280,7 @@ def summa_sparse(adj_matrix, inputs, rank, row, col, size, row_groups, col_group
     if col == proc_col - 1:
         width_per_proc -= proc_col * width_per_proc - width
 
-    acol = torch.sparse.FloatTensor(height_per_proc, middim_per_proc)
+    acol = torch.cuda.sparse.FloatTensor(height_per_proc, middim_per_proc)
 
     brow = torch.FloatTensor(middim_per_proc, width_per_proc)
 
@@ -290,12 +300,12 @@ def summa_sparse(adj_matrix, inputs, rank, row, col, size, row_groups, col_group
 
         if row_src_rank == rank:
             # acol = adj_matrix.clone()
-            acol_indices_len = torch.cuda.FloatTensor([len(adj_matrix.indices()[0])])
-            acol_values_len = torch.cuda.FloatTensor([len(adj_matrix.values())])
+            acol_indices_len = torch.cuda.LongTensor([adj_matrix.indices().contiguous()[0].size(0)])
+            acol_values_len = torch.cuda.LongTensor([adj_matrix.values().contiguous().size(0)])
         else:
             # acol = torch.sparse.FloatTensor(height_per_proc, middim_per_proc)
-            acol_indices_len = torch.cuda.FloatTensor([0])
-            acol_values_len = torch.cuda.FloatTensor([0])
+            acol_indices_len = torch.cuda.LongTensor([0])
+            acol_values_len = torch.cuda.LongTensor([0])
 
         dist.broadcast(acol_indices_len, row_src_rank, row_groups[row])
         dist.broadcast(acol_values_len, row_src_rank, row_groups[row])
@@ -322,29 +332,27 @@ def summa_sparse(adj_matrix, inputs, rank, row, col, size, row_groups, col_group
         if row_src_rank == rank:
             acol = adj_matrix
         else:
-            acol = torch.sparse.FloatTensor(acol_indices, acol_values, 
-                                            torch.Size([height_per_proc, middim_per_proc]))
+            acol = torch.sparse_coo_tensor(acol_indices, acol_values,
+                                            torch.Size([height_per_proc, middim_per_proc]),
+                                            device=torch.device("cuda"))
 
         if col_src_rank == rank:
             brow = inputs
         else:
-            brow = torch.FloatTensor(middim_per_proc, width_per_proc)
+            brow = torch.cuda.FloatTensor(middim_per_proc, width_per_proc)
 
-        tstart = start_time(col_groups[col], rank)
+        tstart = start_time(row_groups[0], rank)
 
         dist.broadcast(brow.contiguous(), col_src_rank, col_groups[col])
 
-        dur = stop_time(col_groups[col], rank, tstart)
+        dur = stop_time(row_groups[0], rank, tstart)
         comm_time += dur
         
-        tstart = start_time(col_groups[0], rank)
+        tstart = start_time(row_groups[0], rank)
 
-        tstart = time.time()
         z_tmp = torch.sparse.mm(acol.float(), brow)
-        tstop = time.time()
-        print("sparse time: " + str(tstop - tstart))
 
-        dur = stop_time(col_groups[0], rank, tstart)
+        dur = stop_time(row_groups[0], rank, tstart)
         comp_time += dur
 
         z_loc += z_tmp
@@ -372,7 +380,7 @@ def summa_loc(mata, matb, rank, row, col, size, row_groups, col_groups,
     #     width_per_proc -= proc_col * width_per_proc - width
     width_per_proc = matb[rank].size(1)
 
-    acol = torch.FloatTensor(height_per_proc, middim_per_proc)
+    acol = torch.cuda.FloatTensor(height_per_proc, middim_per_proc)
 
     brow = torch.FloatTensor(middim_per_proc, width_per_proc)
 
@@ -393,7 +401,7 @@ def summa_loc(mata, matb, rank, row, col, size, row_groups, col_groups,
         if row_src_rank == rank:
             acol = mata
         else:
-            acol = torch.FloatTensor(height_per_proc, matb[col_src_rank].size(0))
+            acol = torch.cuda.FloatTensor(height_per_proc, matb[col_src_rank].size(0))
         
         tstart = start_time(row_groups[row], rank)
 
@@ -420,7 +428,7 @@ def summa_loc(mata, matb, rank, row, col, size, row_groups, col_groups,
 
     return z_loc
 
-def get_proc_groups(rank, size):
+def get_proc_groups(rank, size, group):
     proc_row = proc_row_size(size)
     proc_col = proc_col_size(size)
     
@@ -437,18 +445,22 @@ def get_proc_groups(rank, size):
     for i in range(proc_col):
         col_procs.append(list(range(i, size, proc_row)))
 
-    for i in range(len(row_procs)):
-        row_groups.append(dist.new_group(row_procs[i]))
+    for i in range(proc_row):
+        dist.barrier(group)
+        row_groups.append(dist.new_group(list(range(i * proc_col, i * proc_col + proc_col))))
 
-    for i in range(len(col_procs)):
-        col_groups.append(dist.new_group(col_procs[i]))
+    dist.barrier(group)
+    for i in range(proc_col):
+        dist.barrier(group)
+        col_groups.append(dist.new_group(list(range(i, size, proc_row))))
 
+    print("row_procs: " + str(row_procs) + " col_procs: " + str(col_procs), flush=True)
     return row_groups, col_groups
 
 class GCNFunc(torch.autograd.Function):
     @staticmethod
     def forward(ctx, inputs, weight, node_count, adj_matrix, am_partitions, rank, size, group, 
-                        func):
+                        row_groups, col_groups, func):
         # inputs: H
         # adj_matrix: A
         # weight: W
@@ -465,11 +477,12 @@ class GCNFunc(torch.autograd.Function):
         ctx.rank = rank
         ctx.size = size
         ctx.group = group
+        ctx.row_groups = row_groups
+        ctx.col_groups = col_groups
 
         ctx.func = func
 
         adj_matrix_t = adj_matrix # Only true for undirected graphs
-        row_groups, col_groups = get_proc_groups(rank, size)
 
         # TODO: will need to change height argument when n % sqrt(P) != 0 and non-square grid
         z = summa_sparse(adj_matrix_t, inputs, rank, rank_row, rank_col, size, row_groups, 
@@ -505,6 +518,8 @@ class GCNFunc(torch.autograd.Function):
         rank = ctx.rank
         size = ctx.size
         group = ctx.group
+        row_groups = ctx.row_groups
+        col_groups = ctx.col_groups
         node_count = ctx.node_count
 
         func = ctx.func
@@ -528,8 +543,6 @@ class GCNFunc(torch.autograd.Function):
         rank_row = int(rank / proc_col)
         rank_col = rank % proc_col
             
-        row_groups, col_groups = get_proc_groups(rank, size)
-
         # First backprop equation
         # TODO: will need to change height argument when n % sqrt(P) != 0 and non-square grid
         ag = summa_sparse(adj_matrix, grad_output, rank, rank_row, rank_col, size, row_groups, 
@@ -574,8 +587,7 @@ class GCNFunc(torch.autograd.Function):
                                 torch.cuda.FloatTensor(grad_weight.size(0), pad_col).fill_(no_occur_val)), 
                                 dim=1) 
 
-        # dist.all_gather(grad_weight_recv, grad_weight)
-        dist.all_gather_multigpu([grad_weight_recv], [grad_weight], group)
+        dist.all_gather(grad_weight_recv, grad_weight)
 
         # for i in range(size):
         #     if rank == i:
@@ -601,17 +613,16 @@ class GCNFunc(torch.autograd.Function):
                 grad_weight_row = torch.cat((grad_weight_row, grad_weight_recv[rank_wt]), dim=1)
             grad_weight_fin = torch.cat((grad_weight_fin, grad_weight_row), dim=0)
 
-        return grad_input, grad_weight_fin, None, None, None, None, None, None, None
+        return grad_input, grad_weight_fin, None, None, None, None, None, None, None, None, None
 
 def train(inputs, weight1, weight2, node_count, adj_matrix, am_partitions, optimizer, data, rank, 
-                size, group):
+                size, group, row_groups, col_groups):
 
-    print("forward1", flush=True)
     outputs = GCNFunc.apply(inputs, weight1, node_count, adj_matrix, am_partitions, rank, size, 
-                                    group, F.relu)
-    print("forward2", flush=True)
+                                    group, row_groups, col_groups, F.relu)
+
     outputs = GCNFunc.apply(outputs, weight2, node_count, adj_matrix, am_partitions, rank, size, 
-                                    group, F.log_softmax)
+                                    group, row_groups, col_groups, F.log_softmax)
 
     proc_row = proc_row_size(size)
     proc_col = proc_col_size(size)
@@ -628,8 +639,6 @@ def train(inputs, weight1, weight2, node_count, adj_matrix, am_partitions, optim
 
     min_class = rank * class_per_rank
     max_class = min((rank + 1) * class_per_rank, total_classes)
-
-    row_groups, _ = get_proc_groups(rank, size)
 
     # Note: bool type removes warnings, unsure of perf penalty
     # loss = F.nll_loss(outputs[data.train_mask.bool()], data.y[data.train_mask.bool()])
@@ -661,7 +670,6 @@ def train(inputs, weight1, weight2, node_count, adj_matrix, am_partitions, optim
         vertex_train_count = (data.train_mask.size(0) - (data.train_mask == 0).sum(dim=0))
         loss_calc = -loss_calc / vertex_train_count
 
-        print("backward", flush=True)
         loss_calc.backward()
         # print("loss_calc: " + str(loss_calc), flush=True)
         # loss = F.nll_loss(outputs[rank_train_mask], datay_rank[rank_train_mask])
@@ -830,6 +838,7 @@ def run(rank, size, inputs, adj_matrix, data, features, classes, device):
     best_val_acc = test_acc = 0
     outputs = None
     group = dist.new_group(list(range(size)))
+    row_groups, col_groups = get_proc_groups(rank, size, group)
 
     # adj_matrix_loc = torch.rand(node_count, n_per_proc)
     # inputs_loc = torch.rand(n_per_proc, inputs.size(1))
@@ -866,10 +875,11 @@ def run(rank, size, inputs, adj_matrix, data, features, classes, device):
     for i in range(len(am_pbyp)):
         am_pbyp[i] = am_pbyp[i].to(device)
     # for epoch in range(1, 101):
+
     for epoch in range(2):
         outputs = train(inputs_loc, weight1, weight2, inputs.size(0), adj_matrix_loc, am_pbyp, 
-                                optimizer, data, rank, size, group)
-        print("Epoch: {:03d}".format(epoch), flush=True)
+                                optimizer, data, rank, size, group, row_groups, col_groups)
+    print("Epoch: {:03d}".format(epoch), flush=True)
 
     # dist.barrier(group)
     # if rank == 0:
@@ -936,11 +946,12 @@ def main(P, correctness_check):
         adj_matrix = edge_index
 
     outputs = None
+    os.environ["RANK"] = os.environ["OMPI_COMM_WORLD_RANK"]
     dist.init_process_group(backend='nccl')
     # dist.init_process_group('gloo', init_method='env://')
     rank = dist.get_rank()
     size = dist.get_world_size()
-    print("Processes: " + str(size))
+    print("Processes: " + str(size), flush=True)
 
     init_process(rank, size, inputs, adj_matrix, data, dataset.num_features, dataset.num_classes, 
                     device, outputs, run)
