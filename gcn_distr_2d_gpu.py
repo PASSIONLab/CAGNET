@@ -31,6 +31,8 @@ import socket
 import time
 import numpy as np
 
+from sparse_coo_tensor_cpp import sparse_coo_tensor_gpu
+
 comp_time = 0.0
 comm_time = 0.0
 
@@ -255,9 +257,8 @@ def summa_sparse(adj_matrix, inputs, rank, row, col, size, row_groups, col_group
         if row_src_rank == rank:
             acol = adj_matrix
         else:
-            acol = torch.sparse_coo_tensor(acol_indices, acol_values, 
-                                            torch.Size([height_per_proc, middim_per_proc]),
-                                            device=torch.device("cuda"))
+            acol = sparse_coo_tensor_gpu(acol_indices, acol_values, 
+                                            torch.Size([height_per_proc, middim_per_proc]))
 
         if col_src_rank == rank:
             brow = inputs

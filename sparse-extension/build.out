@@ -1,0 +1,14 @@
+Traceback (most recent call last):
+  File "setup.py", line 2, in <module>
+    from torch.utils import cpp_extension
+  File "/ccs/home/alokt/.conda/envs/gnn/lib/python3.6/site-packages/torch/__init__.py", line 44, in <module>
+    import numpy as _np  # noqa: F401
+  File "/ccs/home/alokt/.conda/envs/gnn/lib/python3.6/site-packages/numpy/__init__.py", line 142, in <module>
+    from . import core
+  File "/ccs/home/alokt/.conda/envs/gnn/lib/python3.6/site-packages/numpy/core/__init__.py", line 17, in <module>
+    from . import multiarray
+  File "/ccs/home/alokt/.conda/envs/gnn/lib/python3.6/site-packages/numpy/core/multiarray.py", line 14, in <module>
+    from . import overrides
+  File "/ccs/home/alokt/.conda/envs/gnn/lib/python3.6/site-packages/numpy/core/overrides.py", line 7, in <module>
+    from numpy.core._multiarray_umath import (
+KeyboardInterrupt
