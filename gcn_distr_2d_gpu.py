@@ -5,6 +5,7 @@ import argparse
 import math
 
 import torch
+import torch_sparse
 import torch.distributed as dist
 
 from torch_geometric.datasets import Planetoid, PPI, Reddit
@@ -44,107 +45,29 @@ def normalize(adj_matrix):
     return torch.mm(d, torch.mm(adj_matrix, d))
 
 def start_time(group, rank):
-    dist.barrier(group)
-    tstart = 0.0
-    if rank == 0:
-        tstart = time.time()
-    return tstart
+    # dist.barrier(group)
+    # tstart = 0.0
+    # if rank == 0:
+    #     tstart = time.time()
+    # return tstart
+    return 0.0
 
 def stop_time(group, rank, tstart):
-    dist.barrier(group)
-    tstop = 0.0
-    if rank == 0:
-        tstop = time.time()
-    return tstop - tstart
+    # dist.barrier(group)
+    # tstop = 0.0
+    # if rank == 0:
+    #     tstop = time.time()
+    # return tstop - tstart
+    return 0.0
 
-def block_row(adj_matrix, am_partitions, inputs, weight, rank, size):
-    n_per_proc = math.ceil(float(adj_matrix.size(1)) / size)
-    # n_per_proc = int(adj_matrix.size(1) / size)
-    # am_partitions = list(torch.split(adj_matrix, n_per_proc, dim=1))
-
-    # z_loc = torch.cuda.FloatTensor(n_per_proc, inputs.size(1)).fill_(0)
-    z_loc = torch.zeros(adj_matrix.size(0), inputs.size(1))
-    
-    inputs_recv = torch.zeros(inputs.size())
-
-    part_id = rank % size
-
-    z_loc += torch.mm(am_partitions[part_id].t(), inputs) 
-
-    for i in range(1, size):
-        part_id = (rank + i) % size
-
-        inputs_recv = torch.zeros(am_partitions[part_id].size(0), inputs.size(1))
-
-        src = (rank + 1) % size
-        dst = rank - 1
-        if dst < 0:
-            dst = size - 1
-
-        if rank == 0:
-            dist.send(tensor=inputs, dst=dst)
-            dist.recv(tensor=inputs_recv, src=src)
-        else:
-            dist.recv(tensor=inputs_recv, src=src)
-            dist.send(tensor=inputs, dst=dst)
-        
-        inputs = inputs_recv.clone()
-
-        # z_loc += torch.mm(am_partitions[part_id], inputs) 
-        z_loc += torch.mm(am_partitions[part_id].t(), inputs) 
-
-
-    # z_loc = torch.mm(z_loc, weight)
-    return z_loc
-
-def outer_product(adj_matrix, grad_output, rank, size, group):
-    n_per_proc = math.ceil(float(adj_matrix.size(0)) / size)
-    
-    # A * G^l
-    ag = torch.mm(adj_matrix, grad_output)
-
-    # reduction on A * G^l low-rank matrices
-    dist.all_reduce(ag, op=dist.reduce_op.SUM, group=group)
-
-    # partition A * G^l by block rows and get block row for this process
-    # TODO: this might not be space-efficient
-    red_partitions = list(torch.split(ag, n_per_proc, dim=0))
-    grad_input = red_partitions[rank]
-
-    return grad_input
-
-def outer_product2(inputs, ag, rank, size, group):
-    # (H^(l-1))^T * (A * G^l)
-    grad_weight = torch.mm(inputs, ag)
-    
-    # reduction on grad_weight low-rank matrices
-    dist.all_reduce(grad_weight, op=dist.reduce_op.SUM, group=group)
-
-    return grad_weight
-
-def broad_func(adj_matrix, am_partitions, inputs, rank, size, group):
-    n_per_proc = math.ceil(float(adj_matrix.size(1)) / size)
-
-    # z_loc = torch.cuda.FloatTensor(adj_matrix.size(0), inputs.size(1)).fill_(0)
-    z_loc = torch.zeros(adj_matrix.size(0), inputs.size(1))
-    
-    # inputs_recv = torch.cuda.FloatTensor(n_per_proc, inputs.size(1))
-    inputs_recv = torch.zeros(n_per_proc, inputs.size(1))
-
-    for i in range(size):
-        if i == rank:
-            inputs_recv = inputs.clone()
-        elif i == size - 1:
-            # inputs_recv = torch.cuda.FloatTensor(list(am_partitions[i].size())[1],inputs.size(1))
-            inputs_recv = torch.zeros(list(am_partitions[i].t().size())[1], inputs.size(1))
-
-        dist.broadcast(inputs_recv, src=i, group=group)
-
-        # z_loc += torch.mm(am_partitions[i], inputs_recv) 
-        z_loc += torch.mm(am_partitions[i].t(), inputs_recv) 
-
-    return z_loc
-
+def intersect(t1, t2):
+    t1_t = t1.t().squeeze()
+    t2_t = t2.t().squeeze()
+    indices = torch.zeros_like(t1_t, dtype = torch.uint8, device = 'cuda')
+    for elem in t2_t:
+        indices = indices | (t1_t == elem).byte()
+    intersection = t1_t[indices]
+    return intersection.t()
 
 def transpose(mat, row, col, height, width, size):
     proc_row = proc_row_size(size)
@@ -332,7 +255,7 @@ def summa_sparse(adj_matrix, inputs, rank, row, col, size, row_groups, col_group
         if row_src_rank == rank:
             acol = adj_matrix
         else:
-            acol = torch.sparse_coo_tensor(acol_indices, acol_values,
+            acol = torch.sparse_coo_tensor(acol_indices, acol_values, 
                                             torch.Size([height_per_proc, middim_per_proc]),
                                             device=torch.device("cuda"))
 
@@ -350,7 +273,7 @@ def summa_sparse(adj_matrix, inputs, rank, row, col, size, row_groups, col_group
         
         tstart = start_time(row_groups[0], rank)
 
-        z_tmp = torch.sparse.mm(acol.float(), brow)
+        z_tmp = torch.sparse.mm(acol, brow)
 
         dur = stop_time(row_groups[0], rank, tstart)
         comp_time += dur
@@ -435,15 +358,8 @@ def get_proc_groups(rank, size, group):
     rank_row = int(rank / proc_col)
     rank_col = rank % proc_col
         
-    row_procs = []
-    col_procs = []
     row_groups = []
     col_groups = []
-    for i in range(proc_row):
-        row_procs.append(list(range(i * proc_col, i * proc_col + proc_col)))
-
-    for i in range(proc_col):
-        col_procs.append(list(range(i, size, proc_row)))
 
     for i in range(proc_row):
         dist.barrier(group)
@@ -454,7 +370,6 @@ def get_proc_groups(rank, size, group):
         dist.barrier(group)
         col_groups.append(dist.new_group(list(range(i, size, proc_row))))
 
-    print("row_procs: " + str(row_procs) + " col_procs: " + str(col_procs), flush=True)
     return row_groups, col_groups
 
 class GCNFunc(torch.autograd.Function):
@@ -646,12 +561,12 @@ def train(inputs, weight1, weight2, node_count, adj_matrix, am_partitions, optim
     # if datay_rank.size(0) > 0:
         # datay_ids = datay_rank[rank_train_mask].long().view(-1, 1)
         datay_ids = datay_rank[rank_train_mask].long()
-        indicesl = torch.nonzero((datay_ids >= min_class).float() * torch.cuda.FloatTensor(datay_ids.size()).fill_(1))
-        indicesr = torch.nonzero((datay_ids <  max_class).float() * torch.cuda.FloatTensor(datay_ids.size()).fill_(1))
-        indices = torch.from_numpy(np.intersect1d(indicesl.to(torch.device('cpu')), indicesr.to(torch.device('cpu')))).to(torch.device('cuda'))
+
+        filtered_indices = torch.mul(datay_ids >= min_class, datay_ids < max_class).float()
+        indices = torch.nonzero(filtered_indices * torch.cuda.FloatTensor(datay_ids.size()).fill_(1)).squeeze()
+
 
         datay_ids = datay_rank[rank_train_mask].long().view(-1, 1)
-
         datay_ids = datay_ids.index_select(0, indices)
         datay_ids -= min_class
         outputs_ids = outputs.index_select(0, indices)
@@ -661,7 +576,6 @@ def train(inputs, weight1, weight2, node_count, adj_matrix, am_partitions, optim
         loss_calc = torch.sum(classes)
         loss_calc_tens = torch.Tensor([loss_calc.item()])
 
-        loss_calc = loss_calc.to(torch.device('cuda'))
         rank_row_src = rank_row * proc_col
 
         dist.reduce(loss_calc, dst=rank_row_src, op=dist.reduce_op.SUM, group=row_groups[rank_row])
@@ -862,12 +776,8 @@ def run(rank, size, inputs, adj_matrix, data, features, classes, device):
 
     adj_matrix_loc = adj_matrix_loc.coalesce()
 
-    # dist.barrier(group)
-    # tstart = 0.0
-    # tstop = 0.0
-    # if rank == 0:
-    #     tstart = time.time()
-    tstart = start_time(group, rank)
+    # tstart = start_time(group, rank)
+    tstart = time.time()
 
     inputs_loc = inputs_loc.to(device)
     adj_matrix_loc = adj_matrix_loc.to(device)
@@ -881,12 +791,9 @@ def run(rank, size, inputs, adj_matrix, data, features, classes, device):
                                 optimizer, data, rank, size, group, row_groups, col_groups)
     print("Epoch: {:03d}".format(epoch), flush=True)
 
-    # dist.barrier(group)
-    # if rank == 0:
-    #     tstop = time.time()
-
-    dur = stop_time(group, rank, tstart)
-    print("Time: " + str(dur))
+    # dur = stop_time(group, rank, tstart)
+    tstop = time.time()
+    print("Time: " + str(tstop - tstart))
 
     if rank == 0:
         print("comm_time: " + str(comm_time))

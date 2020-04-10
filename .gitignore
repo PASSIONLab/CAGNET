@@ -12,3 +12,4 @@ reddit_coo/
 .*.swn
 .*.swo
 .*.swp
+.nfs*
