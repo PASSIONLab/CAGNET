@@ -36,7 +36,7 @@ from sparse_coo_tensor_cpp import sparse_coo_tensor_gpu
 comp_time = 0.0
 comm_time = 0.0
 
-normalization = False
+normalization = True
 no_occur_val = 42.1234
 
 def normalize(adj_matrix):
@@ -47,20 +47,20 @@ def normalize(adj_matrix):
     return torch.mm(d, torch.mm(adj_matrix, d))
 
 def start_time(group, rank):
-    dist.barrier(group)
-    tstart = 0.0
-    if rank == 0:
-        tstart = time.time()
-    return tstart
-    # return 0.0
+    # dist.barrier(group)
+    # tstart = 0.0
+    # if rank == 0:
+    #     tstart = time.time()
+    # return tstart
+    return 0.0
 
 def stop_time(group, rank, tstart):
-    dist.barrier(group)
-    tstop = 0.0
-    if rank == 0:
-        tstop = time.time()
-    return tstop - tstart
-    # return 0.0
+    # dist.barrier(group)
+    # tstop = 0.0
+    # if rank == 0:
+    #     tstop = time.time()
+    # return tstop - tstart
+    return 0.0
 
 def intersect(t1, t2):
     t1_t = t1.t().squeeze()
@@ -71,7 +71,7 @@ def intersect(t1, t2):
     intersection = t1_t[indices]
     return intersection.t()
 
-def transpose(mat, row, col, height, width, size, transpose_group):
+def transpose(mat, row, col, height, width, size):
     proc_row = proc_row_size(size)
     proc_col = proc_col_size(size)
 
@@ -99,7 +99,7 @@ def transpose(mat, row, col, height, width, size, transpose_group):
     #     dist.recv(tensor=mat_recv, src=rank_t)
     #     dist.send(tensor=mat.t().contiguous(), dst=rank_t)
 
-    # transpose_group = dist.new_group([rank, rank_t])
+    transpose_group = dist.new_group([rank, rank_t])
 
     mat_recvs = [mat.t().contiguous(), mat_recv]
 
@@ -109,6 +109,7 @@ def transpose(mat, row, col, height, width, size, transpose_group):
     else:
         dist.broadcast(mat_recvs[1], src=rank_t, group=transpose_group)
         dist.broadcast(mat_recvs[0], src=rank, group=transpose_group)
+
 
     return mat_recvs[1]
 
@@ -351,7 +352,7 @@ def summa_loc(mata, matb, rank, row, col, size, row_groups, col_groups,
 
     return z_loc
 
-def get_proc_groups(rank, size, group):
+def get_proc_groups(rank, size):
     proc_row = proc_row_size(size)
     proc_col = proc_col_size(size)
     
@@ -362,12 +363,9 @@ def get_proc_groups(rank, size, group):
     col_groups = []
 
     for i in range(proc_row):
-        dist.barrier(group)
         row_groups.append(dist.new_group(list(range(i * proc_col, i * proc_col + proc_col))))
 
-    dist.barrier(group)
     for i in range(proc_col):
-        dist.barrier(group)
         col_groups.append(dist.new_group(list(range(i, size, proc_row))))
 
     return row_groups, col_groups
@@ -375,7 +373,7 @@ def get_proc_groups(rank, size, group):
 class GCNFunc(torch.autograd.Function):
     @staticmethod
     def forward(ctx, inputs, weight, node_count, adj_matrix, am_partitions, rank, size, group, 
-                        row_groups, col_groups, transpose_group, func):
+                        row_groups, col_groups, func):
         # inputs: H
         # adj_matrix: A
         # weight: W
@@ -394,7 +392,6 @@ class GCNFunc(torch.autograd.Function):
         ctx.group = group
         ctx.row_groups = row_groups
         ctx.col_groups = col_groups
-        ctx.transpose_group = transpose_group
 
         ctx.func = func
 
@@ -436,7 +433,6 @@ class GCNFunc(torch.autograd.Function):
         group = ctx.group
         row_groups = ctx.row_groups
         col_groups = ctx.col_groups
-        transpose_group = ctx.transpose_group
         node_count = ctx.node_count
 
         func = ctx.func
@@ -482,8 +478,7 @@ class GCNFunc(torch.autograd.Function):
         # col_groups twice because of transpose
         # TODO: will need to change height argument when n % sqrt(P) != 0 and non-square grid
 
-        inputs_t = transpose(inputs, rank_row, rank_col, node_count, weight.size(0), size,
-                                transpose_group)
+        inputs_t = transpose(inputs, rank_row, rank_col, node_count, weight.size(0), size)
 
         grad_weight = summa(inputs_t, ag, rank, rank_row, rank_col, size, row_groups, col_groups, 
                                 weight.size(0), node_count, weight.size(1), transpose=False)
@@ -531,16 +526,16 @@ class GCNFunc(torch.autograd.Function):
                 grad_weight_row = torch.cat((grad_weight_row, grad_weight_recv[rank_wt]), dim=1)
             grad_weight_fin = torch.cat((grad_weight_fin, grad_weight_row), dim=0)
 
-        return grad_input, grad_weight_fin, None, None, None, None, None, None, None, None, None, None
+        return grad_input, grad_weight_fin, None, None, None, None, None, None, None, None, None
 
 def train(inputs, weight1, weight2, node_count, adj_matrix, am_partitions, optimizer, data, rank, 
-                size, group, row_groups, col_groups, transpose_group):
+                size, group, row_groups, col_groups):
 
     outputs = GCNFunc.apply(inputs, weight1, node_count, adj_matrix, am_partitions, rank, size, 
-                                    group, row_groups, col_groups, transpose_group, F.relu)
+                                    group, row_groups, col_groups, F.relu)
 
     outputs = GCNFunc.apply(outputs, weight2, node_count, adj_matrix, am_partitions, rank, size, 
-                                    group, row_groups, col_groups, transpose_group, F.log_softmax)
+                                    group, row_groups, col_groups, F.log_softmax)
 
     proc_row = proc_row_size(size)
     proc_col = proc_col_size(size)
@@ -634,53 +629,71 @@ def split_coo(adj_matrix, node_count, n_per_proc, dim):
     return am_partitions, vtx_indices
 
 # Normalize all elements according to KW's normalization rule
-def scale_elements(adj_matrix, adj_part, node_count, row_vtx, col_vtx):
+def scale_elements(adj_part, node_count, rank, size, row, col, row_vtx, col_vtx):
     if not normalization:
         return
-
-    # Scale each edge (u, v) by 1 / (sqrt(u) * sqrt(v))
-    indices = adj_part._indices()
-    values = adj_part._values()
-
-    deg_map = dict()
-    for i in range(adj_part._nnz()):
-        u = indices[0][i] + row_vtx
-        v = indices[1][i] + col_vtx
-
-        if u.item() in deg_map:
-            degu = deg_map[u.item()]
-        else:
-            degu = (adj_matrix[0] == u).sum().item()
-            deg_map[u.item()] = degu
-
-        if v.item() in deg_map:
-            degv = deg_map[v.item()]
-        else:
-            degv = (adj_matrix[0] == v).sum().item()
-            deg_map[v.item()] = degv
-
-        values[i] = values[i] / (math.sqrt(degu) * math.sqrt(degv))
     
-    # deg = torch.histc(adj_matrix[0].float(), bins=node_count)
-    # deg = deg.pow(-0.5)
+    proc_row = proc_row_size(size)
+    proc_col = proc_col_size(size)
+    row_groups, col_groups = get_proc_groups(rank, size)
 
-    # row_len = adj_part.size(0)
-    # col_len = adj_part.size(1)
+    # Compute degrees across process row
+    degs = torch.sparse.sum(adj_part, dim=1).to_dense().to(torch.device("cuda"))
+    dist.all_reduce(degs, op=dist.reduce_op.SUM, group=row_groups[row]) 
 
-    # dleft = torch.sparse_coo_tensor([np.arange(row_vtx, row_vtx + row_len).tolist(),
-    #                                  np.arange(row_vtx, row_vtx + row_len).tolist()],
-    #                                  deg[row_vtx:(row_vtx + row_len)],
-    #                                  size=(row_len, row_len),
-    #                                  requires_grad=False)
+    # Gather degrees across process col
+    # TODO: modify when node_count % proc_row != 0
+    recv_row_size = int(math.ceil(float(node_count) / proc_row))
 
-    # dright = torch.sparse_coo_tensor([np.arange(col_vtx, col_vtx + col_len).tolist(),
-    #                                  np.arange(col_vtx, col_vtx + col_len).tolist()],
-    #                                  deg[row_vtx:(col_vtx + col_len)],
-    #                                  size=(col_len, col_len),
-    #                                  requires_grad=False)
+    degs_list = []
+    for i in range(proc_row):
+        degs_list.append(torch.zeros(recv_row_size).to(torch.device("cuda")))
 
-    # adj_part = torch.sparse.mm(torch.sparse.mm(dleft, adj_part), dright)
-    # return adj_part
+    dist.all_gather(degs_list, degs, group=col_groups[col])
+    for i in range(proc_row):
+        degs_list[i] = degs_list[i].to(torch.device("cpu"))
+
+    degs = torch.cat(degs_list)
+
+    height_per_proc = math.ceil(float(node_count) / proc_row)
+    width_per_proc  = math.ceil(float(node_count) / proc_col)
+
+    if row == proc_row - 1:
+        height_per_proc -= proc_row * height_per_proc - node_count
+
+    if col == proc_col - 1:
+        width_per_proc -= proc_col * width_per_proc - node_count
+
+    min_vtx = max(row_vtx, col_vtx)
+    max_vtx = min(row_vtx + height_per_proc, col_vtx + width_per_proc)
+
+    degs_values = degs[min_vtx:max_vtx]
+    degs_values = degs_values.pow(-0.5)
+
+    degs_indices_src = torch.Tensor(np.arange(min_vtx - row_vtx, max_vtx - row_vtx)).unsqueeze(0)
+    degs_indices_dst = torch.Tensor(np.arange(min_vtx - col_vtx, max_vtx - col_vtx)).unsqueeze(0)
+
+    degs_indices = torch.cat((degs_indices_src, degs_indices_dst), dim=0)
+
+    degs = torch.sparse_coo_tensor(degs_indices, degs_values, size=adj_part.size(), 
+                                        requires_grad=False)
+    
+    degs = degs.coalesce()
+    adj_part = adj_part.coalesce()
+    indices_inner, values_inner = torch_sparse.spspmm(adj_part.indices(), adj_part.values(),
+                                                          degs.indices(), degs.values(),
+                                                          adj_part.size(0), adj_part.size(1),
+                                                          degs.size(1))
+
+    scaled_indices, scaled_values = torch_sparse.spspmm(degs.indices(), degs.values(),
+                                                            indices_inner, values_inner,
+                                                            degs.size(0), degs.size(1),
+                                                            node_count)
+
+    scaled_adj = torch.sparse_coo_tensor(scaled_indices, scaled_values, size=adj_part.size(),
+                                            requires_grad=False)
+
+    return scaled_adj
 
 def proc_row_size(size):
     return math.floor(math.sqrt(size))
@@ -716,24 +729,15 @@ def twod_partition(rank, size, inputs, adj_matrix, data, features, classes, devi
                                                         size=(last_node_count, proc_node_count),
                                                         requires_grad=False)
 
-                scale_elements(adj_matrix, am_pbyp[i], node_count, vtx_indices[i], 
-                                    vtx_indices[rank_col])
+                am_pbyp[i] = scale_elements(am_pbyp[i], node_count, rank, size, rank_row, rank_col,
+                                                vtx_indices[i], vtx_indices[rank_col])
             else:
                 am_pbyp[i] = torch.sparse_coo_tensor(am_pbyp[i], torch.ones(am_pbyp[i].size(1)), 
                                                         size=(n_per_proc, proc_node_count),
                                                         requires_grad=False)
 
-                scale_elements(adj_matrix, am_pbyp[i], node_count, vtx_indices[i], 
-                                    vtx_indices[rank_col])
-
-        for i in range(len(am_partitions)):
-            proc_node_count = vtx_indices[i + 1] - vtx_indices[i]
-            am_partitions[i] = torch.sparse_coo_tensor(am_partitions[i], 
-                                                    torch.ones(am_partitions[i].size(1)), 
-                                                    size=(node_count, proc_node_count), 
-                                                    requires_grad=False)
-
-            scale_elements(adj_matrix, am_partitions[i], node_count,  0, vtx_indices[i])
+                am_pbyp[i] = scale_elements(am_pbyp[i], node_count, rank, size, rank_row, rank_col,
+                                                vtx_indices[i], vtx_indices[rank_col])
 
         input_rowparts = torch.split(inputs, math.ceil(float(inputs.size(0)) / proc_row), dim=0)
         input_partitions = []
@@ -754,33 +758,8 @@ def run(rank, size, inputs, adj_matrix, data, features, classes, device):
 
     best_val_acc = test_acc = 0
     outputs = None
-
     group = dist.new_group(list(range(size)))
-    row_groups, col_groups = get_proc_groups(rank, size, group)
-
-    proc_row = proc_row_size(size)
-    proc_col = proc_col_size(size)
-    rank_row = int(rank / proc_col)
-    rank_col = rank % proc_col
-    rank_t  = rank_col * proc_row + rank_row
-
-    transpose_groups = []
-
-    for i in range(proc_row):
-        transpose_groups_row = []
-        for j in range(proc_col):
-            local_rank = i * proc_col + j
-            local_rank_t = j * proc_row + i
-            if local_rank < local_rank_t:
-                transpose_groups_row.append(dist.new_group([local_rank, local_rank_t]))
-            else:
-                transpose_groups_row.append(None)
-        transpose_groups.append(transpose_groups_row)
-    
-    if rank < rank_t:
-        transpose_group = transpose_groups[rank_row][rank_col]
-    else:
-        transpose_group = transpose_groups[rank_col][rank_row]
+    row_groups, col_groups = get_proc_groups(rank, size)
 
     # adj_matrix_loc = torch.rand(node_count, n_per_proc)
     # inputs_loc = torch.rand(n_per_proc, inputs.size(1))
@@ -818,8 +797,7 @@ def run(rank, size, inputs, adj_matrix, data, features, classes, device):
 
     for epoch in range(2):
         outputs = train(inputs_loc, weight1, weight2, inputs.size(0), adj_matrix_loc, am_pbyp, 
-                                optimizer, data, rank, size, group, row_groups, col_groups,
-                                transpose_group)
+                                optimizer, data, rank, size, group, row_groups, col_groups)
     print("Epoch: {:03d}".format(epoch), flush=True)
 
     # dur = stop_time(group, rank, tstart)
@@ -856,11 +834,11 @@ def init_process(rank, size, inputs, adj_matrix, data, features, classes, device
 
 def main(P, correctness_check):
     print(socket.gethostname())
-    dataset = 'Reddit'
+    dataset = 'Cora'
     path = osp.join(osp.dirname(osp.realpath(__file__)), '..', 'data', dataset)
-    # dataset = Planetoid(path, dataset, T.NormalizeFeatures())
+    dataset = Planetoid(path, dataset, T.NormalizeFeatures())
     # dataset = PPI(path, 'train', T.NormalizeFeatures())
-    dataset = Reddit(path, T.NormalizeFeatures())
+    # dataset = Reddit(path, T.NormalizeFeatures())
     data = dataset[0]
 
     seed = 0
