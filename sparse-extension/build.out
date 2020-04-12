@@ -1,14 +1,80 @@
-Traceback (most recent call last):
-  File "setup.py", line 2, in <module>
-    from torch.utils import cpp_extension
-  File "/ccs/home/alokt/.conda/envs/gnn/lib/python3.6/site-packages/torch/__init__.py", line 44, in <module>
-    import numpy as _np  # noqa: F401
-  File "/ccs/home/alokt/.conda/envs/gnn/lib/python3.6/site-packages/numpy/__init__.py", line 142, in <module>
-    from . import core
-  File "/ccs/home/alokt/.conda/envs/gnn/lib/python3.6/site-packages/numpy/core/__init__.py", line 17, in <module>
-    from . import multiarray
-  File "/ccs/home/alokt/.conda/envs/gnn/lib/python3.6/site-packages/numpy/core/multiarray.py", line 14, in <module>
-    from . import overrides
-  File "/ccs/home/alokt/.conda/envs/gnn/lib/python3.6/site-packages/numpy/core/overrides.py", line 7, in <module>
-    from numpy.core._multiarray_umath import (
-KeyboardInterrupt
+running install
+running bdist_egg
+running egg_info
+writing sparse_coo_tensor_cpp.egg-info/PKG-INFO
+writing dependency_links to sparse_coo_tensor_cpp.egg-info/dependency_links.txt
+writing top-level names to sparse_coo_tensor_cpp.egg-info/top_level.txt
+reading manifest file 'sparse_coo_tensor_cpp.egg-info/SOURCES.txt'
+writing manifest file 'sparse_coo_tensor_cpp.egg-info/SOURCES.txt'
+installing library code to build/bdist.linux-ppc64le/egg
+running install_lib
+running build_ext
+building 'sparse_coo_tensor_cpp' extension
+/ccs/home/alokt/.conda/envs/gnn/bin/powerpc64le-conda_cos7-linux-gnu-cc -DNDEBUG -fwrapv -O2 -Wall -Wstrict-prototypes -mcpu=power8 -mtune=power8 -mpower8-fusion -mpower8-vector -ftree-vectorize -fPIC -fstack-protector-strong -fno-plt -O3 -pipe -DNDEBUG -D_FORTIFY_SOURCE=2 -O3 -fPIC -I/ccs/home/alokt/.conda/envs/gnn/lib/python3.6/site-packages/torch/include -I/ccs/home/alokt/.conda/envs/gnn/lib/python3.6/site-packages/torch/include/torch/csrc/api/include -I/ccs/home/alokt/.conda/envs/gnn/lib/python3.6/site-packages/torch/include/TH -I/ccs/home/alokt/.conda/envs/gnn/lib/python3.6/site-packages/torch/include/THC -I/ccs/home/alokt/.conda/envs/gnn/include/python3.6m -c sparse_coo_tensor.cpp -o build/temp.linux-ppc64le-3.6/sparse_coo_tensor.o -lcusparse -DTORCH_API_INCLUDE_EXTENSION_H -DTORCH_EXTENSION_NAME=sparse_coo_tensor_cpp -D_GLIBCXX_USE_CXX11_ABI=1 -std=c++11
+cc1plus: warning: command line option '-Wstrict-prototypes' is valid for C/ObjC but not for C++
+sparse_coo_tensor.cpp: In function 'at::Tensor spmm_gpu(const at::Tensor&, const at::Tensor&, const at::Tensor&, int64_t, int64_t, const at::Tensor&)':
+sparse_coo_tensor.cpp:96:27: error: 'h_a_values' was not declared in this scope
+     cudaMemcpy(d_avalues, h_a_values, nnz * sizeof(int), cudaMemcpyDeviceToHost);
+                           ^~~~~~~~~~
+sparse_coo_tensor.cpp:96:27: note: suggested alternative: 'h_avalues'
+     cudaMemcpy(d_avalues, h_a_values, nnz * sizeof(int), cudaMemcpyDeviceToHost);
+                           ^~~~~~~~~~
+                           h_avalues
+sparse_coo_tensor.cpp:141:27: error: 'h_values' was not declared in this scope
+     cudaMemcpy(d_cvalues, h_values, c_rows * c_cols * sizeof(int), cudaMemcpyDeviceToHost);
+                           ^~~~~~~~
+sparse_coo_tensor.cpp:141:27: note: suggested alternative: 'h_cvalues'
+     cudaMemcpy(d_cvalues, h_values, c_rows * c_cols * sizeof(int), cudaMemcpyDeviceToHost);
+                           ^~~~~~~~
+                           h_cvalues
+sparse_coo_tensor.cpp:162:44: warning: format '%d' expects argument of type 'int', but argument 2 has type 'size_t {aka long unsigned int}' [-Wformat=]
+     printf("buffer_size: %d\n", buffer_size);
+                                            ^
+sparse_coo_tensor.cpp:163:34: warning: format '%x' expects argument of type 'unsigned int', but argument 2 has type 'char*' [-Wformat=]
+     printf("buffer: %x\n", buffer);
+                                  ^
+sparse_coo_tensor.cpp:210:35: warning: format '%f' expects argument of type 'double', but argument 2 has type 'int' [-Wformat=]
+         printf("%f ", h_bvalues[i]);
+                       ~~~~~~~~~~~~^
+sparse_coo_tensor.cpp:215:25: error: 'C' was not declared in this scope
+     for (int i = 0; i < C.size(0) * C.size(1); i++) {
+                         ^
+sparse_coo_tensor.cpp:215:25: note: suggested alternatives:
+In file included from /ccs/home/alokt/.conda/envs/gnn/lib/python3.6/site-packages/torch/include/ATen/core/Dimname.h:5:0,
+                 from /ccs/home/alokt/.conda/envs/gnn/lib/python3.6/site-packages/torch/include/ATen/core/NamedTensor.h:4,
+                 from /ccs/home/alokt/.conda/envs/gnn/lib/python3.6/site-packages/torch/include/ATen/core/TensorBody.h:20,
+                 from /ccs/home/alokt/.conda/envs/gnn/lib/python3.6/site-packages/torch/include/ATen/Tensor.h:11,
+                 from /ccs/home/alokt/.conda/envs/gnn/lib/python3.6/site-packages/torch/include/ATen/Context.h:4,
+                 from /ccs/home/alokt/.conda/envs/gnn/lib/python3.6/site-packages/torch/include/ATen/ATen.h:5,
+                 from sparse_coo_tensor.cpp:1:
+/ccs/home/alokt/.conda/envs/gnn/lib/python3.6/site-packages/torch/include/ATen/core/aten_interned_strings.h:716:9: note:   'c10::attr::C'
+ _(attr, C) \
+         ^
+/ccs/home/alokt/.conda/envs/gnn/lib/python3.6/site-packages/torch/include/ATen/core/interned_strings.h:363:35: note: in definition of macro 'DEFINE_SYMBOL'
+   namespace ns { constexpr Symbol s(static_cast<unique_t>(_keys::ns##_##s)); }
+                                   ^
+/ccs/home/alokt/.conda/envs/gnn/lib/python3.6/site-packages/torch/include/ATen/core/interned_strings.h:197:3: note: in expansion of macro 'FORALL_ATTR_BASE_SYMBOLS'
+   FORALL_ATTR_BASE_SYMBOLS(_)        \
+   ^~~~~~~~~~~~~~~~~~~~~~~~
+/ccs/home/alokt/.conda/envs/gnn/lib/python3.6/site-packages/torch/include/ATen/core/interned_strings.h:364:1: note: in expansion of macro 'FORALL_NS_SYMBOLS'
+ FORALL_NS_SYMBOLS(DEFINE_SYMBOL)
+ ^~~~~~~~~~~~~~~~~
+/ccs/home/alokt/.conda/envs/gnn/lib/python3.6/site-packages/torch/include/ATen/core/aten_interned_strings.h:716:9: note:   'c10::attr::C'
+ _(attr, C) \
+         ^
+/ccs/home/alokt/.conda/envs/gnn/lib/python3.6/site-packages/torch/include/ATen/core/interned_strings.h:363:35: note: in definition of macro 'DEFINE_SYMBOL'
+   namespace ns { constexpr Symbol s(static_cast<unique_t>(_keys::ns##_##s)); }
+                                   ^
+/ccs/home/alokt/.conda/envs/gnn/lib/python3.6/site-packages/torch/include/ATen/core/interned_strings.h:197:3: note: in expansion of macro 'FORALL_ATTR_BASE_SYMBOLS'
+   FORALL_ATTR_BASE_SYMBOLS(_)        \
+   ^~~~~~~~~~~~~~~~~~~~~~~~
+/ccs/home/alokt/.conda/envs/gnn/lib/python3.6/site-packages/torch/include/ATen/core/interned_strings.h:364:1: note: in expansion of macro 'FORALL_NS_SYMBOLS'
+ FORALL_NS_SYMBOLS(DEFINE_SYMBOL)
+ ^~~~~~~~~~~~~~~~~
+sparse_coo_tensor.cpp:216:35: warning: format '%f' expects argument of type 'double', but argument 2 has type 'int' [-Wformat=]
+         printf("%f ", h_cvalues[i]);
+                       ~~~~~~~~~~~~^
+sparse_coo_tensor.cpp:149:9: warning: unused variable 'zero' [-Wunused-variable]
+     int zero = 0;
+         ^~~~
+error: command '/ccs/home/alokt/.conda/envs/gnn/bin/powerpc64le-conda_cos7-linux-gnu-cc' failed with exit status 1

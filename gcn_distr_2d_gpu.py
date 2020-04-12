@@ -31,10 +31,16 @@ import socket
 import time
 import numpy as np
 
-from sparse_coo_tensor_cpp import sparse_coo_tensor_gpu
+from sparse_coo_tensor_cpp import sparse_coo_tensor_gpu, spmm_gpu
 
 comp_time = 0.0
 comm_time = 0.0
+summa_sparse_bcast1 = 0.0
+summa_sparse_bcast1_words = 0
+summa_sparse_bcast2 = 0.0
+summa_bcast1 = 0.0
+summa_bcast2 = 0.0
+summa_loc_bcast = 0.0
 
 normalization = False
 no_occur_val = 42.1234
@@ -52,7 +58,6 @@ def start_time(group, rank):
     if rank == 0:
         tstart = time.time()
     return tstart
-    # return 0.0
 
 def stop_time(group, rank, tstart):
     dist.barrier(group)
@@ -60,7 +65,6 @@ def stop_time(group, rank, tstart):
     if rank == 0:
         tstop = time.time()
     return tstop - tstart
-    # return 0.0
 
 def intersect(t1, t2):
     t1_t = t1.t().squeeze()
@@ -118,6 +122,9 @@ def summa(adj_matrix, inputs, rank, row, col, size, row_groups, col_groups, heig
     global comm_time
     global comp_time
 
+    global summa_bcast1
+    global summa_bcast2
+
     proc_row = proc_row_size(size)
     proc_col = proc_col_size(size)
 
@@ -161,6 +168,7 @@ def summa(adj_matrix, inputs, rank, row, col, size, row_groups, col_groups, heig
 
         dur = stop_time(row_groups[row], rank, tstart)
         comm_time += dur
+        summa_bcast1 += dur
 
         if col_src_rank == rank:
             brow = inputs
@@ -173,6 +181,7 @@ def summa(adj_matrix, inputs, rank, row, col, size, row_groups, col_groups, heig
 
         dur = stop_time(col_groups[col], rank, tstart)
         comm_time += dur
+        summa_bcast2 += dur
 
         tstart = start_time(row_groups[0], rank)
 
@@ -188,6 +197,11 @@ def summa_sparse(adj_matrix, inputs, rank, row, col, size, row_groups, col_group
 
     global comm_time
     global comp_time
+
+    global summa_sparse_bcast1
+    global summa_sparse_bcast2
+
+    global summa_sparse_bcast1_words
 
     proc_row = proc_row_size(size)
     proc_col = proc_col_size(size)
@@ -252,6 +266,9 @@ def summa_sparse(adj_matrix, inputs, rank, row, col, size, row_groups, col_group
 
         dur = stop_time(row_groups[row], rank, tstart)
         comm_time += dur
+        summa_sparse_bcast1 += dur
+        if rank == 0:
+            summa_sparse_bcast1_words += 3 * acol_values_len
 
         if row_src_rank == rank:
             acol = adj_matrix
@@ -270,15 +287,18 @@ def summa_sparse(adj_matrix, inputs, rank, row, col, size, row_groups, col_group
 
         dur = stop_time(row_groups[0], rank, tstart)
         comm_time += dur
-        
+        summa_sparse_bcast2 += dur
+
         tstart = start_time(row_groups[0], rank)
 
         z_tmp = torch.sparse.mm(acol, brow)
+        # z_tmp = spmm_gpu(acol_indices[0].int(), acol_indices[1].int(), acol_values.double(), 
+        #                  height_per_proc, middim_per_proc, brow.double()).float()
+        z_loc += z_tmp
 
         dur = stop_time(row_groups[0], rank, tstart)
         comp_time += dur
 
-        z_loc += z_tmp
 
     return z_loc
 
@@ -287,6 +307,8 @@ def summa_loc(mata, matb, rank, row, col, size, row_groups, col_groups,
 
     global comm_time
     global comp_time
+
+    global summa_loc_bcast
 
     proc_row = proc_row_size(size)
     proc_col = proc_col_size(size)
@@ -332,6 +354,7 @@ def summa_loc(mata, matb, rank, row, col, size, row_groups, col_groups,
 
         dur = stop_time(row_groups[row], rank, tstart)
         comm_time += dur
+        summa_loc_bcast += dur
 
         # if col_src_rank == rank:
         #     brow = matb.clone()
@@ -810,13 +833,12 @@ def run(rank, size, inputs, adj_matrix, data, features, classes, device):
 
     for i in range(len(am_pbyp)):
         am_pbyp[i] = am_pbyp[i].to(device)
-    # for epoch in range(1, 101):
 
     # tstart = start_time(group, rank)
     if rank == 0:
         tstart = time.time()
 
-    for epoch in range(2):
+    for epoch in range(100):
         outputs = train(inputs_loc, weight1, weight2, inputs.size(0), adj_matrix_loc, am_pbyp, 
                                 optimizer, data, rank, size, group, row_groups, col_groups,
                                 transpose_group)
@@ -830,6 +852,12 @@ def run(rank, size, inputs, adj_matrix, data, features, classes, device):
     if rank == 0:
         print("comm_time: " + str(comm_time))
         print("comp_time: " + str(comp_time))
+        print(f"summa_sparse_bcast1: {summa_sparse_bcast1}")
+        print(f"summa_sparse_bcast1_words: {summa_sparse_bcast1_words}")
+        print(f"summa_sparse_bcast2: {summa_sparse_bcast2}")
+        print(f"summa_bcast1: {summa_bcast1}")
+        print(f"summa_bcast2: {summa_bcast2}")
+        print(f"summa_loc_bcast: {summa_loc_bcast}")
     
     # All-gather outputs to test accuracy
     # output_parts = []
