@@ -37,7 +37,10 @@ comp_time = 0.0
 comm_time = 0.0
 summa_sparse_bcast1 = 0.0
 summa_sparse_bcast1_words = 0
+summa_sparse_bcast2_words = 0
 summa_sparse_bcast2 = 0.0
+summa_sparse_bcast2_fwd = 0.0
+summa_sparse_bcast2_bwd = 0.0
 summa_bcast1 = 0.0
 summa_bcast2 = 0.0
 summa_loc_bcast = 0.0
@@ -202,6 +205,7 @@ def summa_sparse(adj_matrix, inputs, rank, row, col, size, row_groups, col_group
     global summa_sparse_bcast2
 
     global summa_sparse_bcast1_words
+    global summa_sparse_bcast2_words
 
     proc_row = proc_row_size(size)
     proc_col = proc_col_size(size)
@@ -246,10 +250,11 @@ def summa_sparse(adj_matrix, inputs, rank, row, col, size, row_groups, col_group
             acol_values_len = torch.cuda.LongTensor([0])
 
         dist.broadcast(acol_indices_len, row_src_rank, row_groups[row])
-        dist.broadcast(acol_values_len, row_src_rank, row_groups[row])
+        # dist.broadcast(acol_values_len, row_src_rank, row_groups[row])
 
-        acol_indices_len = acol_indices_len.item()
-        acol_values_len = acol_values_len.item()
+        acol_indices_len = acol_indices_len.item() # nnz
+        # acol_values_len = acol_values_len.item()
+        acol_values_len = acol_indices_len
 
         if row_src_rank == rank:
             acol_indices = adj_matrix.indices().contiguous().long()
@@ -258,11 +263,12 @@ def summa_sparse(adj_matrix, inputs, rank, row, col, size, row_groups, col_group
             acol_indices = torch.cuda.LongTensor(2, acol_indices_len).fill_(0)
             acol_values = torch.cuda.FloatTensor(acol_values_len).fill_(0)
         
+
+        acol = torch.cat((acol_indices.float(), acol_values.unsqueeze(0)), dim=0).contiguous()
+
         tstart = start_time(row_groups[row], rank)
 
-        dist.broadcast(acol_indices[0], row_src_rank, row_groups[row])
-        dist.broadcast(acol_indices[1], row_src_rank, row_groups[row])
-        dist.broadcast(acol_values, row_src_rank, row_groups[row])
+        dist.broadcast(acol, row_src_rank, row_groups[row])
 
         dur = stop_time(row_groups[row], rank, tstart)
         comm_time += dur
@@ -270,35 +276,42 @@ def summa_sparse(adj_matrix, inputs, rank, row, col, size, row_groups, col_group
         if rank == 0:
             summa_sparse_bcast1_words += 3 * acol_values_len
 
+        acol_indices = acol[:2].long()
+        acol_values = acol[2].squeeze(0)
+
         if row_src_rank == rank:
             acol = adj_matrix
         else:
             acol = sparse_coo_tensor_gpu(acol_indices, acol_values, 
                                             torch.Size([height_per_proc, middim_per_proc]))
 
+
         if col_src_rank == rank:
             brow = inputs
         else:
             brow = torch.cuda.FloatTensor(middim_per_proc, width_per_proc)
 
+        brow = brow.contiguous()
+
         tstart = start_time(row_groups[0], rank)
 
-        dist.broadcast(brow.contiguous(), col_src_rank, col_groups[col])
+        dist.broadcast(brow, col_src_rank, col_groups[col])
 
         dur = stop_time(row_groups[0], rank, tstart)
         comm_time += dur
         summa_sparse_bcast2 += dur
+        if rank == 0:
+            summa_sparse_bcast2_words += brow.size(0) * brow.size(1)
 
         tstart = start_time(row_groups[0], rank)
 
-        z_tmp = torch.sparse.mm(acol, brow)
-        # z_tmp = spmm_gpu(acol_indices[0].int(), acol_indices[1].int(), acol_values.double(), 
-        #                  height_per_proc, middim_per_proc, brow.double()).float()
+        # z_tmp = torch.sparse.mm(acol, brow)
+        z_tmp = spmm_gpu(acol_indices[0].int(), acol_indices[1].int(), acol_values.double(), 
+                       height_per_proc, middim_per_proc, brow.double()).float()
         z_loc += z_tmp
 
         dur = stop_time(row_groups[0], rank, tstart)
         comp_time += dur
-
 
     return z_loc
 
@@ -404,6 +417,9 @@ class GCNFunc(torch.autograd.Function):
         # weight: W
         # func: sigma
 
+        global summa_sparse_bcast2
+        global summa_sparse_bcast2_fwd
+
         proc_row = proc_row_size(size)
         proc_col = proc_col_size(size)
         
@@ -423,6 +439,8 @@ class GCNFunc(torch.autograd.Function):
 
         adj_matrix_t = adj_matrix # Only true for undirected graphs
 
+        tmp_summa_sparse_bcast2 = summa_sparse_bcast2
+
         # TODO: will need to change height argument when n % sqrt(P) != 0 and non-square grid
         z = summa_sparse(adj_matrix_t, inputs, rank, rank_row, rank_col, size, row_groups, 
                             col_groups, node_count, node_count, weight.size(0), transpose=False)
@@ -440,6 +458,7 @@ class GCNFunc(torch.autograd.Function):
         z.requires_grad = True
         ctx.z = z
 
+        summa_sparse_bcast2_fwd += summa_sparse_bcast2 - tmp_summa_sparse_bcast2
         # Worry about activation later
         # if func is F.log_softmax:
         #     h = func(z, dim=1)
@@ -453,6 +472,9 @@ class GCNFunc(torch.autograd.Function):
 
     @staticmethod
     def backward(ctx, grad_output):
+        global summa_sparse_bcast2
+        global summa_sparse_bcast2_bwd
+
         inputs, weight, adj_matrix = ctx.saved_tensors
         rank = ctx.rank
         size = ctx.size
@@ -476,6 +498,8 @@ class GCNFunc(torch.autograd.Function):
 
         #     sigmap = torch.autograd.grad(outputs=func_eval, inputs=z,grad_outputs=grad_output)[0]
         #     grad_output = sigmap
+
+        tmp_summa_sparse_bcast2 = summa_sparse_bcast2
 
         proc_row = proc_row_size(size)
         proc_col = proc_col_size(size)
@@ -554,6 +578,7 @@ class GCNFunc(torch.autograd.Function):
                 grad_weight_row = torch.cat((grad_weight_row, grad_weight_recv[rank_wt]), dim=1)
             grad_weight_fin = torch.cat((grad_weight_fin, grad_weight_row), dim=0)
 
+        summa_sparse_bcast2_bwd += summa_sparse_bcast2 - tmp_summa_sparse_bcast2
         return grad_input, grad_weight_fin, None, None, None, None, None, None, None, None, None, None
 
 def train(inputs, weight1, weight2, node_count, adj_matrix, am_partitions, optimizer, data, rank, 
@@ -842,7 +867,7 @@ def run(rank, size, inputs, adj_matrix, data, features, classes, device):
         outputs = train(inputs_loc, weight1, weight2, inputs.size(0), adj_matrix_loc, am_pbyp, 
                                 optimizer, data, rank, size, group, row_groups, col_groups,
                                 transpose_group)
-    print("Epoch: {:03d}".format(epoch), flush=True)
+        print("Epoch: {:03d}".format(epoch), flush=True)
 
     # dur = stop_time(group, rank, tstart)
     if rank == 0:
@@ -855,6 +880,9 @@ def run(rank, size, inputs, adj_matrix, data, features, classes, device):
         print(f"summa_sparse_bcast1: {summa_sparse_bcast1}")
         print(f"summa_sparse_bcast1_words: {summa_sparse_bcast1_words}")
         print(f"summa_sparse_bcast2: {summa_sparse_bcast2}")
+        print(f"summa_sparse_bcast2_fwd: {summa_sparse_bcast2_fwd}")
+        print(f"summa_sparse_bcast2_bwd: {summa_sparse_bcast2_bwd}")
+        print(f"summa_sparse_bcast2_words: {summa_sparse_bcast2_words}")
         print(f"summa_bcast1: {summa_bcast1}")
         print(f"summa_bcast2: {summa_bcast2}")
         print(f"summa_loc_bcast: {summa_loc_bcast}")
