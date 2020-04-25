@@ -1033,7 +1033,7 @@ def twod_partition(rank, size, inputs, adj_matrix, data, features, classes, devi
     # TODO: Maybe I do want grad here. Unsure.
     with torch.no_grad():
         # Column partitions
-        am_partitions, vtx_indices_col= split_coo(adj_matrix, node_count, n_per_col, 1)
+        am_partitions, vtx_indices_col = split_coo(adj_matrix, node_count, n_per_col, 1)
 
         proc_node_count = vtx_indices_col[rank_col + 1] - vtx_indices_col[rank_col]
         am_pbyp, vtx_indices_row  = split_coo(am_partitions[rank_col], node_count, n_per_row, 0)

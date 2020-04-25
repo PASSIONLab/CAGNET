@@ -106,14 +106,18 @@ def transpose(mat, row, col, height, width, size, acc_per_rank, transpose_group)
     if rank == rank_t:
         return mat.t()
 
-    height_recv = math.ceil(float(width) / proc_row)
-    width_recv  = math.ceil(float(height) / proc_col)
+    # height_recv = math.ceil(float(width) / proc_row)
+    # width_recv  = math.ceil(float(height) / proc_col)
+    height_recv = width // proc_row
+    width_recv  = height // proc_col
 
     if row == proc_row - 1:
-        height_recv -= proc_row * height_recv - width
+        # height_recv -= proc_row * height_recv - width
+        height_recv = width - height_recv * (proc_row - 1)
 
     if col == proc_col - 1:
-        width_recv -= proc_col * width_recv - height
+        # width_recv -= proc_col * width_recv - height
+        width_recv = height - width_recv * (proc_col - 1)
 
     mat_recv = torch.cuda.FloatTensor(height_recv, width_recv, device=device)
 
@@ -154,17 +158,23 @@ def summa(adj_matrix, inputs, rank, row, col, size, acc_per_rank, row_groups, co
     proc_row = proc_row_size(size)
     proc_col = proc_col_size(size)
 
-    height_per_proc = math.ceil(float(height) / proc_row)
-    width_per_proc  = math.ceil(float(width) / proc_col)
+    # height_per_proc = math.ceil(float(height) / proc_row)
+    # width_per_proc  = math.ceil(float(width) / proc_col)
+    # # TODO: Not sure how to handle this w/o square grid
+    # middim_per_proc = math.ceil(float(middim) / proc_row)
+    height_per_proc = height // proc_row
+    width_per_proc  = width // proc_col
     # TODO: Not sure how to handle this w/o square grid
-    middim_per_proc = math.ceil(float(middim) / proc_row)
+    middim_per_proc = middim // proc_row
     device = torch.device('cuda:{}'.format(rank_to_devid(rank, acc_per_rank)))
 
     if row == proc_row - 1:
-        height_per_proc -= proc_row * height_per_proc - height
+        # height_per_proc -= proc_row * height_per_proc - height
+        height_per_proc = height - height_per_proc * (proc_row - 1)
 
     if col == proc_col - 1:
-        width_per_proc -= proc_col * width_per_proc - width
+        # width_per_proc -= proc_col * width_per_proc - width
+        width_per_proc = width - width_per_proc * (proc_col - 1)
 
     acol_tens = torch.cuda.FloatTensor(height_per_proc, middim_per_proc, device=device)
     brow_tens = torch.cuda.FloatTensor(middim_per_proc, width_per_proc, device=device)
@@ -180,9 +190,12 @@ def summa(adj_matrix, inputs, rank, row, col, size, acc_per_rank, row_groups, co
         col_src_rank = k * proc_col + col
 
         if k == proc_col - 1:
-            middim_per_proc -= proc_col * middim_per_proc - middim
-            acol_tens = acol_tens[:,:middim_per_proc]
-            brow_tens = brow_tens[:middim_per_proc]
+            # middim_per_proc -= proc_col * middim_per_proc - middim
+            middim_per_proc = middim - middim_per_proc * (proc_col - 1)
+            # acol_tens = acol_tens[:,:middim_per_proc]
+            # brow_tens = brow_tens[:middim_per_proc]
+            acol_tens = torch.cuda.FloatTensor(height_per_proc, middim_per_proc, device=device)
+            brow_tens = torch.cuda.FloatTensor(middim_per_proc, width_per_proc, device=device)
 
         if row_src_rank == rank:
             acol = adj_matrix
@@ -243,18 +256,25 @@ def summa_sparse(adj_matrix, inputs, rank, row, col, size, acc_per_rank, row_gro
     proc_row = proc_row_size(size)
     proc_col = proc_col_size(size)
 
-    height_per_proc = math.ceil(float(height) / proc_row)
-    width_per_proc  = math.ceil(float(width) / proc_col)
+    # height_per_proc = math.ceil(float(height) / proc_row)
+    # width_per_proc  = math.ceil(float(width) / proc_col)
+
+    # # TODO: Not sure how to handle this w/o square grid
+    # middim_per_proc = math.ceil(float(middim) / proc_col)
+    height_per_proc = height // proc_row
+    width_per_proc  = width // proc_col
 
     # TODO: Not sure how to handle this w/o square grid
-    middim_per_proc = math.ceil(float(middim) / proc_col)
+    middim_per_proc = middim // proc_col
     device = torch.device('cuda:{}'.format(rank_to_devid(rank, acc_per_rank)))
 
     if row == proc_row - 1:
-        height_per_proc -= proc_row * height_per_proc - height
+        # height_per_proc -= proc_row * height_per_proc - height
+        height_per_proc = height - height_per_proc * (proc_row - 1)
 
     if col == proc_col - 1:
-        width_per_proc -= proc_col * width_per_proc - width
+        # width_per_proc -= proc_col * width_per_proc - width
+        width_per_proc = width - width_per_proc * (proc_col - 1)
 
     # acol = torch.cuda.sparse.FloatTensor(height_per_proc, middim_per_proc, device=device)
 
@@ -268,7 +288,8 @@ def summa_sparse(adj_matrix, inputs, rank, row, col, size, acc_per_rank, row_gro
         col_src_rank = k * proc_col + col
 
         if k == proc_col - 1:
-            middim_per_proc -= proc_col * middim_per_proc - middim
+            # middim_per_proc -= proc_col * middim_per_proc - middim
+            middim_per_proc = middim - middim_per_proc * (proc_col - 1)
 
         if row_src_rank == rank:
             # acol = adj_matrix.clone()
@@ -362,14 +383,19 @@ def summa_loc(mata, matb, rank, row, col, size, acc_per_rank, row_groups, col_gr
     proc_row = proc_row_size(size)
     proc_col = proc_col_size(size)
 
-    height_per_proc = math.ceil(float(height) / proc_row)
-    width_per_proc  = math.ceil(float(width) / proc_col)
+    # height_per_proc = math.ceil(float(height) / proc_row)
+    # width_per_proc  = math.ceil(float(width) / proc_col)
+    # # TODO: Not sure how to handle this w/o square grid
+    # middim_per_proc = math.ceil(float(middim) / proc_row)
+    height_per_proc = height // proc_row
+    width_per_proc  = width // proc_col
     # TODO: Not sure how to handle this w/o square grid
-    middim_per_proc = math.ceil(float(middim) / proc_row)
+    middim_per_proc = middim // proc_row
     device = torch.device('cuda:{}'.format(rank_to_devid(rank, acc_per_rank)))
 
     if row == proc_row - 1:
-        height_per_proc -= proc_row * height_per_proc - height
+        # height_per_proc -= proc_row * height_per_proc - height
+        height_per_proc = height - height_per_proc * (proc_row - 1)
 
     # if col == proc_col - 1:
     #     width_per_proc -= proc_col * width_per_proc - width
@@ -559,10 +585,28 @@ class GCNFunc(torch.autograd.Function):
                             row_groups, col_groups, node_count, node_count, weight.size(0))
 
         # tstart_grad_weight = start_time(row_groups[0], rank)
-        weight_rows = torch.split(weight, math.ceil(float(weight.size(0)) / proc_row), dim=0)
+        chunk_sizes_row = []
+        chunk_sizes_col = []
+        weight_per_row = weight.size(0) // proc_row
+        weight_per_col = weight.size(1) // proc_col
+        for i in range(proc_row):
+            if i == proc_row - 1:
+                chunk_sizes_row.append(weight.size(0) - weight_per_row * (proc_row - 1))
+            else:
+                chunk_sizes_row.append(weight_per_row)
+
+        for i in range(proc_col):
+            if i == proc_col - 1:
+                chunk_sizes_col.append(weight.size(1) - weight_per_col * (proc_col - 1))
+            else:
+                chunk_sizes_col.append(weight_per_col)
+
+        # weight_rows = torch.split(weight, math.ceil(float(weight.size(0)) / proc_row), dim=0)
+        weight_rows = torch.split(weight, chunk_sizes_row, dim=0)
         weight_parts = []
         for i in weight_rows:
-            weight_cols = torch.split(i, math.ceil(float(weight.size(1)) / proc_col), dim=1)
+            # weight_cols = torch.split(i, math.ceil(float(weight.size(1)) / proc_col), dim=1)
+            weight_cols = torch.split(i, chunk_sizes_col, dim=1)
             weight_parts.extend(weight_cols)
         # grad_weight_time += stop_time(row_groups[0], rank, tstart_grad_weight)
 
@@ -640,11 +684,28 @@ class GCNFunc(torch.autograd.Function):
                             row_groups, col_groups, node_count, node_count, weight.t().size(0))
 
         # tstart_grad_weight = start_time(row_groups[0], rank)
-        weight_rows = torch.split(weight.t(), math.ceil(float(weight.t().size(0)) / proc_row), 
-                                        dim=0)
+        chunk_sizes_row = []
+        chunk_sizes_col = []
+        weight_per_row = weight.t().size(0) // proc_row
+        weight_per_col = weight.t().size(1) // proc_col
+        for i in range(proc_row):
+            if i == proc_row - 1:
+                chunk_sizes_row.append(weight.t().size(0) - weight_per_row * (proc_row - 1))
+            else:
+                chunk_sizes_row.append(weight_per_row)
+
+        for i in range(proc_col):
+            if i == proc_col - 1:
+                chunk_sizes_col.append(weight.t().size(1) - weight_per_col * (proc_col - 1))
+            else:
+                chunk_sizes_col.append(weight_per_col)
+        # weight_rows = torch.split(weight.t(), math.ceil(float(weight.t().size(0)) / proc_row), 
+        weight_rows = torch.split(weight.t(), chunk_sizes_row, dim=0)
+
         weight_parts = []
         for i in weight_rows:
-            weight_cols = torch.split(i, math.ceil(float(weight.t().size(1)) / proc_col), dim=1)
+            # weight_cols = torch.split(i, math.ceil(float(weight.t().size(1)) / proc_col), dim=1)
+            weight_cols = torch.split(i, chunk_sizes_col, dim=1)
             weight_parts.extend(weight_cols)
 
         # grad_input = torch.mm(ag, weight.t())
@@ -668,14 +729,18 @@ class GCNFunc(torch.autograd.Function):
         # tstart_grad_weight = start_time(row_groups[0], rank)
         # Collect grad_weight's across processes
         grad_weight_recv = []
+        max_row_chunk = max(chunk_sizes_col) #transpose
+        max_col_chunk = max(chunk_sizes_row)
         for i in range(size):
             grad_weight_recv.append(torch.cuda.FloatTensor(
-                                                math.ceil(float(weight.size(0)) / proc_row),
-                                                math.ceil(float(weight.size(1)) / proc_col),
+                                                max_row_chunk,
+                                                max_col_chunk,
                                                 device=device))
 
-        pad_row = math.ceil(float(weight.size(0)) / proc_row) - grad_weight.size(0)
-        pad_col = math.ceil(float(weight.size(1)) / proc_col) - grad_weight.size(1)
+        # pad_row = math.ceil(float(weight.size(0)) / proc_row) - grad_weight.size(0)
+        # pad_col = math.ceil(float(weight.size(1)) / proc_col) - grad_weight.size(1)
+        pad_row = max_row_chunk - grad_weight.size(0)
+        pad_col = max_col_chunk - grad_weight.size(1)
 
         # TODO: make this part less hacky
         grad_weight = torch.cat((grad_weight, 
@@ -745,10 +810,13 @@ def train(inputs, weight1, weight2, node_count, adj_matrix, am_partitions, optim
     datay_rank = torch.split(data.y, outputs.size(0), dim=0)[rank_row]
 
     total_classes = weight2.size(1)
-    class_per_rank = math.ceil(float(total_classes) / proc_col)
+    # class_per_rank = math.ceil(float(total_classes) / proc_col)
+    class_per_rank = total_classes // proc_col
 
     min_class = rank_col * class_per_rank
     max_class = min((rank_col + 1) * class_per_rank, total_classes)
+    if rank_col == proc_col - 1:
+        max_classes = total_classes
 
 
     # Note: bool type removes warnings, unsure of perf penalty
@@ -815,8 +883,12 @@ def test(outputs, data, vertex_count, rank):
 
 # Split a COO into partitions of size n_per_proc
 # Basically torch.split but for Sparse Tensors since pytorch doesn't support that.
-def split_coo(adj_matrix, node_count, n_per_proc, dim):
+def split_coo(adj_matrix, node_count, n_per_proc, dim, size):
+    proc_row = proc_row_size(size)
+    proc_col = proc_col_size(size)
+
     vtx_indices = list(range(0, node_count, n_per_proc))
+    vtx_indices = vtx_indices[:proc_row]
     vtx_indices.append(node_count)
 
     am_partitions = []
@@ -888,7 +960,8 @@ def twod_partition(rank, size, inputs, adj_matrix, data, features, classes, devi
     proc_row = proc_row_size(size)
     proc_col = proc_col_size(size)
 
-    n_per_proc = math.ceil(float(node_count) / proc_row)
+    # n_per_proc = math.ceil(float(node_count) / proc_row)
+    n_per_proc = node_count // proc_row
 
     rank_row = int(rank / proc_col)
     rank_col = rank % proc_col
@@ -900,10 +973,10 @@ def twod_partition(rank, size, inputs, adj_matrix, data, features, classes, devi
     # TODO: Maybe I do want grad here. Unsure.
     with torch.no_grad():
         # Column partitions
-        am_partitions, vtx_indices = split_coo(adj_matrix, node_count, n_per_proc, 1)
+        am_partitions, vtx_indices = split_coo(adj_matrix, node_count, n_per_proc, 1, size)
 
         proc_node_count = vtx_indices[rank_col + 1] - vtx_indices[rank_col]
-        am_pbyp, _ = split_coo(am_partitions[rank_col], node_count, n_per_proc, 0)
+        am_pbyp, _ = split_coo(am_partitions[rank_col], node_count, n_per_proc, 0, size)
         for i in range(len(am_pbyp)):
             if i == proc_row - 1:
                 last_node_count = vtx_indices[i + 1] - vtx_indices[i]
@@ -921,11 +994,29 @@ def twod_partition(rank, size, inputs, adj_matrix, data, features, classes, devi
                 scale_elements(adj_matrix, am_pbyp[i], node_count, vtx_indices[i], 
                                     vtx_indices[rank_col])
 
-        input_rowparts = torch.split(inputs, math.ceil(float(inputs.size(0)) / proc_row), dim=0)
+        # input_rowparts = torch.split(inputs, math.ceil(float(inputs.size(0)) / proc_row), dim=0)
+        inputs_per_row = inputs.size(0) // proc_row
+        inputs_per_col = inputs.size(1) // proc_col
+        chunks_per_row = []
+        chunks_per_col = []
+        for i in range(proc_row):
+            if i == proc_row - 1:
+                chunks_per_row.append(inputs.size(0) - inputs_per_row * (proc_row - 1))
+            else:
+                chunks_per_row.append(inputs_per_row)
+        for i in range(proc_col):
+            if i == proc_col - 1:
+                chunks_per_col.append(inputs.size(1) - inputs_per_col * (proc_col - 1))
+            else:
+                chunks_per_col.append(inputs_per_col)
+
+        # input_rowparts = torch.split(inputs, math.ceil(float(inputs.size(0)) / proc_row), dim=0)
+        input_rowparts = torch.split(inputs, chunks_per_row, dim=0)
         input_partitions = []
         for i in input_rowparts:
-            input_partitions.append(torch.split(i, math.ceil(float(inputs.size(1)) / proc_col), 
-                                        dim=1))
+            # input_partitions.append(torch.split(i, math.ceil(float(inputs.size(1)) / proc_col), 
+            #                            dim=1))
+            input_partitions.append(torch.split(i, chunks_per_col, dim=1))
 
         adj_matrix_loc = am_pbyp[rank_row]
         inputs_loc = input_partitions[rank_row][rank_col]
@@ -1107,7 +1198,6 @@ def main(P, correctness_check, acc_per_rank):
         data = dataset[0]
         num_features = dataset.num_features
         num_classes = dataset.num_classes + 9
-        data.y = torch.cat((data.y, torch.zeros(9).long()), dim=0) 
     elif graphname == 'Amazon':
         edge_index = torch.load(path + "/processed/amazon_graph.pt")
         edge_index = edge_index.t_()

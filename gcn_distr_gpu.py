@@ -26,6 +26,8 @@ import time
 import numpy as np
 
 normalization = False
+device = None
+acc_per_rank = 0
 
 def normalize(adj_matrix):
     adj_matrix = adj_matrix + torch.eye(adj_matrix.size(0))
@@ -39,8 +41,8 @@ def block_row(adj_matrix, am_partitions, inputs, weight, rank, size):
     # n_per_proc = int(adj_matrix.size(1) / size)
     # am_partitions = list(torch.split(adj_matrix, n_per_proc, dim=1))
 
-    # z_loc = torch.cuda.FloatTensor(n_per_proc, inputs.size(1)).fill_(0)
-    z_loc = torch.zeros(adj_matrix.size(0), inputs.size(1))
+    z_loc = torch.cuda.FloatTensor(n_per_proc, inputs.size(1)).fill_(0)
+    # z_loc = torch.zeros(adj_matrix.size(0), inputs.size(1))
     
     inputs_recv = torch.zeros(inputs.size())
 
@@ -100,20 +102,22 @@ def outer_product2(inputs, ag, rank, size, group):
     return grad_weight
 
 def broad_func(adj_matrix, am_partitions, inputs, rank, size, group):
+    global device
+
     n_per_proc = math.ceil(float(adj_matrix.size(1)) / size)
 
-    # z_loc = torch.cuda.FloatTensor(adj_matrix.size(0), inputs.size(1)).fill_(0)
-    z_loc = torch.zeros(adj_matrix.size(0), inputs.size(1))
+    z_loc = torch.cuda.FloatTensor(adj_matrix.size(0), inputs.size(1), device=device).fill_(0)
+    # z_loc = torch.zeros(adj_matrix.size(0), inputs.size(1))
     
-    # inputs_recv = torch.cuda.FloatTensor(n_per_proc, inputs.size(1))
-    inputs_recv = torch.zeros(n_per_proc, inputs.size(1))
+    inputs_recv = torch.cuda.FloatTensor(n_per_proc, inputs.size(1), device=device).fill_(0)
+    # inputs_recv = torch.zeros(n_per_proc, inputs.size(1))
 
     for i in range(size):
         if i == rank:
             inputs_recv = inputs.clone()
         elif i == size - 1:
-            # inputs_recv = torch.cuda.FloatTensor(list(am_partitions[i].size())[1], inputs.size(1))
-            inputs_recv = torch.zeros(list(am_partitions[i].t().size())[1], inputs.size(1))
+            inputs_recv = torch.cuda.FloatTensor(am_partitions[i].size(0), inputs.size(1), device=device).fill_(0)
+            # inputs_recv = torch.zeros(list(am_partitions[i].t().size())[1], inputs.size(1))
 
         dist.broadcast(inputs_recv, src=i, group=group)
 
@@ -200,8 +204,8 @@ def train(inputs, weight1, weight2, adj_matrix, am_partitions, optimizer, data, 
         # loss = F.nll_loss(outputs, torch.max(datay_rank, 1)[1])
         loss.backward()
     else:
-        # fake_loss = (outputs * torch.cuda.FloatTensor(outputs.size()).fill_(0)).sum()
-        fake_loss = (outputs * torch.zeros(outputs.size())).sum()
+        fake_loss = (outputs * torch.cuda.FloatTensor(outputs.size(), device=device).fill_(0)).sum()
+        # fake_loss = (outputs * torch.zeros(outputs.size())).sum()
         fake_loss.backward()
 
     optimizer.step()
@@ -357,6 +361,12 @@ def run(rank, size, inputs, adj_matrix, data, features, classes, device):
 
     inputs_loc, adj_matrix_loc, am_pbyp = oned_partition(rank, size, inputs, adj_matrix, data, 
                                                                 features, classes, device)
+
+    inputs_loc = inputs_loc.to(device)
+    adj_matrix_loc = adj_matrix_loc.to(device)
+    for i in range(len(am_pbyp)):
+        am_pbyp[i] = am_pbyp[i].to(device)
+
     dist.barrier(group)
     tstart = 0.0
     tstop = 0.0
@@ -364,7 +374,7 @@ def run(rank, size, inputs, adj_matrix, data, features, classes, device):
         tstart = time.time()
 
     # for epoch in range(1, 201):
-    for epoch in range(1):
+    for epoch in range(100):
         outputs = train(inputs_loc, weight1, weight2, adj_matrix_loc, am_pbyp, optimizer, data, 
                                 rank, size, group)
         print("Epoch: {:03d}".format(epoch), flush=True)
@@ -393,25 +403,41 @@ def run(rank, size, inputs, adj_matrix, data, features, classes, device):
     print("rank: " + str(rank) + " " +  str(outputs))
     return outputs
 
+def rank_to_devid(rank, acc_per_rank):
+    return rank % acc_per_rank
+
 def init_process(rank, size, inputs, adj_matrix, data, features, classes, device, outputs, fn):
     run_outputs = fn(rank, size, inputs, adj_matrix, data, features, classes, device)
     if outputs is not None:
         outputs[rank] = run_outputs.detach()
 
 def main(P, correctness_check):
+    global device
+
     print(socket.gethostname())
-    dataset = 'Cora'
+    dataset = 'Reddit'
     path = osp.join(osp.dirname(osp.realpath(__file__)), '..', 'data', dataset)
-    dataset = Planetoid(path, dataset, T.NormalizeFeatures())
+    # dataset = Planetoid(path, dataset, T.NormalizeFeatures())
     # dataset = PPI(path, 'train', T.NormalizeFeatures())
-    # dataset = Reddit(path, T.NormalizeFeatures())
+    dataset = Reddit(path, T.NormalizeFeatures())
     data = dataset[0]
 
     seed = 0
 
     mp.set_start_method('spawn', force=True)
+    outputs = None
+    os.environ["RANK"] = os.environ["OMPI_COMM_WORLD_RANK"]
+    dist.init_process_group(backend='nccl')
+    rank = dist.get_rank()
+    size = dist.get_world_size()
+    print("Processes: " + str(size))
+
     # device = torch.device('cpu')
-    device = torch.device('cuda')
+    devid = rank_to_devid(rank, acc_per_rank)
+    device = torch.device('cuda:{}'.format(devid))
+    torch.cuda.set_device(device)
+    curr_devid = torch.cuda.current_device()
+    devcount = torch.cuda.device_count()
 
     data = data.to(device)
     data.x.requires_grad = True
@@ -426,11 +452,6 @@ def main(P, correctness_check):
     else:
         adj_matrix = edge_index
 
-    outputs = None
-    dist.init_process_group(backend='gloo')
-    rank = dist.get_rank()
-    size = dist.get_world_size()
-    print("Processes: " + str(size))
 
     init_process(rank, size, inputs, adj_matrix, data, dataset.num_features, dataset.num_classes, 
                     device, outputs, run)
@@ -448,6 +469,7 @@ if __name__ == '__main__':
                         help='Run correctness check')
     parser.add_argument('--local_rank', metavar='C', type=str,
                         help='Local rank')
+    parser.add_argument("--accperrank", type=int)
     args = parser.parse_args()
     print(args)
     P = args.processes
@@ -455,6 +477,7 @@ if __name__ == '__main__':
     if P is None:
         P = 1
 
+    acc_per_rank = args.accperrank
     if correctness_check is None or correctness_check == "nocheck":
         correctness_check = False
     else:

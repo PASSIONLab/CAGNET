@@ -786,7 +786,7 @@ def run(rank, size, inputs, adj_matrix, data, features, classes, device):
     tstart = start_time(group, rank)
 
     # for epoch in range(1, 101):
-    for epoch in range(2):
+    for epoch in range(1):
         outputs = train(inputs_loc, weight1, weight2, inputs.size(0), adj_matrix_loc, am_pbyp, 
                                 optimizer, data, rank, size, group)
         print("Epoch: {:03d}".format(epoch), flush=True)
@@ -853,7 +853,7 @@ def main(P, correctness_check):
         adj_matrix = edge_index
 
     outputs = None
-    dist.init_process_group(backend='mpi')
+    dist.init_process_group(backend='gloo')
     rank = dist.get_rank()
     size = dist.get_world_size()
     print("Processes: " + str(size))
@@ -872,6 +872,8 @@ if __name__ == '__main__':
                         help='Number of processes')
     parser.add_argument('--correctness', metavar='C', type=str,
                         help='Run correctness check')
+    parser.add_argument('--local_rank', metavar='C', type=str,
+                        help='Local rank')
     args = parser.parse_args()
     print(args)
     P = args.processes

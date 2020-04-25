@@ -106,12 +106,14 @@ void printCusparseSpMat(int32_t rows, int32_t cols, int32_t nnz, int32_t *row_in
   delete [] col_indices_host;
 }
 
-at::Tensor spmm_gpu(const at::Tensor& A_rowindices, 
+// at::Tensor spmm_gpu(const at::Tensor& A_rowindices, 
+void spmm_gpu(const at::Tensor& A_rowindices, 
                         const at::Tensor& A_colindices,
                         const at::Tensor& A_values, 
                         int32_t n,
                         int32_t m,
-                        at::Tensor& B) {
+                        at::Tensor& B,
+                        at::Tensor& C) {
 
     // cusparseHandle_t handle;
     // CHECK_CUSPARSE(cusparseCreate(&handle));
@@ -124,6 +126,12 @@ at::Tensor spmm_gpu(const at::Tensor& A_rowindices,
     clock_t start, stop;
     
     int32_t *d_a_csrrows;
+
+    
+    // int devid_old = 0;
+    // cudaGetDevice(&devid_old);
+    // cudaSetDevice(devid);
+
     cudaMalloc(&d_a_csrrows, (n + 1) * sizeof(int32_t));
     CHECK_CUSPARSE(cusparseXcoo2csr(handle, 
                                         A_rowindices.data<int>(), 
@@ -132,31 +140,54 @@ at::Tensor spmm_gpu(const at::Tensor& A_rowindices,
                                         d_a_csrrows, 
                                         CUSPARSE_INDEX_BASE_ZERO));
 
-    double alpha = 1;
-    double beta = 0;
+    float alpha = 1;
+    float beta = 1;
     cusparseMatDescr_t descrA;
     cusparseCreateMatDescr(&descrA);
     cusparseSetMatType(descrA,CUSPARSE_MATRIX_TYPE_GENERAL);
     cusparseSetMatIndexBase(descrA,CUSPARSE_INDEX_BASE_ZERO);
 
-    auto C = torch::ones({n, B.size(1)}, torch::dtype(torch::kDouble).device(torch::kCUDA));
-    CHECK_CUSPARSE(cusparseDcsrmm2(handle,
+    // auto C = torch::ones({n, B.size(1)}, torch::dtype(torch::kDouble).device(torch::kCUDA));
+
+    int32_t b_row = B.size(0);
+    int32_t b_col = B.size(1);
+    int32_t c_row = C.size(0);
+    int32_t c_col = C.size(1);
+    
+    // Row-major to column-major
+    // B.t_();
+    // B.set_data(B.contiguous());
+    // B.set_data(B.view({b_row, b_col}));
+    C.t_();
+    C.set_data(C.contiguous());
+    C.set_data(C.view({c_row, c_col}));
+    CHECK_CUSPARSE(cusparseScsrmm2(handle,
                                     CUSPARSE_OPERATION_NON_TRANSPOSE,
                                     CUSPARSE_OPERATION_TRANSPOSE,
+                                    // CUSPARSE_OPERATION_NON_TRANSPOSE,
                                     n,
-                                    B.size(1),
+                                    // B.size(1),
+                                    b_col,
                                     m,
                                     nnz,
                                     &alpha,
                                     descrA,
-                                    A_values.data<double>(),
+                                    A_values.data<float>(),
                                     d_a_csrrows,
                                     A_colindices.data<int>(),
-                                    B.data<double>(),
+                                    B.data<float>(),
                                     B.size(1),
+                                    // b_row,
                                     &beta,
-                                    C.data<double>(),
+                                    C.data<float>(),
                                     n)); 
+    cudaFree(d_a_csrrows);
+
+    // Column-major to row-major
+    // B.set_data(B.view({b_col, b_row}));
+    // B.t_();
+    C.set_data(C.view({c_col, c_row}));
+    C.t_();
 
     // Impl1.5 -- coo2csr + cusparseSpMM
     // cusparseSpMatDescr_t matA;
@@ -265,7 +296,7 @@ at::Tensor spmm_gpu(const at::Tensor& A_rowindices,
     //                                 CUSPARSE_COOMM_ALG1,
     //                                 buffer));
 
-    return C.view({B.size(1), n}).t();
+    // return C.view({B.size(1), n}).t();
 }
 
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {

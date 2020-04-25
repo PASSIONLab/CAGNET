@@ -1,0 +1,13 @@
++ /sw/summit/xalt/1.2.0/bin/mpirun -x WORLD_SIZE=1 -x MASTER_ADDR=h30n17 -x MASTER_PORT=1234 -x LSB_MCPU_HOSTS -x PATH -x LD_LIBRARY_PATH -x PYTHONPATH -x LSB_JOBID -mca plm_rsh_num_concurrent 1 --rankfile /tmp/DDLRUN/DDLRUN.Bcs5uLSbeG3D/RANKFILE -n 1 -x DDL_HOST_PORT=2200 -x DDL_HOST_LIST=h30n17:0 -x "DDL_OPTIONS=-mode p:1x1x1x1 " bash -c 'source /sw/summit/python/3.6/anaconda3/5.3.0/etc/profile.d/conda.sh && conda activate /ccs/home/alokt/.conda/envs/gnn > /dev/null 2>&1 && python gcn_distr_2d_gpu.py --accperrank=1'
+python: can't open file 'gcn_distr_2d_gpu.py': [Errno 2] No such file or directory
+--------------------------------------------------------------------------
+Primary job  terminated normally, but 1 process returned
+a non-zero exit code. Per user-direction, the job has been aborted.
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+mpirun detected that one or more processes exited with non-zero status, thus causing
+the job to be terminated. The first process to do so was:
+
+  Process name: [[57303,1],0]
+  Exit code:    2
+--------------------------------------------------------------------------
