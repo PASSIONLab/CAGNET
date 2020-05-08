@@ -1,0 +1,86 @@
+
+CommandNotFoundError: Your shell has not been properly configured to use 'conda activate'.
+To initialize your shell, run
+
+    $ conda init <SHELL_NAME>
+
+Currently supported shells are:
+  - bash
+  - fish
+  - tcsh
+  - xonsh
+  - zsh
+  - powershell
+
+See 'conda init --help' for more information and options.
+
+IMPORTANT: You may need to close and restart your shell after running 'conda init'.
+
+
+
+Lmod is automatically replacing "xl/16.1.1-5" with "gcc/6.4.0".
+
+
+Due to MODULEPATH changes, the following have been reloaded:
+  1) spectrum-mpi/10.3.1.2-20200121
+
+
+Currently Loaded Modules:
+  1) hsi/5.0.2.p5            6) tmux/2.2
+  2) xalt/1.2.0              7) cuda/10.1.243
+  3) lsf-tools/2.0           8) gcc/6.4.0
+  4) darshan-runtime/3.1.7   9) spectrum-mpi/10.3.1.2-20200121
+  5) DefApps
+
+ 
+
+g29n03
+/ccs/home/alokt/.lsbatch/1588903257.83728.shell: line 30: outputs/final_outputs/log_sm/reddit/distr_proc64_2d_output_mid16_True.txt: No such file or directory
+/ccs/home/alokt/.lsbatch/1588903257.83728.shell: line 30: outputs/final_outputs/log_sm/reddit/distr_proc64_2d_output_mid16_False.txt: No such file or directory
+/ccs/home/alokt/.lsbatch/1588903257.83728.shell: line 30: outputs/final_outputs/log_sm/reddit/distr_proc64_2d_output_mid36_True.txt: No such file or directory
+/ccs/home/alokt/.lsbatch/1588903257.83728.shell: line 30: outputs/final_outputs/log_sm/reddit/distr_proc64_2d_output_mid36_False.txt: No such file or directory
+/ccs/home/alokt/.lsbatch/1588903257.83728.shell: line 30: outputs/final_outputs/log_sm/reddit/distr_proc64_2d_output_mid256_True.txt: No such file or directory
+/ccs/home/alokt/.lsbatch/1588903257.83728.shell: line 30: outputs/final_outputs/log_sm/reddit/distr_proc64_2d_output_mid256_False.txt: No such file or directory
+/ccs/home/alokt/.lsbatch/1588903257.83728.shell: line 40: outputs/final_outputs/log_sm/amazon/distr_proc64_2d_output_mid16_True.txt: No such file or directory
+/ccs/home/alokt/.lsbatch/1588903257.83728.shell: line 40: outputs/final_outputs/log_sm/amazon/distr_proc64_2d_output_mid16_False.txt: No such file or directory
+/ccs/home/alokt/.lsbatch/1588903257.83728.shell: line 40: outputs/final_outputs/log_sm/amazon/distr_proc64_2d_output_mid36_True.txt: No such file or directory
+/ccs/home/alokt/.lsbatch/1588903257.83728.shell: line 40: outputs/final_outputs/log_sm/amazon/distr_proc64_2d_output_mid36_False.txt: No such file or directory
+/ccs/home/alokt/.lsbatch/1588903257.83728.shell: line 40: outputs/final_outputs/log_sm/amazon/distr_proc64_2d_output_mid256_True.txt: No such file or directory
+/ccs/home/alokt/.lsbatch/1588903257.83728.shell: line 40: outputs/final_outputs/log_sm/amazon/distr_proc64_2d_output_mid256_False.txt: No such file or directory
+/ccs/home/alokt/.lsbatch/1588903257.83728.shell: line 50: outputs/final_outputs/log_sm/subgraph3/distr_proc64_2d_output_mid16_True.txt: No such file or directory
+/ccs/home/alokt/.lsbatch/1588903257.83728.shell: line 50: outputs/final_outputs/log_sm/subgraph3/distr_proc64_2d_output_mid16_False.txt: No such file or directory
+/ccs/home/alokt/.lsbatch/1588903257.83728.shell: line 50: outputs/final_outputs/log_sm/subgraph3/distr_proc64_2d_output_mid36_True.txt: No such file or directory
+/ccs/home/alokt/.lsbatch/1588903257.83728.shell: line 50: outputs/final_outputs/log_sm/subgraph3/distr_proc64_2d_output_mid36_False.txt: No such file or directory
+/ccs/home/alokt/.lsbatch/1588903257.83728.shell: line 50: outputs/final_outputs/log_sm/subgraph3/distr_proc64_2d_output_mid256_True.txt: No such file or directory
+/ccs/home/alokt/.lsbatch/1588903257.83728.shell: line 50: outputs/final_outputs/log_sm/subgraph3/distr_proc64_2d_output_mid256_False.txt: No such file or directory
+
+------------------------------------------------------------
+Sender: LSF System <lsfadmin@batch2>
+Subject: Job 83728: <distr-gnn2d-p64> in cluster <summit> Exited
+
+Job <distr-gnn2d-p64> was submitted from host <batch2> by user <alokt> in cluster <summit> at Thu May  7 22:00:57 2020
+Job was executed on host(s) <1*batch2>, in queue <batch>, as user <alokt> in cluster <summit> at Thu May  7 22:06:18 2020
+                            <42*g29n03>
+                            <42*g33n02>
+                            <42*g35n04>
+                            <42*g35n05>
+                            <42*g35n12>
+                            <42*g36n03>
+                            <42*g36n04>
+                            <42*g36n05>
+                            <42*g36n06>
+                            <42*g36n07>
+                            <42*h09n08>
+                            <42*h09n10>
+                            <42*h21n16>
+                            <42*h22n05>
+                            <42*h22n13>
+                            <42*h28n13>
+</ccs/home/alokt> was used as the home directory.
+</autofs/nccs-svm1_home1/alokt/gnn_training/job_scripts/2d> was used as the working directory.
+Started at Thu May  7 22:06:18 2020
+Terminated at Thu May  7 22:06:38 2020
+Results reported at Thu May  7 22:06:38 2020
+
+The output (if any) is above this job summary.
+

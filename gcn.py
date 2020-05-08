@@ -57,10 +57,9 @@ class Net(torch.nn.Module):
         # x = self.conv2(x, edge_index)
         # return F.log_softmax(x, dim=1)
         x = self.conv1(x, edge_index)
-        # x = F.relu(x)
+        x = F.relu(x)
         x = self.conv2(x, edge_index)
-        # return F.log_softmax(x, dim=1)
-        return x
+        return F.log_softmax(x, dim=1)
 
 
 # device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -87,6 +86,10 @@ def train():
     F.nll_loss(outputs[data.train_mask.bool()], data.y[data.train_mask.bool()]).backward()
     # F.nll_loss(outputs, torch.max(data.y, 1)[1]).backward()
 
+    for W in model.parameters():
+        if W.grad is not None:
+            print(W.grad)
+
     optimizer.step()
     return outputs
 
@@ -99,7 +102,6 @@ def test(outputs):
         accs.append(acc)
     return accs
 
-
 def main(): 
     best_val_acc = test_acc = 0
     outputs = None
@@ -107,7 +109,7 @@ def main():
     tstart = time.time()
 
     # for epoch in range(1, 101):
-    for epoch in range(10):
+    for epoch in range(100):
         outputs = train()
         # train_acc, val_acc, tmp_test_acc = test(outputs)
         # if val_acc > best_val_acc:

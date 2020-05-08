@@ -1,0 +1,55 @@
+#!/bin/bash
+#BSUB -P BIF115
+#BSUB -W 2:00
+#BSUB -nnodes 16
+#BSUB -alloc_flags gpumps
+#BSUB -J distr-gnn-p64
+#BSUB -o distr-gnn.%J
+#BSUB -e distr-gnn.%J
+
+conda activate gnn
+
+module load cuda
+module load gcc
+
+module list
+
+# hostarr=(${LSB_HOSTS})
+# echo $LSB_MCPU_HOSTS
+hostarr=(${LSB_MCPU_HOSTS})
+echo ${hostarr[2]}
+
+declare -a midlayers=("16" "64" "256")
+declare -a timings=("True" "False")
+
+cd ../../
+
+# Reddit
+for i in "${midlayers[@]}"
+    do
+        for j in "${timings[@]}"
+            do
+                ddlrun -x WORLD_SIZE=64 -x MASTER_ADDR=${hostarr[2]} -x MASTER_PORT=1234 -x CUDA_VISIBLE_DEVICES=0,1,2,3  -accelerators 4 python gcn_distr_gpu.py --accperrank=4 --epochs=100 --graphname=Reddit --timing=$j --midlayer=$i &> outputs/final_outputs/reddit/distr_proc64_1d_output_mid$i\_$j\_words.txt
+
+            done
+    done
+
+# Amazon
+for i in "${midlayers[@]}"
+    do
+        for j in "${timings[@]}"
+            do
+                ddlrun -x WORLD_SIZE=64 -x MASTER_ADDR=${hostarr[2]} -x MASTER_PORT=1234  -x CUDA_VISIBLE_DEVICES=0,1,2,3 -accelerators 4 python gcn_distr_gpu.py --accperrank=4 --epochs=100 --graphname=Amazon --timing=$j --midlayer=$i &> outputs/final_outputs/amazon/distr_proc64_1d_output_mid$i\_$j\_words.txt
+
+            done
+    done
+
+# subgraph3
+for i in "${midlayers[@]}"
+    do
+        for j in "${timings[@]}"
+            do
+                ddlrun -x WORLD_SIZE=64 -x MASTER_ADDR=${hostarr[2]} -x MASTER_PORT=1234 -x CUDA_VISIBLE_DEVICES=0,1,2,3  -accelerators 4 python gcn_distr_gpu.py --accperrank=4 --epochs=10 --graphname=subgraph3 --timing=$j --midlayer=$i &> outputs/final_outputs/subgraph3/distr_proc64_1d_output_mid$i\_$j\_words.txt
+
+            done
+    done

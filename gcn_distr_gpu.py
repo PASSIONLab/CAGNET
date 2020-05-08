@@ -7,6 +7,7 @@ import math
 import torch
 import torch.distributed as dist
 
+from torch_geometric.data import Data, Dataset
 from torch_geometric.datasets import Planetoid, PPI, Reddit
 from torch_geometric.nn import GCNConv, ChebConv  # noqa
 from torch_geometric.utils import add_remaining_self_loops, to_dense_adj, dense_to_sparse, to_scipy_sparse_matrix
@@ -21,13 +22,46 @@ import torch.nn.functional as F
 
 from torch_scatter import scatter_add
 
+from sparse_coo_tensor_cpp import sparse_coo_tensor_gpu, spmm_gpu
+
 import socket
 import time
 import numpy as np
 
+comp_time = 0.0
+comm_time = 0.0
+scomp_time = 0.0
+dcomp_time = 0.0
+bcast_comm_time = 0.0
+bcast_words = 0
+op1_comm_time = 0.0
+op2_comm_time = 0.0
+
+epochs = 0
+graphname = ""
+mid_layer = 0
+timing = True
 normalization = False
 device = None
 acc_per_rank = 0
+
+def start_time(group, rank):
+    if not timing:
+        return 0.0
+    dist.barrier(group)
+    tstart = 0.0
+    if rank == 0:
+     tstart = time.time()
+    return tstart
+
+def stop_time(group, rank, tstart):
+    if not timing:
+        return 0.0
+    dist.barrier(group)
+    tstop = 0.0
+    if rank == 0:
+        tstop = time.time()
+    return tstop - tstart
 
 def normalize(adj_matrix):
     adj_matrix = adj_matrix + torch.eye(adj_matrix.size(0))
@@ -77,13 +111,31 @@ def block_row(adj_matrix, am_partitions, inputs, weight, rank, size):
     return z_loc
 
 def outer_product(adj_matrix, grad_output, rank, size, group):
+    global comm_time
+    global comp_time
+    global dcomp_time
+    global op1_comm_time
+
+
     n_per_proc = math.ceil(float(adj_matrix.size(0)) / size)
     
+    tstart_comp = start_time(group, rank)
+
     # A * G^l
     ag = torch.mm(adj_matrix, grad_output)
 
+    dur = stop_time(group, rank, tstart_comp)
+    comp_time += dur
+    dcomp_time += dur
+
+    tstart_comm = start_time(group, rank)
+
     # reduction on A * G^l low-rank matrices
     dist.all_reduce(ag, op=dist.reduce_op.SUM, group=group)
+
+    dur = stop_time(group, rank, tstart_comm)
+    comm_time += dur
+    op1_comm_time += dur
 
     # partition A * G^l by block rows and get block row for this process
     # TODO: this might not be space-efficient
@@ -93,20 +145,42 @@ def outer_product(adj_matrix, grad_output, rank, size, group):
     return grad_input
 
 def outer_product2(inputs, ag, rank, size, group):
+    global comm_time
+    global comp_time
+    global dcomp_time
+    global op2_comm_time
+
+    tstart_comp = start_time(group, rank)
     # (H^(l-1))^T * (A * G^l)
     grad_weight = torch.mm(inputs, ag)
+
+    dur = stop_time(group, rank, tstart_comp)
+    comp_time += dur
+    dcomp_time += dur
     
+    tstart_comm = start_time(group, rank)
     # reduction on grad_weight low-rank matrices
     dist.all_reduce(grad_weight, op=dist.reduce_op.SUM, group=group)
 
+    dur = stop_time(group, rank, tstart_comm)
+    comm_time += dur
+    op2_comm_time += dur
+
     return grad_weight
 
-def broad_func(adj_matrix, am_partitions, inputs, rank, size, group):
+def broad_func(node_count, am_partitions, inputs, rank, size, group):
     global device
+    global comm_time
+    global comp_time
+    global scomp_time
+    global bcast_comm_time
+    global bcast_words
 
-    n_per_proc = math.ceil(float(adj_matrix.size(1)) / size)
+    # n_per_proc = math.ceil(float(adj_matrix.size(1)) / size)
+    n_per_proc = math.ceil(float(node_count) / size)
 
-    z_loc = torch.cuda.FloatTensor(adj_matrix.size(0), inputs.size(1), device=device).fill_(0)
+    # z_loc = torch.cuda.FloatTensor(adj_matrix.size(0), inputs.size(1), device=device).fill_(0)
+    z_loc = torch.cuda.FloatTensor(am_partitions[0].size(0), inputs.size(1), device=device).fill_(0)
     # z_loc = torch.zeros(adj_matrix.size(0), inputs.size(1))
     
     inputs_recv = torch.cuda.FloatTensor(n_per_proc, inputs.size(1), device=device).fill_(0)
@@ -116,19 +190,37 @@ def broad_func(adj_matrix, am_partitions, inputs, rank, size, group):
         if i == rank:
             inputs_recv = inputs.clone()
         elif i == size - 1:
-            inputs_recv = torch.cuda.FloatTensor(am_partitions[i].size(0), inputs.size(1), device=device).fill_(0)
+            inputs_recv = torch.cuda.FloatTensor(am_partitions[i].size(1), inputs.size(1), device=device).fill_(0)
             # inputs_recv = torch.zeros(list(am_partitions[i].t().size())[1], inputs.size(1))
+
+        tstart_comm = start_time(group, rank)
 
         dist.broadcast(inputs_recv, src=i, group=group)
 
-        # z_loc += torch.mm(am_partitions[i], inputs_recv) 
-        z_loc += torch.mm(am_partitions[i].t(), inputs_recv) 
+        dur = stop_time(group, rank, tstart_comm)
+        comm_time += dur
+        bcast_comm_time += dur
+        bcast_words += inputs_recv.size(0) * inputs_recv.size(1)
+
+        tstart_comp = start_time(group, rank)
+
+        spmm_gpu(am_partitions[i].indices()[0].int(), am_partitions[i].indices()[1].int(), 
+                        am_partitions[i].values(), am_partitions[i].size(0), 
+                        am_partitions[i].size(1), inputs_recv, z_loc)
+
+        dur = stop_time(group, rank, tstart_comp)
+        comp_time += dur
+        scomp_time += dur
 
     return z_loc
 
 class GCNFunc(torch.autograd.Function):
     @staticmethod
     def forward(ctx, inputs, weight, adj_matrix, am_partitions, rank, size, group, func):
+        global comm_time
+        global comp_time
+        global dcomp_time
+
         # inputs: H
         # adj_matrix: A
         # weight: W
@@ -143,9 +235,16 @@ class GCNFunc(torch.autograd.Function):
         ctx.func = func
 
         # z = block_row(adj_matrix.t(), am_partitions, inputs, weight, rank, size)
-        z = broad_func(adj_matrix.t(), am_partitions, inputs, rank, size, group)
+        z = broad_func(adj_matrix.size(0), am_partitions, inputs, rank, size, group)
+
+        tstart_comp = start_time(group, rank)
 
         z = torch.mm(z, weight)
+
+        dur = stop_time(group, rank, tstart_comp)
+        comp_time += dur
+        dcomp_time += dur
+
         z.requires_grad = True
         ctx.z = z
 
@@ -160,6 +259,10 @@ class GCNFunc(torch.autograd.Function):
 
     @staticmethod
     def backward(ctx, grad_output):
+        global comm_time
+        global comp_time
+        global dcomp_time
+
         inputs, weight, adj_matrix = ctx.saved_tensors
         rank = ctx.rank
         size = ctx.size
@@ -181,7 +284,14 @@ class GCNFunc(torch.autograd.Function):
 
         # First backprop equation
         ag = outer_product(adj_matrix, grad_output, rank, size, group)
+
+        tstart_comp = start_time(group, rank)
+
         grad_input = torch.mm(ag, weight.t())
+
+        dur = stop_time(group, rank, tstart_comp)
+        comp_time += dur
+        dcomp_time += dur
 
         # Second backprop equation (reuses the A * G^l computation)
         grad_weight = outer_product2(inputs.t(), ag, rank, size, group)
@@ -325,7 +435,8 @@ def oned_partition(rank, size, inputs, adj_matrix, data, features, classes, devi
 
         for i in range(len(am_partitions)):
             proc_node_count = vtx_indices[i + 1] - vtx_indices[i]
-            am_partitions[i] = torch.sparse_coo_tensor(am_partitions[i], torch.ones(am_partitions[i].size(1)), 
+            am_partitions[i] = torch.sparse_coo_tensor(am_partitions[i], 
+                                                    torch.ones(am_partitions[i].size(1)), 
                                                     size=(node_count, proc_node_count), 
                                                     requires_grad=False)
             scale_elements(adj_matrix, am_partitions[i], node_count,  0, vtx_indices[i])
@@ -338,6 +449,9 @@ def oned_partition(rank, size, inputs, adj_matrix, data, features, classes, devi
     return inputs_loc, adj_matrix_loc, am_pbyp
 
 def run(rank, size, inputs, adj_matrix, data, features, classes, device):
+    global epochs
+    global mid_layer
+
     best_val_acc = test_acc = 0
     outputs = None
     group = dist.new_group(list(range(size)))
@@ -346,11 +460,11 @@ def run(rank, size, inputs, adj_matrix, data, features, classes, device):
     # inputs_loc = torch.rand(n_per_proc, inputs.size(1))
 
     torch.manual_seed(0)
-    weight1_nonleaf = torch.rand(features, 16, requires_grad=True)
+    weight1_nonleaf = torch.rand(features, mid_layer, requires_grad=True)
     weight1_nonleaf = weight1_nonleaf.to(device)
     weight1_nonleaf.retain_grad()
 
-    weight2_nonleaf = torch.rand(16, classes, requires_grad=True)
+    weight2_nonleaf = torch.rand(mid_layer, classes, requires_grad=True)
     weight2_nonleaf = weight2_nonleaf.to(device)
     weight2_nonleaf.retain_grad()
 
@@ -365,7 +479,7 @@ def run(rank, size, inputs, adj_matrix, data, features, classes, device):
     inputs_loc = inputs_loc.to(device)
     adj_matrix_loc = adj_matrix_loc.to(device)
     for i in range(len(am_pbyp)):
-        am_pbyp[i] = am_pbyp[i].to(device)
+        am_pbyp[i] = am_pbyp[i].t().coalesce().to(device)
 
     dist.barrier(group)
     tstart = 0.0
@@ -374,7 +488,8 @@ def run(rank, size, inputs, adj_matrix, data, features, classes, device):
         tstart = time.time()
 
     # for epoch in range(1, 201):
-    for epoch in range(100):
+    print(f"Starting training...", flush=True)
+    for epoch in range(epochs):
         outputs = train(inputs_loc, weight1, weight2, adj_matrix_loc, am_pbyp, optimizer, data, 
                                 rank, size, group)
         print("Epoch: {:03d}".format(epoch), flush=True)
@@ -382,8 +497,16 @@ def run(rank, size, inputs, adj_matrix, data, features, classes, device):
     dist.barrier(group)
     if rank == 0:
         tstop = time.time()
-
-    print("Time: " + str(tstop - tstart))
+        print("Time: " + str(tstop - tstart))
+        print("comm_time: " + str(comm_time))
+        print("comp_time: " + str(comp_time))
+        print("scomp_time: " + str(scomp_time))
+        print("dcomp_time: " + str(dcomp_time))
+        print("bcast_comm_time: " + str(bcast_comm_time))
+        print("bcast_words: " + str(bcast_words))
+        print("op1_comm_time: " + str(op1_comm_time))
+        print("op2_comm_time: " + str(op2_comm_time))
+    
     
     # All-gather outputs to test accuracy
     # output_parts = []
@@ -413,15 +536,9 @@ def init_process(rank, size, inputs, adj_matrix, data, features, classes, device
 
 def main(P, correctness_check):
     global device
+    global graphname
 
     print(socket.gethostname())
-    dataset = 'Reddit'
-    path = osp.join(osp.dirname(osp.realpath(__file__)), '..', 'data', dataset)
-    # dataset = Planetoid(path, dataset, T.NormalizeFeatures())
-    # dataset = PPI(path, 'train', T.NormalizeFeatures())
-    dataset = Reddit(path, T.NormalizeFeatures())
-    data = dataset[0]
-
     seed = 0
 
     mp.set_start_method('spawn', force=True)
@@ -439,13 +556,68 @@ def main(P, correctness_check):
     curr_devid = torch.cuda.current_device()
     devcount = torch.cuda.device_count()
 
-    data = data.to(device)
-    data.x.requires_grad = True
-    inputs = data.x.to(device)
-    inputs.requires_grad = True
-    data.y = data.y.to(device)
-
-    edge_index = data.edge_index
+    if graphname == "Cora":
+        path = osp.join(osp.dirname(osp.realpath(__file__)), '..', 'data', graphname)
+        dataset = Planetoid(path, graphname, T.NormalizeFeatures())
+        data = dataset[0]
+        data = data.to(device)
+        data.x.requires_grad = True
+        inputs = data.x.to(device)
+        inputs.requires_grad = True
+        data.y = data.y.to(device)
+        edge_index = data.edge_index
+        num_features = dataset.num_features
+        num_classes = dataset.num_classes
+    elif graphname == "Reddit":
+        path = osp.join(osp.dirname(osp.realpath(__file__)), '..', 'data', graphname)
+        dataset = Reddit(path, T.NormalizeFeatures())
+        data = dataset[0]
+        data = data.to(device)
+        data.x.requires_grad = True
+        inputs = data.x.to(device)
+        inputs.requires_grad = True
+        data.y = data.y.to(device)
+        edge_index = data.edge_index
+        num_features = dataset.num_features
+        num_classes = dataset.num_classes
+    elif graphname == 'Amazon':
+        path = osp.join(osp.dirname(osp.realpath(__file__)), '..', 'data', graphname)
+        edge_index = torch.load(path + "/processed/amazon_graph.pt")
+        edge_index = edge_index.t_()
+        # n = 9430086
+        n = 14249640
+        num_features = 300
+        num_classes = 24
+        # mid_layer = 24
+        inputs = torch.rand(n, num_features)
+        data = Data()
+        data.y = torch.rand(n).uniform_(0, num_classes - 1).long()
+        data.train_mask = torch.ones(n).long()
+        # edge_index = edge_index.to(device)
+        print(f"edge_index.size: {edge_index.size()}", flush=True)
+        print(f"edge_index: {edge_index}", flush=True)
+        data = data.to(device)
+        # inputs = inputs.to(device)
+        inputs.requires_grad = True
+        data.y = data.y.to(device)
+    elif graphname == 'subgraph3':
+        path = "/gpfs/alpine/bif115/scratch/alokt/HipMCL/"
+        print(f"Loading coo...", flush=True)
+        edge_index = torch.load(path + "/processed/subgraph3_graph.pt")
+        print(f"Done loading coo", flush=True)
+        n = 8745542
+        num_features = 128
+        # mid_layer = 512
+        # mid_layer = 64
+        num_classes = 256
+        inputs = torch.rand(n, num_features)
+        data = Data()
+        data.y = torch.rand(n).uniform_(0, num_classes - 1).long()
+        data.train_mask = torch.ones(n).long()
+        print(f"edge_index.size: {edge_index.size()}", flush=True)
+        data = data.to(device)
+        inputs.requires_grad = True
+        data.y = data.y.to(device)
 
     if normalization:
         adj_matrix, _ = add_remaining_self_loops(edge_index)
@@ -453,8 +625,8 @@ def main(P, correctness_check):
         adj_matrix = edge_index
 
 
-    init_process(rank, size, inputs, adj_matrix, data, dataset.num_features, dataset.num_classes, 
-                    device, outputs, run)
+    init_process(rank, size, inputs, adj_matrix, data, num_features, num_classes, device, outputs, 
+                    run)
 
     if outputs is not None:
         return outputs[0]
@@ -470,6 +642,11 @@ if __name__ == '__main__':
     parser.add_argument('--local_rank', metavar='C', type=str,
                         help='Local rank')
     parser.add_argument("--accperrank", type=int)
+    parser.add_argument("--epochs", type=int)
+    parser.add_argument("--graphname", type=str)
+    parser.add_argument("--timing", type=str)
+    parser.add_argument("--midlayer", type=int)
+
     args = parser.parse_args()
     print(args)
     P = args.processes
@@ -482,6 +659,17 @@ if __name__ == '__main__':
         correctness_check = False
     else:
         correctness_check = True
+
+    epochs = args.epochs
+    graphname = args.graphname
+    timing = args.timing == "True"
+    mid_layer = args.midlayer
+
+    if (epochs is None) or (graphname is None) or (timing is None) or (mid_layer is None):
+        print(f"Error: missing argument {epochs} {graphname} {timing} {mid_layer}")
+        exit()
+
+    print(f"Arguments: epochs: {epochs} graph: {graphname} timing: {timing} mid: {mid_layer}")
     
     print("Correctness: " + str(correctness_check))
     print(main(P, correctness_check))
