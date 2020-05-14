@@ -28,14 +28,22 @@ import socket
 import time
 import numpy as np
 
-comp_time = 0.0
-comm_time = 0.0
-scomp_time = 0.0
-dcomp_time = 0.0
-bcast_comm_time = 0.0
-bcast_words = 0
-op1_comm_time = 0.0
-op2_comm_time = 0.0
+# comp_time = 0.0
+# comm_time = 0.0
+# scomp_time = 0.0
+# dcomp_time = 0.0
+# bcast_comm_time = 0.0
+# bcast_words = 0
+# op1_comm_time = 0.0
+# op2_comm_time = 0.0
+total_time = dict()
+comp_time = dict()
+comm_time = dict()
+scomp_time = dict()
+dcomp_time = dict()
+bcast_comm_time = dict()
+op1_comm_time = dict()
+op2_comm_time = dict()
 
 epochs = 0
 graphname = ""
@@ -50,8 +58,7 @@ def start_time(group, rank):
         return 0.0
     dist.barrier(group)
     tstart = 0.0
-    if rank == 0:
-     tstart = time.time()
+    tstart = time.time()
     return tstart
 
 def stop_time(group, rank, tstart):
@@ -59,8 +66,7 @@ def stop_time(group, rank, tstart):
         return 0.0
     dist.barrier(group)
     tstop = 0.0
-    if rank == 0:
-        tstop = time.time()
+    tstop = time.time()
     return tstop - tstart
 
 def normalize(adj_matrix):
@@ -125,8 +131,8 @@ def outer_product(adj_matrix, grad_output, rank, size, group):
     ag = torch.mm(adj_matrix, grad_output)
 
     dur = stop_time(group, rank, tstart_comp)
-    comp_time += dur
-    dcomp_time += dur
+    comp_time[rank] += dur
+    dcomp_time[rank] += dur
 
     tstart_comm = start_time(group, rank)
 
@@ -134,8 +140,8 @@ def outer_product(adj_matrix, grad_output, rank, size, group):
     dist.all_reduce(ag, op=dist.reduce_op.SUM, group=group)
 
     dur = stop_time(group, rank, tstart_comm)
-    comm_time += dur
-    op1_comm_time += dur
+    comm_time[rank] += dur
+    op1_comm_time[rank] += dur
 
     # partition A * G^l by block rows and get block row for this process
     # TODO: this might not be space-efficient
@@ -155,16 +161,16 @@ def outer_product2(inputs, ag, rank, size, group):
     grad_weight = torch.mm(inputs, ag)
 
     dur = stop_time(group, rank, tstart_comp)
-    comp_time += dur
-    dcomp_time += dur
+    comp_time[rank] += dur
+    dcomp_time[rank] += dur
     
     tstart_comm = start_time(group, rank)
     # reduction on grad_weight low-rank matrices
     dist.all_reduce(grad_weight, op=dist.reduce_op.SUM, group=group)
 
     dur = stop_time(group, rank, tstart_comm)
-    comm_time += dur
-    op2_comm_time += dur
+    comm_time[rank] += dur
+    op2_comm_time[rank] += dur
 
     return grad_weight
 
@@ -174,7 +180,6 @@ def broad_func(node_count, am_partitions, inputs, rank, size, group):
     global comp_time
     global scomp_time
     global bcast_comm_time
-    global bcast_words
 
     # n_per_proc = math.ceil(float(adj_matrix.size(1)) / size)
     n_per_proc = math.ceil(float(node_count) / size)
@@ -198,9 +203,8 @@ def broad_func(node_count, am_partitions, inputs, rank, size, group):
         dist.broadcast(inputs_recv, src=i, group=group)
 
         dur = stop_time(group, rank, tstart_comm)
-        comm_time += dur
-        bcast_comm_time += dur
-        bcast_words += inputs_recv.size(0) * inputs_recv.size(1)
+        comm_time[rank] += dur
+        bcast_comm_time[rank] += dur
 
         tstart_comp = start_time(group, rank)
 
@@ -209,8 +213,8 @@ def broad_func(node_count, am_partitions, inputs, rank, size, group):
                         am_partitions[i].size(1), inputs_recv, z_loc)
 
         dur = stop_time(group, rank, tstart_comp)
-        comp_time += dur
-        scomp_time += dur
+        comp_time[rank] += dur
+        scomp_time[rank] += dur
 
     return z_loc
 
@@ -242,8 +246,8 @@ class GCNFunc(torch.autograd.Function):
         z = torch.mm(z, weight)
 
         dur = stop_time(group, rank, tstart_comp)
-        comp_time += dur
-        dcomp_time += dur
+        comp_time[rank] += dur
+        dcomp_time[rank] += dur
 
         z.requires_grad = True
         ctx.z = z
@@ -290,8 +294,8 @@ class GCNFunc(torch.autograd.Function):
         grad_input = torch.mm(ag, weight.t())
 
         dur = stop_time(group, rank, tstart_comp)
-        comp_time += dur
-        dcomp_time += dur
+        comp_time[rank] += dur
+        dcomp_time[rank] += dur
 
         # Second backprop equation (reuses the A * G^l computation)
         grad_weight = outer_product2(inputs.t(), ag, rank, size, group)
@@ -459,6 +463,15 @@ def run(rank, size, inputs, adj_matrix, data, features, classes, device):
     # adj_matrix_loc = torch.rand(node_count, n_per_proc)
     # inputs_loc = torch.rand(n_per_proc, inputs.size(1))
 
+
+    inputs_loc, adj_matrix_loc, am_pbyp = oned_partition(rank, size, inputs, adj_matrix, data, 
+                                                                features, classes, device)
+
+    inputs_loc = inputs_loc.to(device)
+    adj_matrix_loc = adj_matrix_loc.to(device)
+    for i in range(len(am_pbyp)):
+        am_pbyp[i] = am_pbyp[i].t().coalesce().to(device)
+
     torch.manual_seed(0)
     weight1_nonleaf = torch.rand(features, mid_layer, requires_grad=True)
     weight1_nonleaf = weight1_nonleaf.to(device)
@@ -472,20 +485,20 @@ def run(rank, size, inputs, adj_matrix, data, features, classes, device):
     weight2 = Parameter(weight2_nonleaf)
 
     optimizer = torch.optim.Adam([weight1, weight2], lr=0.01)
-
-    inputs_loc, adj_matrix_loc, am_pbyp = oned_partition(rank, size, inputs, adj_matrix, data, 
-                                                                features, classes, device)
-
-    inputs_loc = inputs_loc.to(device)
-    adj_matrix_loc = adj_matrix_loc.to(device)
-    for i in range(len(am_pbyp)):
-        am_pbyp[i] = am_pbyp[i].t().coalesce().to(device)
-
     dist.barrier(group)
     tstart = 0.0
     tstop = 0.0
-    if rank == 0:
+    
+    if timing:
         tstart = time.time()
+
+    comm_time[rank] = 0.0
+    comp_time[rank] = 0.0
+    scomp_time[rank] = 0.0
+    dcomp_time[rank] = 0.0
+    bcast_comm_time[rank] = 0.0
+    op1_comm_time[rank] = 0.0
+    op2_comm_time[rank] = 0.0
 
     # for epoch in range(1, 201):
     print(f"Starting training...", flush=True)
@@ -495,17 +508,16 @@ def run(rank, size, inputs, adj_matrix, data, features, classes, device):
         print("Epoch: {:03d}".format(epoch), flush=True)
 
     dist.barrier(group)
-    if rank == 0:
+    if timing:
         tstop = time.time()
-        print("Time: " + str(tstop - tstart))
-        print("comm_time: " + str(comm_time))
-        print("comp_time: " + str(comp_time))
-        print("scomp_time: " + str(scomp_time))
-        print("dcomp_time: " + str(dcomp_time))
-        print("bcast_comm_time: " + str(bcast_comm_time))
-        print("bcast_words: " + str(bcast_words))
-        print("op1_comm_time: " + str(op1_comm_time))
-        print("op2_comm_time: " + str(op2_comm_time))
+        print(f"rank: {rank} Time: {tstop - tstart}")
+        print(f"rank: {rank} comm_time: {comm_time[rank]}")
+        print(f"rank: {rank} comp_time: {comp_time[rank]}")
+        print(f"rank: {rank} scomp_time: {scomp_time[rank]}")
+        print(f"rank: {rank} dcomp_time: {dcomp_time[rank]}")
+        print(f"rank: {rank} bcast_comm_time: {bcast_comm_time[rank]}")
+        print(f"rank: {rank} op1_comm_time: {op1_comm_time[rank]}")
+        print(f"rank: {rank} op2_comm_time: {op2_comm_time[rank]}")
     
     
     # All-gather outputs to test accuracy

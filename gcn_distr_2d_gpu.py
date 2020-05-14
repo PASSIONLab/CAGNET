@@ -32,8 +32,6 @@ import socket
 import time
 import numpy as np
 
-from torchviz import make_dot
-
 from sparse_coo_tensor_cpp import sparse_coo_tensor_gpu, spmm_gpu
 
 comp_time = 0.0

@@ -22,6 +22,8 @@ echo ${hostarr[2]}
 declare -a midlayers=("16" "64" "256")
 declare -a timings=("True" "False")
 
+cd ../../
+
 # Reddit
 for i in "${midlayers[@]}"
     do
