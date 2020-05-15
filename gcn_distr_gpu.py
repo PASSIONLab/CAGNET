@@ -25,6 +25,7 @@ from torch_scatter import scatter_add
 from sparse_coo_tensor_cpp import sparse_coo_tensor_gpu, spmm_gpu
 
 import socket
+import statistics
 import time
 import numpy as np
 
@@ -52,6 +53,8 @@ timing = True
 normalization = False
 device = None
 acc_per_rank = 0
+run_count = 0
+run = 0
 
 def start_time(group, rank):
     if not timing:
@@ -121,6 +124,7 @@ def outer_product(adj_matrix, grad_output, rank, size, group):
     global comp_time
     global dcomp_time
     global op1_comm_time
+    global run
 
 
     n_per_proc = math.ceil(float(adj_matrix.size(0)) / size)
@@ -131,8 +135,8 @@ def outer_product(adj_matrix, grad_output, rank, size, group):
     ag = torch.mm(adj_matrix, grad_output)
 
     dur = stop_time(group, rank, tstart_comp)
-    comp_time[rank] += dur
-    dcomp_time[rank] += dur
+    comp_time[run][rank] += dur
+    dcomp_time[run][rank] += dur
 
     tstart_comm = start_time(group, rank)
 
@@ -140,8 +144,8 @@ def outer_product(adj_matrix, grad_output, rank, size, group):
     dist.all_reduce(ag, op=dist.reduce_op.SUM, group=group)
 
     dur = stop_time(group, rank, tstart_comm)
-    comm_time[rank] += dur
-    op1_comm_time[rank] += dur
+    comm_time[run][rank] += dur
+    op1_comm_time[run][rank] += dur
 
     # partition A * G^l by block rows and get block row for this process
     # TODO: this might not be space-efficient
@@ -155,22 +159,23 @@ def outer_product2(inputs, ag, rank, size, group):
     global comp_time
     global dcomp_time
     global op2_comm_time
+    global run
 
     tstart_comp = start_time(group, rank)
     # (H^(l-1))^T * (A * G^l)
     grad_weight = torch.mm(inputs, ag)
 
     dur = stop_time(group, rank, tstart_comp)
-    comp_time[rank] += dur
-    dcomp_time[rank] += dur
+    comp_time[run][rank] += dur
+    dcomp_time[run][rank] += dur
     
     tstart_comm = start_time(group, rank)
     # reduction on grad_weight low-rank matrices
     dist.all_reduce(grad_weight, op=dist.reduce_op.SUM, group=group)
 
     dur = stop_time(group, rank, tstart_comm)
-    comm_time[rank] += dur
-    op2_comm_time[rank] += dur
+    comm_time[run][rank] += dur
+    op2_comm_time[run][rank] += dur
 
     return grad_weight
 
@@ -180,6 +185,7 @@ def broad_func(node_count, am_partitions, inputs, rank, size, group):
     global comp_time
     global scomp_time
     global bcast_comm_time
+    global run
 
     # n_per_proc = math.ceil(float(adj_matrix.size(1)) / size)
     n_per_proc = math.ceil(float(node_count) / size)
@@ -203,8 +209,8 @@ def broad_func(node_count, am_partitions, inputs, rank, size, group):
         dist.broadcast(inputs_recv, src=i, group=group)
 
         dur = stop_time(group, rank, tstart_comm)
-        comm_time[rank] += dur
-        bcast_comm_time[rank] += dur
+        comm_time[run][rank] += dur
+        bcast_comm_time[run][rank] += dur
 
         tstart_comp = start_time(group, rank)
 
@@ -213,8 +219,8 @@ def broad_func(node_count, am_partitions, inputs, rank, size, group):
                         am_partitions[i].size(1), inputs_recv, z_loc)
 
         dur = stop_time(group, rank, tstart_comp)
-        comp_time[rank] += dur
-        scomp_time[rank] += dur
+        comp_time[run][rank] += dur
+        scomp_time[run][rank] += dur
 
     return z_loc
 
@@ -224,6 +230,7 @@ class GCNFunc(torch.autograd.Function):
         global comm_time
         global comp_time
         global dcomp_time
+        global run
 
         # inputs: H
         # adj_matrix: A
@@ -246,8 +253,8 @@ class GCNFunc(torch.autograd.Function):
         z = torch.mm(z, weight)
 
         dur = stop_time(group, rank, tstart_comp)
-        comp_time[rank] += dur
-        dcomp_time[rank] += dur
+        comp_time[run][rank] += dur
+        dcomp_time[run][rank] += dur
 
         z.requires_grad = True
         ctx.z = z
@@ -266,6 +273,7 @@ class GCNFunc(torch.autograd.Function):
         global comm_time
         global comp_time
         global dcomp_time
+        global run
 
         inputs, weight, adj_matrix = ctx.saved_tensors
         rank = ctx.rank
@@ -294,8 +302,8 @@ class GCNFunc(torch.autograd.Function):
         grad_input = torch.mm(ag, weight.t())
 
         dur = stop_time(group, rank, tstart_comp)
-        comp_time[rank] += dur
-        dcomp_time[rank] += dur
+        comp_time[run][rank] += dur
+        dcomp_time[run][rank] += dur
 
         # Second backprop equation (reuses the A * G^l computation)
         grad_weight = outer_product2(inputs.t(), ag, rank, size, group)
@@ -455,6 +463,7 @@ def oned_partition(rank, size, inputs, adj_matrix, data, features, classes, devi
 def run(rank, size, inputs, adj_matrix, data, features, classes, device):
     global epochs
     global mid_layer
+    global run
 
     best_val_acc = test_acc = 0
     outputs = None
@@ -472,52 +481,82 @@ def run(rank, size, inputs, adj_matrix, data, features, classes, device):
     for i in range(len(am_pbyp)):
         am_pbyp[i] = am_pbyp[i].t().coalesce().to(device)
 
-    torch.manual_seed(0)
-    weight1_nonleaf = torch.rand(features, mid_layer, requires_grad=True)
-    weight1_nonleaf = weight1_nonleaf.to(device)
-    weight1_nonleaf.retain_grad()
+    for i in range(run_count):
+        run = i
+        torch.manual_seed(0)
+        weight1_nonleaf = torch.rand(features, mid_layer, requires_grad=True)
+        weight1_nonleaf = weight1_nonleaf.to(device)
+        weight1_nonleaf.retain_grad()
 
-    weight2_nonleaf = torch.rand(mid_layer, classes, requires_grad=True)
-    weight2_nonleaf = weight2_nonleaf.to(device)
-    weight2_nonleaf.retain_grad()
+        weight2_nonleaf = torch.rand(mid_layer, classes, requires_grad=True)
+        weight2_nonleaf = weight2_nonleaf.to(device)
+        weight2_nonleaf.retain_grad()
 
-    weight1 = Parameter(weight1_nonleaf)
-    weight2 = Parameter(weight2_nonleaf)
+        weight1 = Parameter(weight1_nonleaf)
+        weight2 = Parameter(weight2_nonleaf)
 
-    optimizer = torch.optim.Adam([weight1, weight2], lr=0.01)
-    dist.barrier(group)
-    tstart = 0.0
-    tstop = 0.0
-    
-    if timing:
+        optimizer = torch.optim.Adam([weight1, weight2], lr=0.01)
+        dist.barrier(group)
+
+        tstart = 0.0
+        tstop = 0.0
         tstart = time.time()
 
-    comm_time[rank] = 0.0
-    comp_time[rank] = 0.0
-    scomp_time[rank] = 0.0
-    dcomp_time[rank] = 0.0
-    bcast_comm_time[rank] = 0.0
-    op1_comm_time[rank] = 0.0
-    op2_comm_time[rank] = 0.0
+        total_time[i] = dict()
+        comm_time[i] = dict()
+        comp_time[i] = dict()
+        scomp_time[i] = dict()
+        dcomp_time[i] = dict()
+        bcast_comm_time[i] = dict()
+        op1_comm_time[i] = dict()
+        op2_comm_time[i] = dict()
 
-    # for epoch in range(1, 201):
-    print(f"Starting training...", flush=True)
-    for epoch in range(epochs):
-        outputs = train(inputs_loc, weight1, weight2, adj_matrix_loc, am_pbyp, optimizer, data, 
-                                rank, size, group)
-        print("Epoch: {:03d}".format(epoch), flush=True)
+        total_time[i][rank] = 0.0
+        comm_time[i][rank] = 0.0
+        comp_time[i][rank] = 0.0
+        scomp_time[i][rank] = 0.0
+        dcomp_time[i][rank] = 0.0
+        bcast_comm_time[i][rank] = 0.0
+        op1_comm_time[i][rank] = 0.0
+        op2_comm_time[i][rank] = 0.0
 
-    dist.barrier(group)
-    if timing:
+        # for epoch in range(1, 201):
+        print(f"Starting training... rank {rank} run {i}", flush=True)
+        for epoch in range(epochs):
+            outputs = train(inputs_loc, weight1, weight2, adj_matrix_loc, am_pbyp, optimizer, data, 
+                                    rank, size, group)
+            print("Epoch: {:03d}".format(epoch), flush=True)
+
+        dist.barrier(group)
         tstop = time.time()
-        print(f"rank: {rank} Time: {tstop - tstart}")
-        print(f"rank: {rank} comm_time: {comm_time[rank]}")
-        print(f"rank: {rank} comp_time: {comp_time[rank]}")
-        print(f"rank: {rank} scomp_time: {scomp_time[rank]}")
-        print(f"rank: {rank} dcomp_time: {dcomp_time[rank]}")
-        print(f"rank: {rank} bcast_comm_time: {bcast_comm_time[rank]}")
-        print(f"rank: {rank} op1_comm_time: {op1_comm_time[rank]}")
-        print(f"rank: {rank} op2_comm_time: {op2_comm_time[rank]}")
+        total_time[i][rank] = tstop - tstart
+
+    # Get median runtime according to rank0 and print that run's breakdown
+    dist.barrier(group)
+    if rank == 0:
+        total_times_r0 = [] 
+        for i in range(run_count):
+            total_times_r0.append(total_time[i][0])
+
+        print(f"total_times_r0: {total_times_r0}")
+        median_run_time = statistics.median(total_times_r0)
+        median_idx = total_times_r0.index(median_run_time)
+        median_idx = torch.cuda.LongTensor([median_idx])
+    else:
+        median_idx = torch.cuda.LongTensor([0])
+        
+    dist.broadcast(median_idx, src=0, group=group)        
+    median_idx = median_idx.item()
+    print(f"rank: {rank} median_run: {median_idx}")
+    print(f"rank: {rank} total_time: {total_time[median_idx][rank]}")
+    print(f"rank: {rank} comm_time: {comm_time[median_idx][rank]}")
+    print(f"rank: {rank} comp_time: {comp_time[median_idx][rank]}")
+    print(f"rank: {rank} scomp_time: {scomp_time[median_idx][rank]}")
+    print(f"rank: {rank} dcomp_time: {dcomp_time[median_idx][rank]}")
+    print(f"rank: {rank} bcast_comm_time: {bcast_comm_time[median_idx][rank]}")
+    print(f"rank: {rank} op1_comm_time: {op1_comm_time[median_idx][rank]}")
+    print(f"rank: {rank} op2_comm_time: {op2_comm_time[median_idx][rank]}")
+    print(f"rank: {rank} {outputs}")
     
     
     # All-gather outputs to test accuracy
@@ -535,7 +574,6 @@ def run(rank, size, inputs, adj_matrix, data, features, classes, device):
     # log = 'Epoch: {:03d}, Train: {:.4f}, Val: {:.4f}, Test: {:.4f}'
 
     # print(log.format(200, train_acc, best_val_acc, test_acc))
-    print("rank: " + str(rank) + " " +  str(outputs))
     return outputs
 
 def rank_to_devid(rank, acc_per_rank):
@@ -658,6 +696,7 @@ if __name__ == '__main__':
     parser.add_argument("--graphname", type=str)
     parser.add_argument("--timing", type=str)
     parser.add_argument("--midlayer", type=int)
+    parser.add_argument("--runcount", type=int)
 
     args = parser.parse_args()
     print(args)
@@ -676,12 +715,13 @@ if __name__ == '__main__':
     graphname = args.graphname
     timing = args.timing == "True"
     mid_layer = args.midlayer
+    run_count = args.runcount
 
-    if (epochs is None) or (graphname is None) or (timing is None) or (mid_layer is None):
-        print(f"Error: missing argument {epochs} {graphname} {timing} {mid_layer}")
+    if (epochs is None) or (graphname is None) or (timing is None) or (mid_layer is None) or (run_count is None):
+        print(f"Error: missing argument {epochs} {graphname} {timing} {mid_layer} {run_count}")
         exit()
 
-    print(f"Arguments: epochs: {epochs} graph: {graphname} timing: {timing} mid: {mid_layer}")
+    print(f"Arguments: epochs: {epochs} graph: {graphname} timing: {timing} mid: {mid_layer} runs: {run_count}")
     
     print("Correctness: " + str(correctness_check))
     print(main(P, correctness_check))

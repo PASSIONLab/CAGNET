@@ -29,7 +29,7 @@ for i in "${midlayers[@]}"
     do
         for j in "${timings[@]}"
             do
-                ddlrun -x WORLD_SIZE=36 -x MASTER_ADDR=${hostarr[2]} -x MASTER_PORT=1234 -x CUDA_VISIBLE_DEVICES=0,1,2,3,4,5  -accelerators 6 python gcn_distr_gpu.py --accperrank=6 --epochs=100 --graphname=Reddit --timing=$j --midlayer=$i &> outputs/final_outputs/reddit/distr_proc36_1d_output_mid$i\_$j\_words.txt
+                ddlrun -x WORLD_SIZE=36 -x MASTER_ADDR=${hostarr[2]} -x MASTER_PORT=1234 -x CUDA_VISIBLE_DEVICES=0,1,2,3,4,5  -accelerators 6 python gcn_distr_gpu.py --accperrank=6 --epochs=100 --graphname=Reddit --timing=$j --midlayer=$i --runcount=3 &> outputs/final_outputs/reddit/distr_proc36_1d_output_mid$i\_$j\_words.txt
 
             done
     done
@@ -39,7 +39,7 @@ for i in "${midlayers[@]}"
     do
         for j in "${timings[@]}"
             do
-                ddlrun -x WORLD_SIZE=36 -x MASTER_ADDR=${hostarr[2]} -x MASTER_PORT=1234 -x CUDA_VISIBLE_DEVICES=0,1,2,3,4,5  -accelerators 6 python gcn_distr_gpu.py --accperrank=6 --epochs=100 --graphname=Amazon --timing=$j --midlayer=$i &> outputs/final_outputs/amazon/distr_proc36_1d_output_mid$i\_$j\_words.txt
+                ddlrun -x WORLD_SIZE=36 -x MASTER_ADDR=${hostarr[2]} -x MASTER_PORT=1234 -x CUDA_VISIBLE_DEVICES=0,1,2,3,4,5  -accelerators 6 python gcn_distr_gpu.py --accperrank=6 --epochs=100 --graphname=Amazon --timing=$j --midlayer=$i --runcount=3 &> outputs/final_outputs/amazon/distr_proc36_1d_output_mid$i\_$j\_words.txt
 
             done
     done
@@ -49,7 +49,7 @@ for i in "${midlayers[@]}"
     do
         for j in "${timings[@]}"
             do
-                ddlrun -x WORLD_SIZE=36 -x MASTER_ADDR=${hostarr[2]} -x MASTER_PORT=1234  -x CUDA_VISIBLE_DEVICES=0,1,2,3,4,5 -accelerators 6 python gcn_distr_gpu.py --accperrank=6 --epochs=10 --graphname=subgraph3 --timing=$j --midlayer=$i &> outputs/final_outputs/subgraph3/distr_proc36_1d_output_mid$i\_$j\_words.txt
+                ddlrun -x WORLD_SIZE=36 -x MASTER_ADDR=${hostarr[2]} -x MASTER_PORT=1234  -x CUDA_VISIBLE_DEVICES=0,1,2,3,4,5 -accelerators 6 python gcn_distr_gpu.py --accperrank=6 --epochs=10 --graphname=subgraph3 --timing=$j --midlayer=$i --runcount=3 &> outputs/final_outputs/subgraph3/distr_proc36_1d_output_mid$i\_$j\_words.txt
 
             done
     done

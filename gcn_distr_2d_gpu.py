@@ -1181,6 +1181,17 @@ def main(P, correctness_check, acc_per_rank):
         data = Data()
         data.y = torch.rand(n).uniform_(0, num_classes - 1)
         data.train_mask = torch.ones(n).long()
+    elif graphname == 'subgraph4':
+        path = "/gpfs/alpine/bif115/scratch/alokt/HipMCL/"
+        edge_index = torch.load(path + "/processed/subgraph4_graph.pt")
+        n = 4372771
+        num_features = 128
+        # mid_layer = 64
+        num_classes = 256
+        inputs = torch.rand(n, num_features)
+        data = Data()
+        data.y = torch.rand(n).uniform_(0, num_classes - 1)
+        data.train_mask = torch.ones(n).long()
     elif graphname == 'subgraph3':
         path = "/gpfs/alpine/bif115/scratch/alokt/HipMCL/"
         edge_index = torch.load(path + "/processed/subgraph3_graph.pt")
@@ -1223,6 +1234,10 @@ def main(P, correctness_check, acc_per_rank):
         data = data.to(device)
         inputs.requires_grad = True
         data.y = data.y.to(device)
+    elif graphname == "subgraph4":
+        print(f"edge_index.size: {edge_index.size()}", flush=True)
+        data = data.to(device)
+        inputs.requires_grad = True
     elif graphname == "subgraph3":
         print(f"edge_index.size: {edge_index.size()}", flush=True)
         data = data.to(device)
