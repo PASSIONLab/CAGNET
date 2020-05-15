@@ -1047,11 +1047,16 @@ def run(rank, size, inputs, adj_matrix, data, features, mid_layer, classes, devi
     inputs_loc = inputs_loc.to(device)
     adj_matrix_loc = adj_matrix_loc.to(device)
 
+    # Don't time first epoch
+    outputs = train(inputs_loc, weight1, weight2, inputs.size(0), adj_matrix_loc, None, 
+                            optimizer, data, rank, size, acc_per_rank, group, row_groups, 
+                            col_groups, transpose_group)
+
     # tstart = start_time(group, rank)
     if rank == 0:
         tstart = time.time()
 
-    for epoch in range(epochs):
+    for epoch in range(epochs - 1):
         if rank == 0:
             tstart_epoch = time.time()
         outputs = train(inputs_loc, weight1, weight2, inputs.size(0), adj_matrix_loc, None, 

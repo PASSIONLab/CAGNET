@@ -35,3 +35,35 @@ Currently Loaded Modules:
  
 
 b09n13
+User defined signal 2
+
+------------------------------------------------------------
+Sender: LSF System <lsfadmin@batch2>
+Subject: Job 97673: <distr-gnn-p64> in cluster <summit> Exited
+
+Job <distr-gnn-p64> was submitted from host <batch1> by user <alokt> in cluster <summit> at Thu May 14 22:51:47 2020
+Job was executed on host(s) <1*batch2>, in queue <batch>, as user <alokt> in cluster <summit> at Fri May 15 01:13:06 2020
+                            <42*b09n13>
+                            <42*b35n08>
+                            <42*h26n07>
+                            <42*h27n13>
+                            <42*h36n03>
+                            <42*h36n04>
+                            <42*h36n05>
+                            <42*h36n06>
+                            <42*h36n07>
+                            <42*h36n08>
+                            <42*h36n10>
+                            <42*h36n11>
+                            <42*h36n12>
+                            <42*h36n13>
+                            <42*h36n14>
+                            <42*h36n15>
+</ccs/home/alokt> was used as the home directory.
+</autofs/nccs-svm1_home1/alokt/gnn_training/job_scripts/1d> was used as the working directory.
+Started at Fri May 15 01:13:06 2020
+Terminated at Fri May 15 03:13:34 2020
+Results reported at Fri May 15 03:13:34 2020
+
+The output (if any) is above this job summary.
+
