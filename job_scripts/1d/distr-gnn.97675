@@ -35,3 +35,43 @@ Currently Loaded Modules:
  
 
 b36n08
+User defined signal 2
+
+------------------------------------------------------------
+Sender: LSF System <lsfadmin@batch5>
+Subject: Job 97675: <distr-gnn-p144> in cluster <summit> Exited
+
+Job <distr-gnn-p144> was submitted from host <batch1> by user <alokt> in cluster <summit> at Thu May 14 22:51:51 2020
+Job was executed on host(s) <1*batch5>, in queue <batch>, as user <alokt> in cluster <summit> at Fri May 15 02:46:49 2020
+                            <42*b36n08>
+                            <42*b36n09>
+                            <42*b36n10>
+                            <42*b36n11>
+                            <42*b36n12>
+                            <42*b36n13>
+                            <42*b36n14>
+                            <42*b36n15>
+                            <42*b36n16>
+                            <42*b36n17>
+                            <42*b36n18>
+                            <42*c01n01>
+                            <42*c01n02>
+                            <42*c01n03>
+                            <42*c01n04>
+                            <42*c01n05>
+                            <42*c01n06>
+                            <42*c01n07>
+                            <42*c01n08>
+                            <42*c01n09>
+                            <42*c01n10>
+                            <42*c01n11>
+                            <42*c01n12>
+                            <42*c01n13>
+</ccs/home/alokt> was used as the home directory.
+</autofs/nccs-svm1_home1/alokt/gnn_training/job_scripts/1d> was used as the working directory.
+Started at Fri May 15 02:46:49 2020
+Terminated at Fri May 15 04:47:08 2020
+Results reported at Fri May 15 04:47:08 2020
+
+The output (if any) is above this job summary.
+

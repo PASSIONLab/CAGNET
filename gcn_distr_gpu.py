@@ -67,7 +67,7 @@ def start_time(group, rank):
 def stop_time(group, rank, tstart):
     if not timing:
         return 0.0
-    dist.barrier(group)
+    # dist.barrier(group)
     tstop = 0.0
     tstop = time.time()
     return tstop - tstart
@@ -522,14 +522,16 @@ def run(rank, size, inputs, adj_matrix, data, features, classes, device):
 
         # for epoch in range(1, 201):
         print(f"Starting training... rank {rank} run {i}", flush=True)
+        # with torch.autograd.profiler.profile(use_cuda=True) as prof:
         for epoch in range(epochs):
             outputs = train(inputs_loc, weight1, weight2, adj_matrix_loc, am_pbyp, optimizer, data, 
                                     rank, size, group)
             print("Epoch: {:03d}".format(epoch), flush=True)
 
-        dist.barrier(group)
+        # dist.barrier(group)
         tstop = time.time()
         total_time[i][rank] = tstop - tstart
+        # print(prof.key_averages().table(sort_by="self_cuda_time_total"))
 
     # Get median runtime according to rank0 and print that run's breakdown
     dist.barrier(group)
@@ -604,6 +606,7 @@ def main(P, correctness_check):
     device = torch.device('cuda:{}'.format(devid))
     torch.cuda.set_device(device)
     curr_devid = torch.cuda.current_device()
+    print(f"curr_devid: {curr_devid}", flush=True)
     devcount = torch.cuda.device_count()
 
     if graphname == "Cora":
