@@ -1,0 +1,36 @@
+#!/bin/bash
+#BSUB -P BIF115
+#BSUB -W 2:00
+#BSUB -nnodes 64
+#BSUB -alloc_flags gpumps
+#BSUB -J distr-gnn2d-p144
+#BSUB -o distr-gnn.%J
+#BSUB -e distr-gnn.%J
+
+conda activate gnn2
+
+module load cuda
+module load gcc
+
+module list
+
+# hostarr=(${LSB_HOSTS})
+# echo $LSB_MCPU_HOSTS
+hostarr=(${LSB_MCPU_HOSTS})
+echo ${hostarr[2]}
+
+declare -a midlayers=("16" "64" "256")
+# declare -a midlayers=("256")
+declare -a timings=("True" "False")
+
+cd ../../
+
+# subgraph2
+for i in "${midlayers[@]}"
+    do
+        for j in "${timings[@]}"
+            do
+                ddlrun -x WORLD_SIZE=256 -x MASTER_ADDR=${hostarr[2]} -x MASTER_PORT=1234 -accelerators 4 python gcn_distr_2d_gpu.py --accperrank=4 --epochs=20 --graphname=subgraph2 --timing=$j --midlayer=$i &> outputs/final_outputs/subgraph2/distr_proc256_2d_output_mid$i\_$j\.txt
+
+            done
+    done

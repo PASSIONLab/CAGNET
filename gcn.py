@@ -16,11 +16,11 @@ parser.add_argument('--use_gdc', action='store_true',
                     help='Use GDC preprocessing.')
 args = parser.parse_args()
 
-dataset = 'Cora'
+dataset = 'Reddit'
 path = osp.join(osp.dirname(osp.realpath(__file__)), '..', 'data', dataset)
-dataset = Planetoid(path, dataset, T.NormalizeFeatures())
+# dataset = Planetoid(path, dataset, T.NormalizeFeatures())
 # dataset = PPI(path, 'train', T.NormalizeFeatures())
-# dataset = Reddit(path, T.NormalizeFeatures())
+dataset = Reddit(path, T.NormalizeFeatures())
 # dataset = Yelp(path, T.NormalizeFeatures())
 data = dataset[0]
 
@@ -38,8 +38,8 @@ if args.use_gdc:
 class Net(torch.nn.Module):
     def __init__(self):
         super(Net, self).__init__()
-        self.conv1 = GCNConv(dataset.num_features, 16, cached=True, normalize=False, bias=False)
-        self.conv2 = GCNConv(16, dataset.num_classes, cached=True, normalize=False, bias=False)
+        self.conv1 = GCNConv(dataset.num_features, 16, cached=True, normalize=True, bias=False)
+        self.conv2 = GCNConv(16, dataset.num_classes, cached=True, normalize=True, bias=False)
 
         self.conv1.node_dim = 0
         self.conv2.node_dim = 0
@@ -86,10 +86,6 @@ def train():
     F.nll_loss(outputs[data.train_mask.bool()], data.y[data.train_mask.bool()]).backward()
     # F.nll_loss(outputs, torch.max(data.y, 1)[1]).backward()
 
-    for W in model.parameters():
-        if W.grad is not None:
-            print(W.grad)
-
     optimizer.step()
     return outputs
 
@@ -109,7 +105,7 @@ def main():
     tstart = time.time()
 
     # for epoch in range(1, 101):
-    for epoch in range(100):
+    for epoch in range(2):
         outputs = train()
         # train_acc, val_acc, tmp_test_acc = test(outputs)
         # if val_acc > best_val_acc:

@@ -880,51 +880,79 @@ def split_coo(adj_matrix, node_count, n_per_proc, dim):
 # Normalize all elements according to KW's normalization rule
 def scale_elements(adj_matrix, adj_part, node_count, row_vtx, col_vtx):
     if not normalization:
-        return
+        return adj_part
 
     # Scale each edge (u, v) by 1 / (sqrt(u) * sqrt(v))
-    indices = adj_part._indices()
-    values = adj_part._values()
+    # indices = adj_part._indices()
+    # values = adj_part._values()
 
-    deg_map = dict()
-    for i in range(adj_part._nnz()):
-        u = indices[0][i] + row_vtx
-        v = indices[1][i] + col_vtx
+    # deg_map = dict()
+    # for i in range(adj_part._nnz()):
+    #     u = indices[0][i] + row_vtx
+    #     v = indices[1][i] + col_vtx
 
-        if u.item() in deg_map:
-            degu = deg_map[u.item()]
-        else:
-            degu = (adj_matrix[0] == u).sum().item()
-            deg_map[u.item()] = degu
+    #     if u.item() in deg_map:
+    #         degu = deg_map[u.item()]
+    #     else:
+    #         degu = (adj_matrix[0] == u).sum().item()
+    #         deg_map[u.item()] = degu
 
-        if v.item() in deg_map:
-            degv = deg_map[v.item()]
-        else:
-            degv = (adj_matrix[0] == v).sum().item()
-            deg_map[v.item()] = degv
+    #     if v.item() in deg_map:
+    #         degv = deg_map[v.item()]
+    #     else:
+    #         degv = (adj_matrix[0] == v).sum().item()
+    #         deg_map[v.item()] = degv
 
-        values[i] = values[i] / (math.sqrt(degu) * math.sqrt(degv))
-    
-    # deg = torch.histc(adj_matrix[0].float(), bins=node_count)
-    # deg = deg.pow(-0.5)
+    #     values[i] = values[i] / (math.sqrt(degu) * math.sqrt(degv))
 
-    # row_len = adj_part.size(0)
-    # col_len = adj_part.size(1)
+    row_len = adj_part.size(0)
+    col_len = adj_part.size(1)
 
-    # dleft = torch.sparse_coo_tensor([np.arange(row_vtx, row_vtx + row_len).tolist(),
-    #                                  np.arange(row_vtx, row_vtx + row_len).tolist()],
-    #                                  deg[row_vtx:(row_vtx + row_len)],
-    #                                  size=(row_len, row_len),
-    #                                  requires_grad=False)
+    deg = torch.histc(adj_matrix[0].float(), bins=node_count)
+    print(f"deg_before: {deg} zeros: {(deg == 0).sum()}")
+    print(f"adj_part_before: {adj_part}")
 
-    # dright = torch.sparse_coo_tensor([np.arange(col_vtx, col_vtx + col_len).tolist(),
-    #                                  np.arange(col_vtx, col_vtx + col_len).tolist()],
-    #                                  deg[row_vtx:(col_vtx + col_len)],
-    #                                  size=(col_len, col_len),
-    #                                  requires_grad=False)
+    identity = torch.sparse_coo_tensor([np.arange(0, row_len).tolist(),
+                                         np.arange(0, row_len).tolist()],
+                                       torch.ones(row_len),
+                                       size=(row_len, row_len),
+                                       requires_grad=False, device=torch.device("cpu"))
+    adj_part = adj_part + identity
+    adj_part = torch.sparse_coo_tensor(adj_part._indices(), torch.ones(adj_part._nnz()),
+                                            size=(row_len, row_len), requires_grad=False,
+                                            device=torch.device("cpu"))
+    adj_part = adj_part.coalesce()
 
+    deg = torch.histc(adj_matrix[0].float(), bins=node_count)
+    print(f"deg: {deg} zeros: {(deg == 0).sum()}")
+    print(f"adj_part: {adj_part}")
+    deg = deg.pow(-0.5)
+
+    dleft = torch.sparse_coo_tensor([np.arange(0, row_len).tolist(),
+                                     np.arange(0, row_len).tolist()],
+                                     deg[row_vtx:(row_vtx + row_len)],
+                                     size=(row_len, row_len),
+                                     requires_grad=False, device=torch.device("cpu"))
+
+    dright = torch.sparse_coo_tensor([np.arange(0, col_len).tolist(),
+                                     np.arange(0, col_len).tolist()],
+                                     deg[col_vtx:(col_vtx + col_len)],
+                                     size=(col_len, col_len),
+                                     requires_grad=False, device=torch.device("cpu"))
     # adj_part = torch.sparse.mm(torch.sparse.mm(dleft, adj_part), dright)
-    # return adj_part
+    ad_ind, ad_val = torch_sparse.spspmm(adj_part._indices(), adj_part._values(), 
+                                            dright._indices(), dright._values(),
+                                            adj_part.size(0), adj_part.size(1), dright.size(1))
+
+    adj_part_ind, adj_part_val = torch_sparse.spspmm(dleft._indices(), dleft._values(), 
+                                                        ad_ind, ad_val,
+                                                        dleft.size(0), dleft.size(1), adj_part.size(1))
+
+    adj_part = torch.sparse_coo_tensor(adj_part_ind, adj_part_val, 
+                                                size=(adj_part.size(0), adj_part.size(1)),
+                                                requires_grad=False, device=torch.device("cpu"))
+
+    return adj_part
 
 def proc_row_size(size):
     return math.floor(math.sqrt(size))
@@ -960,15 +988,15 @@ def twod_partition(rank, size, inputs, adj_matrix, data, features, classes, devi
                                                         size=(last_node_count, proc_node_count),
                                                         requires_grad=False)
 
-                scale_elements(adj_matrix, am_pbyp[i], node_count, vtx_indices[i], 
-                                    vtx_indices[rank_col])
+                am_pbyp[i] = scale_elements(adj_matrix, am_pbyp[i], node_count, vtx_indices[i], 
+                                                vtx_indices[rank_col])
             else:
                 am_pbyp[i] = torch.sparse_coo_tensor(am_pbyp[i], torch.ones(am_pbyp[i].size(1)), 
                                                         size=(n_per_proc, proc_node_count),
                                                         requires_grad=False)
 
-                scale_elements(adj_matrix, am_pbyp[i], node_count, vtx_indices[i], 
-                                    vtx_indices[rank_col])
+                am_pbyp[i] = scale_elements(adj_matrix, am_pbyp[i], node_count, vtx_indices[i], 
+                                                vtx_indices[rank_col])
 
         input_rowparts = torch.split(inputs, math.ceil(float(inputs.size(0)) / proc_row), dim=0)
         input_partitions = []
@@ -1056,6 +1084,7 @@ def run(rank, size, inputs, adj_matrix, data, features, mid_layer, classes, devi
     if rank == 0:
         tstart = time.time()
 
+    # with torch.autograd.profiler.profile(use_cuda=True) as prof:
     for epoch in range(epochs - 1):
         if rank == 0:
             tstart_epoch = time.time()
@@ -1088,6 +1117,7 @@ def run(rank, size, inputs, adj_matrix, data, features, mid_layer, classes, devi
             print(f"summa_sparse_time: {summa_sparse_time}")
             print(f"summa_time: {summa_time}")
             print("Epoch: {:03d}".format(epoch), flush=True)
+    # print(prof.key_averages().table(sort_by="self_cuda_time_total"))
 
     # dur = stop_time(group, rank, tstart)
     if rank == 0:
@@ -1209,6 +1239,18 @@ def main(P, correctness_check, acc_per_rank):
         data = Data()
         data.y = torch.rand(n).uniform_(0, num_classes - 1)
         data.train_mask = torch.ones(n).long()
+    elif graphname == 'subgraph2':
+        path = "/gpfs/alpine/bif115/scratch/alokt/HipMCL/"
+        edge_index = torch.load(path + "/processed/subgraph2_graph.pt")
+        n = 17491085
+        num_features = 128
+        # mid_layer = 512
+        # mid_layer = 64
+        num_classes = 256
+        inputs = torch.rand(n, num_features)
+        data = Data()
+        data.y = torch.rand(n).uniform_(0, num_classes - 1)
+        data.train_mask = torch.ones(n).long()
 
     os.environ["RANK"] = os.environ["OMPI_COMM_WORLD_RANK"]
     dist.init_process_group(backend='nccl')
@@ -1248,6 +1290,10 @@ def main(P, correctness_check, acc_per_rank):
         data = data.to(device)
         inputs.requires_grad = True
         data.y = data.y.to(device)
+    elif graphname == "subgraph2":
+        print(f"edge_index.size: {edge_index.size()}", flush=True)
+        data = data.to(device)
+        inputs.requires_grad = True
     else:
         data = data.to(device)
         data.x.requires_grad = True
@@ -1284,6 +1330,7 @@ if __name__ == '__main__':
     parser.add_argument("--graphname", type=str)
     parser.add_argument("--timing", type=str)
     parser.add_argument("--midlayer", type=int)
+    parser.add_argument("--local_rank", type=int)
     args = parser.parse_args()
     print(args)
     P = args.processes

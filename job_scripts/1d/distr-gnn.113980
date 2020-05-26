@@ -1,0 +1,68 @@
+
+CommandNotFoundError: Your shell has not been properly configured to use 'conda activate'.
+To initialize your shell, run
+
+    $ conda init <SHELL_NAME>
+
+Currently supported shells are:
+  - bash
+  - fish
+  - tcsh
+  - xonsh
+  - zsh
+  - powershell
+
+See 'conda init --help' for more information and options.
+
+IMPORTANT: You may need to close and restart your shell after running 'conda init'.
+
+
+
+Lmod is automatically replacing "xl/16.1.1-5" with "gcc/6.4.0".
+
+
+Due to MODULEPATH changes, the following have been reloaded:
+  1) spectrum-mpi/10.3.1.2-20200121
+
+
+Currently Loaded Modules:
+  1) hsi/5.0.2.p5            6) tmux/2.2
+  2) xalt/1.2.0              7) cuda/10.1.243
+  3) lsf-tools/2.0           8) gcc/6.4.0
+  4) darshan-runtime/3.1.7   9) spectrum-mpi/10.3.1.2-20200121
+  5) DefApps
+
+ 
+
+a23n04
+
+------------------------------------------------------------
+Sender: LSF System <lsfadmin@batch1>
+Subject: Job 113980: <distr-gnn-p64> in cluster <summit> Exited
+
+Job <distr-gnn-p64> was submitted from host <batch2> by user <alokt> in cluster <summit> at Fri May 22 14:53:15 2020
+Job was executed on host(s) <1*batch1>, in queue <batch>, as user <alokt> in cluster <summit> at Fri May 22 18:42:56 2020
+                            <42*a23n04>
+                            <42*b25n02>
+                            <42*b25n03>
+                            <42*b25n04>
+                            <42*b25n05>
+                            <42*b25n06>
+                            <42*b31n11>
+                            <42*c02n17>
+                            <42*c02n18>
+                            <42*e04n05>
+                            <42*f15n05>
+                            <42*f15n06>
+                            <42*f15n07>
+                            <42*f15n08>
+                            <42*f15n09>
+                            <42*f15n10>
+</ccs/home/alokt> was used as the home directory.
+</ccs/home/alokt/gnn_training/job_scripts/1d> was used as the working directory.
+Started at Fri May 22 18:42:56 2020
+Terminated at Fri May 22 19:39:18 2020
+Results reported at Fri May 22 19:39:18 2020
+
+The output (if any) is above this job summary.
+

@@ -43,6 +43,8 @@ comm_time = dict()
 scomp_time = dict()
 dcomp_time = dict()
 bcast_comm_time = dict()
+barrier_time = dict()
+barrier_subset_time = dict()
 op1_comm_time = dict()
 op2_comm_time = dict()
 
@@ -56,10 +58,21 @@ acc_per_rank = 0
 run_count = 0
 run = 0
 
-def start_time(group, rank):
+def start_time(group, rank, subset=False, src=None):
+    global barrier_time
+    global barrier_subset_time
+
     if not timing:
         return 0.0
+    
+    barrier_tstart = time.time()
+
     dist.barrier(group)
+    barrier_tstop = time.time()
+    barrier_time[run][rank] += barrier_tstop - barrier_tstart
+    if subset:
+        barrier_subset_time[run][rank] += barrier_tstop - barrier_tstart
+
     tstart = 0.0
     tstart = time.time()
     return tstart
@@ -68,7 +81,10 @@ def stop_time(group, rank, tstart):
     if not timing:
         return 0.0
     # dist.barrier(group)
-    tstop = 0.0
+    devid = rank_to_devid(rank, acc_per_rank)
+    device = torch.device('cuda:{}'.format(devid))
+    torch.cuda.synchronize(device=device)
+
     tstop = time.time()
     return tstop - tstart
 
@@ -508,6 +524,8 @@ def run(rank, size, inputs, adj_matrix, data, features, classes, device):
         scomp_time[i] = dict()
         dcomp_time[i] = dict()
         bcast_comm_time[i] = dict()
+        barrier_time[i] = dict()
+        barrier_subset_time[i] = dict()
         op1_comm_time[i] = dict()
         op2_comm_time[i] = dict()
 
@@ -517,12 +535,13 @@ def run(rank, size, inputs, adj_matrix, data, features, classes, device):
         scomp_time[i][rank] = 0.0
         dcomp_time[i][rank] = 0.0
         bcast_comm_time[i][rank] = 0.0
+        barrier_time[i][rank] = 0.0
+        barrier_subset_time[i][rank] = 0.0
         op1_comm_time[i][rank] = 0.0
         op2_comm_time[i][rank] = 0.0
 
         # for epoch in range(1, 201):
         print(f"Starting training... rank {rank} run {i}", flush=True)
-        # with torch.autograd.profiler.profile(use_cuda=True) as prof:
         for epoch in range(epochs):
             outputs = train(inputs_loc, weight1, weight2, adj_matrix_loc, am_pbyp, optimizer, data, 
                                     rank, size, group)
@@ -531,7 +550,6 @@ def run(rank, size, inputs, adj_matrix, data, features, classes, device):
         # dist.barrier(group)
         tstop = time.time()
         total_time[i][rank] = tstop - tstart
-        # print(prof.key_averages().table(sort_by="self_cuda_time_total"))
 
     # Get median runtime according to rank0 and print that run's breakdown
     dist.barrier(group)
@@ -556,6 +574,8 @@ def run(rank, size, inputs, adj_matrix, data, features, classes, device):
     print(f"rank: {rank} scomp_time: {scomp_time[median_idx][rank]}")
     print(f"rank: {rank} dcomp_time: {dcomp_time[median_idx][rank]}")
     print(f"rank: {rank} bcast_comm_time: {bcast_comm_time[median_idx][rank]}")
+    print(f"rank: {rank} barrier_time: {barrier_time[median_idx][rank]}")
+    print(f"rank: {rank} barrier_subset_time: {barrier_subset_time[median_idx][rank]}")
     print(f"rank: {rank} op1_comm_time: {op1_comm_time[median_idx][rank]}")
     print(f"rank: {rank} op2_comm_time: {op2_comm_time[median_idx][rank]}")
     print(f"rank: {rank} {outputs}")
@@ -606,7 +626,7 @@ def main(P, correctness_check):
     device = torch.device('cuda:{}'.format(devid))
     torch.cuda.set_device(device)
     curr_devid = torch.cuda.current_device()
-    print(f"curr_devid: {curr_devid}", flush=True)
+    # print(f"curr_devid: {curr_devid}", flush=True)
     devcount = torch.cuda.device_count()
 
     if graphname == "Cora":
