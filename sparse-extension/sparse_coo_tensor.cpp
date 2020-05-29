@@ -188,115 +188,89 @@ void spmm_gpu(const at::Tensor& A_rowindices,
     // B.t_();
     C.set_data(C.view({c_col, c_row}));
     C.t_();
+}
 
-    // Impl1.5 -- coo2csr + cusparseSpMM
-    // cusparseSpMatDescr_t matA;
-    // cusparseDnMatDescr_t matB;
-    // cusparseDnMatDescr_t matC;
-    // CHECK_CUSPARSE(cusparseCreateCsr(&matA, n, m, nnz,
-    //                                   d_a_csrrows,
-    //                                   A_colindices.data<int>(),
-    //                                   A_values.data<double>(),
-    //                                   CUSPARSE_INDEX_32I,
-    //                                   CUSPARSE_INDEX_32I,
-    //                                   CUSPARSE_INDEX_BASE_ZERO,
-    //                                   CUDA_R_64F));
+void spmm_gpu(const at::Tensor& A_rowindices, 
+                        const at::Tensor& A_colindices,
+                        const at::Tensor& A_values, 
+                        int32_t n,
+                        int32_t m,
+                        at::Tensor& B,
+                        at::Tensor& C) {
 
-    // CHECK_CUSPARSE(cusparseCreateDnMat(&matB, B.size(1), B.size(0), B.size(1),
-    //                          B.data<double>(),
-    //                          CUDA_R_64F,
-    //                          CUSPARSE_ORDER_COL));
+    // cusparseHandle_t handle;
+    // CHECK_CUSPARSE(cusparseCreate(&handle));
+    auto state = at::globalContext().lazyInitCUDA();
+    auto handle = THCState_getCurrentSparseHandle(state);
 
-    // // Construct C
+    // Impl1 -- coo2csr + csrmm2
+    int nnz = A_values.size(0);
+
+    clock_t start, stop;
+    
+    int32_t *d_a_csrrows;
+
+    
+    // int devid_old = 0;
+    // cudaGetDevice(&devid_old);
+    // cudaSetDevice(devid);
+
+    cudaMalloc(&d_a_csrrows, (n + 1) * sizeof(int32_t));
+    CHECK_CUSPARSE(cusparseXcoo2csr(handle, 
+                                        A_rowindices.data<int>(), 
+                                        nnz, 
+                                        n, 
+                                        d_a_csrrows, 
+                                        CUSPARSE_INDEX_BASE_ZERO));
+
+    float alpha = 1;
+    float beta = 1;
+    cusparseMatDescr_t descrA;
+    cusparseCreateMatDescr(&descrA);
+    cusparseSetMatType(descrA,CUSPARSE_MATRIX_TYPE_GENERAL);
+    cusparseSetMatIndexBase(descrA,CUSPARSE_INDEX_BASE_ZERO);
+
     // auto C = torch::ones({n, B.size(1)}, torch::dtype(torch::kDouble).device(torch::kCUDA));
-    // CHECK_CUSPARSE(cusparseCreateDnMat(&matC, C.size(0), C.size(1), C.size(0),
-    //                         C.data<double>(),
-    //                         CUDA_R_64F,
-    //                         CUSPARSE_ORDER_COL));
 
-    // // cusparseSpMM_bufferSize to get buffer size fro spmm call
-    // size_t buffer_size;
-    // double alpha = 1;
-    // double beta = 0;
-    // CHECK_CUSPARSE(cusparseSpMM_bufferSize(handle, 
-    //                                 CUSPARSE_OPERATION_NON_TRANSPOSE,
-    //                                 CUSPARSE_OPERATION_TRANSPOSE, // torch is row-m, cusparse col-m
-    //                                 (void*)&alpha, matA, matB, 
-    //                                 (void*)&beta, matC,
-    //                                 CUDA_R_64F,
-    //                                 CUSPARSE_CSRMM_ALG1,
-    //                                 &buffer_size));
-    // // allocate buffer
-    // void *buffer = nullptr;
-    // cudaMalloc(&buffer, buffer_size);
+    int32_t b_row = B.size(0);
+    int32_t b_col = B.size(1);
+    int32_t c_row = C.size(0);
+    int32_t c_col = C.size(1);
+    
+    // Row-major to column-major
+    // B.t_();
+    // B.set_data(B.contiguous());
+    // B.set_data(B.view({b_row, b_col}));
+    C.t_();
+    C.set_data(C.contiguous());
+    C.set_data(C.view({c_row, c_col}));
+    CHECK_CUSPARSE(cusparseScsrmm2(handle,
+                                    CUSPARSE_OPERATION_NON_TRANSPOSE,
+                                    CUSPARSE_OPERATION_TRANSPOSE,
+                                    // CUSPARSE_OPERATION_NON_TRANSPOSE,
+                                    n,
+                                    // B.size(1),
+                                    b_col,
+                                    m,
+                                    nnz,
+                                    &alpha,
+                                    descrA,
+                                    A_values.data<float>(),
+                                    d_a_csrrows,
+                                    A_colindices.data<int>(),
+                                    B.data<float>(),
+                                    B.size(1),
+                                    // b_row,
+                                    &beta,
+                                    C.data<float>(),
+                                    n)); 
+    cudaFree(d_a_csrrows);
 
-    // // cusparseSpMM with A, B, C and buffer
-    // CHECK_CUSPARSE(cusparseSpMM(handle,
-    //                                 CUSPARSE_OPERATION_NON_TRANSPOSE,
-    //                                 CUSPARSE_OPERATION_TRANSPOSE,
-    //                                 (void*)&alpha, matA, matB, 
-    //                                 (void*)&beta, matC,
-    //                                 CUDA_R_64F,
-    //                                 CUSPARSE_CSRMM_ALG1,
-    //                                 buffer));
-
-    // Impl2 -- cusparseSpMM on coo
-    // cusparseSpMatDescr_t matA;
-    // cusparseDnMatDescr_t matB;
-    // cusparseDnMatDescr_t matC;
-    // // Construct A
-    // int nnz = A_values.size(0);
-    // CHECK_CUSPARSE(cusparseCreateCoo(&matA, n, m, nnz, 
-    //                                     A_rowindices.data<int>(), 
-    //                                     A_colindices.data<int>(), 
-    //                                     A_values.data<double>(), 
-    //                                     CUSPARSE_INDEX_32I, 
-    //                                     CUSPARSE_INDEX_BASE_ZERO, 
-    //                                     CUDA_R_64F));
-
-    // 
-    // // Construct B
-    // B = B.view({B.size(1), B.size(0)}).t();
-
-    // CHECK_CUSPARSE(cusparseCreateDnMat(&matB, B.size(0), B.size(1), B.size(0),
-    //                         B.data<double>(),
-    //                         CUDA_R_64F,
-    //                         CUSPARSE_ORDER_COL));
-
-    // // Construct C
-    // auto C = torch::ones({n, B.size(1)}, torch::dtype(torch::kDouble).device(torch::kCUDA));
-    // CHECK_CUSPARSE(cusparseCreateDnMat(&matC, C.size(0), C.size(1), C.size(0),
-    //                         C.data<double>(),
-    //                         CUDA_R_64F,
-    //                         CUSPARSE_ORDER_COL));
-
-    // // cusparseSpMM_bufferSize to get buffer size fro spmm call
-    // size_t buffer_size;
-    // double alpha = 1;
-    // double beta = 0;
-    // CHECK_CUSPARSE(cusparseSpMM_bufferSize(handle, 
-    //                                 CUSPARSE_OPERATION_NON_TRANSPOSE,
-    //                                 CUSPARSE_OPERATION_NON_TRANSPOSE, // torch is row-m, cusparse col-m
-    //                                 (void*)&alpha, matA, matB, 
-    //                                 (void*)&beta, matC,
-    //                                 CUDA_R_64F,
-    //                                 CUSPARSE_COOMM_ALG1,
-    //                                 &buffer_size));
-    // // allocate buffer
-    // void *buffer = nullptr;
-    // cudaMalloc(&buffer, buffer_size);
-
-    // // cusparseSpMM with A, B, C and buffer
-    // CHECK_CUSPARSE(cusparseSpMM(handle,
-    //                                 CUSPARSE_OPERATION_NON_TRANSPOSE,
-    //                                 CUSPARSE_OPERATION_NON_TRANSPOSE,
-    //                                 (void*)&alpha, matA, matB, 
-    //                                 (void*)&beta, matC,
-    //                                 CUDA_R_64F,
-    //                                 CUSPARSE_COOMM_ALG1,
-    //                                 buffer));
-
-    // return C.view({B.size(1), n}).t();
+    // Column-major to row-major
+    // B.set_data(B.view({b_col, b_row}));
+    // B.t_();
+    C.set_data(C.view({c_col, c_row}));
+    C.t_();
 }
 
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {

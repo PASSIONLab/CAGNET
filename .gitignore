@@ -16,3 +16,5 @@ reddit_coo/
 test*
 distr*.txt
 distr*.prof
+gcn*.txt
+*saved*

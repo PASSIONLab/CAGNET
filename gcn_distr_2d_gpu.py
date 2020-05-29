@@ -605,20 +605,20 @@ class GCNFunc(torch.autograd.Function):
         summa_sparse_bcast2_fwd += summa_sparse_bcast2 - tmp_summa_sparse_bcast2
 
         # Worry about activation later
-        if func is F.log_softmax:
-            h = dist_log_softmax(z, rank, size, acc_per_rank, row_groups[rank_row])
-            # h = dist_log_softmax2(z, rank, size, weight.size(1), acc_per_rank, 
-            #                        row_groups[rank_row], None)
-        elif func is F.relu:
-            h = func(z)
-        else:
-            h = z
+        # if func is F.log_softmax:
+        #     h = dist_log_softmax(z, rank, size, acc_per_rank, row_groups[rank_row])
+        #     # h = dist_log_softmax2(z, rank, size, weight.size(1), acc_per_rank, 
+        #     #                        row_groups[rank_row], None)
+        # elif func is F.relu:
+        #     h = func(z)
+        # else:
+        #     h = z
 
         # dur = stop_time(row_groups[0], rank, tstart)
         # fwd_time += dur
 
-        # return z
-        return h
+        return z
+        # return h
 
     @staticmethod
     def backward(ctx, grad_output):
@@ -651,35 +651,35 @@ class GCNFunc(torch.autograd.Function):
         # tstart = start_time(row_groups[0], rank)
             
         # Worry about activation later
-        with torch.set_grad_enabled(True):
-            if func is F.log_softmax:
-                # func_eval = dist_log_softmax(z, rank, size, acc_per_rank, row_groups[rank_row])
-                func_eval, z_gathered, go_gathered = dist_log_softmax2(z, rank, size, 
-                                                                weight.size(1), 
-                                                                acc_per_rank, 
-                                                                row_groups[rank_row], grad_output)
-                width = z_gathered.size(1)
+        # with torch.set_grad_enabled(True):
+        #     if func is F.log_softmax:
+        #         # func_eval = dist_log_softmax(z, rank, size, acc_per_rank, row_groups[rank_row])
+        #         func_eval, z_gathered, go_gathered = dist_log_softmax2(z, rank, size, 
+        #                                                         weight.size(1), 
+        #                                                         acc_per_rank, 
+        #                                                         row_groups[rank_row], grad_output)
+        #         width = z_gathered.size(1)
 
-                sigmap = torch.autograd.grad(outputs=func_eval, inputs=z_gathered,
-                                                grad_outputs=go_gathered)[0]
+        #         sigmap = torch.autograd.grad(outputs=func_eval, inputs=z_gathered,
+        #                                         grad_outputs=go_gathered)[0]
 
-                grad_output = sigmap.split(int(math.ceil(width / proc_col)), dim=1)[rank_col]
-                del z_gathered
-                del go_gathered
-            elif func is F.relu:
-                func_eval = func(z)
-                sigmap = torch.autograd.grad(outputs=func_eval, inputs=z,
-                                                grad_outputs=grad_output)[0]
-                grad_output = sigmap
-            else:
-                func_eval = z
-                sigmap = torch.autograd.grad(outputs=func_eval, inputs=z,
-                                                grad_outputs=grad_output)[0]
-                grad_output = sigmap
+        #         grad_output = sigmap.split(int(math.ceil(width / proc_col)), dim=1)[rank_col]
+        #         del z_gathered
+        #         del go_gathered
+        #     elif func is F.relu:
+        #         func_eval = func(z)
+        #         sigmap = torch.autograd.grad(outputs=func_eval, inputs=z,
+        #                                         grad_outputs=grad_output)[0]
+        #         grad_output = sigmap
+        #     else:
+        #         func_eval = z
+        #         sigmap = torch.autograd.grad(outputs=func_eval, inputs=z,
+        #                                         grad_outputs=grad_output)[0]
+        #         grad_output = sigmap
 
 
-            # print(f"rank: {rank} sigmap: {sigmap}", flush=True)
-            del func_eval
+        #     # print(f"rank: {rank} sigmap: {sigmap}", flush=True)
+        #     del func_eval
 
         tmp_summa_sparse_bcast2 = summa_sparse_bcast2
 
