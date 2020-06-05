@@ -129,11 +129,11 @@ def transpose(mat, row, col, height, width, size, acc_per_rank, transpose_group)
     mat_recvs = [mat.t().contiguous(), mat_recv]
 
     if rank < rank_t:
-        dist.broadcast(mat_recvs[0], src=rank, group=transpose_group)
-        dist.broadcast(mat_recvs[1], src=rank_t, group=transpose_group)
+        dist.broadcast_multigpu([mat_recvs[0]], src=rank, group=transpose_group)
+        dist.broadcast_multigpu([mat_recvs[1]], src=rank_t, group=transpose_group)
     else:
-        dist.broadcast(mat_recvs[1], src=rank_t, group=transpose_group)
-        dist.broadcast(mat_recvs[0], src=rank, group=transpose_group)
+        dist.broadcast_multigpu([mat_recvs[1]], src=rank_t, group=transpose_group)
+        dist.broadcast_multigpu([mat_recvs[0]], src=rank, group=transpose_group)
 
     return mat_recvs[1]
 
@@ -192,7 +192,7 @@ def summa(adj_matrix, inputs, rank, row, col, size, acc_per_rank, row_groups, co
         
         tstart = start_time(row_groups[row], rank)
 
-        dist.broadcast(acol.contiguous(), row_src_rank, row_groups[row])
+        dist.broadcast_multigpu([acol.contiguous()], row_src_rank, row_groups[row])
 
         dur = stop_time(row_groups[row], rank, tstart)
         comm_time += dur
@@ -206,7 +206,7 @@ def summa(adj_matrix, inputs, rank, row, col, size, acc_per_rank, row_groups, co
 
         tstart = start_time(col_groups[col], rank)
 
-        dist.broadcast(brow.contiguous(), col_src_rank, col_groups[col])
+        dist.broadcast_multigpu([brow.contiguous()], col_src_rank, col_groups[col])
 
         dur = stop_time(col_groups[col], rank, tstart)
         comm_time += dur
@@ -282,7 +282,7 @@ def summa_sparse(adj_matrix, inputs, rank, row, col, size, acc_per_rank, row_gro
             acol_indices_len = torch.cuda.LongTensor([0], device=device)
             acol_values_len = torch.cuda.LongTensor([0], device=device)
 
-        dist.broadcast(acol_indices_len, row_src_rank, row_groups[row])
+        dist.broadcast_multigpu([acol_indices_len], row_src_rank, row_groups[row])
         # dist.broadcast(acol_values_len, row_src_rank, row_groups[row])
 
         acol_indices_len = acol_indices_len.item() # nnz
@@ -301,7 +301,7 @@ def summa_sparse(adj_matrix, inputs, rank, row, col, size, acc_per_rank, row_gro
 
         tstart = start_time(row_groups[row], rank)
 
-        dist.broadcast(acol, row_src_rank, row_groups[row])
+        dist.broadcast_multigpu([acol], row_src_rank, row_groups[row])
 
         dur = stop_time(row_groups[row], rank, tstart)
         comm_time += dur
@@ -328,7 +328,7 @@ def summa_sparse(adj_matrix, inputs, rank, row, col, size, acc_per_rank, row_gro
 
         tstart = start_time(row_groups[0], rank)
 
-        dist.broadcast(brow, col_src_rank, col_groups[col])
+        dist.broadcast_multigpu([brow], col_src_rank, col_groups[col])
 
         dur = stop_time(row_groups[0], rank, tstart)
         comm_time += dur
@@ -401,7 +401,7 @@ def summa_loc(mata, matb, rank, row, col, size, acc_per_rank, row_groups, col_gr
         
         tstart = start_time(row_groups[row], rank)
 
-        dist.broadcast(acol.contiguous(), row_src_rank, row_groups[row])
+        dist.broadcast_multigpu([acol.contiguous()], row_src_rank, row_groups[row])
 
         dur = stop_time(row_groups[row], rank, tstart)
         comm_time += dur
@@ -734,7 +734,8 @@ class GCNFunc(torch.autograd.Function):
                         torch.cuda.FloatTensor(grad_weight.size(0), pad_col, device=device).fill_(no_occur_val)), 
                         dim=1) 
 
-        dist.all_gather(grad_weight_recv, grad_weight)
+        # dist.all_gather(grad_weight_recv, grad_weight)
+        dist.all_gather_multigpu([grad_weight_recv], [grad_weight])
 
         # for i in range(size):
         #     if rank == i:
@@ -824,8 +825,8 @@ def train(inputs, weight1, weight2, node_count, adj_matrix, am_partitions, optim
 
         rank_row_src = rank_row * proc_col
 
-        dist.reduce(loss_calc, dst=rank_row_src, op=dist.reduce_op.SUM, group=row_groups[rank_row])
-        dist.broadcast(loss_calc, src=rank_row_src, group=row_groups[rank_row]) 
+        dist.reduce_multigpu([loss_calc], dst=rank_row_src, op=dist.reduce_op.SUM, group=row_groups[rank_row])
+        dist.broadcast_multigpu([loss_calc], src=rank_row_src, group=row_groups[rank_row]) 
 
         vertex_train_count = (data.train_mask.size(0) - (data.train_mask == 0).sum(dim=0))
         loss_calc = -loss_calc / vertex_train_count

@@ -94,110 +94,6 @@ def stop_time(group, rank, tstart):
         tstop = time.time()
     return tstop - tstart
 
-def dist_log_softmax(z, rank, size, acc_per_rank, group):
-    torch.set_printoptions(edgeitems=4)
-    proc_row = proc_row_size(size)
-    proc_col = proc_col_size(size)
-    rank_row = int(rank / proc_col)
-    rank_col = rank % proc_col
-    device = torch.device('cuda:{}'.format(rank_to_devid(rank, acc_per_rank)))
-
-    maxes = torch.max(z, dim=1, keepdim=True)[0]
-    maxes_recv = []
-    for i in range(proc_col):
-        maxes_recv.append(torch.cuda.FloatTensor(maxes.size(), device=device))
-
-    # dist.all_reduce(maxes, op=dist.reduce_op.MAX, group=group)
-    dist.all_gather(maxes_recv, maxes, group=group)
-    maxes_recv[rank_col] = maxes
-    maxes = torch.max(torch.cat(maxes_recv, dim=1), dim=1, keepdim=True)[0]
-
-    # h = torch.exp(z - maxes)
-    sm_sum = torch.sum(torch.exp(z - maxes), dim=1, keepdim=True)
-
-    sm_sum_recv = []
-    for i in range(proc_col):
-        sm_sum_recv.append(torch.cuda.FloatTensor(sm_sum.size(), device=device))
-
-    # dist.all_reduce(sm_sum, op=dist.reduce_op.SUM, group=group)
-    dist.all_gather(sm_sum_recv, sm_sum, group=group)
-    sm_sum_recv[rank_col] = sm_sum
-    sm_sum = torch.sum(torch.cat(sm_sum_recv, dim=1), dim=1, keepdim=True)
-    sm_sum = torch.log(sm_sum)
-    h = z - maxes - sm_sum
-    return h
-
-def dist_log_softmax2(z, rank, size, width, acc_per_rank, group, grad_output):
-    proc_row = proc_row_size(size)
-    proc_col = proc_col_size(size)
-    rank_row = int(rank / proc_col)
-    rank_col = rank % proc_col
-    device = torch.device('cuda:{}'.format(rank_to_devid(rank, acc_per_rank)))
-
-    # width_per_proc = int(math.ceil(float(width) / proc_col))
-    width_per_proc = width // proc_col
-    leftover = width - width_per_proc * proc_col
-    if z.size(1) != width_per_proc + leftover:
-        z = torch.cat((z, torch.cuda.FloatTensor(z.size(0), leftover)), dim=1)
-
-    z_recv = []
-    for i in range(proc_col):
-        z_recv.append(torch.cuda.FloatTensor(z.size()))
-
-    dist.all_gather(z_recv, z, group=group)
-    z_recv[rank_col] = z
-
-    for i in range(len(z_recv)):
-        if i < proc_col - 1 and leftover > 0:
-            z_recv[i] = z_recv[i][:,:-leftover]
-
-    z = torch.cat(z_recv, dim=1)
-
-    if grad_output is not None:
-        if grad_output.size(1) != width_per_proc + leftover:
-            grad_output = torch.cat((grad_output, 
-                                        torch.cuda.FloatTensor(grad_output.size(0), 
-                                                        leftover)), 
-                                        dim=1)
-
-        grad_output_recv = []
-        for i in range(proc_col):
-            grad_output_recv.append(torch.cuda.FloatTensor(grad_output.size()))
-
-        dist.all_gather(grad_output_recv, grad_output, group=group)
-        grad_output_recv[rank_col] = grad_output
-
-        for i in range(len(grad_output_recv)):
-            if i < proc_col - 1 and leftover > 0:
-                grad_output_recv[i] = grad_output_recv[i][:,:-leftover]
-
-        grad_output = torch.cat(grad_output_recv, dim=1)
-
-    maxes = torch.max(z, dim=1, keepdim=True)[0]
-    h = torch.exp(z - maxes)
-    sm_sum = torch.sum(h, dim=1, keepdim=True)
-    sm_sum = torch.log(sm_sum)
-
-    h = z - maxes - sm_sum
-
-    # if h.requires_grad:
-    #     if rank_col == 0:
-    #         sm_sigma = torch.autograd.grad(outputs=h, inputs=z,
-    #                                             grad_outputs=grad_output)[0]
-    #         print(f"rank: {rank} sm_sigma: {sm_sigma}", flush=True)
-    #     else:
-    #         sm_sigma = torch.autograd.grad(outputs=h, inputs=z,
-    #                                             grad_outputs=grad_output)[0]
-    #         print(f"rank: {rank} sm_sigma: {sm_sigma}", flush=True)
-
-    # Only works for P = 4
-    # if rank_col == 0:
-    #     return h[:,:width_per_proc]
-    # else:
-    #     return h[:,width_per_proc:]
-    return h, z, grad_output
-
-
 def transpose(mat, row, col, height, width, size, acc_per_rank, transpose_group):
     proc_row = proc_row_size(size)
     proc_col = proc_col_size(size)
@@ -239,9 +135,13 @@ def transpose(mat, row, col, height, width, size, acc_per_rank, transpose_group)
     if rank < rank_t:
         dist.broadcast(mat_recvs[0], src=rank, group=transpose_group)
         dist.broadcast(mat_recvs[1], src=rank_t, group=transpose_group)
+        # dist.broadcast_multigpu([mat_recvs[0]], src=rank, group=transpose_group)
+        # dist.broadcast_multigpu([mat_recvs[1]], src=rank_t, group=transpose_group)
     else:
         dist.broadcast(mat_recvs[1], src=rank_t, group=transpose_group)
         dist.broadcast(mat_recvs[0], src=rank, group=transpose_group)
+        # dist.broadcast_multigpu([mat_recvs[1]], src=rank_t, group=transpose_group)
+        # dist.broadcast_multigpu([mat_recvs[0]], src=rank, group=transpose_group)
 
     return mat_recvs[1]
 
@@ -309,7 +209,9 @@ def summa(adj_matrix, inputs, rank, row, col, size, acc_per_rank, row_groups, co
         
         tstart = start_time(row_groups[row], rank)
 
-        dist.broadcast(acol.contiguous(), row_src_rank, row_groups[row])
+        acol = acol.contiguous()
+        # dist.broadcast_multigpu([acol], row_src_rank, row_groups[row])
+        dist.broadcast(acol, row_src_rank, row_groups[row])
 
         dur = stop_time(row_groups[row], rank, tstart)
         comm_time += dur
@@ -323,7 +225,9 @@ def summa(adj_matrix, inputs, rank, row, col, size, acc_per_rank, row_groups, co
 
         tstart = start_time(col_groups[col], rank)
 
-        dist.broadcast(brow.contiguous(), col_src_rank, col_groups[col])
+        brow = brow.contiguous()
+        # dist.broadcast_multigpu([brow], col_src_rank, col_groups[col])
+        dist.broadcast(brow, col_src_rank, col_groups[col])
 
         dur = stop_time(col_groups[col], rank, tstart)
         comm_time += dur
@@ -408,7 +312,7 @@ def summa_sparse(adj_matrix, inputs, rank, row, col, size, acc_per_rank, row_gro
             acol_values_len = torch.cuda.LongTensor([0], device=device)
 
         dist.broadcast(acol_indices_len, row_src_rank, row_groups[row])
-        # dist.broadcast(acol_values_len, row_src_rank, row_groups[row])
+        # dist.broadcast_multigpu([acol_indices_len], row_src_rank, row_groups[row])
 
         acol_indices_len = acol_indices_len.item() # nnz
         # acol_values_len = acol_values_len.item()
@@ -426,6 +330,7 @@ def summa_sparse(adj_matrix, inputs, rank, row, col, size, acc_per_rank, row_gro
 
         tstart = start_time(row_groups[row], rank)
 
+        # dist.broadcast_multigpu([acol], row_src_rank, row_groups[row])
         dist.broadcast(acol, row_src_rank, row_groups[row])
 
         dur = stop_time(row_groups[row], rank, tstart)
@@ -453,6 +358,7 @@ def summa_sparse(adj_matrix, inputs, rank, row, col, size, acc_per_rank, row_gro
 
         tstart = start_time(row_groups[0], rank)
 
+        # dist.broadcast_multigpu([brow], col_src_rank, col_groups[col])
         dist.broadcast(brow, col_src_rank, col_groups[col])
 
         dur = stop_time(row_groups[0], rank, tstart)
@@ -531,7 +437,9 @@ def summa_loc(mata, matb, rank, row, col, size, acc_per_rank, row_groups, col_gr
         
         tstart = start_time(row_groups[row], rank)
 
-        dist.broadcast(acol.contiguous(), row_src_rank, row_groups[row])
+        acol = acol.contiguous()
+        # dist.broadcast_multigpu([acol], row_src_rank, row_groups[row])
+        dist.broadcast(acol, row_src_rank, row_groups[row])
 
         dur = stop_time(row_groups[row], rank, tstart)
         comm_time += dur
@@ -576,6 +484,74 @@ def get_proc_groups(rank, size, group):
         col_groups.append(dist.new_group(list(range(i, size, proc_row))))
 
     return row_groups, col_groups
+
+def dist_log_softmax(z, rank, size, acc_per_rank, group):
+    torch.set_printoptions(edgeitems=4)
+    proc_row = proc_row_size(size)
+    proc_col = proc_col_size(size)
+    rank_row = int(rank / proc_col)
+    rank_col = rank % proc_col
+    device = torch.device('cuda:{}'.format(rank_to_devid(rank, acc_per_rank)))
+    
+    maxes = torch.max(z, dim=1, keepdim=True)[0]
+    maxes_recv = []
+    for i in range(proc_col):
+        maxes_recv.append(torch.cuda.FloatTensor(maxes.size(), device=device))
+
+    # dist.all_reduce(maxes, op=dist.reduce_op.MAX, group=group)
+    dist.all_gather(maxes_recv, maxes, group=group)
+    maxes_recv[rank_col] = maxes
+    maxes = torch.max(torch.cat(maxes_recv, dim=1), dim=1, keepdim=True)[0]
+
+    h = torch.exp(z - maxes)
+    sm_sum = torch.sum(h, dim=1, keepdim=True)
+
+    sm_sum_recv = []
+    for i in range(proc_col):
+        sm_sum_recv.append(torch.cuda.FloatTensor(sm_sum.size(), device=device))
+
+    # dist.all_reduce(sm_sum, op=dist.reduce_op.SUM, group=group)
+    dist.all_gather(sm_sum_recv, sm_sum, group=group)
+    sm_sum_recv[rank_col] = sm_sum
+    sm_sum = torch.sum(torch.cat(sm_sum_recv, dim=1), dim=1, keepdim=True)
+    sm_sum = torch.log(sm_sum)
+    h = z - maxes - sm_sum
+    return h
+
+def dist_log_softmax2(z, rank, size, acc_per_rank, group):
+    print(f"z: {z}", flush=True)
+    proc_row = proc_row_size(size)
+    proc_col = proc_col_size(size)
+    rank_row = int(rank / proc_col)
+    rank_col = rank % proc_col
+    device = torch.device('cuda:{}'.format(rank_to_devid(rank, acc_per_rank)))
+    
+    maxes = torch.max(z, dim=1, keepdim=True)[0]
+    maxes_recv = []
+    for i in range(proc_col):
+        maxes_recv.append(torch.cuda.FloatTensor(maxes.size(), device=device))
+
+    # dist.all_reduce(maxes, op=dist.reduce_op.MAX, group=group)
+    dist.all_gather(maxes_recv, maxes, group=group)
+    for i in range(proc_col):
+        maxes_recv[rank_col].requires_grad = True
+    maxes_recv[rank_col] = maxes
+    maxes = torch.max(torch.cat(maxes_recv, dim=1), dim=1, keepdim=True)[0]
+
+    h = torch.exp(z - maxes)
+    # sm_sum = torch.sum(h, dim=1, keepdim=True)
+
+    # sm_sum_recv = []
+    # for i in range(proc_col):
+    #     sm_sum_recv.append(torch.cuda.FloatTensor(sm_sum.size(), device=device))
+
+    # # dist.all_reduce(sm_sum, op=dist.reduce_op.SUM, group=group)
+    # dist.all_gather(sm_sum_recv, sm_sum, group=group)
+    # sm_sum_recv[rank_col] = sm_sum
+    # sm_sum = torch.sum(torch.cat(sm_sum_recv, dim=1), dim=1, keepdim=True)
+    # sm_sum = torch.log(sm_sum)
+    # h = z - maxes - sm_sum
+    return h
 
 class GCNFunc(torch.autograd.Function):
     @staticmethod
@@ -656,20 +632,17 @@ class GCNFunc(torch.autograd.Function):
         summa_sparse_bcast2_fwd += summa_sparse_bcast2 - tmp_summa_sparse_bcast2
 
         # Worry about activation later
-        if func is F.log_softmax:
-            h = dist_log_softmax(z, rank, size, acc_per_rank, row_groups[rank_row])
-            # h = dist_log_softmax2(z, rank, size, weight.size(1), acc_per_rank, 
-            #                        row_groups[rank_row], None)
-        elif func is F.relu:
-            h = func(z)
-        else:
-            h = z
+        # if func is F.log_softmax:
+        #     h = dist_log_softmax(z, rank, size, acc_per_rank, row_groups[rank_row])
+        # elif func is F.relu:
+        #     h = func(z)
+        # else:
+        #     h = z
 
         # dur = stop_time(row_groups[0], rank, tstart)
         # fwd_time += dur
 
-        # return z
-        return h
+        return z
 
     @staticmethod
     def backward(ctx, grad_output):
@@ -702,43 +675,18 @@ class GCNFunc(torch.autograd.Function):
         # tstart = start_time(row_groups[0], rank)
             
         # Worry about activation later
-        with torch.set_grad_enabled(True):
-            if func is F.log_softmax:
-                # func_eval = dist_log_softmax(z, rank, size, acc_per_rank, row_groups[rank_row])
-                func_eval, z_gathered, go_gathered = dist_log_softmax2(z, rank, size, 
-                                                                weight.size(1), 
-                                                                acc_per_rank, 
-                                                                row_groups[rank_row], grad_output)
-                width = z_gathered.size(1)
+        # with torch.set_grad_enabled(True):
+        #     if func is F.log_softmax:
+        #         func_eval = dist_log_softmax2(z, rank, size, acc_per_rank, row_groups[rank_row])
+        #     elif func is F.relu:
+        #         func_eval = func(z)
+        #     else:
+        #         func_eval = z
 
-                sigmap = torch.autograd.grad(outputs=func_eval, inputs=z_gathered,
-                                                grad_outputs=go_gathered)[0]
-
-                chunk_sizes = []
-                width_per_col = width // proc_col
-                for i in range(proc_col):
-                    if i == proc_col - 1:
-                        chunk_sizes.append(width - width_per_col * (proc_col - 1))
-                    else:
-                        chunk_sizes.append(width_per_col)
-
-                grad_output = sigmap.split(chunk_sizes, dim=1)[rank_col]
-                del z_gathered
-                del go_gathered
-            elif func is F.relu:
-                func_eval = func(z)
-                sigmap = torch.autograd.grad(outputs=func_eval, inputs=z,
-                                                grad_outputs=grad_output)[0]
-                grad_output = sigmap
-            else:
-                func_eval = z
-                sigmap = torch.autograd.grad(outputs=func_eval, inputs=z,
-                                                grad_outputs=grad_output)[0]
-                grad_output = sigmap
-
-
-            # print(f"rank: {rank} sigmap: {sigmap}", flush=True)
-            del func_eval
+        #     # sigmap = torch.autograd.grad(outputs=func_eval, inputs=z,grad_outputs=grad_output)[0]
+        #     sigmap = torch.autograd.grad(outputs=func_eval, inputs=z,grad_outputs=grad_output)[0]
+        #     print(f"rank: {rank} sigmap: {sigmap}", flush=True)
+        #     grad_output = sigmap
 
         tmp_summa_sparse_bcast2 = summa_sparse_bcast2
 
@@ -815,6 +763,7 @@ class GCNFunc(torch.autograd.Function):
                         dim=1) 
 
         dist.all_gather(grad_weight_recv, grad_weight)
+        # dist.all_gather_multigpu([grad_weight_recv], [grad_weight])
 
         # for i in range(size):
         #     if rank == i:
@@ -907,6 +856,8 @@ def train(inputs, weight1, weight2, node_count, adj_matrix, am_partitions, optim
 
         rank_row_src = rank_row * proc_col
 
+        # dist.reduce_multigpu([loss_calc], dst=rank_row_src, op=dist.reduce_op.SUM, group=row_groups[rank_row])
+        # dist.broadcast_multigpu([loss_calc], src=rank_row_src, group=row_groups[rank_row]) 
         dist.reduce(loss_calc, dst=rank_row_src, op=dist.reduce_op.SUM, group=row_groups[rank_row])
         dist.broadcast(loss_calc, src=rank_row_src, group=row_groups[rank_row]) 
 
@@ -1096,6 +1047,7 @@ def run(rank, size, inputs, adj_matrix, data, features, mid_layer, classes, devi
     global comm_time
     global comp_time
     global epochs
+    global timing
 
     best_val_acc = test_acc = 0
     outputs = None
@@ -1108,6 +1060,9 @@ def run(rank, size, inputs, adj_matrix, data, features, mid_layer, classes, devi
     rank_row = int(rank / proc_col)
     rank_col = rank % proc_col
     rank_t  = rank_col * proc_row + rank_row
+
+    if rank_row >= proc_row or rank_col >= proc_col:
+        return
 
     transpose_groups = []
 
@@ -1153,17 +1108,27 @@ def run(rank, size, inputs, adj_matrix, data, features, mid_layer, classes, devi
     inputs_loc = inputs_loc.to(device)
     adj_matrix_loc = adj_matrix_loc.to(device)
 
+    # Do not time first epoch
+    timing_on = timing == True
+    timing = False
+    outputs = train(inputs_loc, weight1, weight2, inputs.size(0), adj_matrix_loc, None, 
+                            optimizer, data, rank, size, acc_per_rank, group, row_groups, 
+                            col_groups, transpose_group)
+    if timing_on:
+        timing = True
+
     # tstart = start_time(group, rank)
     if rank == 0:
         tstart = time.time()
 
-    for epoch in range(epochs):
+    for epoch in range(1, epochs):
         if rank == 0:
             tstart_epoch = time.time()
+
         outputs = train(inputs_loc, weight1, weight2, inputs.size(0), adj_matrix_loc, None, 
                                 optimizer, data, rank, size, acc_per_rank, group, row_groups, 
                                 col_groups, transpose_group)
-        if rank == 0 and timing:
+        if rank == 0:
             tstop_epoch = time.time()
             tstop = time.time()
             print(f"Epoch time: {epoch} {tstop_epoch - tstart_epoch}", flush=True)
@@ -1195,7 +1160,7 @@ def run(rank, size, inputs, adj_matrix, data, features, mid_layer, classes, devi
         tstop = time.time()
         print("Time: " + str(tstop - tstart))
 
-    if rank == 0 and timing:
+    if rank == 0:
         print("comm_time: " + str(comm_time))
         print("comp_time: " + str(comp_time))
         print(f"summa_sparse_comp: {summa_sparse_comp}")

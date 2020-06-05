@@ -84,6 +84,7 @@ def train():
     outputs = model()
     
     # Note: bool type removes warnings, unsure of perf penalty
+    print(f"RHS: {data.y[data.train_mask.bool()]}")
     F.nll_loss(outputs[data.train_mask.bool()], data.y[data.train_mask.bool()]).backward()
     # F.nll_loss(outputs, torch.max(data.y, 1)[1]).backward()
 
@@ -106,7 +107,7 @@ def main():
     tstart = time.time()
 
     # for epoch in range(1, 101):
-    for epoch in range(100):
+    for epoch in range(1):
         outputs = train()
         # train_acc, val_acc, tmp_test_acc = test(outputs)
         # if val_acc > best_val_acc:

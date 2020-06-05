@@ -19,8 +19,8 @@ module list
 hostarr=(${LSB_MCPU_HOSTS})
 echo ${hostarr[2]}
 
-declare -a midlayers=("16" "64" "256")
-# declare -a midlayers=("256")
+# declare -a midlayers=("16" "64" "256")
+declare -a midlayers=("64")
 declare -a timings=("True" "False")
 
 cd ../../

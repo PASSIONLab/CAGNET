@@ -10,88 +10,72 @@ installing library code to build/bdist.linux-ppc64le/egg
 running install_lib
 running build_ext
 building 'sparse_coo_tensor_cpp' extension
-/ccs/home/alokt/.conda/envs/gnn/bin/powerpc64le-conda_cos7-linux-gnu-cc -DNDEBUG -fwrapv -O2 -Wall -Wstrict-prototypes -mcpu=power8 -mtune=power8 -mpower8-fusion -mpower8-vector -ftree-vectorize -fPIC -fstack-protector-strong -fno-plt -O3 -pipe -DNDEBUG -D_FORTIFY_SOURCE=2 -O3 -fPIC -I/ccs/home/alokt/.conda/envs/gnn/lib/python3.6/site-packages/torch/include -I/ccs/home/alokt/.conda/envs/gnn/lib/python3.6/site-packages/torch/include/torch/csrc/api/include -I/ccs/home/alokt/.conda/envs/gnn/lib/python3.6/site-packages/torch/include/TH -I/ccs/home/alokt/.conda/envs/gnn/lib/python3.6/site-packages/torch/include/THC -I/ccs/home/alokt/.conda/envs/gnn/include/python3.6m -c sparse_coo_tensor.cpp -o build/temp.linux-ppc64le-3.6/sparse_coo_tensor.o -lcusparse -DTORCH_API_INCLUDE_EXTENSION_H -DTORCH_EXTENSION_NAME=sparse_coo_tensor_cpp -D_GLIBCXX_USE_CXX11_ABI=1 -std=c++11
+/ccs/home/alokt/.conda/envs/gnn2/bin/powerpc64le-conda_cos7-linux-gnu-cc -DNDEBUG -fwrapv -O2 -Wall -Wstrict-prototypes -mcpu=power8 -mtune=power8 -mpower8-fusion -mpower8-vector -ftree-vectorize -fPIC -fstack-protector-strong -fno-plt -O3 -pipe -DNDEBUG -D_FORTIFY_SOURCE=2 -O3 -fPIC -I/ccs/home/alokt/.conda/envs/gnn2/lib/python3.6/site-packages/torch/include -I/ccs/home/alokt/.conda/envs/gnn2/lib/python3.6/site-packages/torch/include/torch/csrc/api/include -I/ccs/home/alokt/.conda/envs/gnn2/lib/python3.6/site-packages/torch/include/TH -I/ccs/home/alokt/.conda/envs/gnn2/lib/python3.6/site-packages/torch/include/THC -I/ccs/home/alokt/.conda/envs/gnn2/include/python3.6m -c sparse_coo_tensor.cpp -o build/temp.linux-ppc64le-3.6/sparse_coo_tensor.o -lcusparse -DTORCH_API_INCLUDE_EXTENSION_H -DTORCH_EXTENSION_NAME=sparse_coo_tensor_cpp -D_GLIBCXX_USE_CXX11_ABI=1 -std=c++11
 cc1plus: warning: command line option '-Wstrict-prototypes' is valid for C/ObjC but not for C++
 sparse_coo_tensor.cpp: In function 'void spmm_gpu(const at::Tensor&, const at::Tensor&, const at::Tensor&, int32_t, int32_t, at::Tensor&, at::Tensor&)':
-sparse_coo_tensor.cpp:132:64: warning: 'T* at::Tensor::data() const [with T = int]' is deprecated [-Wdeprecated-declarations]
+sparse_coo_tensor.cpp:137:64: warning: 'T* at::Tensor::data() const [with T = int]' is deprecated [-Wdeprecated-declarations]
                                          A_rowindices.data<int>(),
                                                                 ^
 sparse_coo_tensor.cpp:23:32: note: in definition of macro 'CHECK_CUSPARSE'
      cusparseStatus_t status = (func);                                          \
                                 ^~~~
-In file included from /ccs/home/alokt/.conda/envs/gnn/lib/python3.6/site-packages/torch/include/ATen/Tensor.h:11:0,
-                 from /ccs/home/alokt/.conda/envs/gnn/lib/python3.6/site-packages/torch/include/ATen/Context.h:4,
-                 from /ccs/home/alokt/.conda/envs/gnn/lib/python3.6/site-packages/torch/include/ATen/ATen.h:5,
+In file included from /ccs/home/alokt/.conda/envs/gnn2/lib/python3.6/site-packages/torch/include/ATen/Tensor.h:11:0,
+                 from /ccs/home/alokt/.conda/envs/gnn2/lib/python3.6/site-packages/torch/include/ATen/Context.h:4,
+                 from /ccs/home/alokt/.conda/envs/gnn2/lib/python3.6/site-packages/torch/include/ATen/ATen.h:5,
                  from sparse_coo_tensor.cpp:1:
-/ccs/home/alokt/.conda/envs/gnn/lib/python3.6/site-packages/torch/include/ATen/core/TensorBody.h:303:7: note: declared here
+/ccs/home/alokt/.conda/envs/gnn2/lib/python3.6/site-packages/torch/include/ATen/core/TensorBody.h:303:7: note: declared here
    T * data() const {
        ^~~~
-sparse_coo_tensor.cpp:156:27: error: no matching function for call to 'print(std::ostream&, at::Tensor&)'
-     at::print(std::cout, C);
-                           ^
-In file included from /ccs/home/alokt/.conda/envs/gnn/lib/python3.6/site-packages/torch/include/ATen/Formatting.h:1:0,
-                 from /ccs/home/alokt/.conda/envs/gnn/lib/python3.6/site-packages/torch/include/ATen/Utils.h:9,
-                 from /ccs/home/alokt/.conda/envs/gnn/lib/python3.6/site-packages/torch/include/ATen/Context.h:5,
-                 from /ccs/home/alokt/.conda/envs/gnn/lib/python3.6/site-packages/torch/include/ATen/ATen.h:5,
-                 from sparse_coo_tensor.cpp:1:
-/ccs/home/alokt/.conda/envs/gnn/lib/python3.6/site-packages/torch/include/ATen/core/Formatting.h:14:26: note: candidate: std::ostream& at::print(std::ostream&, const at::Tensor&, int64_t)
- CAFFE2_API std::ostream& print(
-                          ^~~~~
-/ccs/home/alokt/.conda/envs/gnn/lib/python3.6/site-packages/torch/include/ATen/core/Formatting.h:14:26: note:   candidate expects 3 arguments, 2 provided
-/ccs/home/alokt/.conda/envs/gnn/lib/python3.6/site-packages/torch/include/ATen/core/Formatting.h:21:20: note: candidate: void at::print(const at::Tensor&, int64_t)
- static inline void print(const Tensor & t, int64_t linesize=80) {
-                    ^~~~~
-/ccs/home/alokt/.conda/envs/gnn/lib/python3.6/site-packages/torch/include/ATen/core/Formatting.h:21:20: note:   no known conversion for argument 1 from 'std::ostream {aka std::basic_ostream<char>}' to 'const at::Tensor&'
-sparse_coo_tensor.cpp:168:58: warning: 'T* at::Tensor::data() const [with T = float]' is deprecated [-Wdeprecated-declarations]
+sparse_coo_tensor.cpp:175:58: warning: 'T* at::Tensor::data() const [with T = float]' is deprecated [-Wdeprecated-declarations]
                                      A_values.data<float>(),
                                                           ^
 sparse_coo_tensor.cpp:23:32: note: in definition of macro 'CHECK_CUSPARSE'
      cusparseStatus_t status = (func);                                          \
                                 ^~~~
-In file included from /ccs/home/alokt/.conda/envs/gnn/lib/python3.6/site-packages/torch/include/ATen/Tensor.h:11:0,
-                 from /ccs/home/alokt/.conda/envs/gnn/lib/python3.6/site-packages/torch/include/ATen/Context.h:4,
-                 from /ccs/home/alokt/.conda/envs/gnn/lib/python3.6/site-packages/torch/include/ATen/ATen.h:5,
+In file included from /ccs/home/alokt/.conda/envs/gnn2/lib/python3.6/site-packages/torch/include/ATen/Tensor.h:11:0,
+                 from /ccs/home/alokt/.conda/envs/gnn2/lib/python3.6/site-packages/torch/include/ATen/Context.h:4,
+                 from /ccs/home/alokt/.conda/envs/gnn2/lib/python3.6/site-packages/torch/include/ATen/ATen.h:5,
                  from sparse_coo_tensor.cpp:1:
-/ccs/home/alokt/.conda/envs/gnn/lib/python3.6/site-packages/torch/include/ATen/core/TensorBody.h:303:7: note: declared here
+/ccs/home/alokt/.conda/envs/gnn2/lib/python3.6/site-packages/torch/include/ATen/core/TensorBody.h:303:7: note: declared here
    T * data() const {
        ^~~~
-sparse_coo_tensor.cpp:170:60: warning: 'T* at::Tensor::data() const [with T = int]' is deprecated [-Wdeprecated-declarations]
+sparse_coo_tensor.cpp:177:60: warning: 'T* at::Tensor::data() const [with T = int]' is deprecated [-Wdeprecated-declarations]
                                      A_colindices.data<int>(),
                                                             ^
 sparse_coo_tensor.cpp:23:32: note: in definition of macro 'CHECK_CUSPARSE'
      cusparseStatus_t status = (func);                                          \
                                 ^~~~
-In file included from /ccs/home/alokt/.conda/envs/gnn/lib/python3.6/site-packages/torch/include/ATen/Tensor.h:11:0,
-                 from /ccs/home/alokt/.conda/envs/gnn/lib/python3.6/site-packages/torch/include/ATen/Context.h:4,
-                 from /ccs/home/alokt/.conda/envs/gnn/lib/python3.6/site-packages/torch/include/ATen/ATen.h:5,
+In file included from /ccs/home/alokt/.conda/envs/gnn2/lib/python3.6/site-packages/torch/include/ATen/Tensor.h:11:0,
+                 from /ccs/home/alokt/.conda/envs/gnn2/lib/python3.6/site-packages/torch/include/ATen/Context.h:4,
+                 from /ccs/home/alokt/.conda/envs/gnn2/lib/python3.6/site-packages/torch/include/ATen/ATen.h:5,
                  from sparse_coo_tensor.cpp:1:
-/ccs/home/alokt/.conda/envs/gnn/lib/python3.6/site-packages/torch/include/ATen/core/TensorBody.h:303:7: note: declared here
+/ccs/home/alokt/.conda/envs/gnn2/lib/python3.6/site-packages/torch/include/ATen/core/TensorBody.h:303:7: note: declared here
    T * data() const {
        ^~~~
-sparse_coo_tensor.cpp:171:51: warning: 'T* at::Tensor::data() const [with T = float]' is deprecated [-Wdeprecated-declarations]
+sparse_coo_tensor.cpp:178:51: warning: 'T* at::Tensor::data() const [with T = float]' is deprecated [-Wdeprecated-declarations]
                                      B.data<float>(),
                                                    ^
 sparse_coo_tensor.cpp:23:32: note: in definition of macro 'CHECK_CUSPARSE'
      cusparseStatus_t status = (func);                                          \
                                 ^~~~
-In file included from /ccs/home/alokt/.conda/envs/gnn/lib/python3.6/site-packages/torch/include/ATen/Tensor.h:11:0,
-                 from /ccs/home/alokt/.conda/envs/gnn/lib/python3.6/site-packages/torch/include/ATen/Context.h:4,
-                 from /ccs/home/alokt/.conda/envs/gnn/lib/python3.6/site-packages/torch/include/ATen/ATen.h:5,
+In file included from /ccs/home/alokt/.conda/envs/gnn2/lib/python3.6/site-packages/torch/include/ATen/Tensor.h:11:0,
+                 from /ccs/home/alokt/.conda/envs/gnn2/lib/python3.6/site-packages/torch/include/ATen/Context.h:4,
+                 from /ccs/home/alokt/.conda/envs/gnn2/lib/python3.6/site-packages/torch/include/ATen/ATen.h:5,
                  from sparse_coo_tensor.cpp:1:
-/ccs/home/alokt/.conda/envs/gnn/lib/python3.6/site-packages/torch/include/ATen/core/TensorBody.h:303:7: note: declared here
+/ccs/home/alokt/.conda/envs/gnn2/lib/python3.6/site-packages/torch/include/ATen/core/TensorBody.h:303:7: note: declared here
    T * data() const {
        ^~~~
-sparse_coo_tensor.cpp:175:51: warning: 'T* at::Tensor::data() const [with T = float]' is deprecated [-Wdeprecated-declarations]
+sparse_coo_tensor.cpp:182:51: warning: 'T* at::Tensor::data() const [with T = float]' is deprecated [-Wdeprecated-declarations]
                                      C.data<float>(),
                                                    ^
 sparse_coo_tensor.cpp:23:32: note: in definition of macro 'CHECK_CUSPARSE'
      cusparseStatus_t status = (func);                                          \
                                 ^~~~
-In file included from /ccs/home/alokt/.conda/envs/gnn/lib/python3.6/site-packages/torch/include/ATen/Tensor.h:11:0,
-                 from /ccs/home/alokt/.conda/envs/gnn/lib/python3.6/site-packages/torch/include/ATen/Context.h:4,
-                 from /ccs/home/alokt/.conda/envs/gnn/lib/python3.6/site-packages/torch/include/ATen/ATen.h:5,
+In file included from /ccs/home/alokt/.conda/envs/gnn2/lib/python3.6/site-packages/torch/include/ATen/Tensor.h:11:0,
+                 from /ccs/home/alokt/.conda/envs/gnn2/lib/python3.6/site-packages/torch/include/ATen/Context.h:4,
+                 from /ccs/home/alokt/.conda/envs/gnn2/lib/python3.6/site-packages/torch/include/ATen/ATen.h:5,
                  from sparse_coo_tensor.cpp:1:
-/ccs/home/alokt/.conda/envs/gnn/lib/python3.6/site-packages/torch/include/ATen/core/TensorBody.h:303:7: note: declared here
+/ccs/home/alokt/.conda/envs/gnn2/lib/python3.6/site-packages/torch/include/ATen/core/TensorBody.h:303:7: note: declared here
    T * data() const {
        ^~~~
 sparse_coo_tensor.cpp:126:13: warning: unused variable 'start' [-Wunused-variable]
@@ -100,4 +84,88 @@ sparse_coo_tensor.cpp:126:13: warning: unused variable 'start' [-Wunused-variabl
 sparse_coo_tensor.cpp:126:20: warning: unused variable 'stop' [-Wunused-variable]
      clock_t start, stop;
                     ^~~~
-error: command '/ccs/home/alokt/.conda/envs/gnn/bin/powerpc64le-conda_cos7-linux-gnu-cc' failed with exit status 1
+sparse_coo_tensor.cpp:153:13: warning: unused variable 'b_col' [-Wunused-variable]
+     int32_t b_col = B.size(1);
+             ^~~~~
+sparse_coo_tensor.cpp: In function 'void spmm_gpu(const at::Tensor&, const at::Tensor&, const at::Tensor&, int32_t, int32_t, at::Tensor&, at::Tensor&)':
+sparse_coo_tensor.cpp:193:6: error: redefinition of 'void spmm_gpu(const at::Tensor&, const at::Tensor&, const at::Tensor&, int32_t, int32_t, at::Tensor&, at::Tensor&)'
+ void spmm_gpu(const at::Tensor& A_rowindices,
+      ^~~~~~~~
+sparse_coo_tensor.cpp:110:6: note: 'void spmm_gpu(const at::Tensor&, const at::Tensor&, const at::Tensor&, int32_t, int32_t, at::Tensor&, at::Tensor&)' previously defined here
+ void spmm_gpu(const at::Tensor& A_rowindices,
+      ^~~~~~~~
+sparse_coo_tensor.cpp:220:64: warning: 'T* at::Tensor::data() const [with T = int]' is deprecated [-Wdeprecated-declarations]
+                                         A_rowindices.data<int>(),
+                                                                ^
+sparse_coo_tensor.cpp:23:32: note: in definition of macro 'CHECK_CUSPARSE'
+     cusparseStatus_t status = (func);                                          \
+                                ^~~~
+In file included from /ccs/home/alokt/.conda/envs/gnn2/lib/python3.6/site-packages/torch/include/ATen/Tensor.h:11:0,
+                 from /ccs/home/alokt/.conda/envs/gnn2/lib/python3.6/site-packages/torch/include/ATen/Context.h:4,
+                 from /ccs/home/alokt/.conda/envs/gnn2/lib/python3.6/site-packages/torch/include/ATen/ATen.h:5,
+                 from sparse_coo_tensor.cpp:1:
+/ccs/home/alokt/.conda/envs/gnn2/lib/python3.6/site-packages/torch/include/ATen/core/TensorBody.h:303:7: note: declared here
+   T * data() const {
+       ^~~~
+sparse_coo_tensor.cpp:258:58: warning: 'T* at::Tensor::data() const [with T = float]' is deprecated [-Wdeprecated-declarations]
+                                     A_values.data<float>(),
+                                                          ^
+sparse_coo_tensor.cpp:23:32: note: in definition of macro 'CHECK_CUSPARSE'
+     cusparseStatus_t status = (func);                                          \
+                                ^~~~
+In file included from /ccs/home/alokt/.conda/envs/gnn2/lib/python3.6/site-packages/torch/include/ATen/Tensor.h:11:0,
+                 from /ccs/home/alokt/.conda/envs/gnn2/lib/python3.6/site-packages/torch/include/ATen/Context.h:4,
+                 from /ccs/home/alokt/.conda/envs/gnn2/lib/python3.6/site-packages/torch/include/ATen/ATen.h:5,
+                 from sparse_coo_tensor.cpp:1:
+/ccs/home/alokt/.conda/envs/gnn2/lib/python3.6/site-packages/torch/include/ATen/core/TensorBody.h:303:7: note: declared here
+   T * data() const {
+       ^~~~
+sparse_coo_tensor.cpp:260:60: warning: 'T* at::Tensor::data() const [with T = int]' is deprecated [-Wdeprecated-declarations]
+                                     A_colindices.data<int>(),
+                                                            ^
+sparse_coo_tensor.cpp:23:32: note: in definition of macro 'CHECK_CUSPARSE'
+     cusparseStatus_t status = (func);                                          \
+                                ^~~~
+In file included from /ccs/home/alokt/.conda/envs/gnn2/lib/python3.6/site-packages/torch/include/ATen/Tensor.h:11:0,
+                 from /ccs/home/alokt/.conda/envs/gnn2/lib/python3.6/site-packages/torch/include/ATen/Context.h:4,
+                 from /ccs/home/alokt/.conda/envs/gnn2/lib/python3.6/site-packages/torch/include/ATen/ATen.h:5,
+                 from sparse_coo_tensor.cpp:1:
+/ccs/home/alokt/.conda/envs/gnn2/lib/python3.6/site-packages/torch/include/ATen/core/TensorBody.h:303:7: note: declared here
+   T * data() const {
+       ^~~~
+sparse_coo_tensor.cpp:261:51: warning: 'T* at::Tensor::data() const [with T = float]' is deprecated [-Wdeprecated-declarations]
+                                     B.data<float>(),
+                                                   ^
+sparse_coo_tensor.cpp:23:32: note: in definition of macro 'CHECK_CUSPARSE'
+     cusparseStatus_t status = (func);                                          \
+                                ^~~~
+In file included from /ccs/home/alokt/.conda/envs/gnn2/lib/python3.6/site-packages/torch/include/ATen/Tensor.h:11:0,
+                 from /ccs/home/alokt/.conda/envs/gnn2/lib/python3.6/site-packages/torch/include/ATen/Context.h:4,
+                 from /ccs/home/alokt/.conda/envs/gnn2/lib/python3.6/site-packages/torch/include/ATen/ATen.h:5,
+                 from sparse_coo_tensor.cpp:1:
+/ccs/home/alokt/.conda/envs/gnn2/lib/python3.6/site-packages/torch/include/ATen/core/TensorBody.h:303:7: note: declared here
+   T * data() const {
+       ^~~~
+sparse_coo_tensor.cpp:265:51: warning: 'T* at::Tensor::data() const [with T = float]' is deprecated [-Wdeprecated-declarations]
+                                     C.data<float>(),
+                                                   ^
+sparse_coo_tensor.cpp:23:32: note: in definition of macro 'CHECK_CUSPARSE'
+     cusparseStatus_t status = (func);                                          \
+                                ^~~~
+In file included from /ccs/home/alokt/.conda/envs/gnn2/lib/python3.6/site-packages/torch/include/ATen/Tensor.h:11:0,
+                 from /ccs/home/alokt/.conda/envs/gnn2/lib/python3.6/site-packages/torch/include/ATen/Context.h:4,
+                 from /ccs/home/alokt/.conda/envs/gnn2/lib/python3.6/site-packages/torch/include/ATen/ATen.h:5,
+                 from sparse_coo_tensor.cpp:1:
+/ccs/home/alokt/.conda/envs/gnn2/lib/python3.6/site-packages/torch/include/ATen/core/TensorBody.h:303:7: note: declared here
+   T * data() const {
+       ^~~~
+sparse_coo_tensor.cpp:209:13: warning: unused variable 'start' [-Wunused-variable]
+     clock_t start, stop;
+             ^~~~~
+sparse_coo_tensor.cpp:209:20: warning: unused variable 'stop' [-Wunused-variable]
+     clock_t start, stop;
+                    ^~~~
+sparse_coo_tensor.cpp:235:13: warning: unused variable 'b_row' [-Wunused-variable]
+     int32_t b_row = B.size(0);
+             ^~~~~
+error: command '/ccs/home/alokt/.conda/envs/gnn2/bin/powerpc64le-conda_cos7-linux-gnu-cc' failed with exit status 1

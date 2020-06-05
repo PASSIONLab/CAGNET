@@ -1,0 +1,63 @@
+
+CommandNotFoundError: Your shell has not been properly configured to use 'conda activate'.
+To initialize your shell, run
+
+    $ conda init <SHELL_NAME>
+
+Currently supported shells are:
+  - bash
+  - fish
+  - tcsh
+  - xonsh
+  - zsh
+  - powershell
+
+See 'conda init --help' for more information and options.
+
+IMPORTANT: You may need to close and restart your shell after running 'conda init'.
+
+
+
+Lmod is automatically replacing "xl/16.1.1-5" with "gcc/6.4.0".
+
+
+Due to MODULEPATH changes, the following have been reloaded:
+  1) spectrum-mpi/10.3.1.2-20200121
+
+
+Currently Loaded Modules:
+  1) hsi/5.0.2.p5            6) tmux/2.2
+  2) xalt/1.2.0              7) cuda/10.1.243
+  3) lsf-tools/2.0           8) gcc/6.4.0
+  4) darshan-runtime/3.1.7   9) spectrum-mpi/10.3.1.2-20200121
+  5) DefApps
+
+ 
+
+g04n03
+
+------------------------------------------------------------
+Sender: LSF System <lsfadmin@batch2>
+Subject: Job 140275: <distr-gnn3d-p64> in cluster <summit> Exited
+
+Job <distr-gnn3d-p64> was submitted from host <login4> by user <alokt> in cluster <summit> at Fri Jun  5 05:02:00 2020
+Job was executed on host(s) <1*batch2>, in queue <batch>, as user <alokt> in cluster <summit> at Fri Jun  5 05:28:47 2020
+                            <42*g04n03>
+                            <42*g04n04>
+                            <42*g04n05>
+                            <42*g04n06>
+                            <42*g04n07>
+                            <42*g04n08>
+                            <42*g04n09>
+                            <42*g04n10>
+                            <42*g04n11>
+                            <42*g04n12>
+                            <42*g04n13>
+</ccs/home/alokt> was used as the home directory.
+</ccs/home/alokt/gnn_training/job_scripts/3d> was used as the working directory.
+Started at Fri Jun  5 05:28:47 2020
+Terminated at Fri Jun  5 05:46:56 2020
+Results reported at Fri Jun  5 05:46:56 2020
+
+The output (if any) is above this job summary.
+
