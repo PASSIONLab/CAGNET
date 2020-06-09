@@ -256,9 +256,9 @@ def split3dspmm_dense(adj_matrix, inputs, rank, row, col, rank_c, size, acc_per_
         else:
             acol = torch.cuda.FloatTensor(height_per_proc, middim_per_proc, device=device).fill_(0)
         
-        acol = acol.contiguous()
         tstart = start_time(row_groups[row][rank_c], rank)
 
+        acol = acol.contiguous()
         dist.broadcast(acol, row_src_rank, row_groups[row][rank_c])
 
         dur = stop_time(row_groups[row][rank_c], rank, tstart)
@@ -271,9 +271,9 @@ def split3dspmm_dense(adj_matrix, inputs, rank, row, col, rank_c, size, acc_per_
             brow = torch.cuda.FloatTensor(middim_per_proc, width_per_proc, device=device).fill_(0)
             # brow = torch.FloatTensor(middim_per_proc, width_per_proc, device=device).fill_(0)
 
-        brow = brow.contiguous()
         tstart = start_time(row_groups[0][0], rank)
 
+        brow = brow.contiguous()
         dist.broadcast(brow, col_src_rank, col_groups[col][rank_c])
 
         dur = stop_time(row_groups[0][0], rank, tstart)
@@ -295,6 +295,9 @@ def split3dspmm_dense(adj_matrix, inputs, rank, row, col, rank_c, size, acc_per_
     tstart = start_time(c_groups[0], rank)
 
     dist.all_reduce(z_loc, group=c_groups[int(rank // proc_c)])
+    z_loc = torch.split(z_loc, chunk_sizes_row, dim=0)
+    z_loc = z_loc[rank_c].contiguous()
+
 
     # dur = stop_time(row_groups[0][0], rank, tstart)
     dur = stop_time(c_groups[0], rank, tstart)
@@ -306,9 +309,6 @@ def split3dspmm_dense(adj_matrix, inputs, rank, row, col, rank_c, size, acc_per_
     # z_tmp = z_tmp_recv[0]
     # for i in range(1, proc_c):
     #     z_tmp += z_tmp_recv[i]
-
-    z_loc = torch.split(z_loc, chunk_sizes_row, dim=0)
-    z_loc = z_loc[rank_c].contiguous()
 
 
     # z_tmp_recv = []
@@ -422,7 +422,7 @@ def split3dspmm_sparse(adj_matrix, inputs, rank, row, col, rank_c, size, acc_per
             # acol_values = torch.FloatTensor(acol_values_len, device=device).fill_(0)
         
 
-        acol = torch.cat((acol_indices.float(), acol_values.unsqueeze(0)), dim=0).contiguous()
+        acol = torch.cat((acol_indices.float(), acol_values.unsqueeze(0)), dim=0)
 
         tstart = start_time(row_groups[row][rank_c], rank)
 
@@ -453,10 +453,10 @@ def split3dspmm_sparse(adj_matrix, inputs, rank, row, col, rank_c, size, acc_per
             brow = torch.cuda.FloatTensor(middim_per_proc, width_per_proc, device=device)
             # brow = torch.FloatTensor(middim_per_proc, width_per_proc, device=device)
 
-        brow = brow.contiguous()
 
         tstart = start_time(row_groups[0][0], rank)
 
+        brow = brow.contiguous()
         dist.broadcast(brow, col_src_rank, col_groups[col][rank_c])
 
         dur = stop_time(row_groups[0][0], rank, tstart)
@@ -484,14 +484,13 @@ def split3dspmm_sparse(adj_matrix, inputs, rank, row, col, rank_c, size, acc_per
     tstart = start_time(c_groups[0], rank)
 
     dist.all_reduce(z_loc, group=c_groups[int(rank // proc_c)])
+    z_loc = torch.split(z_loc, chunk_sizes_col, dim=1)
+    z_loc = z_loc[rank_c].contiguous()
 
     # dur = stop_time(row_groups[0][0], rank, tstart)
     dur = stop_time(c_groups[0], rank, tstart)
     comm_time += dur
     summa_sparse_reduce += dur
-
-    z_loc = torch.split(z_loc, chunk_sizes_col, dim=1)
-    z_loc = z_loc[rank_c].contiguous()
 
     return z_loc, chunk_sizes_col
 
@@ -590,36 +589,37 @@ def split3dspmm_loc(mata, matb, rank, row, col, rank_c, size, acc_per_rank,
         tstart = start_time(row_groups[0][0], rank)
 
         z_tmp = torch.mm(acol, brow)
-        z_loc += z_tmp
 
         dur = stop_time(row_groups[0][0], rank, tstart)
         summa_comp += dur
         comp_time += dur
 
+        # tstart = start_time(row_groups[0][0], rank)
+        tstart = start_time(c_groups[0], rank)
+
+        dist.all_reduce(z_tmp, group=c_groups[int(rank // proc_c)])
+
+        z_loc += z_tmp
+
+        # dur = stop_time(row_groups[0][0], rank, tstart)
+        dur = stop_time(c_groups[0], rank, tstart)
+        summa_reduce += dur
+        comm_time += dur
+
         # del acol
         # del z_tmp
-
-    # tstart = start_time(row_groups[0][0], rank)
-    tstart = start_time(c_groups[0], rank)
-
-    dist.all_reduce(z_loc, group=c_groups[int(rank // proc_c)])
-
-    # dur = stop_time(row_groups[0][0], rank, tstart)
-    dur = stop_time(c_groups[0], rank, tstart)
-    summa_reduce += dur
-    comm_time += dur
-
-
-    z_tmp = torch.split(z_loc, chunk_sizes_row, dim=0)
-    z_loc_ret = z_tmp[rank_c]
 
     # z_tmp_recv = []
     # for i in range(proc_c):
     #     z_tmp_recv.append(torch.FloatTensor(z_tmp.size(), device=device))
 
     # del mata
-    del z_loc
-    return z_loc_ret
+    # del z_loc
+    # return z_loc_ret
+
+    z_tmp = torch.split(z_loc, chunk_sizes_row, dim=0)
+    z_loc = z_tmp[rank_c].clone()
+    return z_loc
 
 def get_proc_groups(rank, size, group):
     proc_row = proc_row_size(size)
@@ -1554,9 +1554,9 @@ def run(rank, size, inputs, adj_matrix, data, features, mid_layer, classes, devi
         if rank == 0:
             tstart_epoch = time.time()
 
-        outputs = train(inputs_loc, weight1, weight2, inputs.size(0), adj_matrix_loc, None, 
-                                optimizer, data, rank, size, acc_per_rank, group, row_groups, 
-                                col_groups, transpose_group, c_groups)
+            outputs = train(inputs_loc, weight1, weight2, inputs.size(0), adj_matrix_loc, None, 
+                                    optimizer, data, rank, size, acc_per_rank, group, row_groups, 
+                                    col_groups, transpose_group, c_groups)
 
         # sync_and_sleep(rank, device)
         if rank == 0:
