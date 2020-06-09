@@ -38,8 +38,8 @@ if args.use_gdc:
 class Net(torch.nn.Module):
     def __init__(self):
         super(Net, self).__init__()
-        self.conv1 = GCNConv(dataset.num_features, 16, cached=True, normalize=False, bias=False)
-        self.conv2 = GCNConv(16, dataset.num_classes, cached=True, normalize=False, bias=False)
+        self.conv1 = GCNConv(dataset.num_features, 16, cached=True, normalize=True, bias=False)
+        self.conv2 = GCNConv(16, dataset.num_classes, cached=True, normalize=True, bias=False)
 
         self.conv1.node_dim = 0
         self.conv2.node_dim = 0
@@ -57,14 +57,13 @@ class Net(torch.nn.Module):
         # x = self.conv2(x, edge_index)
         # return F.log_softmax(x, dim=1)
         x = self.conv1(x, edge_index)
-        # x = F.relu(x)
+        x = F.relu(x)
         x = self.conv2(x, edge_index)
-        # return F.log_softmax(x, dim=1)
-        return x
+        return F.log_softmax(x, dim=1)
 
 
-# device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-device = torch.device('cpu')
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+# device = torch.device('cpu')
 
 torch.manual_seed(seed)
 weight1 = torch.rand(dataset.num_features, 16)
@@ -84,7 +83,6 @@ def train():
     outputs = model()
     
     # Note: bool type removes warnings, unsure of perf penalty
-    print(f"RHS: {data.y[data.train_mask.bool()]}")
     F.nll_loss(outputs[data.train_mask.bool()], data.y[data.train_mask.bool()]).backward()
     # F.nll_loss(outputs, torch.max(data.y, 1)[1]).backward()
 
@@ -109,14 +107,12 @@ def main():
     # for epoch in range(1, 101):
     for epoch in range(1):
         outputs = train()
-        # train_acc, val_acc, tmp_test_acc = test(outputs)
-        # if val_acc > best_val_acc:
-        #     best_val_acc = val_acc
-        #     test_acc = tmp_test_acc
-        # log = 'Epoch: {:03d}, Train: {:.4f}, Val: {:.4f}, Test: {:.4f}'
-        # print(log.format(epoch, train_acc, best_val_acc, test_acc))
-        log = 'Epoch: {:03d}'
-        print(log.format(epoch))
+        train_acc, val_acc, tmp_test_acc = test(outputs)
+        if val_acc > best_val_acc:
+            best_val_acc = val_acc
+            test_acc = tmp_test_acc
+        log = 'Epoch: {:03d}, Train: {:.4f}, Val: {:.4f}, Test: {:.4f}'
+        print(log.format(epoch, train_acc, best_val_acc, test_acc))
 
     tstop = time.time()
     print("Time: " + str(tstop - tstart))

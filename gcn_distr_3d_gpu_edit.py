@@ -768,7 +768,6 @@ class GCNFunc(torch.autograd.Function):
 
         adj_matrix_t = adj_matrix # Only true for undirected graphs
 
-        print(f"rank: {rank} before sparse", flush=True)
         # TODO: will need to change height argument when n % sqrt(P) != 0 and non-square grid
         # z = summa_sparse(adj_matrix_t, inputs, rank, rank_row, rank_col, size, acc_per_rank, 
         z, chunk_sizes_loc = split3dspmm_sparse(adj_matrix_t, inputs, 
@@ -776,7 +775,6 @@ class GCNFunc(torch.autograd.Function):
                                                     rank, rank_row, rank_col, rank_c, size, acc_per_rank, 
                                                     row_groups, col_groups, c_groups, 
                                                     node_count, node_count, weight.size(0))
-        print(f"rank: {rank} after sparse", flush=True)
 
         chunk_sizes_loc_tens = torch.cuda.LongTensor(chunk_sizes_loc)
         chunk_sizes = []
@@ -825,10 +823,8 @@ class GCNFunc(torch.autograd.Function):
                     weight_parts[rank_new] = None
 
         # z = torch.mm(z, weight)
-        print(f"rank: {rank} before loc", flush=True)
         z = split3dspmm_loc(z, weight_parts, rank, rank_row, rank_col, rank_c, size, acc_per_rank, row_groups, 
                                 col_groups, c_groups, node_count, weight.size(0), weight.size(1))
-        print(f"rank: {rank} after loc", flush=True)
 
         # z.requires_grad = True
         ctx.z = z
@@ -1554,16 +1550,13 @@ def run(rank, size, inputs, adj_matrix, data, features, mid_layer, classes, devi
     if rank == 0:
         tstart = time.time()
 
-    # with torch.autograd.profiler.profile(use_cuda=True) as prof:
     for epoch in range(1, epochs):
         if rank == 0:
             tstart_epoch = time.time()
 
-        print(f"rank: {rank} before train", flush=True)
-        outputs = train(inputs_loc, weight1, weight2, inputs.size(0), adj_matrix_loc, None, 
-                                optimizer, data, rank, size, acc_per_rank, group, row_groups, 
-                                col_groups, transpose_group, c_groups)
-        print(f"rank: {rank} after train", flush=True)
+            outputs = train(inputs_loc, weight1, weight2, inputs.size(0), adj_matrix_loc, None, 
+                                    optimizer, data, rank, size, acc_per_rank, group, row_groups, 
+                                    col_groups, transpose_group, c_groups)
 
         # sync_and_sleep(rank, device)
         if rank == 0:
@@ -1596,8 +1589,6 @@ def run(rank, size, inputs, adj_matrix, data, features, mid_layer, classes, devi
             print("Epoch: {:03d}".format(epoch), flush=True)
 
     dist.barrier()
-
-    # print(prof.key_averages().table(sort_by="self_cuda_time_total"))
     if rank == 0:
         tstop = time.time()
         print("Time: " + str(tstop - tstart))

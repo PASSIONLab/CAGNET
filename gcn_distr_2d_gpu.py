@@ -1194,7 +1194,8 @@ def main(P, correctness_check, acc_per_rank):
         num_classes = dataset.num_classes + 9
         data.y = torch.cat((data.y, torch.zeros(9).long()), dim=0) 
     elif graphname == 'Amazon':
-        edge_index = torch.load(path + "/processed/amazon_graph.pt")
+        # edge_index = torch.load(path + "/processed/amazon_graph.pt")
+        edge_index = torch.load("/gpfs/alpine/bif115/scratch/alokt/Amazon/processed/amazon_graph_random.pt")
         edge_index = edge_index.t_()
         n = 9430086
         num_features = 300

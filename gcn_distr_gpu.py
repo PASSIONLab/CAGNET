@@ -21,6 +21,7 @@ from torch.nn import Parameter
 import torch.nn.functional as F
 
 from torch_scatter import scatter_add
+import torch_sparse
 
 from sparse_coo_tensor_cpp import sparse_coo_tensor_gpu, spmm_gpu
 
@@ -52,7 +53,7 @@ epochs = 0
 graphname = ""
 mid_layer = 0
 timing = True
-normalization = False
+normalization = True
 device = None
 acc_per_rank = 0
 run_count = 0
@@ -385,51 +386,62 @@ def split_coo(adj_matrix, node_count, n_per_proc, dim):
 # Normalize all elements according to KW's normalization rule
 def scale_elements(adj_matrix, adj_part, node_count, row_vtx, col_vtx):
     if not normalization:
-        return
+        return adj_part
 
     # Scale each edge (u, v) by 1 / (sqrt(u) * sqrt(v))
-    indices = adj_part._indices()
-    values = adj_part._values()
+    # indices = adj_part._indices()
+    # values = adj_part._values()
 
-    deg_map = dict()
-    for i in range(adj_part._nnz()):
-        u = indices[0][i] + row_vtx
-        v = indices[1][i] + col_vtx
+    # deg_map = dict()
+    # for i in range(adj_part._nnz()):
+    #     u = indices[0][i] + row_vtx
+    #     v = indices[1][i] + col_vtx
 
-        if u.item() in deg_map:
-            degu = deg_map[u.item()]
-        else:
-            degu = (adj_matrix[0] == u).sum().item()
-            deg_map[u.item()] = degu
+    #     if u.item() in deg_map:
+    #         degu = deg_map[u.item()]
+    #     else:
+    #         degu = (adj_matrix[0] == u).sum().item()
+    #         deg_map[u.item()] = degu
 
-        if v.item() in deg_map:
-            degv = deg_map[v.item()]
-        else:
-            degv = (adj_matrix[0] == v).sum().item()
-            deg_map[v.item()] = degv
+    #     if v.item() in deg_map:
+    #         degv = deg_map[v.item()]
+    #     else:
+    #         degv = (adj_matrix[0] == v).sum().item()
+    #         deg_map[v.item()] = degv
 
-        values[i] = values[i] / (math.sqrt(degu) * math.sqrt(degv))
+    #     values[i] = values[i] / (math.sqrt(degu) * math.sqrt(degv))
     
-    # deg = torch.histc(adj_matrix[0].float(), bins=node_count)
-    # deg = deg.pow(-0.5)
+    deg = torch.histc(adj_matrix[0], bins=node_count)
+    deg = deg.pow(-0.5)
 
-    # row_len = adj_part.size(0)
-    # col_len = adj_part.size(1)
+    row_len = adj_part.size(0)
+    col_len = adj_part.size(1)
 
-    # dleft = torch.sparse_coo_tensor([np.arange(row_vtx, row_vtx + row_len).tolist(),
-    #                                  np.arange(row_vtx, row_vtx + row_len).tolist()],
-    #                                  deg[row_vtx:(row_vtx + row_len)],
-    #                                  size=(row_len, row_len),
-    #                                  requires_grad=False)
+    dleft = torch.sparse_coo_tensor([np.arange(0, row_len).tolist(),
+                                     np.arange(0, row_len).tolist()],
+                                     deg[row_vtx:(row_vtx + row_len)].float(),
+                                     size=(row_len, row_len),
+                                     requires_grad=False, device=torch.device("cpu"))
 
-    # dright = torch.sparse_coo_tensor([np.arange(col_vtx, col_vtx + col_len).tolist(),
-    #                                  np.arange(col_vtx, col_vtx + col_len).tolist()],
-    #                                  deg[row_vtx:(col_vtx + col_len)],
-    #                                  size=(col_len, col_len),
-    #                                  requires_grad=False)
-
+    dright = torch.sparse_coo_tensor([np.arange(0, col_len).tolist(),
+                                     np.arange(0, col_len).tolist()],
+                                     deg[col_vtx:(col_vtx + col_len)].float(),
+                                     size=(col_len, col_len),
+                                     requires_grad=False, device=torch.device("cpu"))
     # adj_part = torch.sparse.mm(torch.sparse.mm(dleft, adj_part), dright)
-    # return adj_part
+    ad_ind, ad_val = torch_sparse.spspmm(adj_part._indices(), adj_part._values(), 
+                                            dright._indices(), dright._values(),
+                                            adj_part.size(0), adj_part.size(1), dright.size(1))
+
+    adj_part_ind, adj_part_val = torch_sparse.spspmm(dleft._indices(), dleft._values(), 
+                                                        ad_ind, ad_val,
+                                                        dleft.size(0), dleft.size(1), adj_part.size(1))
+
+    adj_part = torch.sparse_coo_tensor(adj_part_ind, adj_part_val, 
+                                                size=(adj_part.size(0), adj_part.size(1)),
+                                                requires_grad=False, device=torch.device("cpu"))
+
+    return adj_part
 
 def oned_partition(rank, size, inputs, adj_matrix, data, features, classes, device):
     node_count = inputs.size(0)
@@ -453,13 +465,15 @@ def oned_partition(rank, size, inputs, adj_matrix, data, features, classes, devi
                                                         size=(last_node_count, proc_node_count),
                                                         requires_grad=False)
 
-                scale_elements(adj_matrix, am_pbyp[i], node_count, vtx_indices[i], vtx_indices[rank])
+                am_pbyp[i] = scale_elements(adj_matrix, am_pbyp[i], node_count, vtx_indices[i], 
+                                                vtx_indices[rank])
             else:
                 am_pbyp[i] = torch.sparse_coo_tensor(am_pbyp[i], torch.ones(am_pbyp[i].size(1)), 
                                                         size=(n_per_proc, proc_node_count),
                                                         requires_grad=False)
 
-                scale_elements(adj_matrix, am_pbyp[i], node_count, vtx_indices[i], vtx_indices[rank])
+                am_pbyp[i] = scale_elements(adj_matrix, am_pbyp[i], node_count, vtx_indices[i], 
+                                                vtx_indices[rank])
 
         for i in range(len(am_partitions)):
             proc_node_count = vtx_indices[i + 1] - vtx_indices[i]
@@ -467,13 +481,15 @@ def oned_partition(rank, size, inputs, adj_matrix, data, features, classes, devi
                                                     torch.ones(am_partitions[i].size(1)), 
                                                     size=(node_count, proc_node_count), 
                                                     requires_grad=False)
-            scale_elements(adj_matrix, am_partitions[i], node_count,  0, vtx_indices[i])
+            am_partitions[i] = scale_elements(adj_matrix, am_partitions[i], node_count,  0, vtx_indices[i])
 
         input_partitions = torch.split(inputs, math.ceil(float(inputs.size(0)) / size), dim=0)
 
         adj_matrix_loc = am_partitions[rank]
         inputs_loc = input_partitions[rank]
 
+    print(f"rank: {rank} adj_matrix_loc.size: {adj_matrix_loc.size()}", flush=True)
+    print(f"rank: {rank} inputs.size: {inputs.size()}", flush=True)
     return inputs_loc, adj_matrix_loc, am_pbyp
 
 def run(rank, size, inputs, adj_matrix, data, features, classes, device):
@@ -693,7 +709,7 @@ def main(P, correctness_check):
         data.y = data.y.to(device)
 
     if normalization:
-        adj_matrix, _ = add_remaining_self_loops(edge_index)
+        adj_matrix, _ = add_remaining_self_loops(edge_index, num_nodes=inputs.size(0))
     else:
         adj_matrix = edge_index
 

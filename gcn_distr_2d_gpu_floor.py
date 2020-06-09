@@ -1226,9 +1226,11 @@ def main(P, correctness_check, acc_per_rank):
         dataset = Reddit(path, T.NormalizeFeatures())
         data = dataset[0]
         num_features = dataset.num_features
-        num_classes = dataset.num_classes + 9
+        # num_classes = dataset.num_classes + 9
+        num_classes = dataset.num_classes
     elif graphname == 'Amazon':
-        edge_index = torch.load(path + "/processed/amazon_graph.pt")
+        # edge_index = torch.load(path + "/processed/amazon_graph.pt")
+        edge_index = torch.load("/gpfs/alpine/bif115/scratch/alokt/Amazon/processed/amazon_graph_random.pt")
         edge_index = edge_index.t_()
         n = 9430086
         num_features = 300
