@@ -1,7 +1,7 @@
 #!/bin/bash
 #BSUB -P BIF115
 #BSUB -W 2:00
-#BSUB -nnodes 17
+#BSUB -nnodes 25
 #BSUB -alloc_flags gpumps
 #BSUB -J distr-gnn2d-p100
 #BSUB -o distr-gnn.%J
@@ -20,7 +20,7 @@ hostarr=(${LSB_MCPU_HOSTS})
 echo ${hostarr[2]}
 
 # declare -a midlayers=("16" "64" "256")
-declare -a midlayers=("64")
+declare -a midlayers=("16")
 declare -a timings=("True" "False")
 
 cd ../../
@@ -41,7 +41,7 @@ for i in "${midlayers[@]}"
         for j in "${timings[@]}"
             do
                 # ddlrun -x WORLD_SIZE=100 -x MASTER_ADDR=${hostarr[2]} -x MASTER_PORT=1234 -accelerators 4 python gcn_distr_2d_gpu.py --accperrank=4 --epochs=30 --graphname=Amazon --timing=$j --midlayer=$i &> outputs/final_outputs/amazon/distr_proc100_2d_output_mid$i\_$j\.txt
-                ddlrun -x WORLD_SIZE=100 -x MASTER_ADDR=${hostarr[2]} -x MASTER_PORT=1234 -accelerators 6 python gcn_distr_2d_gpu_floor.py --accperrank=6 --epochs=40 --graphname=Amazon --timing=$j --midlayer=$i &> outputs/final_outputs/random/amazon/distr_proc100_2d_output_mid$i\_$j\_nomemleak.txt
+                ddlrun -x WORLD_SIZE=100 -x MASTER_ADDR=${hostarr[2]} -x MASTER_PORT=1234 -accelerators 4 python gcn_distr_2d_gpu_floor.py --accperrank=4 --epochs=100 --graphname=Amazon --timing=$j --midlayer=$i &> outputs/final_outputs/random/amazon/distr_proc100_2d_output_mid$i\_$j\_nomemleak.txt
 
             done
     done

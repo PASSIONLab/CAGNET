@@ -1,0 +1,21 @@
+
+------------------------------------------------------------
+Sender: LSF System <lsfadmin@batch3>
+Subject: Job 153519: <distr-gnn2d-p36> in cluster <summit> Done
+
+Job <distr-gnn2d-p36> was submitted from host <login4> by user <alokt> in cluster <summit> at Fri Jun 12 14:40:14 2020
+Job was executed on host(s) <1*batch3>, in queue <batch>, as user <alokt> in cluster <summit> at Fri Jun 12 15:42:20 2020
+                            <42*f07n09>
+                            <42*f07n10>
+                            <42*f07n11>
+                            <42*f07n12>
+                            <42*f07n13>
+                            <42*f07n14>
+</ccs/home/alokt> was used as the home directory.
+</ccs/home/alokt/gnn_training/job_scripts/2d> was used as the working directory.
+Started at Fri Jun 12 15:42:20 2020
+Terminated at Fri Jun 12 15:43:09 2020
+Results reported at Fri Jun 12 15:43:09 2020
+
+The output (if any) is above this job summary.
+

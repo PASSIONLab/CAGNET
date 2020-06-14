@@ -25,32 +25,32 @@ declare -a timings=("True" "False")
 
 cd ../../
 
-# Reddit
-for i in "${midlayers[@]}"
-    do
-        for j in "${timings[@]}"
-            do
-                ddlrun -x WORLD_SIZE=216 -x MASTER_ADDR=${hostarr[2]} -x MASTER_PORT=1234 -accelerators 6 python gcn_distr_3d_gpu.py --accperrank=6 --epochs=100 --graphname=Reddit --timing=$j --midlayer=$i &> outputs/final_outputs/packed/reddit/distr_proc216_3d_output_mid$i\_$j\.txt
-
-            done
-    done
+# # Reddit
+# for i in "${midlayers[@]}"
+#     do
+#         for j in "${timings[@]}"
+#             do
+#                 ddlrun -x WORLD_SIZE=216 -x MASTER_ADDR=${hostarr[2]} -x MASTER_PORT=1234 -accelerators 6 python gcn_distr_3d_gpu.py --accperrank=6 --epochs=100 --graphname=Reddit --timing=$j --midlayer=$i &> outputs/final_outputs/packed/reddit/distr_proc216_3d_output_mid$i\_$j\.txt
+# 
+#             done
+#     done
 
 # Amazon
 for i in "${midlayers[@]}"
     do
         for j in "${timings[@]}"
             do
-                ddlrun -x WORLD_SIZE=216 -x MASTER_ADDR=${hostarr[2]} -x MASTER_PORT=1234 -accelerators 6 python gcn_distr_3d_gpu.py --accperrank=6 --epochs=100 --graphname=Amazon --timing=$j --midlayer=$i &> outputs/final_outputs/packed/amazon/distr_proc216_3d_output_mid$i\_$j\.txt
+                ddlrun -x WORLD_SIZE=216 -x MASTER_ADDR=${hostarr[2]} -x MASTER_PORT=1234 -accelerators 6 python gcn_distr_3d_gpu.py --accperrank=6 --epochs=100 --graphname=Amazon --timing=$j --midlayer=$i &> outputs/final_outputs/random/amazon/distr_proc216_3d_output_mid$i\_$j\.txt
 
             done
     done
 
-# subgraph3
-for i in "${midlayers[@]}"
-    do
-        for j in "${timings[@]}"
-            do
-                ddlrun -x WORLD_SIZE=216 -x MASTER_ADDR=${hostarr[2]} -x MASTER_PORT=1234 -accelerators 6 python gcn_distr_3d_gpu.py --accperrank=6 --epochs=10 --graphname=subgraph3 --timing=$j --midlayer=$i &> outputs/final_outputs/packed/subgraph3/distr_proc216_3d_output_mid$i\_$j\.txt
-
-            done
-    done
+# # subgraph3
+# for i in "${midlayers[@]}"
+#     do
+#         for j in "${timings[@]}"
+#             do
+#                 ddlrun -x WORLD_SIZE=216 -x MASTER_ADDR=${hostarr[2]} -x MASTER_PORT=1234 -accelerators 6 python gcn_distr_3d_gpu.py --accperrank=6 --epochs=10 --graphname=subgraph3 --timing=$j --midlayer=$i &> outputs/final_outputs/packed/subgraph3/distr_proc216_3d_output_mid$i\_$j\.txt
+# 
+#             done
+#     done
