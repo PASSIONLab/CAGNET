@@ -23,6 +23,8 @@ import torch.multiprocessing as mp
 
 from torch.multiprocessing import Manager, Process
 
+import statistics
+
 from torch.nn import Parameter
 import torch.nn.functional as F
 
@@ -34,34 +36,58 @@ import numpy as np
 
 from sparse_coo_tensor_cpp import sparse_coo_tensor_gpu, spmm_gpu
 
-comp_time = 0.0
-comm_time = 0.0
-summa_sparse_bcast1 = 0.0
-summa_sparse_bcast1_words = 0
-summa_sparse_bcast2_words = 0
-summa_sparse_bcast2 = 0.0
-summa_sparse_bcast2_fwd = 0.0
-summa_sparse_bcast2_bwd = 0.0
-summa_bcast1 = 0.0
-summa_bcast2 = 0.0
-summa_sparse_comp = 0.0
-summa_comp = 0.0
-summa_loc_bcast = 0.0
-fwd_time = 0.0
-bwd_time = 0.0
-transpose_time = 0.0
-grad_weight_time = 0.0
-loss_calc_time = 0.0
-summa_sparse_time = 0.0
-summa_time = 0.0
-summa_loc_time = 0.0
+# comp_time = 0.0
+# comm_time = 0.0
+# summa_sparse_bcast1 = 0.0
+# summa_sparse_bcast1_words = 0
+# summa_sparse_bcast2_words = 0
+# summa_sparse_bcast2 = 0.0
+# summa_sparse_bcast2_fwd = 0.0
+# summa_sparse_bcast2_bwd = 0.0
+# summa_bcast1 = 0.0
+# summa_bcast2 = 0.0
+# summa_sparse_comp = 0.0
+# summa_comp = 0.0
+# summa_loc_bcast = 0.0
+# fwd_time = 0.0
+# bwd_time = 0.0
+# transpose_time = 0.0
+# grad_weight_time = 0.0
+# loss_calc_time = 0.0
+# summa_sparse_time = 0.0
+# summa_time = 0.0
+# summa_loc_time = 0.0
+total_time = dict()
+comp_time = dict()
+comm_time = dict()
+summa_sparse_bcast1 = dict()
+summa_sparse_bcast1_words = dict()
+summa_sparse_bcast2_words = dict()
+summa_sparse_bcast2 = dict()
+summa_sparse_bcast2_fwd = dict()
+summa_sparse_bcast2_bwd = dict()
+summa_bcast1 = dict()
+summa_bcast2 = dict()
+summa_sparse_comp = dict()
+summa_comp = dict()
+summa_loc_bcast = dict()
+fwd_time = dict()
+bwd_time = dict()
+transpose_time = dict()
+grad_weight_time = dict()
+loss_calc_time = dict()
+summa_sparse_time = dict()
+summa_time = dict()
+summa_loc_time = dict()
 
 epochs = 0
 graphname = ""
 mid_layer = 0
 timing = False
-normalization = False
+normalization = True
 no_occur_val = 42.1234
+run_count = 0
+run = 0
 
 def sync_and_sleep(rank, device):
     torch.cuda.synchronize(device=device)
@@ -156,6 +182,7 @@ def summa(adj_matrix, inputs, rank, row, col, size, acc_per_rank, row_groups, co
 
     global summa_comp
     global summa_time
+    global run
 
     # tstart_summa_time = start_time(row_groups[0], rank)
 
@@ -214,8 +241,8 @@ def summa(adj_matrix, inputs, rank, row, col, size, acc_per_rank, row_groups, co
         dist.broadcast(acol, row_src_rank, row_groups[row])
 
         dur = stop_time(row_groups[row], rank, tstart)
-        comm_time += dur
-        summa_bcast1 += dur
+        comm_time[run][rank] += dur
+        summa_bcast1[run][rank] += dur
 
         if col_src_rank == rank:
             brow = inputs
@@ -230,16 +257,16 @@ def summa(adj_matrix, inputs, rank, row, col, size, acc_per_rank, row_groups, co
         dist.broadcast(brow, col_src_rank, col_groups[col])
 
         dur = stop_time(col_groups[col], rank, tstart)
-        comm_time += dur
-        summa_bcast2 += dur
+        comm_time[run][rank] += dur
+        summa_bcast2[run][rank] += dur
 
         tstart = start_time(row_groups[0], rank)
 
         z_loc += torch.mm(acol.float(), brow)
 
         dur = stop_time(row_groups[0], rank, tstart)
-        comp_time += dur
-        summa_comp += dur
+        comp_time[run][rank] += dur
+        summa_comp[run][rank] += dur
 
     # summa_time += stop_time(row_groups[0], rank, tstart_summa_time)
     return z_loc
@@ -258,6 +285,7 @@ def summa_sparse(adj_matrix, inputs, rank, row, col, size, acc_per_rank, row_gro
 
     global summa_sparse_comp
     global summa_sparse_time
+    global run
 
     # tstart_summa_sparse_time = start_time(row_groups[0], rank)
 
@@ -334,10 +362,10 @@ def summa_sparse(adj_matrix, inputs, rank, row, col, size, acc_per_rank, row_gro
         dist.broadcast(acol, row_src_rank, row_groups[row])
 
         dur = stop_time(row_groups[row], rank, tstart)
-        comm_time += dur
-        summa_sparse_bcast1 += dur
+        comm_time[run][rank] += dur
+        summa_sparse_bcast1[run][rank] += dur
         if rank == 0:
-            summa_sparse_bcast1_words += 3 * acol_values_len
+            summa_sparse_bcast1_words[run][rank] += 3 * acol_values_len
 
         acol_indices = acol[:2].long()
         acol_values = acol[2].squeeze(0)
@@ -362,10 +390,10 @@ def summa_sparse(adj_matrix, inputs, rank, row, col, size, acc_per_rank, row_gro
         dist.broadcast(brow, col_src_rank, col_groups[col])
 
         dur = stop_time(row_groups[0], rank, tstart)
-        comm_time += dur
-        summa_sparse_bcast2 += dur
+        comm_time[run][rank] += dur
+        summa_sparse_bcast2[run][rank] += dur
         if rank == 0:
-            summa_sparse_bcast2_words += brow.size(0) * brow.size(1)
+            summa_sparse_bcast2_words[run][rank] += brow.size(0) * brow.size(1)
 
         tstart = start_time(row_groups[0], rank)
 
@@ -373,8 +401,8 @@ def summa_sparse(adj_matrix, inputs, rank, row, col, size, acc_per_rank, row_gro
                         height_per_proc, middim_per_proc, brow, z_loc)
 
         dur = stop_time(row_groups[0], rank, tstart)
-        comp_time += dur
-        summa_sparse_comp += dur
+        comp_time[run][rank] += dur
+        summa_sparse_comp[run][rank] += dur
 
     # summa_sparse_time += stop_time(row_groups[0], rank, tstart_summa_sparse_time)
     return z_loc
@@ -387,6 +415,7 @@ def summa_loc(mata, matb, rank, row, col, size, acc_per_rank, row_groups, col_gr
 
     global summa_loc_bcast
     global summa_loc_time
+    global run
 
     # tstart_summa_loc_time = start_time(row_groups[0], rank)
 
@@ -442,8 +471,8 @@ def summa_loc(mata, matb, rank, row, col, size, acc_per_rank, row_groups, col_gr
         dist.broadcast(acol, row_src_rank, row_groups[row])
 
         dur = stop_time(row_groups[row], rank, tstart)
-        comm_time += dur
-        summa_loc_bcast += dur
+        comm_time[run][rank] += dur
+        summa_loc_bcast[run][rank] += dur
 
         # if col_src_rank == rank:
         #     brow = matb.clone()
@@ -459,7 +488,7 @@ def summa_loc(mata, matb, rank, row, col, size, acc_per_rank, row_groups, col_gr
         z_loc += torch.mm(acol, brow)
 
         dur = stop_time(row_groups[0], rank, tstart)
-        comp_time += dur
+        comp_time[run][rank] += dur
 
     # summa_loc_time += stop_time(row_groups[0], rank, tstart_summa_loc_time)
     return z_loc
@@ -518,40 +547,87 @@ def dist_log_softmax(z, rank, size, acc_per_rank, group):
     h = z - maxes - sm_sum
     return h
 
-def dist_log_softmax2(z, rank, size, acc_per_rank, group):
-    print(f"z: {z}", flush=True)
+def dist_log_softmax2(z, rank, size, width, acc_per_rank, group, grad_output):
     proc_row = proc_row_size(size)
     proc_col = proc_col_size(size)
     rank_row = int(rank / proc_col)
     rank_col = rank % proc_col
-    device = torch.device('cuda:{}'.format(rank_to_devid(rank, acc_per_rank)))
-    
+    # device = torch.device('cuda:{}'.format(rank_to_devid(rank, acc_per_rank)))
+    device = torch.device('cpu')
+
+    chunk_sizes_col = []
+    width_per_col = width // proc_col
+
+    for i in range(proc_col):
+        if i == proc_col - 1:
+            chunk_sizes_col.append(width - width_per_col * (proc_col - 1))
+        else:
+            chunk_sizes_col.append(width_per_col)
+
+    width_per_proc = width - width_per_col * (proc_col - 1)
+    if z.size(1) != width_per_proc:
+        # z = torch.cat((z, torch.cuda.FloatTensor(z.size(0), width_per_proc - z.size(1))), dim=1)
+        z = torch.cat((z, torch.FloatTensor(z.size(0), width_per_proc - z.size(1))), dim=1)
+
+    z_recv = []
+    for i in range(proc_col):
+        # z_recv.append(torch.cuda.FloatTensor(z.size()))
+        z_recv.append(torch.FloatTensor(z.size()))
+
+    dist.all_gather(z_recv, z, group=group)
+    z_recv[rank_col] = z
+
+    for i in range(proc_col - 1):
+        pad_col = width // proc_col
+        z_recv[i] = z_recv[i][:,:pad_col]
+
+    z = torch.cat(z_recv, dim=1)
+
+    if grad_output is not None:
+        if grad_output.size(1) != width_per_proc:
+            grad_output = torch.cat((grad_output, 
+                                        # torch.cuda.FloatTensor(grad_output.size(0), 
+                                        torch.FloatTensor(grad_output.size(0), 
+                                                        width_per_proc - grad_output.size(1))), 
+                                        dim=1)
+
+        grad_output_recv = []
+        for i in range(proc_col):
+            # grad_output_recv.append(torch.cuda.FloatTensor(grad_output.size()))
+            grad_output_recv.append(torch.FloatTensor(grad_output.size()))
+
+        dist.all_gather(grad_output_recv, grad_output, group=group)
+        grad_output_recv[rank_col] = grad_output
+
+        for i in range(proc_col - 1):
+            pad_col = width // proc_col
+            grad_output_recv[i] = grad_output_recv[i][:,:pad_col]
+
+        grad_output = torch.cat(grad_output_recv, dim=1)
+
     maxes = torch.max(z, dim=1, keepdim=True)[0]
-    maxes_recv = []
-    for i in range(proc_col):
-        maxes_recv.append(torch.cuda.FloatTensor(maxes.size(), device=device))
-
-    # dist.all_reduce(maxes, op=dist.reduce_op.MAX, group=group)
-    dist.all_gather(maxes_recv, maxes, group=group)
-    for i in range(proc_col):
-        maxes_recv[rank_col].requires_grad = True
-    maxes_recv[rank_col] = maxes
-    maxes = torch.max(torch.cat(maxes_recv, dim=1), dim=1, keepdim=True)[0]
-
     h = torch.exp(z - maxes)
-    # sm_sum = torch.sum(h, dim=1, keepdim=True)
+    sm_sum = torch.sum(h, dim=1, keepdim=True)
+    sm_sum = torch.log(sm_sum)
 
-    # sm_sum_recv = []
-    # for i in range(proc_col):
-    #     sm_sum_recv.append(torch.cuda.FloatTensor(sm_sum.size(), device=device))
+    h = z - maxes - sm_sum
 
-    # # dist.all_reduce(sm_sum, op=dist.reduce_op.SUM, group=group)
-    # dist.all_gather(sm_sum_recv, sm_sum, group=group)
-    # sm_sum_recv[rank_col] = sm_sum
-    # sm_sum = torch.sum(torch.cat(sm_sum_recv, dim=1), dim=1, keepdim=True)
-    # sm_sum = torch.log(sm_sum)
-    # h = z - maxes - sm_sum
-    return h
+    # if h.requires_grad:
+    #     if rank_col == 0:
+    #         sm_sigma = torch.autograd.grad(outputs=h, inputs=z,
+    #                                             grad_outputs=grad_output)[0]
+    #         print(f"rank: {rank} sm_sigma: {sm_sigma}", flush=True)
+    #     else:
+    #         sm_sigma = torch.autograd.grad(outputs=h, inputs=z,
+    #                                             grad_outputs=grad_output)[0]
+    #         print(f"rank: {rank} sm_sigma: {sm_sigma}", flush=True)
+
+    # Only works for P = 4
+    # if rank_col == 0:
+    #     return h[:,:width_per_proc]
+    # else:
+    #     return h[:,width_per_proc:]
+    return h, z, grad_output
 
 class GCNFunc(torch.autograd.Function):
     @staticmethod
@@ -566,6 +642,7 @@ class GCNFunc(torch.autograd.Function):
         global summa_sparse_bcast2_fwd
         global fwd_time
         global grad_weight_time
+        global run
 
         # tstart = start_time(row_groups[0], rank)
 
@@ -590,7 +667,7 @@ class GCNFunc(torch.autograd.Function):
 
         adj_matrix_t = adj_matrix # Only true for undirected graphs
 
-        tmp_summa_sparse_bcast2 = summa_sparse_bcast2
+        tmp_summa_sparse_bcast2 = summa_sparse_bcast2[run][rank]
 
         # TODO: will need to change height argument when n % sqrt(P) != 0 and non-square grid
         z = summa_sparse(adj_matrix_t, inputs, rank, rank_row, rank_col, size, acc_per_rank, 
@@ -629,20 +706,21 @@ class GCNFunc(torch.autograd.Function):
         z.requires_grad = True
         ctx.z = z
 
-        summa_sparse_bcast2_fwd += summa_sparse_bcast2 - tmp_summa_sparse_bcast2
+        summa_sparse_bcast2_fwd[run][rank] += summa_sparse_bcast2[run][rank] - tmp_summa_sparse_bcast2
 
         # Worry about activation later
-        # if func is F.log_softmax:
-        #     h = dist_log_softmax(z, rank, size, acc_per_rank, row_groups[rank_row])
-        # elif func is F.relu:
-        #     h = func(z)
-        # else:
-        #     h = z
+        if func is F.log_softmax:
+            h = dist_log_softmax(z, rank, size, acc_per_rank, row_groups[rank_row])
+        elif func is F.relu:
+            h = func(z)
+        else:
+            h = z
 
         # dur = stop_time(row_groups[0], rank, tstart)
         # fwd_time += dur
 
-        return z
+        # return z
+        return h
 
     @staticmethod
     def backward(ctx, grad_output):
@@ -651,6 +729,7 @@ class GCNFunc(torch.autograd.Function):
         global bwd_time
         global transpose_time
         global grad_weight_time
+        global run
 
         inputs, weight, adj_matrix = ctx.saved_tensors
         rank = ctx.rank
@@ -675,20 +754,40 @@ class GCNFunc(torch.autograd.Function):
         # tstart = start_time(row_groups[0], rank)
             
         # Worry about activation later
-        # with torch.set_grad_enabled(True):
-        #     if func is F.log_softmax:
-        #         func_eval = dist_log_softmax2(z, rank, size, acc_per_rank, row_groups[rank_row])
-        #     elif func is F.relu:
-        #         func_eval = func(z)
-        #     else:
-        #         func_eval = z
+        with torch.set_grad_enabled(True):
+            if func is F.log_softmax:
+                # func_eval = dist_log_softmax2(z, rank, size, acc_per_rank, row_groups[rank_row])
+                func_eval, z_gathered, go_gathered = dist_log_softmax2(z, rank, size, 
+                                                                weight.size(1), 
+                                                                acc_per_rank, 
+                                                                row_groups[rank_row], grad_output)
+                width = z_gathered.size(1)
 
-        #     # sigmap = torch.autograd.grad(outputs=func_eval, inputs=z,grad_outputs=grad_output)[0]
-        #     sigmap = torch.autograd.grad(outputs=func_eval, inputs=z,grad_outputs=grad_output)[0]
-        #     print(f"rank: {rank} sigmap: {sigmap}", flush=True)
-        #     grad_output = sigmap
+                sigmap = torch.autograd.grad(outputs=func_eval, inputs=z_gathered,
+                                                grad_outputs=go_gathered)[0]
 
-        tmp_summa_sparse_bcast2 = summa_sparse_bcast2
+                chunk_sizes_col = []
+                sigmap_per_col = width // proc_col
+
+                for i in range(proc_col):
+                    if i == proc_col - 1:
+                        chunk_sizes_col.append(width - sigmap_per_col * (proc_col - 1))
+                    else:
+                        chunk_sizes_col.append(sigmap_per_col)
+
+                grad_output = sigmap.split(chunk_sizes_col, dim=1)[rank_col]
+                del z_gathered
+                del go_gathered
+            elif func is F.relu:
+                func_eval = func(z)
+            else:
+                func_eval = z
+
+            # sigmap = torch.autograd.grad(outputs=func_eval, inputs=z,grad_outputs=grad_output)[0]
+            sigmap = torch.autograd.grad(outputs=func_eval, inputs=z,grad_outputs=grad_output)[0]
+            grad_output = sigmap
+
+        tmp_summa_sparse_bcast2 = summa_sparse_bcast2[run][rank]
 
         # First backprop equation
         # TODO: will need to change height argument when n % sqrt(P) != 0 and non-square grid
@@ -733,7 +832,7 @@ class GCNFunc(torch.autograd.Function):
         tstart_transpose = start_time(row_groups[0], rank)
         inputs_t = transpose(inputs, rank_row, rank_col, node_count, weight.size(0), size,
                                 acc_per_rank, transpose_group)
-        transpose_time += stop_time(row_groups[0], rank, tstart_transpose)
+        transpose_time[run][rank] += stop_time(row_groups[0], rank, tstart_transpose)
 
         grad_weight = summa(inputs_t, ag, rank, rank_row, rank_col, size, acc_per_rank, row_groups,
                                 col_groups, weight.size(0), node_count, weight.size(1))
@@ -789,7 +888,7 @@ class GCNFunc(torch.autograd.Function):
                 grad_weight_row = torch.cat((grad_weight_row, grad_weight_recv[rank_wt]), dim=1)
             grad_weight_fin = torch.cat((grad_weight_fin, grad_weight_row), dim=0)
 
-        summa_sparse_bcast2_bwd += summa_sparse_bcast2 - tmp_summa_sparse_bcast2
+        summa_sparse_bcast2_bwd[run][rank] += summa_sparse_bcast2[run][rank] - tmp_summa_sparse_bcast2
 
         # dur = stop_time(row_groups[0], rank, tstart)
         # bwd_time += dur
@@ -802,6 +901,7 @@ def train(inputs, weight1, weight2, node_count, adj_matrix, am_partitions, optim
                 size, acc_per_rank, group, row_groups, col_groups, transpose_group):
 
     global loss_calc_time
+    global run
 
     outputs = GCNFunc.apply(inputs, weight1, node_count, adj_matrix, am_partitions, rank, size, 
                                     acc_per_rank, group, row_groups, col_groups, transpose_group, 
@@ -864,7 +964,7 @@ def train(inputs, weight1, weight2, node_count, adj_matrix, am_partitions, optim
         vertex_train_count = (data.train_mask.size(0) - (data.train_mask == 0).sum(dim=0))
         loss_calc = -loss_calc / vertex_train_count
 
-        loss_calc_time += stop_time(row_groups[0], rank, tstart_loss_calc)
+        loss_calc_time[run][rank] += stop_time(row_groups[0], rank, tstart_loss_calc)
         loss_calc.backward()
         # print("loss_calc: " + str(loss_calc), flush=True)
         # loss = F.nll_loss(outputs[rank_train_mask], datay_rank[rank_train_mask])
@@ -943,26 +1043,38 @@ def scale_elements(adj_matrix, adj_part, node_count, row_vtx, col_vtx):
 
         values[i] = values[i] / (math.sqrt(degu) * math.sqrt(degv))
     
-    # deg = torch.histc(adj_matrix[0].float(), bins=node_count)
-    # deg = deg.pow(-0.5)
+    adj_part = adj_part.coalesce()
+    deg = torch.histc(adj_matrix[0].double(), bins=node_count)
+    deg = deg.pow(-0.5)
 
-    # row_len = adj_part.size(0)
-    # col_len = adj_part.size(1)
+    row_len = adj_part.size(0)
+    col_len = adj_part.size(1)
 
-    # dleft = torch.sparse_coo_tensor([np.arange(row_vtx, row_vtx + row_len).tolist(),
-    #                                  np.arange(row_vtx, row_vtx + row_len).tolist()],
-    #                                  deg[row_vtx:(row_vtx + row_len)],
-    #                                  size=(row_len, row_len),
-    #                                  requires_grad=False)
+    dleft = torch.sparse_coo_tensor([np.arange(0, row_len).tolist(),
+                                     np.arange(0, row_len).tolist()],
+                                     deg[row_vtx:(row_vtx + row_len)].float(),
+                                     size=(row_len, row_len),
+                                     requires_grad=False, device=torch.device("cpu"))
 
-    # dright = torch.sparse_coo_tensor([np.arange(col_vtx, col_vtx + col_len).tolist(),
-    #                                  np.arange(col_vtx, col_vtx + col_len).tolist()],
-    #                                  deg[row_vtx:(col_vtx + col_len)],
-    #                                  size=(col_len, col_len),
-    #                                  requires_grad=False)
-
+    dright = torch.sparse_coo_tensor([np.arange(0, col_len).tolist(),
+                                     np.arange(0, col_len).tolist()],
+                                     deg[col_vtx:(col_vtx + col_len)].float(),
+                                     size=(col_len, col_len),
+                                     requires_grad=False, device=torch.device("cpu"))
     # adj_part = torch.sparse.mm(torch.sparse.mm(dleft, adj_part), dright)
-    # return adj_part
+    ad_ind, ad_val = torch_sparse.spspmm(adj_part._indices(), adj_part._values(), 
+                                            dright._indices(), dright._values(),
+                                            adj_part.size(0), adj_part.size(1), dright.size(1))
+
+    adj_part_ind, adj_part_val = torch_sparse.spspmm(dleft._indices(), dleft._values(), 
+                                                        ad_ind, ad_val,
+                                                        dleft.size(0), dleft.size(1), adj_part.size(1))
+
+    adj_part = torch.sparse_coo_tensor(adj_part_ind, adj_part_val, 
+                                                size=(adj_part.size(0), adj_part.size(1)),
+                                                requires_grad=False, device=torch.device("cpu"))
+
+    return adj_part
 
 def proc_row_size(size):
     return math.floor(math.sqrt(size))
@@ -1048,6 +1160,7 @@ def run(rank, size, inputs, adj_matrix, data, features, mid_layer, classes, devi
     global comp_time
     global epochs
     global timing
+    global run
 
     best_val_acc = test_acc = 0
     outputs = None
@@ -1085,103 +1198,138 @@ def run(rank, size, inputs, adj_matrix, data, features, mid_layer, classes, devi
     # adj_matrix_loc = torch.rand(node_count, n_per_proc)
     # inputs_loc = torch.rand(n_per_proc, inputs.size(1))
 
-    torch.manual_seed(0)
-    weight1_nonleaf = torch.rand(features, mid_layer, requires_grad=True)
-    weight1_nonleaf = weight1_nonleaf.to(device)
-    weight1_nonleaf.retain_grad()
+    for i in range(run_count):
+        run = i
+        torch.manual_seed(0)
+        weight1_nonleaf = torch.rand(features, mid_layer, requires_grad=True)
+        weight1_nonleaf = weight1_nonleaf.to(device)
+        weight1_nonleaf.retain_grad()
 
-    weight2_nonleaf = torch.rand(mid_layer, classes, requires_grad=True)
-    weight2_nonleaf = weight2_nonleaf.to(device)
-    weight2_nonleaf.retain_grad()
+        weight2_nonleaf = torch.rand(mid_layer, classes, requires_grad=True)
+        weight2_nonleaf = weight2_nonleaf.to(device)
+        weight2_nonleaf.retain_grad()
 
-    weight1 = Parameter(weight1_nonleaf)
-    weight2 = Parameter(weight2_nonleaf)
+        weight1 = Parameter(weight1_nonleaf)
+        weight2 = Parameter(weight2_nonleaf)
 
-    optimizer = torch.optim.Adam([weight1, weight2], lr=0.01)
+        optimizer = torch.optim.Adam([weight1, weight2], lr=0.01)
 
-    inputs_loc, adj_matrix_loc, _ = twod_partition(rank, size, inputs, adj_matrix, data, features,
-                                                        classes, device)
+        inputs_loc, adj_matrix_loc, _ = twod_partition(rank, size, inputs, adj_matrix, data, features,
+                                                            classes, device)
 
-    adj_matrix_loc = adj_matrix_loc.coalesce()
+        adj_matrix_loc = adj_matrix_loc.coalesce()
 
 
-    inputs_loc = inputs_loc.to(device)
-    adj_matrix_loc = adj_matrix_loc.to(device)
+        inputs_loc = inputs_loc.to(device)
+        adj_matrix_loc = adj_matrix_loc.to(device)
 
-    # Do not time first epoch
-    timing_on = timing == True
-    timing = False
-    outputs = train(inputs_loc, weight1, weight2, inputs.size(0), adj_matrix_loc, None, 
-                            optimizer, data, rank, size, acc_per_rank, group, row_groups, 
-                            col_groups, transpose_group)
-    if timing_on:
-        timing = True
+        total_time[i] = dict()
+        comp_time[i] = dict()
+        comm_time[i] = dict()
+        summa_sparse_bcast1[i] = dict()
+        summa_sparse_bcast1_words[i] = dict()
+        summa_sparse_bcast2_words[i] = dict()
+        summa_sparse_bcast2[i] = dict()
+        summa_sparse_bcast2_fwd[i] = dict()
+        summa_sparse_bcast2_bwd[i] = dict()
+        summa_bcast1[i] = dict()
+        summa_bcast2[i] = dict()
+        summa_sparse_comp[i] = dict()
+        summa_comp[i] = dict()
+        summa_loc_bcast[i] = dict()
+        fwd_time[i] = dict()
+        bwd_time[i] = dict()
+        transpose_time[i] = dict()
+        grad_weight_time[i] = dict()
+        loss_calc_time[i] = dict()
+        summa_sparse_time[i] = dict()
+        summa_time[i] = dict()
+        summa_loc_time[i] = dict()
 
-    # tstart = start_time(group, rank)
-    if rank == 0:
-        tstart = time.time()
+        total_time[i][rank] = 0.0
+        comp_time[i][rank] = 0.0
+        comm_time[i][rank] = 0.0
+        summa_sparse_bcast1[i][rank] = 0.0
+        summa_sparse_bcast1_words[i][rank] = 0.0
+        summa_sparse_bcast2_words[i][rank] = 0.0
+        summa_sparse_bcast2[i][rank] = 0.0
+        summa_sparse_bcast2_fwd[i][rank] = 0.0
+        summa_sparse_bcast2_bwd[i][rank] = 0.0
+        summa_bcast1[i][rank] = 0.0
+        summa_bcast2[i][rank] = 0.0
+        summa_sparse_comp[i][rank] = 0.0
+        summa_comp[i][rank] = 0.0
+        summa_loc_bcast[i][rank] = 0.0
+        fwd_time[i][rank] = 0.0
+        bwd_time[i][rank] = 0.0
+        transpose_time[i][rank] = 0.0
+        grad_weight_time[i][rank] = 0.0
+        loss_calc_time[i][rank] = 0.0
+        summa_sparse_time[i][rank] = 0.0
+        summa_time[i][rank] = 0.0
+        summa_loc_time[i][rank] = 0.0
 
-    for epoch in range(1, epochs):
-        if rank == 0:
-            tstart_epoch = time.time()
-
+        # Do not time first epoch
+        timing_on = timing == True
+        timing = False
         outputs = train(inputs_loc, weight1, weight2, inputs.size(0), adj_matrix_loc, None, 
                                 optimizer, data, rank, size, acc_per_rank, group, row_groups, 
                                 col_groups, transpose_group)
-        if rank == 0:
-            tstop_epoch = time.time()
-            tstop = time.time()
-            print(f"Epoch time: {epoch} {tstop_epoch - tstart_epoch}", flush=True)
-            print("Total Time: " + str(tstop - tstart))
-            print("comm_time: " + str(comm_time))
-            print("comp_time: " + str(comp_time))
-            print(f"summa_sparse_comp: {summa_sparse_comp}")
-            print(f"summa_sparse_bcast1: {summa_sparse_bcast1}")
-            print(f"summa_sparse_bcast1_words: {summa_sparse_bcast1_words}")
-            print(f"summa_sparse_bcast2: {summa_sparse_bcast2}")
-            print(f"summa_sparse_bcast2_fwd: {summa_sparse_bcast2_fwd}")
-            print(f"summa_sparse_bcast2_bwd: {summa_sparse_bcast2_bwd}")
-            print(f"summa_sparse_bcast2_words: {summa_sparse_bcast2_words}")
-            print(f"summa_comp: {summa_comp}")
-            print(f"summa_bcast1: {summa_bcast1}")
-            print(f"summa_bcast2: {summa_bcast2}")
-            print(f"summa_loc_bcast: {summa_loc_bcast}")
-            print(f"fwd_time: {fwd_time}")
-            print(f"bwd_time: {bwd_time}")
-            print(f"transpose_time: {transpose_time}")
-            print(f"grad_weight_time: {grad_weight_time}")
-            print(f"loss_calc_time: {loss_calc_time}")
-            print(f"summa_sparse_time: {summa_sparse_time}")
-            print(f"summa_time: {summa_time}")
+        if timing_on:
+            timing = True
+
+        # tstart = start_time(group, rank)
+        tstart = time.time()
+
+        print(f"Starting training... rank {rank} run {i}", flush=True)
+        for epoch in range(1, epochs):
+            outputs = train(inputs_loc, weight1, weight2, inputs.size(0), adj_matrix_loc, None, 
+                                    optimizer, data, rank, size, acc_per_rank, group, row_groups, 
+                                    col_groups, transpose_group)
             print("Epoch: {:03d}".format(epoch), flush=True)
 
-    # dur = stop_time(group, rank, tstart)
-    if rank == 0:
+        # dur = stop_time(group, rank, tstart)
         tstop = time.time()
-        print("Time: " + str(tstop - tstart))
+        total_time[i][rank] = tstop - tstart
 
+    # Get median runtime according to rank0 and print that run's breakdown
+    dist.barrier(group)
     if rank == 0:
-        print("comm_time: " + str(comm_time))
-        print("comp_time: " + str(comp_time))
-        print(f"summa_sparse_comp: {summa_sparse_comp}")
-        print(f"summa_sparse_bcast1: {summa_sparse_bcast1}")
-        print(f"summa_sparse_bcast1_words: {summa_sparse_bcast1_words}")
-        print(f"summa_sparse_bcast2: {summa_sparse_bcast2}")
-        print(f"summa_sparse_bcast2_fwd: {summa_sparse_bcast2_fwd}")
-        print(f"summa_sparse_bcast2_bwd: {summa_sparse_bcast2_bwd}")
-        print(f"summa_sparse_bcast2_words: {summa_sparse_bcast2_words}")
-        print(f"summa_comp: {summa_comp}")
-        print(f"summa_bcast1: {summa_bcast1}")
-        print(f"summa_bcast2: {summa_bcast2}")
-        print(f"summa_loc_bcast: {summa_loc_bcast}")
-        print(f"fwd_time: {fwd_time}")
-        print(f"bwd_time: {bwd_time}")
-        print(f"transpose_time: {transpose_time}")
-        print(f"grad_weight_time: {grad_weight_time}")
-        print(f"loss_calc_time: {loss_calc_time}")
-        print(f"summa_sparse_time: {summa_sparse_time}")
-        print(f"summa_time: {summa_time}")
-        print(f"summa_loc_time: {summa_loc_time}")
+        total_times_r0 = [] 
+        for i in range(run_count):
+            total_times_r0.append(total_time[i][0])
+
+        print(f"total_times_r0: {total_times_r0}")
+        median_run_time = statistics.median(total_times_r0)
+        median_idx = total_times_r0.index(median_run_time)
+        median_idx = torch.cuda.LongTensor([median_idx])
+    else:
+        median_idx = torch.cuda.LongTensor([0])
+
+    dist.broadcast(median_idx, src=0, group=group)        
+    median_idx = median_idx.item()
+    print(f"rank: {rank} median_idx: {median_idx}")
+    print(f"rank: {rank} Time: {total_time[median_idx][rank]}")
+    print(f"rank: {rank} comm_time: {comm_time[median_idx][rank]}")
+    print(f"rank: {rank} comp_time: {comp_time[median_idx][rank]}")
+    print(f"rank: {rank} summa_sparse_comp: {summa_sparse_comp[median_idx][rank]}")
+    print(f"rank: {rank} summa_sparse_bcast1: {summa_sparse_bcast1[median_idx][rank]}")
+    print(f"rank: {rank} summa_sparse_bcast1_words: {summa_sparse_bcast1_words[median_idx][rank]}")
+    print(f"rank: {rank} summa_sparse_bcast2: {summa_sparse_bcast2[median_idx][rank]}")
+    print(f"rank: {rank} summa_sparse_bcast2_fwd: {summa_sparse_bcast2_fwd[median_idx][rank]}")
+    print(f"rank: {rank} summa_sparse_bcast2_bwd: {summa_sparse_bcast2_bwd[median_idx][rank]}")
+    print(f"rank: {rank} summa_sparse_bcast2_words: {summa_sparse_bcast2_words[median_idx][rank]}")
+    print(f"rank: {rank} summa_comp: {summa_comp[median_idx][rank]}")
+    print(f"rank: {rank} summa_bcast1: {summa_bcast1[median_idx][rank]}")
+    print(f"rank: {rank} summa_bcast2: {summa_bcast2[median_idx][rank]}")
+    print(f"rank: {rank} summa_loc_bcast: {summa_loc_bcast[median_idx][rank]}")
+    print(f"rank: {rank} transpose_time: {transpose_time[median_idx][rank]}")
+    print(f"rank: {rank} grad_weight_time: {grad_weight_time[median_idx][rank]}")
+    print(f"rank: {rank} loss_calc_time: {loss_calc_time[median_idx][rank]}")
+    print(f"rank: {rank} summa_sparse_time: {summa_sparse_time[median_idx][rank]}")
+    print(f"rank: {rank} summa_time: {summa_time[median_idx][rank]}")
+    print(f"rank: {rank} summa_loc_time: {summa_loc_time[median_idx][rank]}")
+    print(f"rank: {rank} {outputs}")
     
     # All-gather outputs to test accuracy
     # output_parts = []
@@ -1334,6 +1482,7 @@ if __name__ == '__main__':
     parser.add_argument("--graphname", type=str)
     parser.add_argument("--timing", type=str)
     parser.add_argument("--midlayer", type=int)
+    parser.add_argument("--runcount", type=int)
     args = parser.parse_args()
     print(args)
     P = args.processes
@@ -1354,8 +1503,9 @@ if __name__ == '__main__':
     graphname = args.graphname
     timing = args.timing == "True"
     mid_layer = args.midlayer
+    run_count = args.runcount
 
-    if (epochs is None) or (graphname is None) or (timing is None) or (mid_layer is None):
+    if (epochs is None) or (graphname is None) or (timing is None) or (mid_layer is None) or (run_count is None):
         print(f"Error: missing argument {epochs} {graphname} {timing} {mid_layer}")
         exit()
 

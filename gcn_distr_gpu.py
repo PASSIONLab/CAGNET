@@ -353,19 +353,25 @@ def train(inputs, weight1, weight2, adj_matrix, am_partitions, optimizer, data, 
 
 def test(outputs, data, vertex_count, rank):
     logits, accs = outputs, []
-    datay_rank = torch.split(data.y, vertex_count)[rank]
     for _, mask in data('train_mask', 'val_mask', 'test_mask'):
-        mask_rank = torch.split(mask, vertex_count)[rank]
-        count = mask_rank.nonzero().size(0)
-        if count > 0:
-            pred = logits[mask_rank].max(1)[1]
-            acc = pred.eq(datay_rank[mask_rank]).sum().item() / mask_rank.sum().item()
-            # pred = logits[mask].max(1)[1]
-            # acc = pred.eq(data.y[mask]).sum().item() / mask.sum().item()
-        else:
-            acc = -1
+        pred = logits[mask].max(1)[1]
+        acc = pred.eq(data.y[mask]).sum().item() / mask.sum().item()
         accs.append(acc)
     return accs
+    # logits, accs = outputs, []
+    # datay_rank = torch.split(data.y, vertex_count)[rank]
+    # for _, mask in data('train_mask', 'val_mask', 'test_mask'):
+    #     mask_rank = torch.split(mask, vertex_count)[rank]
+    #     count = mask_rank.nonzero().size(0)
+    #     if count > 0:
+    #         pred = logits[mask_rank].max(1)[1]
+    #         acc = pred.eq(datay_rank[mask_rank]).sum().item() / mask_rank.sum().item()
+    #         # pred = logits[mask].max(1)[1]
+    #         # acc = pred.eq(data.y[mask]).sum().item() / mask.sum().item()
+    #     else:
+    #         acc = -1
+    #     accs.append(acc)
+    # return accs
 
 
 # Split a COO into partitions of size n_per_proc
@@ -411,7 +417,8 @@ def scale_elements(adj_matrix, adj_part, node_count, row_vtx, col_vtx):
 
     #     values[i] = values[i] / (math.sqrt(degu) * math.sqrt(degv))
     
-    deg = torch.histc(adj_matrix[0], bins=node_count)
+    adj_part = adj_part.coalesce()
+    deg = torch.histc(adj_matrix[0].double(), bins=node_count)
     deg = deg.pow(-0.5)
 
     row_len = adj_part.size(0)
@@ -598,20 +605,21 @@ def run(rank, size, inputs, adj_matrix, data, features, classes, device):
     
     
     # All-gather outputs to test accuracy
-    # output_parts = []
-    # for i in range(size):
-    #     output_parts.append(torch.cuda.FloatTensor(am_partitions[0].size(1), classes).fill_(0))
+    output_parts = []
+    # print(f"rows: {am_pbyp[-1].size(0)} cols: {classes}", flush=True)
+    for i in range(size):
+        output_parts.append(torch.cuda.FloatTensor(am_pbyp[-1].size(0), classes, device=device).fill_(0))
 
-    # dist.all_gather(output_parts, outputs)
-    # outputs = torch.cat(output_parts, dim=0)
+    dist.all_gather(output_parts, outputs)
+    outputs = torch.cat(output_parts, dim=0)
 
-    # train_acc, val_acc, tmp_test_acc = test(outputs, data, am_partitions[0].size(1), rank)
-    # if val_acc > best_val_acc:
-    #     best_val_acc = val_acc
-    #     test_acc = tmp_test_acc
-    # log = 'Epoch: {:03d}, Train: {:.4f}, Val: {:.4f}, Test: {:.4f}'
+    train_acc, val_acc, tmp_test_acc = test(outputs, data, am_pbyp[0].size(1), rank)
+    if val_acc > best_val_acc:
+        best_val_acc = val_acc
+        test_acc = tmp_test_acc
+    log = 'Epoch: {:03d}, Train: {:.4f}, Val: {:.4f}, Test: {:.4f}'
 
-    # print(log.format(200, train_acc, best_val_acc, test_acc))
+    print(log.format(900, train_acc, best_val_acc, test_acc))
     return outputs
 
 def rank_to_devid(rank, acc_per_rank):
