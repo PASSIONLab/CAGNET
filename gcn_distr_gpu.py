@@ -606,11 +606,21 @@ def run(rank, size, inputs, adj_matrix, data, features, classes, device):
     
     # All-gather outputs to test accuracy
     output_parts = []
+    n_per_proc = math.ceil(float(inputs.size(0)) / size)
     # print(f"rows: {am_pbyp[-1].size(0)} cols: {classes}", flush=True)
     for i in range(size):
-        output_parts.append(torch.cuda.FloatTensor(am_pbyp[-1].size(0), classes, device=device).fill_(0))
+        output_parts.append(torch.cuda.FloatTensor(n_per_proc, classes, device=device).fill_(0))
+
+    if outputs.size(0) != n_per_proc:
+        pad_row = n_per_proc - outputs.size(0) 
+        outputs = torch.cat((outputs, torch.cuda.FloatTensor(pad_row, classes, device=device)), dim=0)
 
     dist.all_gather(output_parts, outputs)
+    output_parts[rank] = outputs
+    
+    padding = inputs.size(0) - n_per_proc * (size - 1)
+    output_parts[size - 1] = output_parts[size - 1][:padding,:]
+
     outputs = torch.cat(output_parts, dim=0)
 
     train_acc, val_acc, tmp_test_acc = test(outputs, data, am_pbyp[0].size(1), rank)
