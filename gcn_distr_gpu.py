@@ -780,5 +780,5 @@ if __name__ == '__main__':
 
     print(f"Arguments: epochs: {epochs} graph: {graphname} timing: {timing} mid: {mid_layer} runs: {run_count}")
     
-    print("Correctness: " + str(correctness_check))
+    print(f"Correctness: {correctness_check}", flush=True)
     print(main(P, correctness_check))

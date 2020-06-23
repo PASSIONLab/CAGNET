@@ -85,6 +85,7 @@ graphname = ""
 mid_layer = 0
 timing = False
 normalization = False
+activations = False
 no_occur_val = 42.1234
 run_count = 0
 run = 0
@@ -703,19 +704,21 @@ class GCNFunc(torch.autograd.Function):
 
         summa_sparse_bcast2_fwd[run][rank] += summa_sparse_bcast2[run][rank] - tmp_summa_sparse_bcast2
 
-        # Worry about activation later
-        if func is F.log_softmax:
-            h = dist_log_softmax(z, rank, size, acc_per_rank, row_groups[rank_row])
-        elif func is F.relu:
-            h = func(z)
+        if activations:
+            if func is F.log_softmax:
+                h = dist_log_softmax(z, rank, size, acc_per_rank, row_groups[rank_row])
+            elif func is F.relu:
+                h = func(z)
+            else:
+                h = z
+            return h
         else:
-            h = z
+            return z
 
         # dur = stop_time(row_groups[0], rank, tstart)
         # fwd_time += dur
 
         # return z
-        return h
 
     @staticmethod
     def backward(ctx, grad_output):
@@ -748,39 +751,39 @@ class GCNFunc(torch.autograd.Function):
 
         # tstart = start_time(row_groups[0], rank)
             
-        # Worry about activation later
-        with torch.set_grad_enabled(True):
-            if func is F.log_softmax:
-                # func_eval = dist_log_softmax2(z, rank, size, acc_per_rank, row_groups[rank_row])
-                func_eval, z_gathered, go_gathered = dist_log_softmax2(z, rank, size, 
-                                                                weight.size(1), 
-                                                                acc_per_rank, 
-                                                                row_groups[rank_row], grad_output)
-                width = z_gathered.size(1)
+        if activations:
+            with torch.set_grad_enabled(True):
+                if func is F.log_softmax:
+                    # func_eval = dist_log_softmax2(z, rank, size, acc_per_rank, row_groups[rank_row])
+                    func_eval, z_gathered, go_gathered = dist_log_softmax2(z, rank, size, 
+                                                                    weight.size(1), 
+                                                                    acc_per_rank, 
+                                                                    row_groups[rank_row], grad_output)
+                    width = z_gathered.size(1)
 
-                sigmap = torch.autograd.grad(outputs=func_eval, inputs=z_gathered,
-                                                grad_outputs=go_gathered)[0]
+                    sigmap = torch.autograd.grad(outputs=func_eval, inputs=z_gathered,
+                                                    grad_outputs=go_gathered)[0]
 
-                chunk_sizes_col = []
-                sigmap_per_col = width // proc_col
+                    chunk_sizes_col = []
+                    sigmap_per_col = width // proc_col
 
-                for i in range(proc_col):
-                    if i == proc_col - 1:
-                        chunk_sizes_col.append(width - sigmap_per_col * (proc_col - 1))
-                    else:
-                        chunk_sizes_col.append(sigmap_per_col)
+                    for i in range(proc_col):
+                        if i == proc_col - 1:
+                            chunk_sizes_col.append(width - sigmap_per_col * (proc_col - 1))
+                        else:
+                            chunk_sizes_col.append(sigmap_per_col)
 
-                grad_output = sigmap.split(chunk_sizes_col, dim=1)[rank_col]
-                del z_gathered
-                del go_gathered
-            elif func is F.relu:
-                func_eval = func(z)
-                sigmap = torch.autograd.grad(outputs=func_eval, inputs=z,grad_outputs=grad_output)[0]
-                grad_output = sigmap
-            else:
-                func_eval = z
-                sigmap = torch.autograd.grad(outputs=func_eval, inputs=z,grad_outputs=grad_output)[0]
-                grad_output = sigmap
+                    grad_output = sigmap.split(chunk_sizes_col, dim=1)[rank_col]
+                    del z_gathered
+                    del go_gathered
+                elif func is F.relu:
+                    func_eval = func(z)
+                    sigmap = torch.autograd.grad(outputs=func_eval, inputs=z,grad_outputs=grad_output)[0]
+                    grad_output = sigmap
+                else:
+                    func_eval = z
+                    sigmap = torch.autograd.grad(outputs=func_eval, inputs=z,grad_outputs=grad_output)[0]
+                    grad_output = sigmap
 
 
         tmp_summa_sparse_bcast2 = summa_sparse_bcast2[run][rank]
@@ -1022,29 +1025,6 @@ def scale_elements(adj_matrix, adj_part, node_count, row_vtx, col_vtx):
     if not normalization:
         return adj_part
 
-    # # Scale each edge (u, v) by 1 / (sqrt(u) * sqrt(v))
-    # indices = adj_part._indices()
-    # values = adj_part._values()
-
-    # deg_map = dict()
-    # for i in range(adj_part._nnz()):
-    #     u = indices[0][i] + row_vtx
-    #     v = indices[1][i] + col_vtx
-
-    #     if u.item() in deg_map:
-    #         degu = deg_map[u.item()]
-    #     else:
-    #         degu = (adj_matrix[0] == u).sum().item()
-    #         deg_map[u.item()] = degu
-
-    #     if v.item() in deg_map:
-    #         degv = deg_map[v.item()]
-    #     else:
-    #         degv = (adj_matrix[0] == v).sum().item()
-    #         deg_map[v.item()] = degv
-
-    #     values[i] = values[i] / (math.sqrt(degu) * math.sqrt(degv))
-    
     adj_part = adj_part.coalesce()
     deg = torch.histc(adj_matrix[0].double(), bins=node_count)
     deg = deg.pow(-0.5)
@@ -1510,6 +1490,8 @@ if __name__ == '__main__':
     parser.add_argument("--timing", type=str)
     parser.add_argument("--midlayer", type=int)
     parser.add_argument("--runcount", type=int)
+    parser.add_argument("--normalization", type=str)
+    parser.add_argument("--activations", type=str)
     args = parser.parse_args()
     print(args)
     P = args.processes
@@ -1531,12 +1513,14 @@ if __name__ == '__main__':
     timing = args.timing == "True"
     mid_layer = args.midlayer
     run_count = args.runcount
+    normalization = args.normalization == "True"
+    activations = args.activations == "True"
 
     if (epochs is None) or (graphname is None) or (timing is None) or (mid_layer is None) or (run_count is None):
         print(f"Error: missing argument {epochs} {graphname} {timing} {mid_layer}")
         exit()
 
-    print(f"Arguments: epochs: {epochs} graph: {graphname} timing: {timing} mid: {mid_layer}")
+    print(f"Arguments: epochs: {epochs} graph: {graphname} timing: {timing} mid: {mid_layer} norm: {normalization} act: {activations}")
     
     print("Correctness: " + str(correctness_check))
     print(main(P, correctness_check, acc_per_rank))
