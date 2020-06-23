@@ -84,7 +84,7 @@ epochs = 0
 graphname = ""
 mid_layer = 0
 timing = False
-normalization = True
+normalization = False
 no_occur_val = 42.1234
 run_count = 0
 run = 0
@@ -552,8 +552,7 @@ def dist_log_softmax2(z, rank, size, width, acc_per_rank, group, grad_output):
     proc_col = proc_col_size(size)
     rank_row = int(rank / proc_col)
     rank_col = rank % proc_col
-    # device = torch.device('cuda:{}'.format(rank_to_devid(rank, acc_per_rank)))
-    device = torch.device('cpu')
+    device = torch.device('cuda:{}'.format(rank_to_devid(rank, acc_per_rank)))
 
     chunk_sizes_col = []
     width_per_col = width // proc_col
@@ -566,13 +565,11 @@ def dist_log_softmax2(z, rank, size, width, acc_per_rank, group, grad_output):
 
     width_per_proc = width - width_per_col * (proc_col - 1)
     if z.size(1) != width_per_proc:
-        # z = torch.cat((z, torch.cuda.FloatTensor(z.size(0), width_per_proc - z.size(1))), dim=1)
-        z = torch.cat((z, torch.FloatTensor(z.size(0), width_per_proc - z.size(1))), dim=1)
+        z = torch.cat((z, torch.cuda.FloatTensor(z.size(0), width_per_proc - z.size(1))), dim=1)
 
     z_recv = []
     for i in range(proc_col):
-        # z_recv.append(torch.cuda.FloatTensor(z.size()))
-        z_recv.append(torch.FloatTensor(z.size()))
+        z_recv.append(torch.cuda.FloatTensor(z.size()))
 
     dist.all_gather(z_recv, z, group=group)
     z_recv[rank_col] = z
@@ -586,15 +583,13 @@ def dist_log_softmax2(z, rank, size, width, acc_per_rank, group, grad_output):
     if grad_output is not None:
         if grad_output.size(1) != width_per_proc:
             grad_output = torch.cat((grad_output, 
-                                        # torch.cuda.FloatTensor(grad_output.size(0), 
-                                        torch.FloatTensor(grad_output.size(0), 
+                                        torch.cuda.FloatTensor(grad_output.size(0), 
                                                         width_per_proc - grad_output.size(1))), 
                                         dim=1)
 
         grad_output_recv = []
         for i in range(proc_col):
-            # grad_output_recv.append(torch.cuda.FloatTensor(grad_output.size()))
-            grad_output_recv.append(torch.FloatTensor(grad_output.size()))
+            grad_output_recv.append(torch.cuda.FloatTensor(grad_output.size()))
 
         dist.all_gather(grad_output_recv, grad_output, group=group)
         grad_output_recv[rank_col] = grad_output
@@ -780,12 +775,13 @@ class GCNFunc(torch.autograd.Function):
                 del go_gathered
             elif func is F.relu:
                 func_eval = func(z)
+                sigmap = torch.autograd.grad(outputs=func_eval, inputs=z,grad_outputs=grad_output)[0]
+                grad_output = sigmap
             else:
                 func_eval = z
+                sigmap = torch.autograd.grad(outputs=func_eval, inputs=z,grad_outputs=grad_output)[0]
+                grad_output = sigmap
 
-            # sigmap = torch.autograd.grad(outputs=func_eval, inputs=z,grad_outputs=grad_output)[0]
-            sigmap = torch.autograd.grad(outputs=func_eval, inputs=z,grad_outputs=grad_output)[0]
-            grad_output = sigmap
 
         tmp_summa_sparse_bcast2 = summa_sparse_bcast2[run][rank]
 
@@ -981,19 +977,25 @@ def train(inputs, weight1, weight2, node_count, adj_matrix, am_partitions, optim
 
 def test(outputs, data, vertex_count, rank):
     logits, accs = outputs, []
-    datay_rank = torch.split(data.y, vertex_count)[rank]
     for _, mask in data('train_mask', 'val_mask', 'test_mask'):
-        mask_rank = torch.split(mask, vertex_count)[rank]
-        count = mask_rank.nonzero().size(0)
-        if count > 0:
-            pred = logits[mask_rank].max(1)[1]
-            acc = pred.eq(datay_rank[mask_rank]).sum().item() / mask_rank.sum().item()
-            # pred = logits[mask].max(1)[1]
-            # acc = pred.eq(data.y[mask]).sum().item() / mask.sum().item()
-        else:
-            acc = -1
+        pred = logits[mask].max(1)[1]
+        acc = pred.eq(data.y[mask]).sum().item() / mask.sum().item()
         accs.append(acc)
     return accs
+    # logits, accs = outputs, []
+    # datay_rank = torch.split(data.y, vertex_count)[rank]
+    # for _, mask in data('train_mask', 'val_mask', 'test_mask'):
+    #     mask_rank = torch.split(mask, vertex_count)[rank]
+    #     count = mask_rank.nonzero().size(0)
+    #     if count > 0:
+    #         pred = logits[mask_rank].max(1)[1]
+    #         acc = pred.eq(datay_rank[mask_rank]).sum().item() / mask_rank.sum().item()
+    #         # pred = logits[mask].max(1)[1]
+    #         # acc = pred.eq(data.y[mask]).sum().item() / mask.sum().item()
+    #     else:
+    #         acc = -1
+    #     accs.append(acc)
+    # return accs
 
 
 # Split a COO into partitions of size n_per_proc
@@ -1018,30 +1020,30 @@ def split_coo(adj_matrix, node_count, n_per_proc, dim, size):
 # Normalize all elements according to KW's normalization rule
 def scale_elements(adj_matrix, adj_part, node_count, row_vtx, col_vtx):
     if not normalization:
-        return
+        return adj_part
 
-    # Scale each edge (u, v) by 1 / (sqrt(u) * sqrt(v))
-    indices = adj_part._indices()
-    values = adj_part._values()
+    # # Scale each edge (u, v) by 1 / (sqrt(u) * sqrt(v))
+    # indices = adj_part._indices()
+    # values = adj_part._values()
 
-    deg_map = dict()
-    for i in range(adj_part._nnz()):
-        u = indices[0][i] + row_vtx
-        v = indices[1][i] + col_vtx
+    # deg_map = dict()
+    # for i in range(adj_part._nnz()):
+    #     u = indices[0][i] + row_vtx
+    #     v = indices[1][i] + col_vtx
 
-        if u.item() in deg_map:
-            degu = deg_map[u.item()]
-        else:
-            degu = (adj_matrix[0] == u).sum().item()
-            deg_map[u.item()] = degu
+    #     if u.item() in deg_map:
+    #         degu = deg_map[u.item()]
+    #     else:
+    #         degu = (adj_matrix[0] == u).sum().item()
+    #         deg_map[u.item()] = degu
 
-        if v.item() in deg_map:
-            degv = deg_map[v.item()]
-        else:
-            degv = (adj_matrix[0] == v).sum().item()
-            deg_map[v.item()] = degv
+    #     if v.item() in deg_map:
+    #         degv = deg_map[v.item()]
+    #     else:
+    #         degv = (adj_matrix[0] == v).sum().item()
+    #         deg_map[v.item()] = degv
 
-        values[i] = values[i] / (math.sqrt(degu) * math.sqrt(degv))
+    #     values[i] = values[i] / (math.sqrt(degu) * math.sqrt(degv))
     
     adj_part = adj_part.coalesce()
     deg = torch.histc(adj_matrix[0].double(), bins=node_count)
@@ -1111,15 +1113,15 @@ def twod_partition(rank, size, inputs, adj_matrix, data, features, classes, devi
                                                         size=(last_node_count, proc_node_count),
                                                         requires_grad=False)
 
-                scale_elements(adj_matrix, am_pbyp[i], node_count, vtx_indices[i], 
-                                    vtx_indices[rank_col])
+                am_pbyp[i] = scale_elements(adj_matrix, am_pbyp[i], node_count, vtx_indices[i], 
+                                                    vtx_indices[rank_col])
             else:
                 am_pbyp[i] = torch.sparse_coo_tensor(am_pbyp[i], torch.ones(am_pbyp[i].size(1)), 
                                                         size=(n_per_proc, proc_node_count),
                                                         requires_grad=False)
 
-                scale_elements(adj_matrix, am_pbyp[i], node_count, vtx_indices[i], 
-                                    vtx_indices[rank_col])
+                am_pbyp[i] = scale_elements(adj_matrix, am_pbyp[i], node_count, vtx_indices[i], 
+                                                    vtx_indices[rank_col])
 
         # input_rowparts = torch.split(inputs, math.ceil(float(inputs.size(0)) / proc_row), dim=0)
         inputs_per_row = inputs.size(0) // proc_row
@@ -1332,21 +1334,46 @@ def run(rank, size, inputs, adj_matrix, data, features, mid_layer, classes, devi
     print(f"rank: {rank} {outputs}")
     
     # All-gather outputs to test accuracy
-    # output_parts = []
-    # for i in range(size):
-    #     output_parts.append(torch.cuda.FloatTensor(am_partitions[0].size(1), classes).fill_(0))
 
-    # dist.all_gather(output_parts, outputs)
-    # outputs = torch.cat(output_parts, dim=0)
+    # All-gather across process row
+    output_parts_row = []
+    width_per_proc = classes // proc_col
+    for i in range(proc_col):
+        output_parts_row.append(torch.cuda.FloatTensor(outputs.size(0), classes - width_per_proc * (proc_col - 1)))
 
-    # train_acc, val_acc, tmp_test_acc = test(outputs, data, am_partitions[0].size(1), rank)
-    # if val_acc > best_val_acc:
-    #     best_val_acc = val_acc
-    #     test_acc = tmp_test_acc
-    # log = 'Epoch: {:03d}, Train: {:.4f}, Val: {:.4f}, Test: {:.4f}'
+    if outputs.size(1) != classes - width_per_proc * (proc_col - 1):
+        pad_col = (classes - width_per_proc * (proc_col - 1)) - outputs.size(1)
+        outputs = torch.cat((outputs, torch.cuda.FloatTensor(outputs.size(0), pad_col, device=device)), dim=1)
 
-    # print(log.format(200, train_acc, best_val_acc, test_acc))
-    print("rank: " + str(rank) + " " +  str(outputs))
+    dist.all_gather(output_parts_row, outputs, group=row_groups[rank_row])
+    for i in range(proc_col - 1):
+        output_parts_row[i] = output_parts_row[i][:,:width_per_proc]
+
+    outputs_row = torch.cat(output_parts_row, dim=1)
+
+    # All-gather across process col
+    output_parts_col = []
+    height_per_proc = inputs.size(0) // proc_row
+    for i in range(proc_row):
+        output_parts_col.append(torch.cuda.FloatTensor(inputs.size(0) - height_per_proc * (proc_row - 1), classes))
+
+    if outputs_row.size(0) != inputs.size(0) - height_per_proc * (proc_row - 1):
+        pad_row = (inputs.size(0) - height_per_proc * (proc_col - 1)) - outputs_row.size(0)
+        outputs_row = torch.cat((outputs_row, torch.cuda.FloatTensor(pad_row, classes, device=device)), dim=0)
+
+    dist.all_gather(output_parts_col, outputs_row, group=col_groups[rank_col])
+    for i in range(proc_row - 1):
+        output_parts_col[i] = output_parts_col[i][:height_per_proc,:]
+
+    outputs = torch.cat(output_parts_col, dim=0)
+
+    train_acc, val_acc, tmp_test_acc = test(outputs, data, inputs.size(0), rank)
+    if val_acc > best_val_acc:
+        best_val_acc = val_acc
+        test_acc = tmp_test_acc
+    log = 'Epoch: {:03d}, Train: {:.4f}, Val: {:.4f}, Test: {:.4f}'
+
+    print(log.format(200, train_acc, best_val_acc, test_acc))
     return outputs
 
 def init_process(rank, size, inputs, adj_matrix, data, features, mid_layer, classes, device, 
