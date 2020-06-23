@@ -106,19 +106,21 @@ def normalize(adj_matrix):
 def start_time(group, rank):
     if not timing:
         return 0.0
-    dist.barrier(group)
+    if group is not None:
+        dist.barrier(group)
     tstart = 0.0
-    if rank == 0:
-     tstart = time.time()
+    # if rank == 0:
+    tstart = time.time()
     return tstart
 
 def stop_time(group, rank, tstart):
     if not timing:
         return 0.0
-    dist.barrier(group)
+    if group is not None:
+        dist.barrier(group)
     tstop = 0.0
-    if rank == 0:
-        tstop = time.time()
+    # if rank == 0:
+    tstop = time.time()
     return tstop - tstart
 
 def transpose(mat, row, col, height, width, size, acc_per_rank, transpose_group):
@@ -261,11 +263,13 @@ def summa(adj_matrix, inputs, rank, row, col, size, acc_per_rank, row_groups, co
         comm_time[run][rank] += dur
         summa_bcast2[run][rank] += dur
 
-        tstart = start_time(row_groups[0], rank)
+        # tstart = start_time(row_groups[0], rank)
+        tstart = start_time(None, rank)
 
         z_loc += torch.mm(acol.float(), brow)
 
-        dur = stop_time(row_groups[0], rank, tstart)
+        # dur = stop_time(row_groups[0], rank, tstart)
+        dur = stop_time(None, rank, tstart)
         comp_time[run][rank] += dur
         summa_comp[run][rank] += dur
 
@@ -385,23 +389,29 @@ def summa_sparse(adj_matrix, inputs, rank, row, col, size, acc_per_rank, row_gro
 
         brow = brow.contiguous()
 
-        tstart = start_time(row_groups[0], rank)
+        # tstart = start_time(row_groups[0], rank)
+        tstart = start_time(col_groups[col], rank)
 
         # dist.broadcast_multigpu([brow], col_src_rank, col_groups[col])
         dist.broadcast(brow, col_src_rank, col_groups[col])
 
-        dur = stop_time(row_groups[0], rank, tstart)
+        # dur = stop_time(row_groups[0], rank, tstart)
+        dur = stop_time(col_groups[col], rank, tstart)
+
         comm_time[run][rank] += dur
         summa_sparse_bcast2[run][rank] += dur
         if rank == 0:
             summa_sparse_bcast2_words[run][rank] += brow.size(0) * brow.size(1)
 
-        tstart = start_time(row_groups[0], rank)
+        # tstart = start_time(row_groups[0], rank)
+        tstart = start_time(None, rank)
 
         spmm_gpu(acol_indices[0].int(), acol_indices[1].int(), acol_values, 
                         height_per_proc, middim_per_proc, brow, z_loc)
 
-        dur = stop_time(row_groups[0], rank, tstart)
+        # dur = stop_time(row_groups[0], rank, tstart)
+        dur = stop_time(None, rank, tstart)
+        # dur = stop_time(col_groups[col], rank, tstart)
         comp_time[run][rank] += dur
         summa_sparse_comp[run][rank] += dur
 
@@ -484,11 +494,13 @@ def summa_loc(mata, matb, rank, row, col, size, acc_per_rank, row_groups, col_gr
 
         brow = matb[col_src_rank]
 
-        tstart = start_time(row_groups[0], rank)
+        # tstart = start_time(row_groups[0], rank)
+        tstart = start_time(None, rank)
 
         z_loc += torch.mm(acol, brow)
 
-        dur = stop_time(row_groups[0], rank, tstart)
+        # dur = stop_time(row_groups[0], rank, tstart)
+        dur = stop_time(None, rank, tstart)
         comp_time[run][rank] += dur
 
     # summa_loc_time += stop_time(row_groups[0], rank, tstart_summa_loc_time)
@@ -828,10 +840,12 @@ class GCNFunc(torch.autograd.Function):
         # col_groups twice because of transpose
         # TODO: will need to change height argument when n % sqrt(P) != 0 and non-square grid
 
-        tstart_transpose = start_time(row_groups[0], rank)
+        # tstart_transpose = start_time(row_groups[0], rank)
+        tstart_transpose = start_time(transpose_group, rank)
         inputs_t = transpose(inputs, rank_row, rank_col, node_count, weight.size(0), size,
                                 acc_per_rank, transpose_group)
-        transpose_time[run][rank] += stop_time(row_groups[0], rank, tstart_transpose)
+        # transpose_time[run][rank] += stop_time(row_groups[0], rank, tstart_transpose)
+        transpose_time[run][rank] += stop_time(transpose_group, rank, tstart_transpose)
 
         grad_weight = summa(inputs_t, ag, rank, rank_row, rank_col, size, acc_per_rank, row_groups,
                                 col_groups, weight.size(0), node_count, weight.size(1))
@@ -936,7 +950,7 @@ def train(inputs, weight1, weight2, node_count, adj_matrix, am_partitions, optim
     if list(datay_rank[rank_train_mask].size())[0] > 0:
     # if datay_rank.size(0) > 0:
         # datay_ids = datay_rank[rank_train_mask].long().view(-1, 1)
-        tstart_loss_calc = start_time(row_groups[0], rank)
+        # tstart_loss_calc = start_time(row_groups[0], rank)
 
         datay_ids = datay_rank[rank_train_mask].long()
 
@@ -963,7 +977,8 @@ def train(inputs, weight1, weight2, node_count, adj_matrix, am_partitions, optim
         vertex_train_count = (data.train_mask.size(0) - (data.train_mask == 0).sum(dim=0))
         loss_calc = -loss_calc / vertex_train_count
 
-        loss_calc_time[run][rank] += stop_time(row_groups[0], rank, tstart_loss_calc)
+        # loss_calc_time[run][rank] += stop_time(row_groups[0], rank, tstart_loss_calc)
+
         loss_calc.backward()
         # print("loss_calc: " + str(loss_calc), flush=True)
         # loss = F.nll_loss(outputs[rank_train_mask], datay_rank[rank_train_mask])
@@ -984,6 +999,10 @@ def test(outputs, data, vertex_count, rank):
         pred = logits[mask].max(1)[1]
         acc = pred.eq(data.y[mask]).sum().item() / mask.sum().item()
         accs.append(acc)
+
+    if len(accs) != 3:
+        accs = accs + [0] * (3 - len(accs))
+
     return accs
     # logits, accs = outputs, []
     # datay_rank = torch.split(data.y, vertex_count)[rank]
@@ -1261,6 +1280,7 @@ def run(rank, size, inputs, adj_matrix, data, features, mid_layer, classes, devi
             timing = True
 
         # tstart = start_time(group, rank)
+        dist.barrier(group)
         tstart = time.time()
 
         print(f"Starting training... rank {rank} run {i}", flush=True)
@@ -1384,10 +1404,11 @@ def main(P, correctness_check, acc_per_rank):
         # num_classes = dataset.num_classes + 9
         num_classes = dataset.num_classes
     elif graphname == 'Amazon':
-        # edge_index = torch.load(path + "/processed/amazon_graph.pt")
-        edge_index = torch.load("/gpfs/alpine/bif115/scratch/alokt/Amazon/processed/amazon_graph_random.pt")
+        edge_index = torch.load(path + "/processed/amazon_graph.pt")
+        # edge_index = torch.load("/gpfs/alpine/bif115/scratch/alokt/Amazon/processed/amazon_graph_random.pt")
         edge_index = edge_index.t_()
-        n = 9430086
+        # n = 9430086
+        n = 14249639
         num_features = 300
         num_classes = 24
         # mid_layer = 24
