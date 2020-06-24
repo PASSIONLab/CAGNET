@@ -761,6 +761,8 @@ class GCNFunc(torch.autograd.Function):
         rank_col = rank % proc_col
         device = torch.device('cuda:{}'.format(rank_to_devid(rank, acc_per_rank)))
 
+        grad_output = grad_output.contiguous()
+
         # tstart = start_time(row_groups[0], rank)
             
         if activations:
@@ -932,8 +934,6 @@ def train(inputs, weight1, weight2, node_count, adj_matrix, am_partitions, optim
     device = torch.device('cuda:{}'.format(rank_to_devid(rank, acc_per_rank)))
 
     optimizer.zero_grad()
-    rank_train_mask = torch.split(data.train_mask, outputs.size(0), dim=0)[rank_row]
-    datay_rank = torch.split(data.y, outputs.size(0), dim=0)[rank_row]
 
     total_classes = weight2.size(1)
     # class_per_rank = math.ceil(float(total_classes) / proc_col)
@@ -944,46 +944,39 @@ def train(inputs, weight1, weight2, node_count, adj_matrix, am_partitions, optim
     if rank_col == proc_col - 1:
         max_classes = total_classes
 
+    output_parts_row = []
+    width_per_proc = total_classes // proc_col
+    for i in range(proc_col):
+        output_parts_row.append(torch.cuda.FloatTensor(outputs.size(0), 
+                                                total_classes - width_per_proc * (proc_col - 1)))
+
+    if outputs.size(1) != total_classes - width_per_proc * (proc_col - 1):
+        pad_col = (total_classes - width_per_proc * (proc_col - 1)) - outputs.size(1)
+        outputs = torch.cat((outputs, torch.cuda.FloatTensor(outputs.size(0), pad_col, device=device)), dim=1)
+
+    dist.all_gather(output_parts_row, outputs, group=row_groups[rank_row])
+    output_parts_row[rank_col] = outputs
+    for i in range(proc_col - 1):
+        output_parts_row[i] = output_parts_row[i][:,:width_per_proc]
+
+    outputs_row = torch.cat(output_parts_row, dim=1)
+
+    n_per_proc = node_count // proc_row
+    chunk_sizes_row = []
+    for i in range(proc_row):
+        if i == proc_row - 1:
+            chunk_sizes_row.append(node_count - n_per_proc * (proc_row - 1))
+        else:
+            chunk_sizes_row.append(n_per_proc)
+
+    rank_train_mask = torch.split(data.train_mask, chunk_sizes_row, dim=0)[rank_row]
+    datay_rank = torch.split(data.y, chunk_sizes_row, dim=0)[rank_row]
 
     # Note: bool type removes warnings, unsure of perf penalty
     # loss = F.nll_loss(outputs[data.train_mask.bool()], data.y[data.train_mask.bool()])
     if list(datay_rank[rank_train_mask].size())[0] > 0:
-    # if datay_rank.size(0) > 0:
-        # datay_ids = datay_rank[rank_train_mask].long().view(-1, 1)
-        # tstart_loss_calc = start_time(row_groups[0], rank)
-
-        datay_ids = datay_rank[rank_train_mask].long()
-
-        filtered_indices = torch.mul(datay_ids >= min_class, datay_ids < max_class).float()
-        indices = torch.nonzero(filtered_indices * torch.cuda.FloatTensor(datay_ids.size(), device=device).fill_(1)).squeeze()
-
-        datay_ids = datay_rank[rank_train_mask].long().view(-1, 1)
-        datay_ids = datay_ids.index_select(0, indices)
-        datay_ids -= min_class
-        outputs_ids = outputs.index_select(0, indices)
-
-        # classes = torch.gather(outputs[rank_train_mask], 1, datay_ids)
-        classes = torch.gather(outputs_ids, 1, datay_ids)
-        loss_calc = torch.sum(classes)
-        loss_calc_tens = torch.Tensor([loss_calc.item()])
-
-        rank_row_src = rank_row * proc_col
-
-        # dist.reduce_multigpu([loss_calc], dst=rank_row_src, op=dist.reduce_op.SUM, group=row_groups[rank_row])
-        # dist.broadcast_multigpu([loss_calc], src=rank_row_src, group=row_groups[rank_row]) 
-        dist.reduce(loss_calc, dst=rank_row_src, op=dist.reduce_op.SUM, group=row_groups[rank_row])
-        dist.broadcast(loss_calc, src=rank_row_src, group=row_groups[rank_row]) 
-
-        vertex_train_count = (data.train_mask.size(0) - (data.train_mask == 0).sum(dim=0))
-        loss_calc = -loss_calc / vertex_train_count
-
-        # loss_calc_time[run][rank] += stop_time(row_groups[0], rank, tstart_loss_calc)
-
+        loss_calc = F.nll_loss(outputs_row[rank_train_mask], datay_rank[rank_train_mask])
         loss_calc.backward()
-        # print("loss_calc: " + str(loss_calc), flush=True)
-        # loss = F.nll_loss(outputs[rank_train_mask], datay_rank[rank_train_mask])
-        # loss.backward()
-        # print("loss: " + str(loss), flush=True)
     else:
         fake_loss = (outputs * torch.cuda.FloatTensor(outputs.size(), device=device).fill_(0)).sum()
         # fake_loss = (outputs * torch.zeros(outputs.size())).sum()
@@ -1336,44 +1329,44 @@ def run(rank, size, inputs, adj_matrix, data, features, mid_layer, classes, devi
     # All-gather outputs to test accuracy
 
     # All-gather across process row
-    output_parts_row = []
-    width_per_proc = classes // proc_col
-    for i in range(proc_col):
-        output_parts_row.append(torch.cuda.FloatTensor(outputs.size(0), classes - width_per_proc * (proc_col - 1)))
+    # output_parts_row = []
+    # width_per_proc = classes // proc_col
+    # for i in range(proc_col):
+    #     output_parts_row.append(torch.cuda.FloatTensor(outputs.size(0), classes - width_per_proc * (proc_col - 1)))
 
-    if outputs.size(1) != classes - width_per_proc * (proc_col - 1):
-        pad_col = (classes - width_per_proc * (proc_col - 1)) - outputs.size(1)
-        outputs = torch.cat((outputs, torch.cuda.FloatTensor(outputs.size(0), pad_col, device=device)), dim=1)
+    # if outputs.size(1) != classes - width_per_proc * (proc_col - 1):
+    #     pad_col = (classes - width_per_proc * (proc_col - 1)) - outputs.size(1)
+    #     outputs = torch.cat((outputs, torch.cuda.FloatTensor(outputs.size(0), pad_col, device=device)), dim=1)
 
-    dist.all_gather(output_parts_row, outputs, group=row_groups[rank_row])
-    for i in range(proc_col - 1):
-        output_parts_row[i] = output_parts_row[i][:,:width_per_proc]
+    # dist.all_gather(output_parts_row, outputs, group=row_groups[rank_row])
+    # for i in range(proc_col - 1):
+    #     output_parts_row[i] = output_parts_row[i][:,:width_per_proc]
 
-    outputs_row = torch.cat(output_parts_row, dim=1)
+    # outputs_row = torch.cat(output_parts_row, dim=1)
 
-    # All-gather across process col
-    output_parts_col = []
-    height_per_proc = inputs.size(0) // proc_row
-    for i in range(proc_row):
-        output_parts_col.append(torch.cuda.FloatTensor(inputs.size(0) - height_per_proc * (proc_row - 1), classes))
+    # # All-gather across process col
+    # output_parts_col = []
+    # height_per_proc = inputs.size(0) // proc_row
+    # for i in range(proc_row):
+    #     output_parts_col.append(torch.cuda.FloatTensor(inputs.size(0) - height_per_proc * (proc_row - 1), classes))
 
-    if outputs_row.size(0) != inputs.size(0) - height_per_proc * (proc_row - 1):
-        pad_row = (inputs.size(0) - height_per_proc * (proc_col - 1)) - outputs_row.size(0)
-        outputs_row = torch.cat((outputs_row, torch.cuda.FloatTensor(pad_row, classes, device=device)), dim=0)
+    # if outputs_row.size(0) != inputs.size(0) - height_per_proc * (proc_row - 1):
+    #     pad_row = (inputs.size(0) - height_per_proc * (proc_col - 1)) - outputs_row.size(0)
+    #     outputs_row = torch.cat((outputs_row, torch.cuda.FloatTensor(pad_row, classes, device=device)), dim=0)
 
-    dist.all_gather(output_parts_col, outputs_row, group=col_groups[rank_col])
-    for i in range(proc_row - 1):
-        output_parts_col[i] = output_parts_col[i][:height_per_proc,:]
+    # dist.all_gather(output_parts_col, outputs_row, group=col_groups[rank_col])
+    # for i in range(proc_row - 1):
+    #     output_parts_col[i] = output_parts_col[i][:height_per_proc,:]
 
-    outputs = torch.cat(output_parts_col, dim=0)
+    # outputs = torch.cat(output_parts_col, dim=0)
 
-    train_acc, val_acc, tmp_test_acc = test(outputs, data, inputs.size(0), rank)
-    if val_acc > best_val_acc:
-        best_val_acc = val_acc
-        test_acc = tmp_test_acc
-    log = 'Epoch: {:03d}, Train: {:.4f}, Val: {:.4f}, Test: {:.4f}'
+    # train_acc, val_acc, tmp_test_acc = test(outputs, data, inputs.size(0), rank)
+    # if val_acc > best_val_acc:
+    #     best_val_acc = val_acc
+    #     test_acc = tmp_test_acc
+    # log = 'Epoch: {:03d}, Train: {:.4f}, Val: {:.4f}, Test: {:.4f}'
 
-    print(log.format(200, train_acc, best_val_acc, test_acc))
+    # print(log.format(200, train_acc, best_val_acc, test_acc))
     return outputs
 
 def init_process(rank, size, inputs, adj_matrix, data, features, mid_layer, classes, device, 
@@ -1414,7 +1407,7 @@ def main(P, correctness_check, acc_per_rank):
         # mid_layer = 24
         inputs = torch.rand(n, num_features)
         data = Data()
-        data.y = torch.rand(n).uniform_(0, num_classes - 1)
+        data.y = torch.rand(n).uniform_(0, num_classes - 1).long()
         data.train_mask = torch.ones(n).long()
     elif graphname == 'subgraph5':
         path = "/gpfs/alpine/bif115/scratch/alokt/HipMCL/"
@@ -1437,7 +1430,7 @@ def main(P, correctness_check, acc_per_rank):
         num_classes = 256
         inputs = torch.rand(n, num_features)
         data = Data()
-        data.y = torch.rand(n).uniform_(0, num_classes - 1)
+        data.y = torch.rand(n).uniform_(0, num_classes - 1).long()
         data.train_mask = torch.ones(n).long()
 
     os.environ["RANK"] = os.environ["OMPI_COMM_WORLD_RANK"]

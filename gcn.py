@@ -16,11 +16,11 @@ parser.add_argument('--use_gdc', action='store_true',
                     help='Use GDC preprocessing.')
 args = parser.parse_args()
 
-dataset = 'Reddit'
+dataset = 'Cora'
 path = osp.join(osp.dirname(osp.realpath(__file__)), '..', 'data', dataset)
-# dataset = Planetoid(path, dataset, T.NormalizeFeatures())
+dataset = Planetoid(path, dataset, T.NormalizeFeatures())
 # dataset = PPI(path, 'train', T.NormalizeFeatures())
-dataset = Reddit(path, T.NormalizeFeatures())
+# dataset = Reddit(path, T.NormalizeFeatures())
 # dataset = Yelp(path, T.NormalizeFeatures())
 data = dataset[0]
 
@@ -62,8 +62,8 @@ class Net(torch.nn.Module):
         return F.log_softmax(x, dim=1)
 
 
-# device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-device = torch.device('cpu')
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+# device = torch.device('cpu')
 
 torch.manual_seed(seed)
 weight1 = torch.rand(dataset.num_features, 16)
@@ -105,7 +105,7 @@ def main():
     tstart = time.time()
 
     # for epoch in range(1, 101):
-    for epoch in range(20):
+    for epoch in range(100):
         outputs = train()
         train_acc, val_acc, tmp_test_acc = test(outputs)
         if val_acc > best_val_acc:

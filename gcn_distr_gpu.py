@@ -276,14 +276,15 @@ class GCNFunc(torch.autograd.Function):
         z.requires_grad = True
         ctx.z = z
 
-        if func is F.log_softmax:
-            h = func(z, dim=1)
-        elif func is F.relu:
-            h = func(z)
-        else:
-            h = z
+        # if func is F.log_softmax:
+        #     h = func(z, dim=1)
+        # elif func is F.relu:
+        #     h = func(z)
+        # else:
+        #     h = z
 
-        return h
+        # return h
+        return z
 
     @staticmethod
     def backward(ctx, grad_output):
@@ -300,16 +301,16 @@ class GCNFunc(torch.autograd.Function):
         func = ctx.func
         z = ctx.z
 
-        with torch.set_grad_enabled(True):
-            if func is F.log_softmax:
-                func_eval = func(z, dim=1)
-            elif func is F.relu:
-                func_eval = func(z)
-            else:
-                func_eval = z
+        # with torch.set_grad_enabled(True):
+        #     if func is F.log_softmax:
+        #         func_eval = func(z, dim=1)
+        #     elif func is F.relu:
+        #         func_eval = func(z)
+        #     else:
+        #         func_eval = z
 
-            sigmap = torch.autograd.grad(outputs=func_eval, inputs=z, grad_outputs=grad_output)[0]
-            grad_output = sigmap
+        #     sigmap = torch.autograd.grad(outputs=func_eval, inputs=z, grad_outputs=grad_output)[0]
+        #     grad_output = sigmap
 
         # First backprop equation
         ag = outer_product(adj_matrix, grad_output, rank, size, group)
