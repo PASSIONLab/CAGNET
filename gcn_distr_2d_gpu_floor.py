@@ -86,6 +86,7 @@ mid_layer = 0
 timing = False
 normalization = False
 activations = False
+accuracy = False
 no_occur_val = 42.1234
 run_count = 0
 run = 0
@@ -107,20 +108,20 @@ def start_time(group, rank):
     if not timing:
         return 0.0
     if group is not None:
-        dist.barrier(group)
+       dist.barrier(group)
     tstart = 0.0
-    # if rank == 0:
-    tstart = time.time()
+    if rank == 0:
+        tstart = time.time()
     return tstart
 
 def stop_time(group, rank, tstart):
     if not timing:
         return 0.0
     if group is not None:
-        dist.barrier(group)
+       dist.barrier(group)
     tstop = 0.0
-    # if rank == 0:
-    tstop = time.time()
+    if rank == 0:
+        tstop = time.time()
     return tstop - tstart
 
 def transpose(mat, row, col, height, width, size, acc_per_rank, transpose_group):
@@ -389,14 +390,14 @@ def summa_sparse(adj_matrix, inputs, rank, row, col, size, acc_per_rank, row_gro
 
         brow = brow.contiguous()
 
-        # tstart = start_time(row_groups[0], rank)
-        tstart = start_time(col_groups[col], rank)
+        tstart = start_time(row_groups[0], rank)
+        # tstart = start_time(col_groups[col], rank)
 
         # dist.broadcast_multigpu([brow], col_src_rank, col_groups[col])
         dist.broadcast(brow, col_src_rank, col_groups[col])
 
-        # dur = stop_time(row_groups[0], rank, tstart)
-        dur = stop_time(col_groups[col], rank, tstart)
+        dur = stop_time(row_groups[0], rank, tstart)
+        # dur = stop_time(col_groups[col], rank, tstart)
 
         comm_time[run][rank] += dur
         summa_sparse_bcast2[run][rank] += dur
@@ -1219,6 +1220,8 @@ def run(rank, size, inputs, adj_matrix, data, features, mid_layer, classes, devi
                                                             classes, device)
 
         adj_matrix_loc = adj_matrix_loc.coalesce()
+        print(f"rank: {rank} adj_matrix_loc.nnz: {adj_matrix_loc._nnz()}")
+        exit()
 
 
         inputs_loc = inputs_loc.to(device)
@@ -1334,46 +1337,46 @@ def run(rank, size, inputs, adj_matrix, data, features, mid_layer, classes, devi
     print(f"rank: {rank} {outputs}")
     
     # All-gather outputs to test accuracy
+    if accuracy:
+        # All-gather across process row
+        output_parts_row = []
+        width_per_proc = classes // proc_col
+        for i in range(proc_col):
+            output_parts_row.append(torch.cuda.FloatTensor(outputs.size(0), classes - width_per_proc * (proc_col - 1)))
 
-    # All-gather across process row
-    output_parts_row = []
-    width_per_proc = classes // proc_col
-    for i in range(proc_col):
-        output_parts_row.append(torch.cuda.FloatTensor(outputs.size(0), classes - width_per_proc * (proc_col - 1)))
+        if outputs.size(1) != classes - width_per_proc * (proc_col - 1):
+            pad_col = (classes - width_per_proc * (proc_col - 1)) - outputs.size(1)
+            outputs = torch.cat((outputs, torch.cuda.FloatTensor(outputs.size(0), pad_col, device=device)), dim=1)
 
-    if outputs.size(1) != classes - width_per_proc * (proc_col - 1):
-        pad_col = (classes - width_per_proc * (proc_col - 1)) - outputs.size(1)
-        outputs = torch.cat((outputs, torch.cuda.FloatTensor(outputs.size(0), pad_col, device=device)), dim=1)
+        dist.all_gather(output_parts_row, outputs, group=row_groups[rank_row])
+        for i in range(proc_col - 1):
+            output_parts_row[i] = output_parts_row[i][:,:width_per_proc]
 
-    dist.all_gather(output_parts_row, outputs, group=row_groups[rank_row])
-    for i in range(proc_col - 1):
-        output_parts_row[i] = output_parts_row[i][:,:width_per_proc]
+        outputs_row = torch.cat(output_parts_row, dim=1)
 
-    outputs_row = torch.cat(output_parts_row, dim=1)
+        # All-gather across process col
+        output_parts_col = []
+        height_per_proc = inputs.size(0) // proc_row
+        for i in range(proc_row):
+            output_parts_col.append(torch.cuda.FloatTensor(inputs.size(0) - height_per_proc * (proc_row - 1), classes))
 
-    # All-gather across process col
-    output_parts_col = []
-    height_per_proc = inputs.size(0) // proc_row
-    for i in range(proc_row):
-        output_parts_col.append(torch.cuda.FloatTensor(inputs.size(0) - height_per_proc * (proc_row - 1), classes))
+        if outputs_row.size(0) != inputs.size(0) - height_per_proc * (proc_row - 1):
+            pad_row = (inputs.size(0) - height_per_proc * (proc_col - 1)) - outputs_row.size(0)
+            outputs_row = torch.cat((outputs_row, torch.cuda.FloatTensor(pad_row, classes, device=device)), dim=0)
 
-    if outputs_row.size(0) != inputs.size(0) - height_per_proc * (proc_row - 1):
-        pad_row = (inputs.size(0) - height_per_proc * (proc_col - 1)) - outputs_row.size(0)
-        outputs_row = torch.cat((outputs_row, torch.cuda.FloatTensor(pad_row, classes, device=device)), dim=0)
+        dist.all_gather(output_parts_col, outputs_row, group=col_groups[rank_col])
+        for i in range(proc_row - 1):
+            output_parts_col[i] = output_parts_col[i][:height_per_proc,:]
 
-    dist.all_gather(output_parts_col, outputs_row, group=col_groups[rank_col])
-    for i in range(proc_row - 1):
-        output_parts_col[i] = output_parts_col[i][:height_per_proc,:]
+        outputs = torch.cat(output_parts_col, dim=0)
 
-    outputs = torch.cat(output_parts_col, dim=0)
+        train_acc, val_acc, tmp_test_acc = test(outputs, data, inputs.size(0), rank)
+        if val_acc > best_val_acc:
+            best_val_acc = val_acc
+            test_acc = tmp_test_acc
+        log = 'Epoch: {:03d}, Train: {:.4f}, Val: {:.4f}, Test: {:.4f}'
 
-    train_acc, val_acc, tmp_test_acc = test(outputs, data, inputs.size(0), rank)
-    if val_acc > best_val_acc:
-        best_val_acc = val_acc
-        test_acc = tmp_test_acc
-    log = 'Epoch: {:03d}, Train: {:.4f}, Val: {:.4f}, Test: {:.4f}'
-
-    print(log.format(200, train_acc, best_val_acc, test_acc))
+        print(log.format(200, train_acc, best_val_acc, test_acc))
     return outputs
 
 def init_process(rank, size, inputs, adj_matrix, data, features, mid_layer, classes, device, 
@@ -1416,6 +1419,7 @@ def main(P, correctness_check, acc_per_rank):
         data = Data()
         data.y = torch.rand(n).uniform_(0, num_classes - 1)
         data.train_mask = torch.ones(n).long()
+        print(f"before edge_index: {edge_index.size()}")
     elif graphname == 'subgraph5':
         path = "/gpfs/alpine/bif115/scratch/alokt/HipMCL/"
         edge_index = torch.load(path + "/processed/subgraph5_graph.pt")
@@ -1513,6 +1517,7 @@ if __name__ == '__main__':
     parser.add_argument("--runcount", type=int)
     parser.add_argument("--normalization", type=str)
     parser.add_argument("--activations", type=str)
+    parser.add_argument("--accuracy", type=str)
     args = parser.parse_args()
     print(args)
     P = args.processes
@@ -1536,12 +1541,13 @@ if __name__ == '__main__':
     run_count = args.runcount
     normalization = args.normalization == "True"
     activations = args.activations == "True"
+    accuracy = args.accuracy == "True"
 
     if (epochs is None) or (graphname is None) or (timing is None) or (mid_layer is None) or (run_count is None):
         print(f"Error: missing argument {epochs} {graphname} {timing} {mid_layer}")
         exit()
 
-    print(f"Arguments: epochs: {epochs} graph: {graphname} timing: {timing} mid: {mid_layer} norm: {normalization} act: {activations}")
+    print(f"Arguments: epochs: {epochs} graph: {graphname} timing: {timing} mid: {mid_layer} norm: {normalization} act: {activations} acc: {accuracy}")
     
     print("Correctness: " + str(correctness_check))
     print(main(P, correctness_check, acc_per_rank))

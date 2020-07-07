@@ -35,3 +35,35 @@ Currently Loaded Modules:
  
 
 a22n04
+
+------------------------------------------------------------
+Sender: LSF System <lsfadmin@batch1>
+Subject: Job 176934: <distr-gnn2d-p100> in cluster <summit> Exited
+
+Job <distr-gnn2d-p100> was submitted from host <login4> by user <alokt> in cluster <summit> at Tue Jun 23 22:27:04 2020
+Job was executed on host(s) <1*batch1>, in queue <batch>, as user <alokt> in cluster <summit> at Tue Jun 23 23:31:50 2020
+                            <42*a22n04>
+                            <42*a22n05>
+                            <42*a22n06>
+                            <42*a22n07>
+                            <42*a22n08>
+                            <42*a22n09>
+                            <42*a22n10>
+                            <42*a22n11>
+                            <42*a22n12>
+                            <42*a22n13>
+                            <42*a22n14>
+                            <42*a22n15>
+                            <42*a22n16>
+                            <42*a22n17>
+                            <42*a22n18>
+                            <42*a23n01>
+                            <42*a23n02>
+</ccs/home/alokt> was used as the home directory.
+</ccs/home/alokt/gnn_training/job_scripts/2d> was used as the working directory.
+Started at Tue Jun 23 23:31:50 2020
+Terminated at Wed Jun 24 01:30:27 2020
+Results reported at Wed Jun 24 01:30:27 2020
+
+The output (if any) is above this job summary.
+

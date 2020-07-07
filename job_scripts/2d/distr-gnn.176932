@@ -35,3 +35,25 @@ Currently Loaded Modules:
  
 
 e32n11
+User defined signal 2
+
+------------------------------------------------------------
+Sender: LSF System <lsfadmin@batch2>
+Subject: Job 176932: <distr-gnn2d-p36> in cluster <summit> Exited
+
+Job <distr-gnn2d-p36> was submitted from host <login4> by user <alokt> in cluster <summit> at Tue Jun 23 22:27:01 2020
+Job was executed on host(s) <1*batch2>, in queue <batch>, as user <alokt> in cluster <summit> at Tue Jun 23 23:13:14 2020
+                            <42*e32n11>
+                            <42*e32n12>
+                            <42*e32n13>
+                            <42*e32n14>
+                            <42*e32n15>
+                            <42*e32n16>
+</ccs/home/alokt> was used as the home directory.
+</ccs/home/alokt/gnn_training/job_scripts/2d> was used as the working directory.
+Started at Tue Jun 23 23:13:14 2020
+Terminated at Wed Jun 24 01:13:43 2020
+Results reported at Wed Jun 24 01:13:43 2020
+
+The output (if any) is above this job summary.
+
