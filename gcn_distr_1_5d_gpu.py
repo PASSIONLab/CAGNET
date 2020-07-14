@@ -260,7 +260,7 @@ def broad_func(node_count, am_partitions, inputs, rank, size, row_groups, col_gr
 
 class GCNFunc(torch.autograd.Function):
     @staticmethod
-    def forward(ctx, inputs, weight, adj_matrix, am_partitions, rank, size, row_groups, col_groups, func):
+    def forward(ctx, inputs, weight, adj_matrix, am_partitions, rank, size, group, row_groups, col_groups, func):
         global comm_time
         global comp_time
         global dcomp_time
@@ -275,8 +275,10 @@ class GCNFunc(torch.autograd.Function):
         ctx.save_for_backward(inputs, weight, adj_matrix)
         ctx.rank = rank
         ctx.size = size
+        ctx.group = group
         ctx.row_groups = row_groups
         ctx.col_groups = col_groups
+        ctx.am_partitions = am_partitions
 
         ctx.func = func
 
@@ -314,23 +316,27 @@ class GCNFunc(torch.autograd.Function):
         rank = ctx.rank
         size = ctx.size
         group = ctx.group
+        row_groups = ctx.row_groups
+        col_groups = ctx.col_groups
+        am_partitions = ctx.am_partitions
 
         func = ctx.func
         z = ctx.z
 
-        # with torch.set_grad_enabled(True):
-        #     if func is F.log_softmax:
-        #         func_eval = func(z, dim=1)
-        #     elif func is F.relu:
-        #         func_eval = func(z)
-        #     else:
-        #         func_eval = z
+        with torch.set_grad_enabled(True):
+            if func is F.log_softmax:
+                func_eval = func(z, dim=1)
+            elif func is F.relu:
+                func_eval = func(z)
+            else:
+                func_eval = z
 
-        #     sigmap = torch.autograd.grad(outputs=func_eval, inputs=z, grad_outputs=grad_output)[0]
-        #     grad_output = sigmap
+            sigmap = torch.autograd.grad(outputs=func_eval, inputs=z, grad_outputs=grad_output)[0]
+            grad_output = sigmap
 
         # First backprop equation
-        ag = outer_product(adj_matrix, grad_output, rank, size, group)
+        # ag = outer_product(adj_matrix, grad_output, rank, size, group)
+        ag = broad_func(adj_matrix.size(0), am_partitions, grad_output, rank, size, row_groups, col_groups)
 
         tstart_comp = start_time(group, rank)
 
@@ -343,18 +349,19 @@ class GCNFunc(torch.autograd.Function):
         # Second backprop equation (reuses the A * G^l computation)
         grad_weight = outer_product2(inputs.t(), ag, rank, size, group)
 
-        return grad_input, grad_weight, None, None, None, None, None, None
+        return grad_input, grad_weight, None, None, None, None, None, None, None, None
 
-def train(inputs, weight1, weight2, adj_matrix, am_partitions, optimizer, data, rank, size, row_groups, col_groups):
+def train(inputs, weight1, weight2, adj_matrix, am_partitions, optimizer, data, rank, size, group, row_groups, col_groups):
 
-    outputs = GCNFunc.apply(inputs, weight1, adj_matrix, am_partitions, rank, size, row_groups, col_groups, F.relu)
-    outputs = GCNFunc.apply(outputs, weight2, adj_matrix, am_partitions, rank, size, row_groups, col_groups, F.log_softmax)
-
-    return outputs
+    outputs = GCNFunc.apply(inputs, weight1, adj_matrix, am_partitions, rank, size, group, row_groups, col_groups, F.relu)
+    outputs = GCNFunc.apply(outputs, weight2, adj_matrix, am_partitions, rank, size, group, row_groups, col_groups, F.log_softmax)
 
     optimizer.zero_grad()
-    rank_train_mask = torch.split(data.train_mask.bool(), outputs.size(0), dim=0)[rank]
-    datay_rank = torch.split(data.y, outputs.size(0), dim=0)[rank]
+
+    rank_c = rank // replication
+
+    rank_train_mask = torch.split(data.train_mask.bool(), outputs.size(0), dim=0)[rank_c]
+    datay_rank = torch.split(data.y, outputs.size(0), dim=0)[rank_c]
 
     # Note: bool type removes warnings, unsure of perf penalty
     # loss = F.nll_loss(outputs[data.train_mask.bool()], data.y[data.train_mask.bool()])
@@ -617,7 +624,7 @@ def run(rank, size, inputs, adj_matrix, data, features, classes, device):
         print(f"Starting training... rank {rank} run {i}", flush=True)
         for epoch in range(epochs):
             outputs = train(inputs_loc, weight1, weight2, adj_matrix_loc, am_pbyp, optimizer, data, 
-                                    rank, size, row_groups, col_groups)
+                                    rank, size, group, row_groups, col_groups)
             print("Epoch: {:03d}".format(epoch), flush=True)
 
         # dist.barrier(group)
