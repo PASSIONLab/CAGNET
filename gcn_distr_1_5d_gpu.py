@@ -212,39 +212,49 @@ def broad_func(node_count, am_partitions, inputs, rank, size, row_groups, col_gr
     # z_loc = torch.cuda.FloatTensor(adj_matrix.size(0), inputs.size(1), device=device).fill_(0)
     z_loc = torch.cuda.FloatTensor(am_partitions[0].size(0), inputs.size(1), device=device).fill_(0)
     # z_loc = torch.zeros(adj_matrix.size(0), inputs.size(1))
-    
+
     inputs_recv = torch.cuda.FloatTensor(n_per_proc, inputs.size(1), device=device).fill_(0)
     # inputs_recv = torch.zeros(n_per_proc, inputs.size(1))
 
     rank_c = rank // replication
+    rank_col = rank % replication
 
     for i in range(size // (replication ** 2)):
-        q = rank_c // (size // (replication ** 2)) * (size // (replication ** 2)) + i
+        # q = rank_c // (size // (replication ** 2)) * (size // (replication ** 2)) + i
+        # = q * replication + rank_c // (size // (replication **2))
+        q = (rank_col * (size // (replication ** 2)) + i) * replication + rank_col
+
+        q_c = q // replication
+
+        am_partid = rank_col * (size // replication ** 2) + i
+
         if q == rank:
             inputs_recv = inputs.clone()
-        elif q == size - 1:
-            inputs_recv = torch.cuda.FloatTensor(am_partitions[i].size(1), inputs.size(1), device=device).fill_(0)
+        elif q_c == size // replication - 1:
+            inputs_recv = torch.cuda.FloatTensor(am_partitions[am_partid].size(1), inputs.size(1), device=device).fill_(0)
             # inputs_recv = torch.zeros(list(am_partitions[i].t().size())[1], inputs.size(1))
 
-        tstart_comm = start_time(col_groups[rank_c // (size // (replication ** 2))], rank)
+        tstart_comm = start_time(col_groups[rank_col], rank)
 
-        dist.broadcast(inputs_recv, src=q, group=col_groups[rank_c // (size // (replication ** 2))])
+        inputs_recv = inputs_recv.contiguous()
+        dist.broadcast(inputs_recv, src=q, group=col_groups[rank_col])
 
-        dur = stop_time(col_groups[rank_c // (size // (replication ** 2))], rank, tstart_comm)
+        dur = stop_time(col_groups[rank_col], rank, tstart_comm)
         comm_time[run][rank] += dur
         bcast_comm_time[run][rank] += dur
 
-        tstart_comp = start_time(col_groups[rank_c // (size // (replication ** 2))], rank)
+        tstart_comp = start_time(col_groups[rank_col], rank)
 
-        spmm_gpu(am_partitions[i].indices()[0].int(), am_partitions[i].indices()[1].int(), 
-                        am_partitions[i].values(), am_partitions[i].size(0), 
-                        am_partitions[i].size(1), inputs_recv, z_loc)
+        spmm_gpu(am_partitions[am_partid].indices()[0].int(), am_partitions[am_partid].indices()[1].int(), 
+                        am_partitions[am_partid].values(), am_partitions[am_partid].size(0), 
+                        am_partitions[am_partid].size(1), inputs_recv, z_loc, rank)
 
-        dur = stop_time(col_groups[rank_c // (size // (replication ** 2))], rank, tstart_comp)
+        dur = stop_time(col_groups[rank_col], rank, tstart_comp)
         comp_time[run][rank] += dur
         scomp_time[run][rank] += dur
 
-    dist.all_reduce(z_loc.contiguous(), op=dist.reduce_op.SUM, group=row_groups[rank_c])
+    z_loc = z_loc.contiguous()
+    dist.all_reduce(z_loc, op=dist.reduce_op.SUM, group=row_groups[rank_c])
 
     return z_loc
 
@@ -284,15 +294,14 @@ class GCNFunc(torch.autograd.Function):
         z.requires_grad = True
         ctx.z = z
 
-        # if func is F.log_softmax:
-        #     h = func(z, dim=1)
-        # elif func is F.relu:
-        #     h = func(z)
-        # else:
-        #     h = z
+        if func is F.log_softmax:
+            h = func(z, dim=1)
+        elif func is F.relu:
+            h = func(z)
+        else:
+            h = z
 
-        # return h
-        return z
+        return h
 
     @staticmethod
     def backward(ctx, grad_output):
@@ -406,8 +415,6 @@ def get_proc_groups(rank, size):
     for i in range(len(col_procs)):
         col_groups.append(dist.new_group(col_procs[i]))
 
-    print(f"row_procs: {row_procs}", flush=True)
-    print(f"col_procs: {col_procs}", flush=True)
     return row_groups, col_groups
 
 # Split a COO into partitions of size n_per_proc
@@ -504,7 +511,7 @@ def oned_partition(rank, size, inputs, adj_matrix, data, features, classes, devi
         proc_node_count = vtx_indices[rank_c + 1] - vtx_indices[rank_c]
         am_pbyp, _ = split_coo(am_partitions[rank_c], node_count, n_per_proc, 0)
         for i in range(len(am_pbyp)):
-            if i == size - 1:
+            if i == size // replication - 1:
                 last_node_count = vtx_indices[i + 1] - vtx_indices[i]
                 am_pbyp[i] = torch.sparse_coo_tensor(am_pbyp[i], torch.ones(am_pbyp[i].size(1)), 
                                                         size=(last_node_count, proc_node_count),
@@ -544,12 +551,16 @@ def run(rank, size, inputs, adj_matrix, data, features, classes, device):
 
     best_val_acc = test_acc = 0
     outputs = None
-    group = dist.new_group(list(range(size)))
-    row_groups, col_groups = get_proc_groups(rank, size) 
 
     # adj_matrix_loc = torch.rand(node_count, n_per_proc)
     # inputs_loc = torch.rand(n_per_proc, inputs.size(1))
 
+    group = dist.new_group(list(range(size)))
+    row_groups, col_groups = get_proc_groups(rank, size) 
+
+    rank_c = rank // replication
+    if rank_c >= (size // replication):
+        return
 
     inputs_loc, adj_matrix_loc, am_pbyp = oned_partition(rank, size, inputs, adj_matrix, data, 
                                                                 features, classes, device)
@@ -615,6 +626,7 @@ def run(rank, size, inputs, adj_matrix, data, features, classes, device):
 
     # Get median runtime according to rank0 and print that run's breakdown
     dist.barrier(group)
+
     if rank == 0:
         total_times_r0 = [] 
         for i in range(run_count):

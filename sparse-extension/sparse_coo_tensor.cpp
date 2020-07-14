@@ -27,6 +27,10 @@ using namespace at::sparse;
     }                                                                          \
 }
 
+#define CHECK_ERROR(str) \
+    {cudaDeviceSynchronize(); cudaError_t err; err = cudaGetLastError(); if(err!=0) {printf("ERROR %s:  %d %s\n", str, err, cudaGetErrorString(err)); fflush(stdout);}}
+
+
 at::Tensor expand_values_if_needed(const at::Tensor& values) {
     // expand
     if (values.dim() == 0) {
@@ -113,7 +117,8 @@ void spmm_gpu(const at::Tensor& A_rowindices,
                         int32_t n,
                         int32_t m,
                         at::Tensor& B,
-                        at::Tensor& C) {
+                        at::Tensor& C,
+                        int32_t rank) {
 
     // cusparseHandle_t handle;
     // CHECK_CUSPARSE(cusparseCreate(&handle));
@@ -161,6 +166,7 @@ void spmm_gpu(const at::Tensor& A_rowindices,
     C.t_();
     C.set_data(C.contiguous());
     C.set_data(C.view({c_row, c_col}));
+
     CHECK_CUSPARSE(cusparseScsrmm2(handle,
                                     CUSPARSE_OPERATION_NON_TRANSPOSE,
                                     CUSPARSE_OPERATION_TRANSPOSE,
@@ -178,6 +184,7 @@ void spmm_gpu(const at::Tensor& A_rowindices,
                                     &beta,
                                     C.data<float>(),
                                     n)); 
+
     cudaFree(d_a_csrrows);
 
     // Column-major to row-major

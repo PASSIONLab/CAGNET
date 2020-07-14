@@ -1220,12 +1220,11 @@ def run(rank, size, inputs, adj_matrix, data, features, mid_layer, classes, devi
                                                             classes, device)
 
         adj_matrix_loc = adj_matrix_loc.coalesce()
-        print(f"rank: {rank} adj_matrix_loc.nnz: {adj_matrix_loc._nnz()}")
-        exit()
-
 
         inputs_loc = inputs_loc.to(device)
         adj_matrix_loc = adj_matrix_loc.to(device)
+
+        print(f"rank: {rank} adj_matrix_loc.nnz: {adj_matrix_loc._nnz()}")
 
         total_time[i] = dict()
         comp_time[i] = dict()
@@ -1407,10 +1406,12 @@ def main(P, correctness_check, acc_per_rank):
         # num_classes = dataset.num_classes + 9
         num_classes = dataset.num_classes
     elif graphname == 'Amazon':
-        edge_index = torch.load(path + "/processed/amazon_graph.pt")
+        # edge_index = torch.load(path + "/processed/amazon_graph.pt")
         # edge_index = torch.load("/gpfs/alpine/bif115/scratch/alokt/Amazon/processed/amazon_graph_random.pt")
+        edge_index = torch.load("/gpfs/alpine/bif115/scratch/alokt/Amazon/processed/amazon_graph_jsongz.pt")
         edge_index = edge_index.t_()
-        n = 9430086
+        # n = 9430086
+        n = 9430080
         # n = 14249639
         num_features = 300
         num_classes = 24
@@ -1486,7 +1487,6 @@ def main(P, correctness_check, acc_per_rank):
         data.y = data.y.to(device)
 
         edge_index = data.edge_index
-        print("edge count: " + str(len(edge_index[0])))
 
     if normalization:
         adj_matrix, _ = add_remaining_self_loops(edge_index)

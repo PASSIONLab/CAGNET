@@ -38,8 +38,8 @@ if args.use_gdc:
 class Net(torch.nn.Module):
     def __init__(self):
         super(Net, self).__init__()
-        self.conv1 = GCNConv(dataset.num_features, 16, cached=True, normalize=True, bias=False)
-        self.conv2 = GCNConv(16, dataset.num_classes, cached=True, normalize=True, bias=False)
+        self.conv1 = GCNConv(dataset.num_features, 16, cached=True, normalize=False, bias=False)
+        self.conv2 = GCNConv(16, dataset.num_classes, cached=True, normalize=False, bias=False)
 
         self.conv1.node_dim = 0
         self.conv2.node_dim = 0
@@ -105,7 +105,7 @@ def main():
     tstart = time.time()
 
     # for epoch in range(1, 101):
-    for epoch in range(100):
+    for epoch in range(1):
         outputs = train()
         train_acc, val_acc, tmp_test_acc = test(outputs)
         if val_acc > best_val_acc:
