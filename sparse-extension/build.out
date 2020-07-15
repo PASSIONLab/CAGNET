@@ -1,34 +1,15 @@
-running install
-running bdist_egg
-running egg_info
-writing sparse_coo_tensor_cpp.egg-info/PKG-INFO
-writing dependency_links to sparse_coo_tensor_cpp.egg-info/dependency_links.txt
-writing top-level names to sparse_coo_tensor_cpp.egg-info/top_level.txt
-reading manifest file 'sparse_coo_tensor_cpp.egg-info/SOURCES.txt'
-writing manifest file 'sparse_coo_tensor_cpp.egg-info/SOURCES.txt'
-installing library code to build/bdist.linux-ppc64le/egg
-running install_lib
-running build_ext
-creating build/bdist.linux-ppc64le/egg
-copying build/lib.linux-ppc64le-3.6/sparse_coo_tensor_cpp.cpython-36m-powerpc64le-linux-gnu.so -> build/bdist.linux-ppc64le/egg
-creating stub loader for sparse_coo_tensor_cpp.cpython-36m-powerpc64le-linux-gnu.so
-byte-compiling build/bdist.linux-ppc64le/egg/sparse_coo_tensor_cpp.py to sparse_coo_tensor_cpp.cpython-36.pyc
-creating build/bdist.linux-ppc64le/egg/EGG-INFO
-copying sparse_coo_tensor_cpp.egg-info/PKG-INFO -> build/bdist.linux-ppc64le/egg/EGG-INFO
-copying sparse_coo_tensor_cpp.egg-info/SOURCES.txt -> build/bdist.linux-ppc64le/egg/EGG-INFO
-copying sparse_coo_tensor_cpp.egg-info/dependency_links.txt -> build/bdist.linux-ppc64le/egg/EGG-INFO
-copying sparse_coo_tensor_cpp.egg-info/top_level.txt -> build/bdist.linux-ppc64le/egg/EGG-INFO
-writing build/bdist.linux-ppc64le/egg/EGG-INFO/native_libs.txt
-zip_safe flag not set; analyzing archive contents...
-__pycache__.sparse_coo_tensor_cpp.cpython-36: module references __file__
-creating 'dist/sparse_coo_tensor_cpp-0.0.0-py3.6-linux-ppc64le.egg' and adding 'build/bdist.linux-ppc64le/egg' to it
-removing 'build/bdist.linux-ppc64le/egg' (and everything under it)
-Processing sparse_coo_tensor_cpp-0.0.0-py3.6-linux-ppc64le.egg
-removing '/autofs/nccs-svm1_home1/alokt/.conda/envs/gnn2/lib/python3.6/site-packages/sparse_coo_tensor_cpp-0.0.0-py3.6-linux-ppc64le.egg' (and everything under it)
-creating /autofs/nccs-svm1_home1/alokt/.conda/envs/gnn2/lib/python3.6/site-packages/sparse_coo_tensor_cpp-0.0.0-py3.6-linux-ppc64le.egg
-Extracting sparse_coo_tensor_cpp-0.0.0-py3.6-linux-ppc64le.egg to /autofs/nccs-svm1_home1/alokt/.conda/envs/gnn2/lib/python3.6/site-packages
-sparse-coo-tensor-cpp 0.0.0 is already the active version in easy-install.pth
-
-Installed /autofs/nccs-svm1_home1/alokt/.conda/envs/gnn2/lib/python3.6/site-packages/sparse_coo_tensor_cpp-0.0.0-py3.6-linux-ppc64le.egg
-Processing dependencies for sparse-coo-tensor-cpp==0.0.0
-Finished processing dependencies for sparse-coo-tensor-cpp==0.0.0
+Traceback (most recent call last):
+  File "setup.py", line 1, in <module>
+    from setuptools import setup, Extension
+  File "/ccs/home/alokt/.conda/envs/gnn2/lib/python3.6/site-packages/setuptools/__init__.py", line 17, in <module>
+    import setuptools.version
+  File "/ccs/home/alokt/.conda/envs/gnn2/lib/python3.6/site-packages/setuptools/version.py", line 1, in <module>
+    import pkg_resources
+  File "/ccs/home/alokt/.conda/envs/gnn2/lib/python3.6/site-packages/pkg_resources/__init__.py", line 41, in <module>
+    import inspect
+  File "/ccs/home/alokt/.conda/envs/gnn2/lib/python3.6/inspect.py", line 361, in <module>
+    Attribute = namedtuple('Attribute', 'name kind defining_class object')
+  File "/ccs/home/alokt/.conda/envs/gnn2/lib/python3.6/collections/__init__.py", line 429, in namedtuple
+    exec(class_definition, namespace)
+  File "<string>", line 1, in <module>
+KeyboardInterrupt

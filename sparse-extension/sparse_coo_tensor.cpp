@@ -117,8 +117,7 @@ void spmm_gpu(const at::Tensor& A_rowindices,
                         int32_t n,
                         int32_t m,
                         at::Tensor& B,
-                        at::Tensor& C,
-                        int32_t rank) {
+                        at::Tensor& C) {
 
     // cusparseHandle_t handle;
     // CHECK_CUSPARSE(cusparseCreate(&handle));

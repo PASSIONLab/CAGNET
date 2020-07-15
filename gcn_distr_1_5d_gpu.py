@@ -61,33 +61,23 @@ run = 0
 replication = 0
 
 def start_time(group, rank, subset=False, src=None):
-    global barrier_time
-    global barrier_subset_time
-
     if not timing:
         return 0.0
-    
-    barrier_tstart = time.time()
-
-    dist.barrier(group)
-    barrier_tstop = time.time()
-    barrier_time[run][rank] += barrier_tstop - barrier_tstart
-    if subset:
-        barrier_subset_time[run][rank] += barrier_tstop - barrier_tstart
-
+    if group is not None:
+       dist.barrier(group)
     tstart = 0.0
-    tstart = time.time()
+    if rank == 0:
+        tstart = time.time()
     return tstart
 
 def stop_time(group, rank, tstart):
     if not timing:
         return 0.0
-    # dist.barrier(group)
-    devid = rank_to_devid(rank, acc_per_rank)
-    device = torch.device('cuda:{}'.format(devid))
-    torch.cuda.synchronize(device=device)
-
-    tstop = time.time()
+    if group is not None:
+       dist.barrier(group)
+    tstop = 0.0
+    if rank == 0:
+        tstop = time.time()
     return tstop - tstart
 
 def normalize(adj_matrix):
@@ -197,7 +187,7 @@ def outer_product2(inputs, ag, rank, size, group):
 
     return grad_weight
 
-def broad_func(node_count, am_partitions, inputs, rank, size, row_groups, col_groups):
+def broad_func(node_count, am_partitions, inputs, rank, size, row_groups, col_groups, group):
     global device
     global comm_time
     global comp_time
@@ -240,6 +230,7 @@ def broad_func(node_count, am_partitions, inputs, rank, size, row_groups, col_gr
         dist.broadcast(inputs_recv, src=q, group=col_groups[rank_col])
 
         dur = stop_time(col_groups[rank_col], rank, tstart_comm)
+
         comm_time[run][rank] += dur
         bcast_comm_time[run][rank] += dur
 
@@ -247,7 +238,7 @@ def broad_func(node_count, am_partitions, inputs, rank, size, row_groups, col_gr
 
         spmm_gpu(am_partitions[am_partid].indices()[0].int(), am_partitions[am_partid].indices()[1].int(), 
                         am_partitions[am_partid].values(), am_partitions[am_partid].size(0), 
-                        am_partitions[am_partid].size(1), inputs_recv, z_loc, rank)
+                        am_partitions[am_partid].size(1), inputs_recv, z_loc)
 
         dur = stop_time(col_groups[rank_col], rank, tstart_comp)
         comp_time[run][rank] += dur
@@ -283,7 +274,7 @@ class GCNFunc(torch.autograd.Function):
         ctx.func = func
 
         # z = block_row(adj_matrix.t(), am_partitions, inputs, weight, rank, size)
-        z = broad_func(adj_matrix.size(0), am_partitions, inputs, rank, size, row_groups, col_groups)
+        z = broad_func(adj_matrix.size(0), am_partitions, inputs, rank, size, row_groups, col_groups, group)
 
         tstart_comp = start_time(row_groups[0], rank)
 
@@ -336,7 +327,7 @@ class GCNFunc(torch.autograd.Function):
 
         # First backprop equation
         # ag = outer_product(adj_matrix, grad_output, rank, size, group)
-        ag = broad_func(adj_matrix.size(0), am_partitions, grad_output, rank, size, row_groups, col_groups)
+        ag = broad_func(adj_matrix.size(0), am_partitions, grad_output, rank, size, row_groups, col_groups, group)
 
         tstart_comp = start_time(group, rank)
 
@@ -554,6 +545,7 @@ def oned_partition(rank, size, inputs, adj_matrix, data, features, classes, devi
 def run(rank, size, inputs, adj_matrix, data, features, classes, device):
     global epochs
     global mid_layer
+    global timing
     global run
 
     best_val_acc = test_acc = 0
@@ -592,11 +584,6 @@ def run(rank, size, inputs, adj_matrix, data, features, classes, device):
         weight2 = Parameter(weight2_nonleaf)
 
         optimizer = torch.optim.Adam([weight1, weight2], lr=0.01)
-        dist.barrier(group)
-
-        tstart = 0.0
-        tstop = 0.0
-        tstart = time.time()
 
         total_time[i] = dict()
         comm_time[i] = dict()
@@ -620,9 +607,21 @@ def run(rank, size, inputs, adj_matrix, data, features, classes, device):
         op1_comm_time[i][rank] = 0.0
         op2_comm_time[i][rank] = 0.0
 
+        # Do not time first epoch
+        timing_on = timing == True
+        timing = False
+
+        outputs = train(inputs_loc, weight1, weight2, adj_matrix_loc, am_pbyp, optimizer, data, 
+                                    rank, size, group, row_groups, col_groups)
+        if timing_on:
+            timing = True
+
+        dist.barrier(group)
+        tstart = time.time()
+
         # for epoch in range(1, 201):
         print(f"Starting training... rank {rank} run {i}", flush=True)
-        for epoch in range(epochs):
+        for epoch in range(1, epochs):
             outputs = train(inputs_loc, weight1, weight2, adj_matrix_loc, am_pbyp, optimizer, data, 
                                     rank, size, group, row_groups, col_groups)
             print("Epoch: {:03d}".format(epoch), flush=True)
