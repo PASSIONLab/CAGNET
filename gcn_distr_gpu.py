@@ -510,6 +510,7 @@ def run(rank, size, inputs, adj_matrix, data, features, classes, device):
     global epochs
     global mid_layer
     global run
+    global timing
 
     best_val_acc = test_acc = 0
     outputs = None
@@ -549,7 +550,6 @@ def run(rank, size, inputs, adj_matrix, data, features, classes, device):
 
         tstart = 0.0
         tstop = 0.0
-        tstart = time.time()
 
         total_time[i] = dict()
         comm_time[i] = dict()
@@ -573,9 +573,19 @@ def run(rank, size, inputs, adj_matrix, data, features, classes, device):
         op1_comm_time[i][rank] = 0.0
         op2_comm_time[i][rank] = 0.0
 
+        timing_on = timing == True
+        timing = False
+        outputs = train(inputs_loc, weight1, weight2, adj_matrix_loc, am_pbyp, optimizer, data, 
+                                rank, size, group)
+        if timing_on:
+            timing = True
+
+        dist.barrier(group)
+        tstart = time.time()
+
         # for epoch in range(1, 201):
         print(f"Starting training... rank {rank} run {i}", flush=True)
-        for epoch in range(epochs):
+        for epoch in range(1, epochs):
             outputs = train(inputs_loc, weight1, weight2, adj_matrix_loc, am_pbyp, optimizer, data, 
                                     rank, size, group)
             print("Epoch: {:03d}".format(epoch), flush=True)

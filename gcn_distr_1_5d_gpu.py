@@ -731,11 +731,12 @@ def main(P, correctness_check):
         num_classes = dataset.num_classes
     elif graphname == 'Amazon':
         path = osp.join(osp.dirname(osp.realpath(__file__)), '..', 'data', graphname)
-        edge_index = torch.load(path + "/processed/amazon_graph.pt")
+        # edge_index = torch.load(path + "/processed/amazon_graph.pt")
         # edge_index = torch.load("/gpfs/alpine/bif115/scratch/alokt/Amazon/processed/amazon_graph_jsongz.pt")
-        edge_index = edge_index.t_()
+        edge_index = torch.load("/gpfs/alpine/bif115/scratch/alokt/Amazon/processed/amazon_large_randomized.pt")
+        # edge_index = edge_index.t_()
         # n = 9430088
-        n = 14249640
+        n = 14249639
         num_features = 300
         num_classes = 24
         # mid_layer = 24
