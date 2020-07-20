@@ -81,10 +81,10 @@ def start_time(group, rank, subset=False, src=None):
 def stop_time(group, rank, tstart):
     if not timing:
         return 0.0
-    # dist.barrier(group)
+    dist.barrier(group)
     devid = rank_to_devid(rank, acc_per_rank)
     device = torch.device('cuda:{}'.format(devid))
-    torch.cuda.synchronize(device=device)
+    # torch.cuda.synchronize(device=device)
 
     tstop = time.time()
     return tstop - tstart
@@ -256,6 +256,7 @@ class GCNFunc(torch.autograd.Function):
 
         # adj_matrix = adj_matrix.to_dense()
         ctx.save_for_backward(inputs, weight, adj_matrix)
+        ctx.am_partitions = am_partitions
         ctx.rank = rank
         ctx.size = size
         ctx.group = group
@@ -276,15 +277,14 @@ class GCNFunc(torch.autograd.Function):
         z.requires_grad = True
         ctx.z = z
 
-        # if func is F.log_softmax:
-        #     h = func(z, dim=1)
-        # elif func is F.relu:
-        #     h = func(z)
-        # else:
-        #     h = z
+        if func is F.log_softmax:
+            h = func(z, dim=1)
+        elif func is F.relu:
+            h = func(z)
+        else:
+            h = z
 
-        # return h
-        return z
+        return h
 
     @staticmethod
     def backward(ctx, grad_output):
@@ -294,6 +294,7 @@ class GCNFunc(torch.autograd.Function):
         global run
 
         inputs, weight, adj_matrix = ctx.saved_tensors
+        am_partitions = ctx.am_partitions
         rank = ctx.rank
         size = ctx.size
         group = ctx.group
@@ -301,19 +302,19 @@ class GCNFunc(torch.autograd.Function):
         func = ctx.func
         z = ctx.z
 
-        # with torch.set_grad_enabled(True):
-        #     if func is F.log_softmax:
-        #         func_eval = func(z, dim=1)
-        #     elif func is F.relu:
-        #         func_eval = func(z)
-        #     else:
-        #         func_eval = z
+        with torch.set_grad_enabled(True):
+            if func is F.log_softmax:
+                func_eval = func(z, dim=1)
+            elif func is F.relu:
+                func_eval = func(z)
+            else:
+                func_eval = z
 
-        #     sigmap = torch.autograd.grad(outputs=func_eval, inputs=z, grad_outputs=grad_output)[0]
-        #     grad_output = sigmap
+            sigmap = torch.autograd.grad(outputs=func_eval, inputs=z, grad_outputs=grad_output)[0]
+            grad_output = sigmap
 
         # First backprop equation
-        ag = outer_product(adj_matrix, grad_output, rank, size, group)
+        ag = broad_func(adj_matrix.size(0), am_partitions, grad_output, rank, size, group)
 
         tstart_comp = start_time(group, rank)
 
@@ -358,6 +359,11 @@ def test(outputs, data, vertex_count, rank):
         pred = logits[mask].max(1)[1]
         acc = pred.eq(data.y[mask]).sum().item() / mask.sum().item()
         accs.append(acc)
+
+    if len(accs) == 1:
+        accs.append(0)
+        accs.append(0)
+
     return accs
     # logits, accs = outputs, []
     # datay_rank = torch.split(data.y, vertex_count)[rank]
@@ -508,6 +514,9 @@ def run(rank, size, inputs, adj_matrix, data, features, classes, device):
     best_val_acc = test_acc = 0
     outputs = None
     group = dist.new_group(list(range(size)))
+
+    if rank >= size:
+        return
 
     # adj_matrix_loc = torch.rand(node_count, n_per_proc)
     # inputs_loc = torch.rand(n_per_proc, inputs.size(1))
@@ -691,8 +700,9 @@ def main(P, correctness_check):
     elif graphname == 'Amazon':
         path = osp.join(osp.dirname(osp.realpath(__file__)), '..', 'data', graphname)
         edge_index = torch.load(path + "/processed/amazon_graph.pt")
+        # edge_index = torch.load("/gpfs/alpine/bif115/scratch/alokt/Amazon/processed/amazon_graph_jsongz.pt")
         edge_index = edge_index.t_()
-        # n = 9430086
+        # n = 9430088
         n = 14249640
         num_features = 300
         num_classes = 24

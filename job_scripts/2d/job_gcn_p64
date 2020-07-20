@@ -25,32 +25,32 @@ declare -a timings=("True" "False")
 
 cd ../../
 
-# Reddit
-for i in "${midlayers[@]}"
-    do
-        for j in "${timings[@]}"
-            do
-                ddlrun -x WORLD_SIZE=64 -x MASTER_ADDR=${hostarr[2]} -x MASTER_PORT=1234 -accelerators 6 python gcn_distr_2d_gpu_floor.py --accperrank=6 --epochs=100 --graphname=Reddit --timing=$j --midlayer=$i --runcount=3 &> outputs/final_outputs/perproc/reddit/distr_proc64_2d_output_mid$i\_$j\_nomemleak.txt
-
-            done
-    done
+# # Reddit
+# for i in "${midlayers[@]}"
+#     do
+#         for j in "${timings[@]}"
+#             do
+#                 ddlrun -x WORLD_SIZE=64 -x MASTER_ADDR=${hostarr[2]} -x MASTER_PORT=1234 -accelerators 6 python gcn_distr_2d_gpu_floor.py --accperrank=6 --epochs=100 --graphname=Reddit --timing=$j --midlayer=$i --runcount=3 &> outputs/final_outputs/perproc/reddit/distr_proc64_2d_output_mid$i\_$j\_nomemleak.txt
+# 
+#             done
+#     done
 
 # Amazon
 for i in "${midlayers[@]}"
     do
         for j in "${timings[@]}"
             do
-                ddlrun -x WORLD_SIZE=64 -x MASTER_ADDR=${hostarr[2]} -x MASTER_PORT=1234 -accelerators 6 python gcn_distr_2d_gpu_floor.py --accperrank=6 --epochs=100 --graphname=Amazon --timing=$j --midlayer=$i --runcount=3 &> outputs/final_outputs/perproc/amazon/distr_proc64_2d_output_mid$i\_$j\_nomemleak.txt
+                ddlrun -x WORLD_SIZE=64 -x MASTER_ADDR=${hostarr[2]} -x MASTER_PORT=1234 -accelerators 6 python gcn_distr_2d_gpu_floor.py --accperrank=6 --epochs=50 --graphname=Amazon --timing=$j --midlayer=$i --runcount=3 &> outputs/final_outputs/perproc/amazon/distr_proc64_2d_output_mid$i\_$j\_e50.txt
 
             done
     done
 
-# subgraph3
-for i in "${midlayers[@]}"
-    do
-        for j in "${timings[@]}"
-            do
-                ddlrun -x WORLD_SIZE=64 -x MASTER_ADDR=${hostarr[2]} -x MASTER_PORT=1234 -accelerators 6 python gcn_distr_2d_gpu_floor.py --accperrank=6 --epochs=10 --graphname=subgraph3 --timing=$j --midlayer=$i --runcount=3 &> outputs/final_outputs/perproc/subgraph3/distr_proc64_2d_output_mid$i\_$j\_nomemleak.txt
-
-            done
-    done
+# # subgraph3
+# for i in "${midlayers[@]}"
+#     do
+#         for j in "${timings[@]}"
+#             do
+#                 ddlrun -x WORLD_SIZE=64 -x MASTER_ADDR=${hostarr[2]} -x MASTER_PORT=1234 -accelerators 6 python gcn_distr_2d_gpu_floor.py --accperrank=6 --epochs=10 --graphname=subgraph3 --timing=$j --midlayer=$i --runcount=3 &> outputs/final_outputs/perproc/subgraph3/distr_proc64_2d_output_mid$i\_$j\_nomemleak.txt
+# 
+#             done
+#     done

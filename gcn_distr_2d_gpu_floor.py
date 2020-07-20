@@ -1406,13 +1406,13 @@ def main(P, correctness_check, acc_per_rank):
         # num_classes = dataset.num_classes + 9
         num_classes = dataset.num_classes
     elif graphname == 'Amazon':
-        # edge_index = torch.load(path + "/processed/amazon_graph.pt")
+        edge_index = torch.load(path + "/processed/amazon_graph.pt")
         # edge_index = torch.load("/gpfs/alpine/bif115/scratch/alokt/Amazon/processed/amazon_graph_random.pt")
-        edge_index = torch.load("/gpfs/alpine/bif115/scratch/alokt/Amazon/processed/amazon_graph_jsongz.pt")
+        # edge_index = torch.load("/gpfs/alpine/bif115/scratch/alokt/Amazon/processed/amazon_graph_jsongz.pt")
         edge_index = edge_index.t_()
         # n = 9430086
-        n = 9430080
-        # n = 14249639
+        # n = 9430088
+        n = 14249639
         num_features = 300
         num_classes = 24
         # mid_layer = 24

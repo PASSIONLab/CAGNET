@@ -44,9 +44,10 @@ comm_time = dict()
 scomp_time = dict()
 dcomp_time = dict()
 bcast_comm_time = dict()
-reduce_comm_time = dict()
-op_comm_time = dict()
 barrier_time = dict()
+barrier_subset_time = dict()
+op1_comm_time = dict()
+op2_comm_time = dict()
 
 epochs = 0
 graphname = ""
@@ -60,36 +61,23 @@ run = 0
 replication = 0
 
 def start_time(group, rank, subset=False, src=None):
-    global barrier_time
-    global run
-
-    if not timing:
-        return 0.0
-    # if group is not None:
-    #     barrier_tstart = time.time()
-    #     dist.barrier(group)
-    #     barrier_tstop = time.time()
-    #     barrier_time[run][rank] += barrier_tstop - barrier_tstart
-    tstart = 0.0
-    # if rank == 0:
-    tstart = time.time()
-    return tstart
-
-def stop_time(group, rank, tstart):
-    global barrier_time
-    global run
-
     if not timing:
         return 0.0
     if group is not None:
-        barrier_tstart = time.time()
-        # dist.barrier(group)
-        torch.cuda.synchronize(device=device)
-        barrier_tstop = time.time()
-        barrier_time[run][rank] += barrier_tstop - barrier_tstart
+       dist.barrier(group)
+    tstart = 0.0
+    if rank == 0:
+        tstart = time.time()
+    return tstart
+
+def stop_time(group, rank, tstart):
+    if not timing:
+        return 0.0
+    if group is not None:
+       dist.barrier(group)
     tstop = 0.0
-    # if rank == 0:
-    tstop = time.time()
+    if rank == 0:
+        tstop = time.time()
     return tstop - tstart
 
 def normalize(adj_matrix):
@@ -139,11 +127,46 @@ def block_row(adj_matrix, am_partitions, inputs, weight, rank, size):
     # z_loc = torch.mm(z_loc, weight)
     return z_loc
 
+def outer_product(adj_matrix, grad_output, rank, size, group):
+    global comm_time
+    global comp_time
+    global dcomp_time
+    global op1_comm_time
+    global run
+
+
+    n_per_proc = math.ceil(float(adj_matrix.size(0)) / size)
+    
+    tstart_comp = start_time(group, rank)
+
+    # A * G^l
+    ag = torch.mm(adj_matrix, grad_output)
+
+    dur = stop_time(group, rank, tstart_comp)
+    comp_time[run][rank] += dur
+    dcomp_time[run][rank] += dur
+
+    tstart_comm = start_time(group, rank)
+
+    # reduction on A * G^l low-rank matrices
+    dist.all_reduce(ag, op=dist.reduce_op.SUM, group=group)
+
+    dur = stop_time(group, rank, tstart_comm)
+    comm_time[run][rank] += dur
+    op1_comm_time[run][rank] += dur
+
+    # partition A * G^l by block rows and get block row for this process
+    # TODO: this might not be space-efficient
+    red_partitions = list(torch.split(ag, n_per_proc, dim=0))
+    grad_input = red_partitions[rank]
+
+    return grad_input
+
 def outer_product2(inputs, ag, rank, size, group):
     global comm_time
     global comp_time
     global dcomp_time
-    global op_comm_time
+    global op2_comm_time
     global run
 
     tstart_comp = start_time(group, rank)
@@ -160,7 +183,7 @@ def outer_product2(inputs, ag, rank, size, group):
 
     dur = stop_time(group, rank, tstart_comm)
     comm_time[run][rank] += dur
-    op_comm_time[run][rank] += dur
+    op2_comm_time[run][rank] += dur
 
     return grad_weight
 
@@ -170,7 +193,6 @@ def broad_func(node_count, am_partitions, inputs, rank, size, row_groups, col_gr
     global comp_time
     global scomp_time
     global bcast_comm_time
-    global reduce_comm_time
     global run
     global replication
 
@@ -223,13 +245,7 @@ def broad_func(node_count, am_partitions, inputs, rank, size, row_groups, col_gr
         scomp_time[run][rank] += dur
 
     z_loc = z_loc.contiguous()
-
-    tstart_comm = start_time(row_groups[rank_c], rank)
     dist.all_reduce(z_loc, op=dist.reduce_op.SUM, group=row_groups[rank_c])
-    dur = stop_time(row_groups[rank_c], rank, tstart_comm)
-
-    comm_time[run][rank] += dur
-    reduce_comm_time[run][rank] += dur
 
     return z_loc
 
@@ -578,9 +594,10 @@ def run(rank, size, inputs, adj_matrix, data, features, classes, device):
         scomp_time[i] = dict()
         dcomp_time[i] = dict()
         bcast_comm_time[i] = dict()
-        reduce_comm_time[i] = dict()
-        op_comm_time[i] = dict()
         barrier_time[i] = dict()
+        barrier_subset_time[i] = dict()
+        op1_comm_time[i] = dict()
+        op2_comm_time[i] = dict()
 
         total_time[i][rank] = 0.0
         comm_time[i][rank] = 0.0
@@ -588,9 +605,10 @@ def run(rank, size, inputs, adj_matrix, data, features, classes, device):
         scomp_time[i][rank] = 0.0
         dcomp_time[i][rank] = 0.0
         bcast_comm_time[i][rank] = 0.0
-        reduce_comm_time[i][rank] = 0.0
-        op_comm_time[i][rank] = 0.0
         barrier_time[i][rank] = 0.0
+        barrier_subset_time[i][rank] = 0.0
+        op1_comm_time[i][rank] = 0.0
+        op2_comm_time[i][rank] = 0.0
 
         # Do not time first epoch
         timing_on = timing == True
@@ -612,7 +630,6 @@ def run(rank, size, inputs, adj_matrix, data, features, classes, device):
             print("Epoch: {:03d}".format(epoch), flush=True)
 
         # dist.barrier(group)
-        torch.cuda.synchronize(device=device)
         tstop = time.time()
         total_time[i][rank] = tstop - tstart
 
@@ -640,9 +657,10 @@ def run(rank, size, inputs, adj_matrix, data, features, classes, device):
     print(f"rank: {rank} scomp_time: {scomp_time[median_idx][rank]}")
     print(f"rank: {rank} dcomp_time: {dcomp_time[median_idx][rank]}")
     print(f"rank: {rank} bcast_comm_time: {bcast_comm_time[median_idx][rank]}")
-    print(f"rank: {rank} reduce_comm_time: {reduce_comm_time[median_idx][rank]}")
-    print(f"rank: {rank} op_comm_time: {op_comm_time[median_idx][rank]}")
     print(f"rank: {rank} barrier_time: {barrier_time[median_idx][rank]}")
+    print(f"rank: {rank} barrier_subset_time: {barrier_subset_time[median_idx][rank]}")
+    print(f"rank: {rank} op1_comm_time: {op1_comm_time[median_idx][rank]}")
+    print(f"rank: {rank} op2_comm_time: {op2_comm_time[median_idx][rank]}")
     print(f"rank: {rank} {outputs}")
     
     
@@ -731,11 +749,11 @@ def main(P, correctness_check):
         num_classes = dataset.num_classes
     elif graphname == 'Amazon':
         path = osp.join(osp.dirname(osp.realpath(__file__)), '..', 'data', graphname)
-        edge_index = torch.load(path + "/processed/amazon_graph.pt")
-        # edge_index = torch.load("/gpfs/alpine/bif115/scratch/alokt/Amazon/processed/amazon_graph_jsongz.pt")
+        # edge_index = torch.load(path + "/processed/amazon_graph.pt")
+        edge_index = torch.load("/gpfs/alpine/bif115/scratch/alokt/Amazon/processed/amazon_graph_jsongz.pt")
         edge_index = edge_index.t_()
-        # n = 9430088
-        n = 14249640
+        n = 9430088
+        # n = 14249640
         num_features = 300
         num_classes = 24
         # mid_layer = 24
