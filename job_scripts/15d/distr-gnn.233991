@@ -35,3 +35,24 @@ Currently Loaded Modules:
  
 
 g30n17
+
+------------------------------------------------------------
+Sender: LSF System <lsfadmin@batch2>
+Subject: Job 233991: <distr-gnn-15d-p36> in cluster <summit> Exited
+
+Job <distr-gnn-15d-p36> was submitted from host <batch2> by user <alokt> in cluster <summit> at Sun Jul 19 21:59:06 2020
+Job was executed on host(s) <1*batch2>, in queue <batch>, as user <alokt> in cluster <summit> at Sun Jul 19 21:59:20 2020
+                            <42*g30n17>
+                            <42*g30n18>
+                            <42*g31n01>
+                            <42*g31n02>
+                            <42*g31n03>
+                            <42*g31n04>
+</ccs/home/alokt> was used as the home directory.
+</autofs/nccs-svm1_home1/alokt/gnn_training/job_scripts/15d> was used as the working directory.
+Started at Sun Jul 19 21:59:20 2020
+Terminated at Sun Jul 19 22:37:21 2020
+Results reported at Sun Jul 19 22:37:21 2020
+
+The output (if any) is above this job summary.
+

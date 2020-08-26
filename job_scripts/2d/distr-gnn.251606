@@ -1,0 +1,88 @@
+
+CommandNotFoundError: Your shell has not been properly configured to use 'conda activate'.
+To initialize your shell, run
+
+    $ conda init <SHELL_NAME>
+
+Currently supported shells are:
+  - bash
+  - fish
+  - tcsh
+  - xonsh
+  - zsh
+  - powershell
+
+See 'conda init --help' for more information and options.
+
+IMPORTANT: You may need to close and restart your shell after running 'conda init'.
+
+
+
+Lmod is automatically replacing "xl/16.1.1-5" with "gcc/6.4.0".
+
+
+Due to MODULEPATH changes, the following have been reloaded:
+  1) spectrum-mpi/10.3.1.2-20200121
+
+
+Currently Loaded Modules:
+  1) hsi/5.0.2.p5            6) tmux/2.2
+  2) xalt/1.2.0              7) cuda/10.1.243
+  3) lsf-tools/2.0           8) gcc/6.4.0
+  4) darshan-runtime/3.1.7   9) spectrum-mpi/10.3.1.2-20200121
+  5) DefApps
+
+ 
+
+
+
+------------------------------------------------------------
+Sender: LSF System <lsfadmin@batch3>
+Subject: Job 251606: <distr-gnn2d-p36> in cluster <summit> Exited
+
+Job <distr-gnn2d-p36> was submitted from host <login4> by user <alokt> in cluster <summit> at Tue Jul 28 18:22:17 2020
+Job was executed on host(s) <1*batch3>, in queue <batch>, as user <alokt> in cluster <summit> at Wed Jul 29 02:20:40 2020
+                            <42*d06n02>
+                            <42*d06n03>
+                            <42*d06n04>
+                            <42*d06n05>
+                            <42*d06n06>
+                            <42*d06n07>
+                            <42*d06n08>
+                            <42*d06n09>
+                            <42*d06n10>
+                            <42*d06n11>
+                            <42*d06n12>
+                            <42*d06n13>
+                            <42*d06n14>
+                            <42*d06n15>
+                            <42*d06n16>
+                            <42*d06n17>
+                            <42*d06n18>
+                            <42*d07n01>
+                            <42*d07n02>
+                            <42*d07n03>
+                            <42*d07n04>
+                            <42*d07n05>
+                            <42*d07n06>
+                            <42*d07n07>
+                            <42*d07n08>
+                            <42*d07n09>
+                            <42*d07n10>
+                            <42*d07n11>
+                            <42*d07n12>
+                            <42*d07n13>
+                            <42*d07n14>
+                            <42*d34n03>
+                            <42*d34n04>
+                            <42*d34n05>
+                            <42*d34n06>
+                            <42*d34n07>
+</ccs/home/alokt> was used as the home directory.
+</ccs/home/alokt/gnn_training/job_scripts/2d> was used as the working directory.
+Started at Wed Jul 29 02:20:40 2020
+Terminated at Wed Jul 29 02:24:32 2020
+Results reported at Wed Jul 29 02:24:32 2020
+
+The output (if any) is above this job summary.
+

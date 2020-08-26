@@ -1,0 +1,69 @@
+
+CommandNotFoundError: Your shell has not been properly configured to use 'conda activate'.
+To initialize your shell, run
+
+    $ conda init <SHELL_NAME>
+
+Currently supported shells are:
+  - bash
+  - fish
+  - tcsh
+  - xonsh
+  - zsh
+  - powershell
+
+See 'conda init --help' for more information and options.
+
+IMPORTANT: You may need to close and restart your shell after running 'conda init'.
+
+
+
+Lmod is automatically replacing "xl/16.1.1-5" with "gcc/6.4.0".
+
+
+Due to MODULEPATH changes, the following have been reloaded:
+  1) spectrum-mpi/10.3.1.2-20200121
+
+
+Currently Loaded Modules:
+  1) hsi/5.0.2.p5            6) tmux/2.2
+  2) xalt/1.2.0              7) cuda/10.1.243
+  3) lsf-tools/2.0           8) gcc/6.4.0
+  4) darshan-runtime/3.1.7   9) spectrum-mpi/10.3.1.2-20200121
+  5) DefApps
+
+ 
+
+e33n05
+User defined signal 2
+
+------------------------------------------------------------
+Sender: LSF System <lsfadmin@batch3>
+Subject: Job 248596: <distr-gnn-15d-p16> in cluster <summit> Exited
+
+Job <distr-gnn-15d-p16> was submitted from host <login4> by user <alokt> in cluster <summit> at Mon Jul 27 05:51:06 2020
+Job was executed on host(s) <1*batch3>, in queue <batch>, as user <alokt> in cluster <summit> at Mon Jul 27 05:51:23 2020
+                            <42*e33n05>
+                            <42*e33n06>
+                            <42*e33n16>
+                            <42*e34n12>
+                            <42*e34n13>
+                            <42*e34n14>
+                            <42*e34n15>
+                            <42*e34n16>
+                            <42*e34n17>
+                            <42*e34n18>
+                            <42*e35n06>
+                            <42*e35n07>
+                            <42*e35n08>
+                            <42*f07n14>
+                            <42*f08n01>
+                            <42*f08n02>
+</ccs/home/alokt> was used as the home directory.
+</autofs/nccs-svm1_home1/alokt/gnn_training/job_scripts/15d> was used as the working directory.
+Started at Mon Jul 27 05:51:23 2020
+Terminated at Mon Jul 27 07:51:52 2020
+Results reported at Mon Jul 27 07:51:52 2020
+
+The output (if any) is above this job summary.
+

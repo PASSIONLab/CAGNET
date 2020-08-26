@@ -105,20 +105,24 @@ def normalize(adj_matrix):
     return torch.mm(d, torch.mm(adj_matrix, d))
 
 def start_time(group, rank):
+    device = torch.device('cuda:{}'.format(rank_to_devid(rank, acc_per_rank)))
     if not timing:
         return 0.0
     if group is not None:
-       dist.barrier(group)
+        # dist.barrier(group)
+        torch.cuda.synchronize(device=device)
     tstart = 0.0
     if rank == 0:
         tstart = time.time()
     return tstart
 
 def stop_time(group, rank, tstart):
+    device = torch.device('cuda:{}'.format(rank_to_devid(rank, acc_per_rank)))
     if not timing:
         return 0.0
     if group is not None:
-       dist.barrier(group)
+       # dist.barrier(group)
+       torch.cuda.synchronize(device=device)
     tstop = 0.0
     if rank == 0:
         tstop = time.time()
@@ -1273,20 +1277,20 @@ def run(rank, size, inputs, adj_matrix, data, features, mid_layer, classes, devi
         summa_loc_time[i][rank] = 0.0
 
         # Do not time first epoch
-        timing_on = timing == True
-        timing = False
-        outputs = train(inputs_loc, weight1, weight2, inputs.size(0), adj_matrix_loc, None, 
-                                optimizer, data, rank, size, acc_per_rank, group, row_groups, 
-                                col_groups, transpose_group)
-        if timing_on:
-            timing = True
+        # timing_on = timing == True
+        # timing = False
+        # outputs = train(inputs_loc, weight1, weight2, inputs.size(0), adj_matrix_loc, None, 
+        #                         optimizer, data, rank, size, acc_per_rank, group, row_groups, 
+        #                         col_groups, transpose_group)
+        # if timing_on:
+        #     timing = True
 
-        # tstart = start_time(group, rank)
+        # # tstart = start_time(group, rank)
         dist.barrier(group)
         tstart = time.time()
 
         print(f"Starting training... rank {rank} run {i}", flush=True)
-        for epoch in range(1, epochs):
+        for epoch in range(0, epochs):
             outputs = train(inputs_loc, weight1, weight2, inputs.size(0), adj_matrix_loc, None, 
                                     optimizer, data, rank, size, acc_per_rank, group, row_groups, 
                                     col_groups, transpose_group)
@@ -1310,7 +1314,7 @@ def run(rank, size, inputs, adj_matrix, data, features, mid_layer, classes, devi
     else:
         median_idx = torch.cuda.LongTensor([0])
 
-    dist.broadcast(median_idx, src=0, group=group)        
+    # dist.broadcast(median_idx, src=0, group=group)        
     median_idx = median_idx.item()
     print(f"rank: {rank} median_idx: {median_idx}")
     print(f"rank: {rank} Time: {total_time[median_idx][rank]}")
@@ -1405,6 +1409,7 @@ def main(P, correctness_check, acc_per_rank):
         num_features = dataset.num_features
         # num_classes = dataset.num_classes + 9
         num_classes = dataset.num_classes
+        print(f"before edge_index: {data.edge_index.size()}")
     elif graphname == 'Amazon':
         # edge_index = torch.load(path + "/processed/amazon_graph.pt")
         # edge_index = torch.load("/gpfs/alpine/bif115/scratch/alokt/Amazon/processed/amazon_graph_random.pt")

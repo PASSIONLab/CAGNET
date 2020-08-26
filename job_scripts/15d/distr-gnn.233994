@@ -35,3 +35,43 @@ Currently Loaded Modules:
  
 
 h17n07
+User defined signal 2
+
+------------------------------------------------------------
+Sender: LSF System <lsfadmin@batch2>
+Subject: Job 233994: <distr-gnn-15d-p144> in cluster <summit> Exited
+
+Job <distr-gnn-15d-p144> was submitted from host <batch2> by user <alokt> in cluster <summit> at Sun Jul 19 21:59:11 2020
+Job was executed on host(s) <1*batch2>, in queue <batch>, as user <alokt> in cluster <summit> at Sun Jul 19 21:59:32 2020
+                            <42*h17n07>
+                            <42*h17n08>
+                            <42*h17n09>
+                            <42*h17n10>
+                            <42*h17n11>
+                            <42*h17n12>
+                            <42*h17n13>
+                            <42*h17n14>
+                            <42*h28n02>
+                            <42*h28n03>
+                            <42*h28n04>
+                            <42*h29n01>
+                            <42*h29n02>
+                            <42*h29n03>
+                            <42*h34n08>
+                            <42*h34n09>
+                            <42*h34n10>
+                            <42*h34n11>
+                            <42*h34n12>
+                            <42*h34n13>
+                            <42*h34n14>
+                            <42*h34n15>
+                            <42*h34n16>
+                            <42*h34n18>
+</ccs/home/alokt> was used as the home directory.
+</autofs/nccs-svm1_home1/alokt/gnn_training/job_scripts/15d> was used as the working directory.
+Started at Sun Jul 19 21:59:32 2020
+Terminated at Sun Jul 19 23:59:59 2020
+Results reported at Sun Jul 19 23:59:59 2020
+
+The output (if any) is above this job summary.
+

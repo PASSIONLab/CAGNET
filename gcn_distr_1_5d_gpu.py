@@ -44,6 +44,7 @@ comm_time = dict()
 scomp_time = dict()
 dcomp_time = dict()
 bcast_comm_time = dict()
+bcast_words = dict()
 reduce_comm_time = dict()
 op_comm_time = dict()
 barrier_time = dict()
@@ -65,14 +66,15 @@ def start_time(group, rank, subset=False, src=None):
 
     if not timing:
         return 0.0
-    # if group is not None:
-    #     barrier_tstart = time.time()
-    #     dist.barrier(group)
-    #     barrier_tstop = time.time()
-    #     barrier_time[run][rank] += barrier_tstop - barrier_tstart
+    if group is not None:
+        barrier_tstart = time.time()
+        # dist.barrier(group)
+        torch.cuda.synchronize(device=device)
+        barrier_tstop = time.time()
+        barrier_time[run][rank] += barrier_tstop - barrier_tstart
     tstart = 0.0
-    # if rank == 0:
-    tstart = time.time()
+    if rank == 0:
+        tstart = time.time()
     return tstart
 
 def stop_time(group, rank, tstart):
@@ -88,8 +90,8 @@ def stop_time(group, rank, tstart):
         barrier_tstop = time.time()
         barrier_time[run][rank] += barrier_tstop - barrier_tstart
     tstop = 0.0
-    # if rank == 0:
-    tstop = time.time()
+    if rank == 0:
+        tstop = time.time()
     return tstop - tstart
 
 def normalize(adj_matrix):
@@ -170,6 +172,7 @@ def broad_func(node_count, am_partitions, inputs, rank, size, row_groups, col_gr
     global comp_time
     global scomp_time
     global bcast_comm_time
+    global bcast_words
     global reduce_comm_time
     global run
     global replication
@@ -187,7 +190,11 @@ def broad_func(node_count, am_partitions, inputs, rank, size, row_groups, col_gr
     rank_c = rank // replication
     rank_col = rank % replication
 
-    for i in range(size // (replication ** 2)):
+    stages = size // (replication ** 2)
+    if rank_col == replication - 1:
+        stages = (size // replication) - (replication - 1) * stages
+
+    for i in range(stages):
         # q = rank_c // (size // (replication ** 2)) * (size // (replication ** 2)) + i
         # = q * replication + rank_c // (size // (replication **2))
         q = (rank_col * (size // (replication ** 2)) + i) * replication + rank_col
@@ -205,6 +212,7 @@ def broad_func(node_count, am_partitions, inputs, rank, size, row_groups, col_gr
         tstart_comm = start_time(col_groups[rank_col], rank)
 
         inputs_recv = inputs_recv.contiguous()
+        bcast_words[run][rank] += inputs_recv.size(0) * inputs_recv.size(1)
         dist.broadcast(inputs_recv, src=q, group=col_groups[rank_col])
 
         dur = stop_time(col_groups[rank_col], rank, tstart_comm)
@@ -578,6 +586,7 @@ def run(rank, size, inputs, adj_matrix, data, features, classes, device):
         scomp_time[i] = dict()
         dcomp_time[i] = dict()
         bcast_comm_time[i] = dict()
+        bcast_words[i] = dict()
         reduce_comm_time[i] = dict()
         op_comm_time[i] = dict()
         barrier_time[i] = dict()
@@ -588,6 +597,7 @@ def run(rank, size, inputs, adj_matrix, data, features, classes, device):
         scomp_time[i][rank] = 0.0
         dcomp_time[i][rank] = 0.0
         bcast_comm_time[i][rank] = 0.0
+        bcast_words[i][rank] = 0
         reduce_comm_time[i][rank] = 0.0
         op_comm_time[i][rank] = 0.0
         barrier_time[i][rank] = 0.0
@@ -631,7 +641,8 @@ def run(rank, size, inputs, adj_matrix, data, features, classes, device):
     else:
         median_idx = torch.cuda.LongTensor([0])
         
-    dist.broadcast(median_idx, src=0, group=group)        
+    dist.barrier(group)
+    # dist.broadcast(median_idx, src=0, group=group)        
     median_idx = median_idx.item()
     print(f"rank: {rank} median_run: {median_idx}")
     print(f"rank: {rank} total_time: {total_time[median_idx][rank]}")
@@ -640,6 +651,7 @@ def run(rank, size, inputs, adj_matrix, data, features, classes, device):
     print(f"rank: {rank} scomp_time: {scomp_time[median_idx][rank]}")
     print(f"rank: {rank} dcomp_time: {dcomp_time[median_idx][rank]}")
     print(f"rank: {rank} bcast_comm_time: {bcast_comm_time[median_idx][rank]}")
+    print(f"rank: {rank} bcast_words: {bcast_words[median_idx][rank]}")
     print(f"rank: {rank} reduce_comm_time: {reduce_comm_time[median_idx][rank]}")
     print(f"rank: {rank} op_comm_time: {op_comm_time[median_idx][rank]}")
     print(f"rank: {rank} barrier_time: {barrier_time[median_idx][rank]}")
@@ -692,6 +704,7 @@ def main(P, correctness_check):
     mp.set_start_method('spawn', force=True)
     outputs = None
     os.environ["RANK"] = os.environ["OMPI_COMM_WORLD_RANK"]
+
     dist.init_process_group(backend='nccl')
     rank = dist.get_rank()
     size = dist.get_world_size()
@@ -737,6 +750,7 @@ def main(P, correctness_check):
         # edge_index = edge_index.t_()
         # n = 9430088
         n = 14249639
+        # n = 14249640
         num_features = 300
         num_classes = 24
         # mid_layer = 24

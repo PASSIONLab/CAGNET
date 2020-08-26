@@ -80,18 +80,22 @@ def normalize(adj_matrix):
     return torch.mm(d, torch.mm(adj_matrix, d))
 
 def start_time(group, rank):
+    device = torch.device('cuda:{}'.format(rank_to_devid(rank, acc_per_rank)))
     if not timing:
         return 0.0
-    dist.barrier(group)
+    # dist.barrier(group)
+    torch.cuda.synchronize(device=device)
     tstart = 0.0
     if rank == 0:
      tstart = time.time()
     return tstart
 
 def stop_time(group, rank, tstart):
+    device = torch.device('cuda:{}'.format(rank_to_devid(rank, acc_per_rank)))
     if not timing:
         return 0.0
-    dist.barrier(group)
+    # dist.barrier(group)
+    torch.cuda.synchronize(device=device)
     tstop = 0.0
     if rank == 0:
         tstop = time.time()
@@ -1524,6 +1528,7 @@ def run(rank, size, inputs, adj_matrix, data, features, mid_layer, classes, devi
 
     # inputs_loc, adj_matrix_loc, _ = threed_partition(rank, size, inputs, adj_matrix, data, features,
     #                                                     classes, device)
+    print(f"Before partitioning...", flush=True)
     inputs_loc, adj_matrix_loc, _ = twod_partition(rank, size, inputs, adj_matrix, data, features,
                                                         classes, device)
     adj_matrix_loc = adj_matrix_loc.coalesce()
@@ -1531,32 +1536,37 @@ def run(rank, size, inputs, adj_matrix, data, features, mid_layer, classes, devi
     inputs_loc, adj_matrix_loc = threed_partition_loc(rank, size, inputs_loc, adj_matrix_loc.indices(), 
                                                                 adj_matrix_loc.size(0), adj_matrix_loc.size(1),
                                                                 data, features, classes, device)
+    print(f"After partitioning...", flush=True)
 
     adj_matrix_loc = adj_matrix_loc.coalesce()
 
     inputs_loc = inputs_loc.to(device)
     adj_matrix_loc = adj_matrix_loc.to(device)
 
+    print(f"rank: {rank} Before first epoch...", flush=True)
     # Do not time first epoch
     timing_on = timing == True
     timing = False
     outputs = train(inputs_loc, weight1, weight2, inputs.size(0), adj_matrix_loc, None, 
                             optimizer, data, rank, size, acc_per_rank, group, row_groups, 
                             col_groups, transpose_group, c_groups)
+    print(f"After first epoch...", flush=True)
 
     if timing_on:
         timing = True
 
+    dist.barrier(group)
     if rank == 0:
         tstart = time.time()
 
+    print(f"rank: {rank} Starting training...", flush=True)
     for epoch in range(1, epochs):
         if rank == 0:
             tstart_epoch = time.time()
 
-            outputs = train(inputs_loc, weight1, weight2, inputs.size(0), adj_matrix_loc, None, 
-                                    optimizer, data, rank, size, acc_per_rank, group, row_groups, 
-                                    col_groups, transpose_group, c_groups)
+        outputs = train(inputs_loc, weight1, weight2, inputs.size(0), adj_matrix_loc, None, 
+                                optimizer, data, rank, size, acc_per_rank, group, row_groups, 
+                                col_groups, transpose_group, c_groups)
 
         # sync_and_sleep(rank, device)
         if rank == 0:
@@ -1664,9 +1674,11 @@ def main(P, correctness_check, acc_per_rank):
         num_classes = dataset.num_classes + 9
     elif graphname == 'Amazon':
         # edge_index = torch.load(path + "/processed/amazon_graph.pt")
-        edge_index = torch.load("/gpfs/alpine/bif115/scratch/alokt/Amazon/processed/amazon_graph_random.pt")
-        edge_index = edge_index.t_()
-        n = 9430086
+        # edge_index = torch.load("/gpfs/alpine/bif115/scratch/alokt/Amazon/processed/amazon_graph_random.pt")
+        edge_index = torch.load("/gpfs/alpine/bif115/scratch/alokt/Amazon/processed/amazon_large_randomized.pt")
+        # edge_index = edge_index.t_()
+        # n = 9430086
+        n = 14249639
         num_features = 300
         num_classes = 25
         # mid_layer = 24

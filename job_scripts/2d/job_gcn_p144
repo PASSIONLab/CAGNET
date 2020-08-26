@@ -20,7 +20,7 @@ hostarr=(${LSB_MCPU_HOSTS})
 echo ${hostarr[2]}
 
 # declare -a midlayers=("16" "64" "256")
-declare -a midlayers=("64")
+declare -a midlayers=("16")
 declare -a timings=("True" "False")
 
 cd ../../
@@ -41,7 +41,7 @@ for i in "${midlayers[@]}"
         for j in "${timings[@]}"
             do
                 # ddlrun -x WORLD_SIZE=144 -x MASTER_ADDR=${hostarr[2]} -x MASTER_PORT=1234 -accelerators 6 python gcn_distr_2d_gpu.py --accperrank=6 --epochs=30 --graphname=Amazon --timing=$j --midlayer=$i &> outputs/final_outputs/amazon/distr_proc144_2d_output_mid$i\_$j\.txt
-                ddlrun -x WORLD_SIZE=144 -x MASTER_ADDR=${hostarr[2]} -x MASTER_PORT=1234 -accelerators 6 python gcn_distr_2d_gpu_floor.py --accperrank=6 --epochs=50 --graphname=Amazon --timing=$j --midlayer=$i &> outputs/final_outputs/packed/amazon/distr_proc144_2d_output_mid$i\_$j\_e50.txt
+                ddlrun -x WORLD_SIZE=144 -x MASTER_ADDR=${hostarr[2]} -x MASTER_PORT=1234 -accelerators 6 python gcn_distr_2d_gpu_floor.py --accperrank=6 --epochs=50 --graphname=Amazon --timing=$j --midlayer=$i --runcount=1 &> outputs/final_outputs/amazon/distr_proc144_2d_output_mid$i\_$j\_e50.txt
 
             done
     done

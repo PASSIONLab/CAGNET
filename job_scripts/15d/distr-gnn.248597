@@ -1,0 +1,89 @@
+
+CommandNotFoundError: Your shell has not been properly configured to use 'conda activate'.
+To initialize your shell, run
+
+    $ conda init <SHELL_NAME>
+
+Currently supported shells are:
+  - bash
+  - fish
+  - tcsh
+  - xonsh
+  - zsh
+  - powershell
+
+See 'conda init --help' for more information and options.
+
+IMPORTANT: You may need to close and restart your shell after running 'conda init'.
+
+
+
+Lmod is automatically replacing "xl/16.1.1-5" with "gcc/6.4.0".
+
+
+Due to MODULEPATH changes, the following have been reloaded:
+  1) spectrum-mpi/10.3.1.2-20200121
+
+
+Currently Loaded Modules:
+  1) hsi/5.0.2.p5            6) tmux/2.2
+  2) xalt/1.2.0              7) cuda/10.1.243
+  3) lsf-tools/2.0           8) gcc/6.4.0
+  4) darshan-runtime/3.1.7   9) spectrum-mpi/10.3.1.2-20200121
+  5) DefApps
+
+ 
+
+c07n10
+User defined signal 2
+
+------------------------------------------------------------
+Sender: LSF System <lsfadmin@batch1>
+Subject: Job 248597: <distr-gnn-15d-p36> in cluster <summit> Exited
+
+Job <distr-gnn-15d-p36> was submitted from host <login4> by user <alokt> in cluster <summit> at Mon Jul 27 05:51:08 2020
+Job was executed on host(s) <1*batch1>, in queue <batch>, as user <alokt> in cluster <summit> at Mon Jul 27 05:53:19 2020
+                            <42*c07n10>
+                            <42*c07n11>
+                            <42*c07n12>
+                            <42*c07n13>
+                            <42*c07n14>
+                            <42*c07n15>
+                            <42*c09n07>
+                            <42*c09n09>
+                            <42*c09n10>
+                            <42*c09n11>
+                            <42*c09n12>
+                            <42*c11n07>
+                            <42*c13n04>
+                            <42*c13n05>
+                            <42*c13n06>
+                            <42*c13n07>
+                            <42*c13n08>
+                            <42*c13n09>
+                            <42*c13n10>
+                            <42*c13n11>
+                            <42*c13n12>
+                            <42*c13n13>
+                            <42*c13n14>
+                            <42*c13n15>
+                            <42*c13n16>
+                            <42*c13n17>
+                            <42*c13n18>
+                            <42*c25n15>
+                            <42*c25n16>
+                            <42*c25n17>
+                            <42*c25n18>
+                            <42*c26n01>
+                            <42*c26n02>
+                            <42*c26n03>
+                            <42*c26n04>
+                            <42*c26n05>
+</ccs/home/alokt> was used as the home directory.
+</autofs/nccs-svm1_home1/alokt/gnn_training/job_scripts/15d> was used as the working directory.
+Started at Mon Jul 27 05:53:19 2020
+Terminated at Mon Jul 27 07:53:47 2020
+Results reported at Mon Jul 27 07:53:47 2020
+
+The output (if any) is above this job summary.
+

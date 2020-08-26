@@ -30,7 +30,7 @@ for i in "${midlayers[@]}"
     do
         for j in "${timings[@]}"
             do
-                ddlrun -x WORLD_SIZE=8 -x MASTER_ADDR=${hostarr[2]} -x MASTER_PORT=1234 -accelerators 6 python gcn_distr_3d_gpu_edit.py --accperrank=6 --epochs=40 --graphname=Reddit --timing=$j --midlayer=$i &> outputs/final_outputs/packed/reddit/distr_proc8_3d_output_mid$i\_$j\_nomemleak.txt
+                ddlrun -x WORLD_SIZE=8 -x MASTER_ADDR=${hostarr[2]} -x MASTER_PORT=1234 -accelerators 6 python gcn_distr_3d_gpu.py --accperrank=6 --epochs=40 --graphname=Reddit --timing=$j --midlayer=$i &> outputs/final_outputs/reddit/distr_proc8_3d_output_mid$i\_$j\_sync.txt
 
             done
     done

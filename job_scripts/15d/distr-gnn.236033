@@ -1,0 +1,69 @@
+
+CommandNotFoundError: Your shell has not been properly configured to use 'conda activate'.
+To initialize your shell, run
+
+    $ conda init <SHELL_NAME>
+
+Currently supported shells are:
+  - bash
+  - fish
+  - tcsh
+  - xonsh
+  - zsh
+  - powershell
+
+See 'conda init --help' for more information and options.
+
+IMPORTANT: You may need to close and restart your shell after running 'conda init'.
+
+
+
+Lmod is automatically replacing "xl/16.1.1-5" with "gcc/6.4.0".
+
+
+Due to MODULEPATH changes, the following have been reloaded:
+  1) spectrum-mpi/10.3.1.2-20200121
+
+
+Currently Loaded Modules:
+  1) hsi/5.0.2.p5            6) tmux/2.2
+  2) xalt/1.2.0              7) cuda/10.1.243
+  3) lsf-tools/2.0           8) gcc/6.4.0
+  4) darshan-runtime/3.1.7   9) spectrum-mpi/10.3.1.2-20200121
+  5) DefApps
+
+ 
+
+a34n07
+
+------------------------------------------------------------
+Sender: LSF System <lsfadmin@batch1>
+Subject: Job 236033: <distr-gnn-15d-p100> in cluster <summit> Exited
+
+Job <distr-gnn-15d-p100> was submitted from host <login4> by user <alokt> in cluster <summit> at Mon Jul 20 18:43:54 2020
+Job was executed on host(s) <1*batch1>, in queue <batch>, as user <alokt> in cluster <summit> at Mon Jul 20 18:44:09 2020
+                            <42*a34n07>
+                            <42*b11n04>
+                            <42*c07n10>
+                            <42*c07n11>
+                            <42*c07n12>
+                            <42*c26n03>
+                            <42*d16n10>
+                            <42*d25n14>
+                            <42*d25n18>
+                            <42*d26n04>
+                            <42*d26n09>
+                            <42*d26n18>
+                            <42*d28n03>
+                            <42*d30n16>
+                            <42*d31n13>
+                            <42*d32n08>
+                            <42*e30n04>
+</ccs/home/alokt> was used as the home directory.
+</autofs/nccs-svm1_home1/alokt/gnn_training/job_scripts/15d> was used as the working directory.
+Started at Mon Jul 20 18:44:09 2020
+Terminated at Mon Jul 20 19:27:46 2020
+Results reported at Mon Jul 20 19:27:46 2020
+
+The output (if any) is above this job summary.
+

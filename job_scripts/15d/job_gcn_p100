@@ -1,7 +1,7 @@
 #!/bin/bash
 #BSUB -P CSC318LBL
 #BSUB -W 2:00
-#BSUB -nnodes 17
+#BSUB -nnodes 100
 #BSUB -alloc_flags gpumps
 #BSUB -J distr-gnn-15d-p100
 #BSUB -o distr-gnn.%J
@@ -22,36 +22,36 @@ echo ${hostarr[2]}
 # declare -a midlayers=("16" "64" "256")
 declare -a midlayers=("16")
 # declare -a replications=("1" "2" "5" "10")
-declare -a replications=("1" "2")
-declare -a timings=("True" "False")
+declare -a replications=("1" "2" "4")
+declare -a timings=("False" "True")
 
 cd ../../
 
- # Reddit
- for i in "${midlayers[@]}"
-     do
-         for j in "${timings[@]}"
-             do
-                 for k in "${replications[@]}"
-                     do
-                         ddlrun -x WORLD_SIZE=100 -x MASTER_ADDR=${hostarr[2]} -x MASTER_PORT=1234  -accelerators 6 python gcn_distr_1_5d_gpu.py --accperrank=6 --epochs=100 --graphname=Reddit --timing=$j --midlayer=$i --runcount=1 --replication=$k &> outputs/final_outputs/perproc/reddit/distr_proc100_rep$k\_15d_output_mid$i\_$j\_words.txt
-                     done
- 
-             done
-     done
- 
- # Amazon
- for i in "${midlayers[@]}"
-     do
-         for j in "${timings[@]}"
-             do
-                 for k in "${replications[@]}"
-                     do
-                         ddlrun -x WORLD_SIZE=100 -x MASTER_ADDR=${hostarr[2]} -x MASTER_PORT=1234  -accelerators 6 python gcn_distr_1_5d_gpu.py --accperrank=6 --epochs=100 --graphname=Amazon --timing=$j --midlayer=$i --runcount=1 --replication=$k &> outputs/final_outputs/perproc/amazon/distr_proc100_rep$k\_15d_output_mid$i\_$j\_words.txt
-                     done
- 
-             done
-     done
+# Reddit
+for i in "${midlayers[@]}"
+    do
+        for j in "${timings[@]}"
+            do
+                for k in "${replications[@]}"
+                    do
+                        ddlrun -x WORLD_SIZE=100 -x MASTER_ADDR=${hostarr[2]} -x MASTER_PORT=1234  -accelerators 1 python gcn_distr_1_5d_gpu.py --accperrank=1 --epochs=100 --graphname=Reddit --timing=$j --midlayer=$i --runcount=1 --replication=$k &> outputs/final_outputs/reddit/distr_proc100_rep$k\_15d_output_mid$i\_$j\_1gpu.txt
+                    done
+
+            done
+    done
+
+# Amazon
+for i in "${midlayers[@]}"
+    do
+        for j in "${timings[@]}"
+            do
+                for k in "${replications[@]}"
+                    do
+                        ddlrun -x WORLD_SIZE=100 -x MASTER_ADDR=${hostarr[2]} -x MASTER_PORT=1234  -accelerators 1 python gcn_distr_1_5d_gpu.py --accperrank=1 --epochs=100 --graphname=Amazon --timing=$j --midlayer=$i --runcount=1 --replication=$k &> outputs/final_outputs/amazon/distr_proc100_rep$k\_15d_output_mid$i\_$j\_1gpu.txt
+                    done
+
+            done
+    done
 
 # Protein
 for i in "${midlayers[@]}"
@@ -60,7 +60,7 @@ for i in "${midlayers[@]}"
             do
                 for k in "${replications[@]}"
                     do
-                        ddlrun -x WORLD_SIZE=100 -x MASTER_ADDR=${hostarr[2]} -x MASTER_PORT=1234  -accelerators 6 python gcn_distr_1_5d_gpu.py --accperrank=6 --epochs=10 --graphname=subgraph3 --timing=$j --midlayer=$i --runcount=1 --replication=$k &> outputs/final_outputs/perproc/subgraph3/distr_proc100_rep$k\_15d_output_mid$i\_$j\_words.txt
+                        ddlrun -x WORLD_SIZE=100 -x MASTER_ADDR=${hostarr[2]} -x MASTER_PORT=1234  -accelerators 1 python gcn_distr_1_5d_gpu.py --accperrank=1 --epochs=10 --graphname=subgraph3 --timing=$j --midlayer=$i --runcount=1 --replication=$k &> outputs/final_outputs/subgraph3/distr_proc100_rep$k\_15d_output_mid$i\_$j\_1gpu.txt
                     done
 
             done

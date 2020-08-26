@@ -1,0 +1,153 @@
+
+CommandNotFoundError: Your shell has not been properly configured to use 'conda activate'.
+To initialize your shell, run
+
+    $ conda init <SHELL_NAME>
+
+Currently supported shells are:
+  - bash
+  - fish
+  - tcsh
+  - xonsh
+  - zsh
+  - powershell
+
+See 'conda init --help' for more information and options.
+
+IMPORTANT: You may need to close and restart your shell after running 'conda init'.
+
+
+
+Lmod is automatically replacing "xl/16.1.1-5" with "gcc/6.4.0".
+
+
+Due to MODULEPATH changes, the following have been reloaded:
+  1) spectrum-mpi/10.3.1.2-20200121
+
+
+Currently Loaded Modules:
+  1) hsi/5.0.2.p5            6) tmux/2.2
+  2) xalt/1.2.0              7) cuda/10.1.243
+  3) lsf-tools/2.0           8) gcc/6.4.0
+  4) darshan-runtime/3.1.7   9) spectrum-mpi/10.3.1.2-20200121
+  5) DefApps
+
+ 
+
+a06n11
+User defined signal 2
+
+------------------------------------------------------------
+Sender: LSF System <lsfadmin@batch5>
+Subject: Job 249487: <distr-gnn-15d-p100> in cluster <summit> Exited
+
+Job <distr-gnn-15d-p100> was submitted from host <batch3> by user <alokt> in cluster <summit> at Mon Jul 27 15:07:39 2020
+Job was executed on host(s) <1*batch5>, in queue <batch>, as user <alokt> in cluster <summit> at Mon Jul 27 15:30:22 2020
+                            <42*a06n11>
+                            <42*a06n12>
+                            <42*a09n13>
+                            <42*a09n14>
+                            <42*a09n15>
+                            <42*a09n16>
+                            <42*a09n17>
+                            <42*a09n18>
+                            <42*a10n01>
+                            <42*a10n02>
+                            <42*a11n14>
+                            <42*a12n04>
+                            <42*a12n05>
+                            <42*a12n06>
+                            <42*a12n07>
+                            <42*a12n08>
+                            <42*a12n10>
+                            <42*a12n11>
+                            <42*a12n12>
+                            <42*a12n13>
+                            <42*a12n14>
+                            <42*a12n15>
+                            <42*a12n16>
+                            <42*a12n17>
+                            <42*a12n18>
+                            <42*a13n01>
+                            <42*a15n09>
+                            <42*a15n10>
+                            <42*a15n11>
+                            <42*a15n12>
+                            <42*a17n14>
+                            <42*a19n16>
+                            <42*a19n17>
+                            <42*a19n18>
+                            <42*a26n03>
+                            <42*a35n12>
+                            <42*a35n13>
+                            <42*a35n14>
+                            <42*a35n15>
+                            <42*a36n17>
+                            <42*a36n18>
+                            <42*b01n02>
+                            <42*b01n03>
+                            <42*b01n04>
+                            <42*b01n05>
+                            <42*b06n02>
+                            <42*c04n13>
+                            <42*c04n14>
+                            <42*c04n15>
+                            <42*c04n16>
+                            <42*c04n17>
+                            <42*c04n18>
+                            <42*c05n01>
+                            <42*c05n02>
+                            <42*c05n03>
+                            <42*c05n04>
+                            <42*c05n16>
+                            <42*c07n16>
+                            <42*c08n05>
+                            <42*c08n09>
+                            <42*c08n10>
+                            <42*c08n11>
+                            <42*c08n12>
+                            <42*c09n04>
+                            <42*c09n05>
+                            <42*c11n08>
+                            <42*c11n09>
+                            <42*c11n10>
+                            <42*c11n11>
+                            <42*c11n12>
+                            <42*c11n13>
+                            <42*c11n14>
+                            <42*c11n15>
+                            <42*c11n16>
+                            <42*c11n17>
+                            <42*c12n01>
+                            <42*c12n02>
+                            <42*c12n04>
+                            <42*c12n05>
+                            <42*c12n06>
+                            <42*c29n01>
+                            <42*d05n15>
+                            <42*d05n17>
+                            <42*d05n18>
+                            <42*d06n01>
+                            <42*d06n02>
+                            <42*d06n03>
+                            <42*d06n04>
+                            <42*d06n05>
+                            <42*d06n06>
+                            <42*d06n07>
+                            <42*d06n08>
+                            <42*d06n09>
+                            <42*d06n10>
+                            <42*d06n12>
+                            <42*d06n13>
+                            <42*d06n14>
+                            <42*d06n15>
+                            <42*d06n16>
+                            <42*d06n17>
+</ccs/home/alokt> was used as the home directory.
+</autofs/nccs-svm1_home1/alokt/gnn_training/job_scripts/15d> was used as the working directory.
+Started at Mon Jul 27 15:30:22 2020
+Terminated at Mon Jul 27 17:30:44 2020
+Results reported at Mon Jul 27 17:30:44 2020
+
+The output (if any) is above this job summary.
+

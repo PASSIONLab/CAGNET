@@ -35,3 +35,29 @@ Currently Loaded Modules:
  
 
 h15n05
+
+------------------------------------------------------------
+Sender: LSF System <lsfadmin@batch2>
+Subject: Job 233992: <distr-gnn-15d-p64> in cluster <summit> Exited
+
+Job <distr-gnn-15d-p64> was submitted from host <batch2> by user <alokt> in cluster <summit> at Sun Jul 19 21:59:07 2020
+Job was executed on host(s) <1*batch2>, in queue <batch>, as user <alokt> in cluster <summit> at Sun Jul 19 21:59:20 2020
+                            <42*h15n05>
+                            <42*h15n06>
+                            <42*h15n07>
+                            <42*h15n08>
+                            <42*h15n11>
+                            <42*h15n12>
+                            <42*h15n16>
+                            <42*h15n17>
+                            <42*h15n18>
+                            <42*h16n04>
+                            <42*h16n07>
+</ccs/home/alokt> was used as the home directory.
+</autofs/nccs-svm1_home1/alokt/gnn_training/job_scripts/15d> was used as the working directory.
+Started at Sun Jul 19 21:59:20 2020
+Terminated at Sun Jul 19 22:36:40 2020
+Results reported at Sun Jul 19 22:36:40 2020
+
+The output (if any) is above this job summary.
+

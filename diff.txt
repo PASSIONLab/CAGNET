@@ -1,0 +1,893 @@
+26,27d25
+< import statistics
+< 
+39,81c37,57
+< # comp_time = 0.0
+< # comm_time = 0.0
+< # summa_sparse_bcast1 = 0.0
+< # summa_sparse_bcast1_words = 0
+< # summa_sparse_bcast2_words = 0
+< # summa_sparse_bcast2 = 0.0
+< # summa_sparse_bcast2_fwd = 0.0
+< # summa_sparse_bcast2_bwd = 0.0
+< # summa_bcast1 = 0.0
+< # summa_bcast2 = 0.0
+< # summa_sparse_comp = 0.0
+< # summa_comp = 0.0
+< # summa_loc_bcast = 0.0
+< # fwd_time = 0.0
+< # bwd_time = 0.0
+< # transpose_time = 0.0
+< # grad_weight_time = 0.0
+< # loss_calc_time = 0.0
+< # summa_sparse_time = 0.0
+< # summa_time = 0.0
+< # summa_loc_time = 0.0
+< total_time = dict()
+< comp_time = dict()
+< comm_time = dict()
+< summa_sparse_bcast1 = dict()
+< summa_sparse_bcast1_words = dict()
+< summa_sparse_bcast2_words = dict()
+< summa_sparse_bcast2 = dict()
+< summa_sparse_bcast2_fwd = dict()
+< summa_sparse_bcast2_bwd = dict()
+< summa_bcast1 = dict()
+< summa_bcast2 = dict()
+< summa_sparse_comp = dict()
+< summa_comp = dict()
+< summa_loc_bcast = dict()
+< fwd_time = dict()
+< bwd_time = dict()
+< transpose_time = dict()
+< grad_weight_time = dict()
+< loss_calc_time = dict()
+< summa_sparse_time = dict()
+< summa_time = dict()
+< summa_loc_time = dict()
+---
+> comp_time = 0.0
+> comm_time = 0.0
+> summa_sparse_bcast1 = 0.0
+> summa_sparse_bcast1_words = 0
+> summa_sparse_bcast2_words = 0
+> summa_sparse_bcast2 = 0.0
+> summa_sparse_bcast2_fwd = 0.0
+> summa_sparse_bcast2_bwd = 0.0
+> summa_bcast1 = 0.0
+> summa_bcast2 = 0.0
+> summa_sparse_comp = 0.0
+> summa_comp = 0.0
+> summa_loc_bcast = 0.0
+> fwd_time = 0.0
+> bwd_time = 0.0
+> transpose_time = 0.0
+> grad_weight_time = 0.0
+> loss_calc_time = 0.0
+> summa_sparse_time = 0.0
+> summa_time = 0.0
+> summa_loc_time = 0.0
+88,89d63
+< activations = False
+< accuracy = False
+91,92d64
+< run_count = 0
+< run = 0
+108d79
+<     device = torch.device('cuda:{}'.format(rank_to_devid(rank, acc_per_rank)))
+111,113c82
+<     if group is not None:
+<        # dist.barrier(group)
+<        torch.cuda.synchronize(device=device)
+---
+>     dist.barrier(group)
+116c85
+<         tstart = time.time()
+---
+>      tstart = time.time()
+120d88
+<     device = torch.device('cuda:{}'.format(rank_to_devid(rank, acc_per_rank)))
+123,125c91
+<     if group is not None:
+<        # dist.barrier(group)
+<        torch.cuda.synchronize(device=device)
+---
+>     dist.barrier(group)
+172,173d137
+<         # dist.broadcast_multigpu([mat_recvs[0]], src=rank, group=transpose_group)
+<         # dist.broadcast_multigpu([mat_recvs[1]], src=rank_t, group=transpose_group)
+177,178d140
+<         # dist.broadcast_multigpu([mat_recvs[1]], src=rank_t, group=transpose_group)
+<         # dist.broadcast_multigpu([mat_recvs[0]], src=rank, group=transpose_group)
+193d154
+<     global run
+247,249c208
+<         acol = acol.contiguous()
+<         # dist.broadcast_multigpu([acol], row_src_rank, row_groups[row])
+<         dist.broadcast(acol, row_src_rank, row_groups[row])
+---
+>         dist.broadcast(acol.contiguous(), row_src_rank, row_groups[row])
+252,253c211,212
+<         comm_time[run][rank] += dur
+<         summa_bcast1[run][rank] += dur
+---
+>         comm_time += dur
+>         summa_bcast1 += dur
+263,265c222
+<         brow = brow.contiguous()
+<         # dist.broadcast_multigpu([brow], col_src_rank, col_groups[col])
+<         dist.broadcast(brow, col_src_rank, col_groups[col])
+---
+>         dist.broadcast(brow.contiguous(), col_src_rank, col_groups[col])
+268,269c225,226
+<         comm_time[run][rank] += dur
+<         summa_bcast2[run][rank] += dur
+---
+>         comm_time += dur
+>         summa_bcast2 += dur
+271,272c228
+<         # tstart = start_time(row_groups[0], rank)
+<         tstart = start_time(None, rank)
+---
+>         tstart = start_time(row_groups[0], rank)
+276,279c232,234
+<         # dur = stop_time(row_groups[0], rank, tstart)
+<         dur = stop_time(None, rank, tstart)
+<         comp_time[run][rank] += dur
+<         summa_comp[run][rank] += dur
+---
+>         dur = stop_time(row_groups[0], rank, tstart)
+>         comp_time += dur
+>         summa_comp += dur
+298d252
+<     global run
+353c307
+<         # dist.broadcast_multigpu([acol_indices_len], row_src_rank, row_groups[row])
+---
+>         # dist.broadcast(acol_values_len, row_src_rank, row_groups[row])
+371d324
+<         # dist.broadcast_multigpu([acol], row_src_rank, row_groups[row])
+375,376c328,329
+<         comm_time[run][rank] += dur
+<         summa_sparse_bcast1[run][rank] += dur
+---
+>         comm_time += dur
+>         summa_sparse_bcast1 += dur
+378c331
+<             summa_sparse_bcast1_words[run][rank] += 3 * acol_values_len
+---
+>             summa_sparse_bcast1_words += 3 * acol_values_len
+398d350
+<         # tstart = start_time(col_groups[col], rank)
+400d351
+<         # dist.broadcast_multigpu([brow], col_src_rank, col_groups[col])
+404,407c355,356
+<         # dur = stop_time(col_groups[col], rank, tstart)
+< 
+<         comm_time[run][rank] += dur
+<         summa_sparse_bcast2[run][rank] += dur
+---
+>         comm_time += dur
+>         summa_sparse_bcast2 += dur
+409c358
+<             summa_sparse_bcast2_words[run][rank] += brow.size(0) * brow.size(1)
+---
+>             summa_sparse_bcast2_words += brow.size(0) * brow.size(1)
+411,412c360
+<         # tstart = start_time(row_groups[0], rank)
+<         tstart = start_time(None, rank)
+---
+>         tstart = start_time(row_groups[0], rank)
+417,421c365,367
+<         # dur = stop_time(row_groups[0], rank, tstart)
+<         dur = stop_time(None, rank, tstart)
+<         # dur = stop_time(col_groups[col], rank, tstart)
+<         comp_time[run][rank] += dur
+<         summa_sparse_comp[run][rank] += dur
+---
+>         dur = stop_time(row_groups[0], rank, tstart)
+>         comp_time += dur
+>         summa_sparse_comp += dur
+434d379
+<     global run
+485,487c430
+<         acol = acol.contiguous()
+<         # dist.broadcast_multigpu([acol], row_src_rank, row_groups[row])
+<         dist.broadcast(acol, row_src_rank, row_groups[row])
+---
+>         dist.broadcast(acol.contiguous(), row_src_rank, row_groups[row])
+490,491c433,434
+<         comm_time[run][rank] += dur
+<         summa_loc_bcast[run][rank] += dur
+---
+>         comm_time += dur
+>         summa_loc_bcast += dur
+502,503c445
+<         # tstart = start_time(row_groups[0], rank)
+<         tstart = start_time(None, rank)
+---
+>         tstart = start_time(row_groups[0], rank)
+507,509c449,450
+<         # dur = stop_time(row_groups[0], rank, tstart)
+<         dur = stop_time(None, rank, tstart)
+<         comp_time[run][rank] += dur
+---
+>         dur = stop_time(row_groups[0], rank, tstart)
+>         comp_time += dur
+568c509,510
+< def dist_log_softmax2(z, rank, size, width, acc_per_rank, group, grad_output):
+---
+> def dist_log_softmax2(z, rank, size, acc_per_rank, group):
+>     print(f"z: {z}", flush=True)
+574,577c516,518
+< 
+<     chunk_sizes_col = []
+<     width_per_col = width // proc_col
+< 
+---
+>     
+>     maxes = torch.max(z, dim=1, keepdim=True)[0]
+>     maxes_recv = []
+579,586c520
+<         if i == proc_col - 1:
+<             chunk_sizes_col.append(width - width_per_col * (proc_col - 1))
+<         else:
+<             chunk_sizes_col.append(width_per_col)
+< 
+<     width_per_proc = width - width_per_col * (proc_col - 1)
+<     if z.size(1) != width_per_proc:
+<         z = torch.cat((z, torch.cuda.FloatTensor(z.size(0), width_per_proc - z.size(1))), dim=1)
+---
+>         maxes_recv.append(torch.cuda.FloatTensor(maxes.size(), device=device))
+588c522,523
+<     z_recv = []
+---
+>     # dist.all_reduce(maxes, op=dist.reduce_op.MAX, group=group)
+>     dist.all_gather(maxes_recv, maxes, group=group)
+590,619c525,527
+<         z_recv.append(torch.cuda.FloatTensor(z.size()))
+< 
+<     dist.all_gather(z_recv, z, group=group)
+<     z_recv[rank_col] = z
+< 
+<     for i in range(proc_col - 1):
+<         pad_col = width // proc_col
+<         z_recv[i] = z_recv[i][:,:pad_col]
+< 
+<     z = torch.cat(z_recv, dim=1)
+< 
+<     if grad_output is not None:
+<         if grad_output.size(1) != width_per_proc:
+<             grad_output = torch.cat((grad_output, 
+<                                         torch.cuda.FloatTensor(grad_output.size(0), 
+<                                                         width_per_proc - grad_output.size(1))), 
+<                                         dim=1)
+< 
+<         grad_output_recv = []
+<         for i in range(proc_col):
+<             grad_output_recv.append(torch.cuda.FloatTensor(grad_output.size()))
+< 
+<         dist.all_gather(grad_output_recv, grad_output, group=group)
+<         grad_output_recv[rank_col] = grad_output
+< 
+<         for i in range(proc_col - 1):
+<             pad_col = width // proc_col
+<             grad_output_recv[i] = grad_output_recv[i][:,:pad_col]
+< 
+<         grad_output = torch.cat(grad_output_recv, dim=1)
+---
+>         maxes_recv[rank_col].requires_grad = True
+>     maxes_recv[rank_col] = maxes
+>     maxes = torch.max(torch.cat(maxes_recv, dim=1), dim=1, keepdim=True)[0]
+621d528
+<     maxes = torch.max(z, dim=1, keepdim=True)[0]
+623,626c530
+<     sm_sum = torch.sum(h, dim=1, keepdim=True)
+<     sm_sum = torch.log(sm_sum)
+< 
+<     h = z - maxes - sm_sum
+---
+>     # sm_sum = torch.sum(h, dim=1, keepdim=True)
+628,643c532,542
+<     # if h.requires_grad:
+<     #     if rank_col == 0:
+<     #         sm_sigma = torch.autograd.grad(outputs=h, inputs=z,
+<     #                                             grad_outputs=grad_output)[0]
+<     #         print(f"rank: {rank} sm_sigma: {sm_sigma}", flush=True)
+<     #     else:
+<     #         sm_sigma = torch.autograd.grad(outputs=h, inputs=z,
+<     #                                             grad_outputs=grad_output)[0]
+<     #         print(f"rank: {rank} sm_sigma: {sm_sigma}", flush=True)
+< 
+<     # Only works for P = 4
+<     # if rank_col == 0:
+<     #     return h[:,:width_per_proc]
+<     # else:
+<     #     return h[:,width_per_proc:]
+<     return h, z, grad_output
+---
+>     # sm_sum_recv = []
+>     # for i in range(proc_col):
+>     #     sm_sum_recv.append(torch.cuda.FloatTensor(sm_sum.size(), device=device))
+> 
+>     # # dist.all_reduce(sm_sum, op=dist.reduce_op.SUM, group=group)
+>     # dist.all_gather(sm_sum_recv, sm_sum, group=group)
+>     # sm_sum_recv[rank_col] = sm_sum
+>     # sm_sum = torch.sum(torch.cat(sm_sum_recv, dim=1), dim=1, keepdim=True)
+>     # sm_sum = torch.log(sm_sum)
+>     # h = z - maxes - sm_sum
+>     return h
+658d556
+<         global run
+683c581
+<         tmp_summa_sparse_bcast2 = summa_sparse_bcast2[run][rank]
+---
+>         tmp_summa_sparse_bcast2 = summa_sparse_bcast2
+722c620
+<         summa_sparse_bcast2_fwd[run][rank] += summa_sparse_bcast2[run][rank] - tmp_summa_sparse_bcast2
+---
+>         summa_sparse_bcast2_fwd += summa_sparse_bcast2 - tmp_summa_sparse_bcast2
+724,733c622,628
+<         if activations:
+<             if func is F.log_softmax:
+<                 h = dist_log_softmax(z, rank, size, acc_per_rank, row_groups[rank_row])
+<             elif func is F.relu:
+<                 h = func(z)
+<             else:
+<                 h = z
+<             return h
+<         else:
+<             return z
+---
+>         # Worry about activation later
+>         # if func is F.log_softmax:
+>         #     h = dist_log_softmax(z, rank, size, acc_per_rank, row_groups[rank_row])
+>         # elif func is F.relu:
+>         #     h = func(z)
+>         # else:
+>         #     h = z
+738c633
+<         # return z
+---
+>         return z
+747d641
+<         global run
+771,804c665,677
+<         if activations:
+<             with torch.set_grad_enabled(True):
+<                 if func is F.log_softmax:
+<                     # func_eval = dist_log_softmax2(z, rank, size, acc_per_rank, row_groups[rank_row])
+<                     func_eval, z_gathered, go_gathered = dist_log_softmax2(z, rank, size, 
+<                                                                     weight.size(1), 
+<                                                                     acc_per_rank, 
+<                                                                     row_groups[rank_row], grad_output)
+<                     width = z_gathered.size(1)
+< 
+<                     sigmap = torch.autograd.grad(outputs=func_eval, inputs=z_gathered,
+<                                                     grad_outputs=go_gathered)[0]
+< 
+<                     chunk_sizes_col = []
+<                     sigmap_per_col = width // proc_col
+< 
+<                     for i in range(proc_col):
+<                         if i == proc_col - 1:
+<                             chunk_sizes_col.append(width - sigmap_per_col * (proc_col - 1))
+<                         else:
+<                             chunk_sizes_col.append(sigmap_per_col)
+< 
+<                     grad_output = sigmap.split(chunk_sizes_col, dim=1)[rank_col]
+<                     del z_gathered
+<                     del go_gathered
+<                 elif func is F.relu:
+<                     func_eval = func(z)
+<                     sigmap = torch.autograd.grad(outputs=func_eval, inputs=z,grad_outputs=grad_output)[0]
+<                     grad_output = sigmap
+<                 else:
+<                     func_eval = z
+<                     sigmap = torch.autograd.grad(outputs=func_eval, inputs=z,grad_outputs=grad_output)[0]
+<                     grad_output = sigmap
+< 
+---
+>         # Worry about activation later
+>         # with torch.set_grad_enabled(True):
+>         #     if func is F.log_softmax:
+>         #         func_eval = dist_log_softmax2(z, rank, size, acc_per_rank, row_groups[rank_row])
+>         #     elif func is F.relu:
+>         #         func_eval = func(z)
+>         #     else:
+>         #         func_eval = z
+> 
+>         #     # sigmap = torch.autograd.grad(outputs=func_eval, inputs=z,grad_outputs=grad_output)[0]
+>         #     sigmap = torch.autograd.grad(outputs=func_eval, inputs=z,grad_outputs=grad_output)[0]
+>         #     print(f"rank: {rank} sigmap: {sigmap}", flush=True)
+>         #     grad_output = sigmap
+806c679
+<         tmp_summa_sparse_bcast2 = summa_sparse_bcast2[run][rank]
+---
+>         tmp_summa_sparse_bcast2 = summa_sparse_bcast2
+848,849c721
+<         # tstart_transpose = start_time(row_groups[0], rank)
+<         tstart_transpose = start_time(transpose_group, rank)
+---
+>         tstart_transpose = start_time(row_groups[0], rank)
+852,853c724
+<         # transpose_time[run][rank] += stop_time(row_groups[0], rank, tstart_transpose)
+<         transpose_time[run][rank] += stop_time(transpose_group, rank, tstart_transpose)
+---
+>         transpose_time += stop_time(row_groups[0], rank, tstart_transpose)
+883d753
+<         # dist.all_gather_multigpu([grad_weight_recv], [grad_weight])
+909c779
+<         summa_sparse_bcast2_bwd[run][rank] += summa_sparse_bcast2[run][rank] - tmp_summa_sparse_bcast2
+---
+>         summa_sparse_bcast2_bwd += summa_sparse_bcast2 - tmp_summa_sparse_bcast2
+922d791
+<     global run
+958c827
+<         # tstart_loss_calc = start_time(row_groups[0], rank)
+---
+>         tstart_loss_calc = start_time(row_groups[0], rank)
+977,978d845
+<         # dist.reduce_multigpu([loss_calc], dst=rank_row_src, op=dist.reduce_op.SUM, group=row_groups[rank_row])
+<         # dist.broadcast_multigpu([loss_calc], src=rank_row_src, group=row_groups[rank_row]) 
+985,986c852
+<         # loss_calc_time[run][rank] += stop_time(row_groups[0], rank, tstart_loss_calc)
+< 
+---
+>         loss_calc_time += stop_time(row_groups[0], rank, tstart_loss_calc)
+1002a869
+>     datay_rank = torch.split(data.y, vertex_count)[rank]
+1004,1005c871,879
+<         pred = logits[mask].max(1)[1]
+<         acc = pred.eq(data.y[mask]).sum().item() / mask.sum().item()
+---
+>         mask_rank = torch.split(mask, vertex_count)[rank]
+>         count = mask_rank.nonzero().size(0)
+>         if count > 0:
+>             pred = logits[mask_rank].max(1)[1]
+>             acc = pred.eq(datay_rank[mask_rank]).sum().item() / mask_rank.sum().item()
+>             # pred = logits[mask].max(1)[1]
+>             # acc = pred.eq(data.y[mask]).sum().item() / mask.sum().item()
+>         else:
+>             acc = -1
+1007,1010d880
+< 
+<     if len(accs) != 3:
+<         accs = accs + [0] * (3 - len(accs))
+< 
+1012,1025d881
+<     # logits, accs = outputs, []
+<     # datay_rank = torch.split(data.y, vertex_count)[rank]
+<     # for _, mask in data('train_mask', 'val_mask', 'test_mask'):
+<     #     mask_rank = torch.split(mask, vertex_count)[rank]
+<     #     count = mask_rank.nonzero().size(0)
+<     #     if count > 0:
+<     #         pred = logits[mask_rank].max(1)[1]
+<     #         acc = pred.eq(datay_rank[mask_rank]).sum().item() / mask_rank.sum().item()
+<     #         # pred = logits[mask].max(1)[1]
+<     #         # acc = pred.eq(data.y[mask]).sum().item() / mask.sum().item()
+<     #     else:
+<     #         acc = -1
+<     #     accs.append(acc)
+<     # return accs
+1050c906
+<         return adj_part
+---
+>         return
+1052,1081c908,915
+<     adj_part = adj_part.coalesce()
+<     deg = torch.histc(adj_matrix[0].double(), bins=node_count)
+<     deg = deg.pow(-0.5)
+< 
+<     row_len = adj_part.size(0)
+<     col_len = adj_part.size(1)
+< 
+<     dleft = torch.sparse_coo_tensor([np.arange(0, row_len).tolist(),
+<                                      np.arange(0, row_len).tolist()],
+<                                      deg[row_vtx:(row_vtx + row_len)].float(),
+<                                      size=(row_len, row_len),
+<                                      requires_grad=False, device=torch.device("cpu"))
+< 
+<     dright = torch.sparse_coo_tensor([np.arange(0, col_len).tolist(),
+<                                      np.arange(0, col_len).tolist()],
+<                                      deg[col_vtx:(col_vtx + col_len)].float(),
+<                                      size=(col_len, col_len),
+<                                      requires_grad=False, device=torch.device("cpu"))
+<     # adj_part = torch.sparse.mm(torch.sparse.mm(dleft, adj_part), dright)
+<     ad_ind, ad_val = torch_sparse.spspmm(adj_part._indices(), adj_part._values(), 
+<                                             dright._indices(), dright._values(),
+<                                             adj_part.size(0), adj_part.size(1), dright.size(1))
+< 
+<     adj_part_ind, adj_part_val = torch_sparse.spspmm(dleft._indices(), dleft._values(), 
+<                                                         ad_ind, ad_val,
+<                                                         dleft.size(0), dleft.size(1), adj_part.size(1))
+< 
+<     adj_part = torch.sparse_coo_tensor(adj_part_ind, adj_part_val, 
+<                                                 size=(adj_part.size(0), adj_part.size(1)),
+<                                                 requires_grad=False, device=torch.device("cpu"))
+---
+>     # Scale each edge (u, v) by 1 / (sqrt(u) * sqrt(v))
+>     indices = adj_part._indices()
+>     values = adj_part._values()
+> 
+>     deg_map = dict()
+>     for i in range(adj_part._nnz()):
+>         u = indices[0][i] + row_vtx
+>         v = indices[1][i] + col_vtx
+1083c917,950
+<     return adj_part
+---
+>         if u.item() in deg_map:
+>             degu = deg_map[u.item()]
+>         else:
+>             degu = (adj_matrix[0] == u).sum().item()
+>             deg_map[u.item()] = degu
+> 
+>         if v.item() in deg_map:
+>             degv = deg_map[v.item()]
+>         else:
+>             degv = (adj_matrix[0] == v).sum().item()
+>             deg_map[v.item()] = degv
+> 
+>         values[i] = values[i] / (math.sqrt(degu) * math.sqrt(degv))
+>     
+>     # deg = torch.histc(adj_matrix[0].float(), bins=node_count)
+>     # deg = deg.pow(-0.5)
+> 
+>     # row_len = adj_part.size(0)
+>     # col_len = adj_part.size(1)
+> 
+>     # dleft = torch.sparse_coo_tensor([np.arange(row_vtx, row_vtx + row_len).tolist(),
+>     #                                  np.arange(row_vtx, row_vtx + row_len).tolist()],
+>     #                                  deg[row_vtx:(row_vtx + row_len)],
+>     #                                  size=(row_len, row_len),
+>     #                                  requires_grad=False)
+> 
+>     # dright = torch.sparse_coo_tensor([np.arange(col_vtx, col_vtx + col_len).tolist(),
+>     #                                  np.arange(col_vtx, col_vtx + col_len).tolist()],
+>     #                                  deg[row_vtx:(col_vtx + col_len)],
+>     #                                  size=(col_len, col_len),
+>     #                                  requires_grad=False)
+> 
+>     # adj_part = torch.sparse.mm(torch.sparse.mm(dleft, adj_part), dright)
+>     # return adj_part
+1120,1121c987,988
+<                 am_pbyp[i] = scale_elements(adj_matrix, am_pbyp[i], node_count, vtx_indices[i], 
+<                                                     vtx_indices[rank_col])
+---
+>                 scale_elements(adj_matrix, am_pbyp[i], node_count, vtx_indices[i], 
+>                                     vtx_indices[rank_col])
+1127,1128c994,995
+<                 am_pbyp[i] = scale_elements(adj_matrix, am_pbyp[i], node_count, vtx_indices[i], 
+<                                                     vtx_indices[rank_col])
+---
+>                 scale_elements(adj_matrix, am_pbyp[i], node_count, vtx_indices[i], 
+>                                     vtx_indices[rank_col])
+1168,1169d1034
+<     global timing
+<     global run
+1183,1185d1047
+<     if rank_row >= proc_row or rank_col >= proc_col:
+<         return
+< 
+1207,1290c1069,1072
+<     for i in range(run_count):
+<         run = i
+<         torch.manual_seed(0)
+<         weight1_nonleaf = torch.rand(features, mid_layer, requires_grad=True)
+<         weight1_nonleaf = weight1_nonleaf.to(device)
+<         weight1_nonleaf.retain_grad()
+< 
+<         weight2_nonleaf = torch.rand(mid_layer, classes, requires_grad=True)
+<         weight2_nonleaf = weight2_nonleaf.to(device)
+<         weight2_nonleaf.retain_grad()
+< 
+<         weight1 = Parameter(weight1_nonleaf)
+<         weight2 = Parameter(weight2_nonleaf)
+< 
+<         optimizer = torch.optim.Adam([weight1, weight2], lr=0.01)
+< 
+<         inputs_loc, adj_matrix_loc, _ = twod_partition(rank, size, inputs, adj_matrix, data, features,
+<                                                             classes, device)
+< 
+<         adj_matrix_loc = adj_matrix_loc.coalesce()
+< 
+<         inputs_loc = inputs_loc.to(device)
+<         adj_matrix_loc = adj_matrix_loc.to(device)
+< 
+<         print(f"rank: {rank} adj_matrix_loc.nnz: {adj_matrix_loc._nnz()}")
+< 
+<         total_time[i] = dict()
+<         comp_time[i] = dict()
+<         comm_time[i] = dict()
+<         summa_sparse_bcast1[i] = dict()
+<         summa_sparse_bcast1_words[i] = dict()
+<         summa_sparse_bcast2_words[i] = dict()
+<         summa_sparse_bcast2[i] = dict()
+<         summa_sparse_bcast2_fwd[i] = dict()
+<         summa_sparse_bcast2_bwd[i] = dict()
+<         summa_bcast1[i] = dict()
+<         summa_bcast2[i] = dict()
+<         summa_sparse_comp[i] = dict()
+<         summa_comp[i] = dict()
+<         summa_loc_bcast[i] = dict()
+<         fwd_time[i] = dict()
+<         bwd_time[i] = dict()
+<         transpose_time[i] = dict()
+<         grad_weight_time[i] = dict()
+<         loss_calc_time[i] = dict()
+<         summa_sparse_time[i] = dict()
+<         summa_time[i] = dict()
+<         summa_loc_time[i] = dict()
+< 
+<         total_time[i][rank] = 0.0
+<         comp_time[i][rank] = 0.0
+<         comm_time[i][rank] = 0.0
+<         summa_sparse_bcast1[i][rank] = 0.0
+<         summa_sparse_bcast1_words[i][rank] = 0.0
+<         summa_sparse_bcast2_words[i][rank] = 0.0
+<         summa_sparse_bcast2[i][rank] = 0.0
+<         summa_sparse_bcast2_fwd[i][rank] = 0.0
+<         summa_sparse_bcast2_bwd[i][rank] = 0.0
+<         summa_bcast1[i][rank] = 0.0
+<         summa_bcast2[i][rank] = 0.0
+<         summa_sparse_comp[i][rank] = 0.0
+<         summa_comp[i][rank] = 0.0
+<         summa_loc_bcast[i][rank] = 0.0
+<         fwd_time[i][rank] = 0.0
+<         bwd_time[i][rank] = 0.0
+<         transpose_time[i][rank] = 0.0
+<         grad_weight_time[i][rank] = 0.0
+<         loss_calc_time[i][rank] = 0.0
+<         summa_sparse_time[i][rank] = 0.0
+<         summa_time[i][rank] = 0.0
+<         summa_loc_time[i][rank] = 0.0
+< 
+<         # Do not time first epoch
+<         timing_on = timing == True
+<         timing = False
+<         outputs = train(inputs_loc, weight1, weight2, inputs.size(0), adj_matrix_loc, None, 
+<                                 optimizer, data, rank, size, acc_per_rank, group, row_groups, 
+<                                 col_groups, transpose_group)
+<         if timing_on:
+<             timing = True
+< 
+<         # tstart = start_time(group, rank)
+<         dist.barrier(group)
+<         tstart = time.time()
+---
+>     torch.manual_seed(0)
+>     weight1_nonleaf = torch.rand(features, mid_layer, requires_grad=True)
+>     weight1_nonleaf = weight1_nonleaf.to(device)
+>     weight1_nonleaf.retain_grad()
+1292,1297c1074,1076
+<         print(f"Starting training... rank {rank} run {i}", flush=True)
+<         for epoch in range(1, epochs):
+<             outputs = train(inputs_loc, weight1, weight2, inputs.size(0), adj_matrix_loc, None, 
+<                                     optimizer, data, rank, size, acc_per_rank, group, row_groups, 
+<                                     col_groups, transpose_group)
+<             print("Epoch: {:03d}".format(epoch), flush=True)
+---
+>     weight2_nonleaf = torch.rand(mid_layer, classes, requires_grad=True)
+>     weight2_nonleaf = weight2_nonleaf.to(device)
+>     weight2_nonleaf.retain_grad()
+1299,1302c1078,1079
+<         # dur = stop_time(group, rank, tstart)
+<         dist.barrier(group)
+<         tstop = time.time()
+<         total_time[i][rank] = tstop - tstart
+---
+>     weight1 = Parameter(weight1_nonleaf)
+>     weight2 = Parameter(weight2_nonleaf)
+1304,1316c1081
+<     # Get median runtime according to rank0 and print that run's breakdown
+<     dist.barrier(group)
+<     if rank == 0:
+<         total_times_r0 = [] 
+<         for i in range(run_count):
+<             total_times_r0.append(total_time[i][0])
+< 
+<         print(f"total_times_r0: {total_times_r0}")
+<         median_run_time = statistics.median(total_times_r0)
+<         median_idx = total_times_r0.index(median_run_time)
+<         median_idx = torch.cuda.LongTensor([median_idx])
+<     else:
+<         median_idx = torch.cuda.LongTensor([0])
+---
+>     optimizer = torch.optim.Adam([weight1, weight2], lr=0.01)
+1318,1353c1083,1084
+<     dist.broadcast(median_idx, src=0, group=group)        
+<     median_idx = median_idx.item()
+<     print(f"rank: {rank} median_idx: {median_idx}")
+<     print(f"rank: {rank} Time: {total_time[median_idx][rank]}")
+<     print(f"rank: {rank} comm_time: {comm_time[median_idx][rank]}")
+<     print(f"rank: {rank} comp_time: {comp_time[median_idx][rank]}")
+<     print(f"rank: {rank} summa_sparse_comp: {summa_sparse_comp[median_idx][rank]}")
+<     print(f"rank: {rank} summa_sparse_bcast1: {summa_sparse_bcast1[median_idx][rank]}")
+<     print(f"rank: {rank} summa_sparse_bcast1_words: {summa_sparse_bcast1_words[median_idx][rank]}")
+<     print(f"rank: {rank} summa_sparse_bcast2: {summa_sparse_bcast2[median_idx][rank]}")
+<     print(f"rank: {rank} summa_sparse_bcast2_fwd: {summa_sparse_bcast2_fwd[median_idx][rank]}")
+<     print(f"rank: {rank} summa_sparse_bcast2_bwd: {summa_sparse_bcast2_bwd[median_idx][rank]}")
+<     print(f"rank: {rank} summa_sparse_bcast2_words: {summa_sparse_bcast2_words[median_idx][rank]}")
+<     print(f"rank: {rank} summa_comp: {summa_comp[median_idx][rank]}")
+<     print(f"rank: {rank} summa_bcast1: {summa_bcast1[median_idx][rank]}")
+<     print(f"rank: {rank} summa_bcast2: {summa_bcast2[median_idx][rank]}")
+<     print(f"rank: {rank} summa_loc_bcast: {summa_loc_bcast[median_idx][rank]}")
+<     print(f"rank: {rank} transpose_time: {transpose_time[median_idx][rank]}")
+<     print(f"rank: {rank} grad_weight_time: {grad_weight_time[median_idx][rank]}")
+<     print(f"rank: {rank} loss_calc_time: {loss_calc_time[median_idx][rank]}")
+<     print(f"rank: {rank} summa_sparse_time: {summa_sparse_time[median_idx][rank]}")
+<     print(f"rank: {rank} summa_time: {summa_time[median_idx][rank]}")
+<     print(f"rank: {rank} summa_loc_time: {summa_loc_time[median_idx][rank]}")
+<     print(f"rank: {rank} {outputs}")
+<     
+<     # All-gather outputs to test accuracy
+<     if accuracy:
+<         # All-gather across process row
+<         output_parts_row = []
+<         width_per_proc = classes // proc_col
+<         for i in range(proc_col):
+<             output_parts_row.append(torch.cuda.FloatTensor(outputs.size(0), classes - width_per_proc * (proc_col - 1)))
+< 
+<         if outputs.size(1) != classes - width_per_proc * (proc_col - 1):
+<             pad_col = (classes - width_per_proc * (proc_col - 1)) - outputs.size(1)
+<             outputs = torch.cat((outputs, torch.cuda.FloatTensor(outputs.size(0), pad_col, device=device)), dim=1)
+---
+>     inputs_loc, adj_matrix_loc, _ = twod_partition(rank, size, inputs, adj_matrix, data, features,
+>                                                         classes, device)
+1355,1357c1086
+<         dist.all_gather(output_parts_row, outputs, group=row_groups[rank_row])
+<         for i in range(proc_col - 1):
+<             output_parts_row[i] = output_parts_row[i][:,:width_per_proc]
+---
+>     adj_matrix_loc = adj_matrix_loc.coalesce()
+1359d1087
+<         outputs_row = torch.cat(output_parts_row, dim=1)
+1361,1365c1089,1090
+<         # All-gather across process col
+<         output_parts_col = []
+<         height_per_proc = inputs.size(0) // proc_row
+<         for i in range(proc_row):
+<             output_parts_col.append(torch.cuda.FloatTensor(inputs.size(0) - height_per_proc * (proc_row - 1), classes))
+---
+>     inputs_loc = inputs_loc.to(device)
+>     adj_matrix_loc = adj_matrix_loc.to(device)
+1367,1369c1092,1094
+<         if outputs_row.size(0) != inputs.size(0) - height_per_proc * (proc_row - 1):
+<             pad_row = (inputs.size(0) - height_per_proc * (proc_col - 1)) - outputs_row.size(0)
+<             outputs_row = torch.cat((outputs_row, torch.cuda.FloatTensor(pad_row, classes, device=device)), dim=0)
+---
+>     # tstart = start_time(group, rank)
+>     if rank == 0:
+>         tstart = time.time()
+1371,1373c1096,1127
+<         dist.all_gather(output_parts_col, outputs_row, group=col_groups[rank_col])
+<         for i in range(proc_row - 1):
+<             output_parts_col[i] = output_parts_col[i][:height_per_proc,:]
+---
+>     for epoch in range(epochs):
+>         if rank == 0:
+>             tstart_epoch = time.time()
+>         outputs = train(inputs_loc, weight1, weight2, inputs.size(0), adj_matrix_loc, None, 
+>                                 optimizer, data, rank, size, acc_per_rank, group, row_groups, 
+>                                 col_groups, transpose_group)
+>         if rank == 0:
+>             tstop_epoch = time.time()
+>             tstop = time.time()
+>             print(f"Epoch time: {epoch} {tstop_epoch - tstart_epoch}", flush=True)
+>             print("Total Time: " + str(tstop - tstart))
+>             print("comm_time: " + str(comm_time))
+>             print("comp_time: " + str(comp_time))
+>             print(f"summa_sparse_comp: {summa_sparse_comp}")
+>             print(f"summa_sparse_bcast1: {summa_sparse_bcast1}")
+>             print(f"summa_sparse_bcast1_words: {summa_sparse_bcast1_words}")
+>             print(f"summa_sparse_bcast2: {summa_sparse_bcast2}")
+>             print(f"summa_sparse_bcast2_fwd: {summa_sparse_bcast2_fwd}")
+>             print(f"summa_sparse_bcast2_bwd: {summa_sparse_bcast2_bwd}")
+>             print(f"summa_sparse_bcast2_words: {summa_sparse_bcast2_words}")
+>             print(f"summa_comp: {summa_comp}")
+>             print(f"summa_bcast1: {summa_bcast1}")
+>             print(f"summa_bcast2: {summa_bcast2}")
+>             print(f"summa_loc_bcast: {summa_loc_bcast}")
+>             print(f"fwd_time: {fwd_time}")
+>             print(f"bwd_time: {bwd_time}")
+>             print(f"transpose_time: {transpose_time}")
+>             print(f"grad_weight_time: {grad_weight_time}")
+>             print(f"loss_calc_time: {loss_calc_time}")
+>             print(f"summa_sparse_time: {summa_sparse_time}")
+>             print(f"summa_time: {summa_time}")
+>             print("Epoch: {:03d}".format(epoch), flush=True)
+1375c1129,1132
+<         outputs = torch.cat(output_parts_col, dim=0)
+---
+>     # dur = stop_time(group, rank, tstart)
+>     if rank == 0:
+>         tstop = time.time()
+>         print("Time: " + str(tstop - tstart))
+1377,1381c1134,1169
+<         train_acc, val_acc, tmp_test_acc = test(outputs, data, inputs.size(0), rank)
+<         if val_acc > best_val_acc:
+<             best_val_acc = val_acc
+<             test_acc = tmp_test_acc
+<         log = 'Epoch: {:03d}, Train: {:.4f}, Val: {:.4f}, Test: {:.4f}'
+---
+>     if rank == 0:
+>         print("comm_time: " + str(comm_time))
+>         print("comp_time: " + str(comp_time))
+>         print(f"summa_sparse_comp: {summa_sparse_comp}")
+>         print(f"summa_sparse_bcast1: {summa_sparse_bcast1}")
+>         print(f"summa_sparse_bcast1_words: {summa_sparse_bcast1_words}")
+>         print(f"summa_sparse_bcast2: {summa_sparse_bcast2}")
+>         print(f"summa_sparse_bcast2_fwd: {summa_sparse_bcast2_fwd}")
+>         print(f"summa_sparse_bcast2_bwd: {summa_sparse_bcast2_bwd}")
+>         print(f"summa_sparse_bcast2_words: {summa_sparse_bcast2_words}")
+>         print(f"summa_comp: {summa_comp}")
+>         print(f"summa_bcast1: {summa_bcast1}")
+>         print(f"summa_bcast2: {summa_bcast2}")
+>         print(f"summa_loc_bcast: {summa_loc_bcast}")
+>         print(f"fwd_time: {fwd_time}")
+>         print(f"bwd_time: {bwd_time}")
+>         print(f"transpose_time: {transpose_time}")
+>         print(f"grad_weight_time: {grad_weight_time}")
+>         print(f"loss_calc_time: {loss_calc_time}")
+>         print(f"summa_sparse_time: {summa_sparse_time}")
+>         print(f"summa_time: {summa_time}")
+>         print(f"summa_loc_time: {summa_loc_time}")
+>     
+>     # All-gather outputs to test accuracy
+>     # output_parts = []
+>     # for i in range(size):
+>     #     output_parts.append(torch.cuda.FloatTensor(am_partitions[0].size(1), classes).fill_(0))
+> 
+>     # dist.all_gather(output_parts, outputs)
+>     # outputs = torch.cat(output_parts, dim=0)
+> 
+>     # train_acc, val_acc, tmp_test_acc = test(outputs, data, am_partitions[0].size(1), rank)
+>     # if val_acc > best_val_acc:
+>     #     best_val_acc = val_acc
+>     #     test_acc = tmp_test_acc
+>     # log = 'Epoch: {:03d}, Train: {:.4f}, Val: {:.4f}, Test: {:.4f}'
+1383c1171,1172
+<         print(log.format(200, train_acc, best_val_acc, test_acc))
+---
+>     # print(log.format(200, train_acc, best_val_acc, test_acc))
+>     print("rank: " + str(rank) + " " +  str(outputs))
+1411,1412c1200
+<         # num_classes = dataset.num_classes + 9
+<         num_classes = dataset.num_classes
+---
+>         num_classes = dataset.num_classes + 9
+1414,1420c1202,1204
+<         # edge_index = torch.load(path + "/processed/amazon_graph.pt")
+<         # edge_index = torch.load("/gpfs/alpine/bif115/scratch/alokt/Amazon/processed/amazon_graph_random.pt")
+<         edge_index = torch.load("/gpfs/alpine/bif115/scratch/alokt/Amazon/processed/amazon_large_randomized.pt")
+<         # edge_index = edge_index.t_()
+<         # n = 9430086
+<         # n = 9430088
+<         n = 14249639
+---
+>         edge_index = torch.load(path + "/processed/amazon_graph.pt")
+>         edge_index = edge_index.t_()
+>         n = 9430086
+1428d1211
+<         print(f"before edge_index: {edge_index.size()}")
+1494a1278
+>         print("edge count: " + str(len(edge_index[0])))
+1522,1525d1305
+<     parser.add_argument("--runcount", type=int)
+<     parser.add_argument("--normalization", type=str)
+<     parser.add_argument("--activations", type=str)
+<     parser.add_argument("--accuracy", type=str)
+1546,1549d1325
+<     run_count = args.runcount
+<     normalization = args.normalization == "True"
+<     activations = args.activations == "True"
+<     accuracy = args.accuracy == "True"
+1551c1327
+<     if (epochs is None) or (graphname is None) or (timing is None) or (mid_layer is None) or (run_count is None):
+---
+>     if (epochs is None) or (graphname is None) or (timing is None) or (mid_layer is None):
+1555c1331
+<     print(f"Arguments: epochs: {epochs} graph: {graphname} timing: {timing} mid: {mid_layer} norm: {normalization} act: {activations} acc: {accuracy}")
+---
+>     print(f"Arguments: epochs: {epochs} graph: {graphname} timing: {timing} mid: {mid_layer}")

@@ -1,7 +1,7 @@
 #!/bin/bash
 #BSUB -P BIF115
 #BSUB -W 2:00
-#BSUB -nnodes 3
+#BSUB -nnodes 16
 #BSUB -alloc_flags gpumps
 #BSUB -J distr-gnn2d-p16
 #BSUB -o distr-gnn.%J
@@ -14,9 +14,9 @@ module load gcc
 
 module list
 
-hostarr=(${LSB_HOSTS})
+# hostarr=(${LSB_HOSTS})
 # echo $LSB_MCPU_HOSTS
-# hostarr=(${LSB_MCPU_HOSTS})
+hostarr=(${LSB_MCPU_HOSTS})
 echo ${hostarr[2]}
 
 # declare -a midlayers=("16" "64" "256")
@@ -25,22 +25,22 @@ declare -a timings=("True" "False")
 
 cd ../../
 
-# # Reddit
-# for i in "${midlayers[@]}"
-#     do
-#         for j in "${timings[@]}"
-#             do
-#                 ddlrun -x WORLD_SIZE=16 -x MASTER_ADDR=${hostarr[2]} -x MASTER_PORT=1234 -accelerators 6 python gcn_distr_2d_gpu_floor.py --accperrank=6 --epochs=100 --graphname=Reddit --timing=$j --midlayer=$i --runcount=3 &> outputs/final_outputs/perproc/reddit/distr_proc16_2d_output_mid$i\_$j\_nomemleak.txt
-# 
-#             done
-#     done
+# Reddit
+for i in "${midlayers[@]}"
+    do
+        for j in "${timings[@]}"
+            do
+                ddlrun -x WORLD_SIZE=16 -x MASTER_ADDR=${hostarr[2]} -x MASTER_PORT=1234 -accelerators 1 python gcn_distr_2d_gpu_floor.py --accperrank=1 --epochs=100 --graphname=Reddit --timing=$j --midlayer=$i --runcount=1 &> outputs/final_outputs/reddit/distr_proc16_2d_output_mid$i\_$j\_1gpu.txt
+
+            done
+    done
 
 # Amazon
 for i in "${midlayers[@]}"
     do
         for j in "${timings[@]}"
             do
-                ddlrun -x WORLD_SIZE=16 -x MASTER_ADDR=${hostarr[2]} -x MASTER_PORT=1234 -accelerators 6 python gcn_distr_2d_gpu_floor.py --accperrank=6 --epochs=50 --graphname=Amazon --timing=$j --midlayer=$i --runcount=3 &> outputs/final_outputs/perproc/amazon/distr_proc16_2d_output_mid$i\_$j\_e50.txt
+                ddlrun -x WORLD_SIZE=16 -x MASTER_ADDR=${hostarr[2]} -x MASTER_PORT=1234 -accelerators 1 python gcn_distr_2d_gpu_floor.py --accperrank=1 --epochs=50 --graphname=Amazon --timing=$j --midlayer=$i --runcount=1 &> outputs/final_outputs/amazon/distr_proc16_2d_output_mid$i\_$j\_e50_1gpu.txt
 
             done
     done
