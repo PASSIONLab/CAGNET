@@ -13,12 +13,15 @@ distr*.txt
 distr*.prof
 gcn*.txt
 *saved*
+gcn.py
+gcn_conv.py
 gcn_distr.py
 gcn_distr_1_5d_gpu_edit.py
 gcn_distr_2d.py
 gcn_distr_2d_actandnorm.py
 gcn_distr_2d_gen.py
 gcn_distr_2d_gpu.py
+gcn_distr_2d_gpu_gen.py
 gcn_distr_2d_gpu_floor_edit.py
 gcn_distr_2d_gpu_floor_old.py
 gcn_distr_2d_gpu_floor_gpu_gen.py
