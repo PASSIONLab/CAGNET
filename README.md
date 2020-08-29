@@ -71,7 +71,7 @@ To run the CAGNET 1.5D algorithm on Reddit with
 
 run the following command
 
-` ddlrun -x WORLD_SIZE=16 -x MASTER_ADDR=$(echo $LSB_MCPU_HOSTS | cut -d " " -f 3) -x MASTER_PORT=1234 -accelerators 6 python gcn_distr_1_5d.py --accperrank=6 --epochs=100 --graphname=Reddit --timing=False --midlayer=16 --runcount=1 --replication=2`
+` ddlrun -x WORLD_SIZE=16 -x MASTER_ADDR=$(echo $LSB_MCPU_HOSTS | cut -d " " -f 3) -x MASTER_PORT=1234 -accelerators 6 python gcn_distr_15d.py --accperrank=6 --epochs=100 --graphname=Reddit --timing=False --midlayer=16 --runcount=1 --replication=2`
 
 ## Citation
 
