@@ -54,6 +54,7 @@ graphname = ""
 mid_layer = 0
 timing = True
 normalization = False
+activations = False
 device = None
 acc_per_rank = 0
 run_count = 0
@@ -279,14 +280,17 @@ class GCNFunc(torch.autograd.Function):
         z.requires_grad = True
         ctx.z = z
 
-        if func is F.log_softmax:
-            h = func(z, dim=1)
-        elif func is F.relu:
-            h = func(z)
-        else:
-            h = z
+        if activations:
+            if func is F.log_softmax:
+                h = func(z, dim=1)
+            elif func is F.relu:
+                h = func(z)
+            else:
+                h = z
 
-        return h
+            return h
+        else:
+            return z
 
     @staticmethod
     def backward(ctx, grad_output):
@@ -308,13 +312,14 @@ class GCNFunc(torch.autograd.Function):
 
         rank_col = rank % replication
 
-        with torch.set_grad_enabled(True):
-            if func is F.log_softmax:
-                func_eval = func(z, dim=1)
-            elif func is F.relu:
-                func_eval = func(z)
-            else:
-                func_eval = z
+        if activations:
+            with torch.set_grad_enabled(True):
+                if func is F.log_softmax:
+                    func_eval = func(z, dim=1)
+                elif func is F.relu:
+                    func_eval = func(z)
+                else:
+                    func_eval = z
 
             sigmap = torch.autograd.grad(outputs=func_eval, inputs=z, grad_outputs=grad_output)[0]
             grad_output = sigmap
@@ -553,6 +558,7 @@ def run(rank, size, inputs, adj_matrix, data, features, classes, device):
     row_groups, col_groups = get_proc_groups(rank, size) 
 
     rank_c = rank // replication
+    rank_col = rank % replication
     if rank_c >= (size // replication):
         return
 
@@ -662,31 +668,34 @@ def run(rank, size, inputs, adj_matrix, data, features, classes, device):
     
     
     # All-gather outputs to test accuracy
-    # output_parts = []
+    output_parts = []
     # n_per_proc = math.ceil(float(inputs.size(0)) / size)
-    # # print(f"rows: {am_pbyp[-1].size(0)} cols: {classes}", flush=True)
-    # for i in range(size):
-    #     output_parts.append(torch.cuda.FloatTensor(n_per_proc, classes, device=device).fill_(0))
+    n_per_proc = math.ceil(float(inputs.size(0)) / (size / replication))
+    # print(f"rows: {am_pbyp[-1].size(0)} cols: {classes}", flush=True)
+    for i in range(size // replication):
+        output_parts.append(torch.cuda.FloatTensor(n_per_proc, classes, device=device).fill_(0))
 
-    # if outputs.size(0) != n_per_proc:
-    #     pad_row = n_per_proc - outputs.size(0) 
-    #     outputs = torch.cat((outputs, torch.cuda.FloatTensor(pad_row, classes, device=device)), dim=0)
+    if outputs.size(0) != n_per_proc:
+        pad_row = n_per_proc - outputs.size(0) 
+        outputs = torch.cat((outputs, torch.cuda.FloatTensor(pad_row, classes, device=device)), dim=0)
 
     # dist.all_gather(output_parts, outputs)
+    dist.all_gather(output_parts, outputs, group=col_groups[rank_col])
     # output_parts[rank] = outputs
-    # 
-    # padding = inputs.size(0) - n_per_proc * (size - 1)
-    # output_parts[size - 1] = output_parts[size - 1][:padding,:]
+    output_parts[rank_c] = outputs
+    
+    padding = inputs.size(0) - n_per_proc * ((size // replication) - 1)
+    output_parts[(size // replication) - 1] = output_parts[(size // replication) - 1][:padding,:]
 
-    # outputs = torch.cat(output_parts, dim=0)
+    outputs = torch.cat(output_parts, dim=0)
 
-    # train_acc, val_acc, tmp_test_acc = test(outputs, data, am_pbyp[0].size(1), rank)
-    # if val_acc > best_val_acc:
-    #     best_val_acc = val_acc
-    #     test_acc = tmp_test_acc
-    # log = 'Epoch: {:03d}, Train: {:.4f}, Val: {:.4f}, Test: {:.4f}'
+    train_acc, val_acc, tmp_test_acc = test(outputs, data, am_pbyp[0].size(1), rank)
+    if val_acc > best_val_acc:
+        best_val_acc = val_acc
+        test_acc = tmp_test_acc
+    log = 'Epoch: {:03d}, Train: {:.4f}, Val: {:.4f}, Test: {:.4f}'
 
-    # print(log.format(900, train_acc, best_val_acc, test_acc))
+    print(log.format(900, train_acc, best_val_acc, test_acc))
     return outputs
 
 def rank_to_devid(rank, acc_per_rank):
@@ -697,7 +706,7 @@ def init_process(rank, size, inputs, adj_matrix, data, features, classes, device
     if outputs is not None:
         outputs[rank] = run_outputs.detach()
 
-def main(P, correctness_check):
+def main():
     global device
     global graphname
 
@@ -801,14 +810,6 @@ def main(P, correctness_check):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--use_gdc', action='store_true',
-                        help='Use GDC preprocessing.')
-    parser.add_argument('--processes', metavar='P', type=int,
-                        help='Number of processes')
-    parser.add_argument('--correctness', metavar='C', type=str,
-                        help='Run correctness check')
-    parser.add_argument('--local_rank', metavar='C', type=str,
-                        help='Local rank')
     parser.add_argument("--accperrank", type=int)
     parser.add_argument("--epochs", type=int)
     parser.add_argument("--graphname", type=str)
@@ -816,32 +817,27 @@ if __name__ == '__main__':
     parser.add_argument("--midlayer", type=int)
     parser.add_argument("--runcount", type=int)
     parser.add_argument("--replication", type=int)
+    parser.add_argument("--normalization", type=str)
+    parser.add_argument("--activations", type=str)
 
     args = parser.parse_args()
     print(args)
-    P = args.processes
-    correctness_check = args.correctness
-    if P is None:
-        P = 1
 
     acc_per_rank = args.accperrank
-    if correctness_check is None or correctness_check == "nocheck":
-        correctness_check = False
-    else:
-        correctness_check = True
 
     epochs = args.epochs
     graphname = args.graphname
     timing = args.timing == "True"
     mid_layer = args.midlayer
     run_count = args.runcount
+    normalization = args.normalization == "True"
+    activations = args.activations == "True"
     replication = args.replication
 
     if (epochs is None) or (graphname is None) or (timing is None) or (mid_layer is None) or (run_count is None):
         print(f"Error: missing argument {epochs} {graphname} {timing} {mid_layer} {run_count}")
         exit()
 
-    print(f"Arguments: epochs: {epochs} graph: {graphname} timing: {timing} mid: {mid_layer} runs: {run_count} rep: {replication}")
+    print(f"Arguments: epochs: {epochs} graph: {graphname} timing: {timing} mid: {mid_layer} norm: {normalization} act: {activations} runs: {run_count} rep: {replication}")
     
-    print(f"Correctness: {correctness_check}", flush=True)
-    print(main(P, correctness_check))
+    print(main())
