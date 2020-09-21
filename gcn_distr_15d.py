@@ -565,12 +565,7 @@ def run(rank, size, inputs, adj_matrix, data, features, classes, device):
         am_pbyp[i] = am_pbyp[i].t().coalesce().to(device)
 
     adj_matrix_loc.coalesce()
-    nnz = torch.tensor(adj_matrix_loc._nnz(), device=device)
     dist.barrier(group)
-    dist.all_reduce(nnz, op=dist.reduce_op.SUM, group=group)
-
-    print(f"rank: {rank} adj_matrix_loc._nnz(): {adj_matrix_loc._nnz()} nnz: {nnz}")
-    return
 
     for i in range(run_count):
         run = i
