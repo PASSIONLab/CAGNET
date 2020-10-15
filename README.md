@@ -25,10 +25,10 @@ module load ibm-wml-ce/1.7.0-3 # PyTorch 1.3.1, Python 3.6.10
 # PyG and its dependencies
 conda create --name gnn --clone ibm-wml-ce-1.7.0-3
 conda activate gnn
-pip install --no-cache-dir torch-scatter=1.4.0
-pip install --no-cache-dir torch-sparse=0.4.3
-pip install --no-cache-dir torch-cluster=1.4.5
-pip install --no-cache-dir torch-geometric=1.3.2
+pip install --no-cache-dir torch-scatter==1.4.0
+pip install --no-cache-dir torch-sparse==0.4.3
+pip install --no-cache-dir torch-cluster==1.4.5
+pip install --no-cache-dir torch-geometric==1.3.2
 ```
 
 ## Compiling
