@@ -58,8 +58,11 @@ Each file also as the following flags:
 - `--runcount <int>` : Number of times to run training
 - `--normalization <True/False>` : Normalize adjacency matrix in preprocessing
 - `--activations <True/False>` : Enable activation functions between layers
-- `--accuracy <True/False>` : Compute and print accuracy metrics
+- `--accuracy <True/False>` : Compute and print accuracy metrics (Reddit only)
 - `--replication <int>` : Replication factor (1.5D algorithm only)
+- `--download <True/False>` : Download the Reddit dataset
+
+Some of these flags do not currently exist for the 3D algorithm.
 
 ## Running on OLCF Summit (example)
 
@@ -69,9 +72,13 @@ To run the CAGNET 1.5D algorithm on Reddit with
 - 16 hidden layer activations
 - 2-factor replication
 
-run the following command
+run the following command to download the Reddit dataset:
 
-` ddlrun -x WORLD_SIZE=16 -x MASTER_ADDR=$(echo $LSB_MCPU_HOSTS | cut -d " " -f 3) -x MASTER_PORT=1234 -accelerators 6 python gcn_distr_15d.py --accperrank=6 --epochs=100 --graphname=Reddit --timing=False --midlayer=16 --runcount=1 --replication=2`
+`python gcn_distr_15d.py --graphname=Reddit --download=True`
+
+This will download Reddit into `../data`. After downloading the Reddit dataset, run the following command to run training
+
+`ddlrun -x WORLD_SIZE=16 -x MASTER_ADDR=$(echo $LSB_MCPU_HOSTS | cut -d " " -f 3) -x MASTER_PORT=1234 -accelerators 6 python gcn_distr_15d.py --accperrank=6 --epochs=100 --graphname=Reddit --timing=False --midlayer=16 --runcount=1 --replication=2`
 
 ## Citation
 
