@@ -9,7 +9,8 @@ import torch_sparse
 import torch.distributed as dist
 
 from torch_geometric.data import Data, Dataset
-from torch_geometric.datasets import Planetoid, PPI, Reddit
+from torch_geometric.datasets import Planetoid, PPI
+from reddit import Reddit
 from torch_geometric.nn import GCNConv, ChebConv  # noqa
 from torch_geometric.utils import (
         add_remaining_self_loops, 
@@ -90,6 +91,7 @@ accuracy = False
 no_occur_val = 42.1234
 run_count = 0
 run = 0
+download = False
 
 def sync_and_sleep(rank, device):
     torch.cuda.synchronize(device=device)
@@ -1450,6 +1452,9 @@ def main(P, correctness_check, acc_per_rank):
         data.y = torch.rand(n).uniform_(0, num_classes - 1)
         data.train_mask = torch.ones(n).long()
 
+    if download:
+        exit()
+
     os.environ["RANK"] = os.environ["OMPI_COMM_WORLD_RANK"]
     dist.init_process_group(backend='nccl')
     # dist.init_process_group('gloo', init_method='env://')
@@ -1523,6 +1528,7 @@ if __name__ == '__main__':
     parser.add_argument("--normalization", type=str)
     parser.add_argument("--activations", type=str)
     parser.add_argument("--accuracy", type=str)
+    parser.add_argument("--download", type=bool)
     args = parser.parse_args()
     print(args)
     P = args.processes
@@ -1547,10 +1553,12 @@ if __name__ == '__main__':
     normalization = args.normalization == "True"
     activations = args.activations == "True"
     accuracy = args.accuracy == "True"
+    download = args.download
 
-    if (epochs is None) or (graphname is None) or (timing is None) or (mid_layer is None) or (run_count is None):
-        print(f"Error: missing argument {epochs} {graphname} {timing} {mid_layer}")
-        exit()
+    if not download:
+        if (epochs is None) or (graphname is None) or (timing is None) or (mid_layer is None) or (run_count is None):
+            print(f"Error: missing argument {epochs} {graphname} {timing} {mid_layer}")
+            exit()
 
     print(f"Arguments: epochs: {epochs} graph: {graphname} timing: {timing} mid: {mid_layer} norm: {normalization} act: {activations} acc: {accuracy}")
     

@@ -9,7 +9,8 @@ import torch_sparse
 import torch.distributed as dist
 
 from torch_geometric.data import Data, Dataset
-from torch_geometric.datasets import Planetoid, PPI, Reddit
+from torch_geometric.datasets import Planetoid, PPI
+from reddit import Reddit
 from torch_geometric.nn import GCNConv, ChebConv  # noqa
 from torch_geometric.utils import (
         add_remaining_self_loops, 
@@ -1772,31 +1773,17 @@ def main(P, correctness_check, acc_per_rank):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--processes', metavar='P', type=int,
-                        help='Number of processes')
-    parser.add_argument('--correctness', metavar='C', type=str,
-                        help='Run correctness check')
     parser.add_argument("--accperrank", type=int)
     parser.add_argument("--epochs", type=int)
     parser.add_argument("--graphname", type=str)
     parser.add_argument("--timing", type=str)
     parser.add_argument("--midlayer", type=int)
-    parser.add_argument("--local_rank", type=int)
     args = parser.parse_args()
     print(args)
-    P = args.processes
-    correctness_check = args.correctness
-    if P is None:
-        P = 1
 
     acc_per_rank = args.accperrank
     if acc_per_rank is None:
         acc_per_rank = 1
-
-    if correctness_check is None or correctness_check == "nocheck":
-        correctness_check = False
-    else:
-        correctness_check = True
 
     epochs = args.epochs
     graphname = args.graphname

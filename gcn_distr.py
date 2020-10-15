@@ -8,7 +8,8 @@ import torch
 import torch.distributed as dist
 
 from torch_geometric.data import Data, Dataset
-from torch_geometric.datasets import Planetoid, PPI, Reddit
+from torch_geometric.datasets import Planetoid, PPI
+from reddit import Reddit
 from torch_geometric.nn import GCNConv, ChebConv  # noqa
 from torch_geometric.utils import add_remaining_self_loops, to_dense_adj, dense_to_sparse, to_scipy_sparse_matrix
 import torch_geometric.transforms as T
@@ -60,6 +61,7 @@ device = None
 acc_per_rank = 0
 run_count = 0
 run = 0
+download = False
 
 def start_time(group, rank, subset=False, src=None):
     global barrier_time
@@ -675,21 +677,22 @@ def main():
     print(socket.gethostname())
     seed = 0
 
-    mp.set_start_method('spawn', force=True)
-    outputs = None
-    os.environ["RANK"] = os.environ["OMPI_COMM_WORLD_RANK"]
-    dist.init_process_group(backend='nccl')
-    rank = dist.get_rank()
-    size = dist.get_world_size()
-    print("Processes: " + str(size))
+    if not download:
+        mp.set_start_method('spawn', force=True)
+        outputs = None
+        os.environ["RANK"] = os.environ["OMPI_COMM_WORLD_RANK"]
+        dist.init_process_group(backend='nccl')
+        rank = dist.get_rank()
+        size = dist.get_world_size()
+        print("Processes: " + str(size))
 
-    # device = torch.device('cpu')
-    devid = rank_to_devid(rank, acc_per_rank)
-    device = torch.device('cuda:{}'.format(devid))
-    torch.cuda.set_device(device)
-    curr_devid = torch.cuda.current_device()
-    # print(f"curr_devid: {curr_devid}", flush=True)
-    devcount = torch.cuda.device_count()
+        # device = torch.device('cpu')
+        devid = rank_to_devid(rank, acc_per_rank)
+        device = torch.device('cuda:{}'.format(devid))
+        torch.cuda.set_device(device)
+        curr_devid = torch.cuda.current_device()
+        # print(f"curr_devid: {curr_devid}", flush=True)
+        devcount = torch.cuda.device_count()
 
     if graphname == "Cora":
         path = osp.join(osp.dirname(osp.realpath(__file__)), '..', 'data', graphname)
@@ -755,6 +758,9 @@ def main():
         inputs.requires_grad = True
         data.y = data.y.to(device)
 
+    if download:
+        exit()
+
     if normalization:
         adj_matrix, _ = add_remaining_self_loops(edge_index, num_nodes=inputs.size(0))
     else:
@@ -778,6 +784,7 @@ if __name__ == '__main__':
     parser.add_argument("--normalization", type=str)
     parser.add_argument("--activations", type=str)
     parser.add_argument("--accuracy", type=str)
+    parser.add_argument("--download", type=bool)
 
     args = parser.parse_args()
     print(args)
@@ -792,10 +799,12 @@ if __name__ == '__main__':
     normalization = args.normalization == "True"
     activations = args.activations == "True"
     accuracy = args.accuracy == "True"
+    download = args.download
 
-    if (epochs is None) or (graphname is None) or (timing is None) or (mid_layer is None) or (run_count is None):
-        print(f"Error: missing argument {epochs} {graphname} {timing} {mid_layer} {run_count}")
-        exit()
+    if not download:
+        if (epochs is None) or (graphname is None) or (timing is None) or (mid_layer is None) or (run_count is None):
+            print(f"Error: missing argument {epochs} {graphname} {timing} {mid_layer} {run_count}")
+            exit()
 
     print(f"Arguments: epochs: {epochs} graph: {graphname} timing: {timing} mid: {mid_layer} norm: {normalization} act: {activations} acc: {accuracy} runs: {run_count}")
     
