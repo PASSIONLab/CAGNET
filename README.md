@@ -64,7 +64,8 @@ Each file also as the following flags:
 
 Some of these flags do not currently exist for the 3D algorithm.
 
-For the Amazon and subgraph3 (Protein) datasets, the code assumes these datasets exist as COO files in `../data/<graphname>/processed/`, compressed with pickle. For Reddit, PyG handles downloading and accessing the dataset (see below).
+Amazon/Protein datasets must exist as COO files in `../data/<graphname>/processed/`, compressed with pickle. 
+For Reddit, PyG handles downloading and accessing the dataset (see below).
 
 ## Running on OLCF Summit (example)
 
