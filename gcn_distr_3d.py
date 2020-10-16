@@ -1655,7 +1655,7 @@ def init_process(rank, size, inputs, adj_matrix, data, features, mid_layer, clas
     if outputs is not None:
         outputs[rank] = run_outputs.detach()
 
-def main(P, correctness_check, acc_per_rank):
+def main():
     # graphname = 'Reddit'
     global graphname
     global mid_layer
@@ -1779,10 +1779,6 @@ def main(P, correctness_check, acc_per_rank):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--processes', metavar='P', type=int,
-                        help='Number of processes')
-    parser.add_argument('--correctness', metavar='C', type=str,
-                        help='Run correctness check')
     parser.add_argument("--accperrank", type=int)
     parser.add_argument("--epochs", type=int)
     parser.add_argument("--graphname", type=str)
@@ -1790,10 +1786,6 @@ if __name__ == '__main__':
     parser.add_argument("--midlayer", type=int)
     args = parser.parse_args()
     print(args)
-    P = args.processes
-    correctness_check = args.correctness
-    if P is None:
-        P = 1
 
     acc_per_rank = args.accperrank
     if acc_per_rank is None:
@@ -1810,4 +1802,4 @@ if __name__ == '__main__':
 
     print(f"Arguments: epochs: {epochs} graph: {graphname} timing: {timing} mid: {mid_layer}")
     
-    print(main(P, correctness_check, acc_per_rank))
+    print(main())
