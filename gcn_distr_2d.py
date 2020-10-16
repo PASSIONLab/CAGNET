@@ -1415,7 +1415,10 @@ def main(P, correctness_check, acc_per_rank):
     elif graphname == 'Amazon':
         # edge_index = torch.load(path + "/processed/amazon_graph.pt")
         # edge_index = torch.load("/gpfs/alpine/bif115/scratch/alokt/Amazon/processed/amazon_graph_random.pt")
-        edge_index = torch.load("/gpfs/alpine/bif115/scratch/alokt/Amazon/processed/amazon_large_randomized.pt")
+        # edge_index = torch.load("/gpfs/alpine/bif115/scratch/alokt/Amazon/processed/amazon_large_randomized.pt")
+        print(f"Loading coo...", flush=True)
+        edge_index = torch.load("../data/Amazon/processed/data.pt")
+        print(f"Done loading coo", flush=True)
         # edge_index = edge_index.t_()
         # n = 9430086
         # n = 9430088
@@ -1440,8 +1443,11 @@ def main(P, correctness_check, acc_per_rank):
         data.y = torch.rand(n).uniform_(0, num_classes - 1)
         data.train_mask = torch.ones(n).long()
     elif graphname == 'subgraph3':
-        path = "/gpfs/alpine/bif115/scratch/alokt/HipMCL/"
-        edge_index = torch.load(path + "/processed/subgraph3_graph.pt")
+        # path = "/gpfs/alpine/bif115/scratch/alokt/HipMCL/"
+        # edge_index = torch.load(path + "/processed/subgraph3_graph.pt")
+        print(f"Loading coo...", flush=True)
+        edge_index = torch.load("../data/subgraph3/processed/data.pt")
+        print(f"Done loading coo", flush=True)
         n = 8745542
         num_features = 128
         # mid_layer = 512

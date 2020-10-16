@@ -1676,7 +1676,10 @@ def main(P, correctness_check, acc_per_rank):
     elif graphname == 'Amazon':
         # edge_index = torch.load(path + "/processed/amazon_graph.pt")
         # edge_index = torch.load("/gpfs/alpine/bif115/scratch/alokt/Amazon/processed/amazon_graph_random.pt")
-        edge_index = torch.load("/gpfs/alpine/bif115/scratch/alokt/Amazon/processed/amazon_large_randomized.pt")
+        # edge_index = torch.load("/gpfs/alpine/bif115/scratch/alokt/Amazon/processed/amazon_large_randomized.pt")
+        print(f"Loading coo...", flush=True)
+        edge_index = torch.load("../data/Amazon/processed/data.pt")
+        print(f"Done loading coo", flush=True)
         # edge_index = edge_index.t_()
         # n = 9430086
         n = 14249639
@@ -1699,8 +1702,11 @@ def main(P, correctness_check, acc_per_rank):
         data.y = torch.rand(n).uniform_(0, num_classes - 1)
         data.train_mask = torch.ones(n).long()
     elif graphname == 'subgraph3':
-        path = "/gpfs/alpine/bif115/scratch/alokt/HipMCL/"
-        edge_index = torch.load(path + "/processed/subgraph3_graph.pt")
+        # path = "/gpfs/alpine/bif115/scratch/alokt/HipMCL/"
+        # edge_index = torch.load(path + "/processed/subgraph3_graph.pt")
+        print(f"Loading coo...", flush=True)
+        edge_index = torch.load("../data/subgraph3/processed/data.pt")
+        print(f"Done loading coo", flush=True)
         n = 8745542
         num_features = 128
         # mid_layer = 512
@@ -1773,6 +1779,10 @@ def main(P, correctness_check, acc_per_rank):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
+    parser.add_argument('--processes', metavar='P', type=int,
+                        help='Number of processes')
+    parser.add_argument('--correctness', metavar='C', type=str,
+                        help='Run correctness check')
     parser.add_argument("--accperrank", type=int)
     parser.add_argument("--epochs", type=int)
     parser.add_argument("--graphname", type=str)
@@ -1780,6 +1790,10 @@ if __name__ == '__main__':
     parser.add_argument("--midlayer", type=int)
     args = parser.parse_args()
     print(args)
+    P = args.processes
+    correctness_check = args.correctness
+    if P is None:
+        P = 1
 
     acc_per_rank = args.accperrank
     if acc_per_rank is None:
@@ -1796,5 +1810,4 @@ if __name__ == '__main__':
 
     print(f"Arguments: epochs: {epochs} graph: {graphname} timing: {timing} mid: {mid_layer}")
     
-    print("Correctness: " + str(correctness_check))
     print(main(P, correctness_check, acc_per_rank))

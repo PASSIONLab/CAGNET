@@ -760,10 +760,9 @@ def main():
         num_features = dataset.num_features
         num_classes = dataset.num_classes
     elif graphname == 'Amazon':
-        path = osp.join(osp.dirname(osp.realpath(__file__)), '..', 'data', graphname)
-        # edge_index = torch.load(path + "/processed/amazon_graph.pt")
-        # edge_index = torch.load("/gpfs/alpine/bif115/scratch/alokt/Amazon/processed/amazon_graph_jsongz.pt")
-        edge_index = torch.load("/gpfs/alpine/bif115/scratch/alokt/Amazon/processed/amazon_large_randomized.pt")
+        print(f"Loading coo...", flush=True)
+        edge_index = torch.load("../data/Amazon/processed/data.pt")
+        print(f"Done loading coo", flush=True)
         # edge_index = edge_index.t_()
         # n = 9430088
         n = 14249639
@@ -783,9 +782,8 @@ def main():
         inputs.requires_grad = True
         data.y = data.y.to(device)
     elif graphname == 'subgraph3':
-        path = "/gpfs/alpine/bif115/scratch/alokt/HipMCL/"
         print(f"Loading coo...", flush=True)
-        edge_index = torch.load(path + "/processed/subgraph3_graph.pt")
+        edge_index = torch.load("../data/subgraph3/processed/data.pt")
         print(f"Done loading coo", flush=True)
         n = 8745542
         num_features = 128
