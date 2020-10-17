@@ -1461,7 +1461,8 @@ def main():
     if download:
         exit()
 
-    os.environ["RANK"] = os.environ["OMPI_COMM_WORLD_RANK"]
+    if "OMPI_COMM_WORLD_RANK" in os.environ.keys():
+        os.environ["RANK"] = os.environ["OMPI_COMM_WORLD_RANK"]
     dist.init_process_group(backend='nccl')
     # dist.init_process_group('gloo', init_method='env://')
     rank = dist.get_rank()
@@ -1521,6 +1522,7 @@ def main():
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
+    parser.add_argument("--local_rank", type=int)
     parser.add_argument("--accperrank", type=int)
     parser.add_argument("--epochs", type=int)
     parser.add_argument("--graphname", type=str)

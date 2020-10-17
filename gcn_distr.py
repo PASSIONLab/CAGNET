@@ -680,7 +680,8 @@ def main():
     if not download:
         mp.set_start_method('spawn', force=True)
         outputs = None
-        os.environ["RANK"] = os.environ["OMPI_COMM_WORLD_RANK"]
+        if "OMPI_COMM_WORLD_RANK" in os.environ.keys():
+            os.environ["RANK"] = os.environ["OMPI_COMM_WORLD_RANK"]
         dist.init_process_group(backend='nccl')
         rank = dist.get_rank()
         size = dist.get_world_size()
@@ -781,6 +782,7 @@ def main():
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
+    parser.add_argument("--local_rank", type=int)
     parser.add_argument("--accperrank", type=int)
     parser.add_argument("--epochs", type=int)
     parser.add_argument("--graphname", type=str)
