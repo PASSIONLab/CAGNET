@@ -1,4 +1,5 @@
 #include <ATen/ATen.h>
+#include <ATen/cuda/CUDAContext.h>
 #include <ATen/Layout.h>
 #include <ATen/Parallel.h>
 #include <ATen/SparseTensorImpl.h>
@@ -122,7 +123,8 @@ void spmm_gpu(const at::Tensor& A_rowindices,
     // cusparseHandle_t handle;
     // CHECK_CUSPARSE(cusparseCreate(&handle));
     auto state = at::globalContext().lazyInitCUDA();
-    auto handle = THCState_getCurrentSparseHandle(state);
+    // auto handle = THCState_getCurrentSparseHandle(state);
+    auto handle = at::cuda::getCurrentCUDASparseHandle();
 
     // Impl1 -- coo2csr + csrmm2
     int nnz = A_values.size(0);
