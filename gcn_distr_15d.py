@@ -700,6 +700,8 @@ def run(rank, size, inputs, adj_matrix, data, features, classes, device):
         log = 'Epoch: {:03d}, Train: {:.4f}, Val: {:.4f}, Test: {:.4f}'
 
         print(log.format(900, train_acc, best_val_acc, test_acc))
+        torch.save(outputs, "gcn_15d.pt")
+
     return outputs
 
 def rank_to_devid(rank, acc_per_rank):
