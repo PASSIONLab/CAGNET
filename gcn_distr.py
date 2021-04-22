@@ -682,6 +682,17 @@ def main():
         outputs = None
         if "OMPI_COMM_WORLD_RANK" in os.environ.keys():
             os.environ["RANK"] = os.environ["OMPI_COMM_WORLD_RANK"]
+        # Initialize distributed environment with SLURM
+        if "SLURM_PROCID" in os.environ.keys():
+            os.environ["RANK"] = os.environ["SLURM_PROCID"]
+
+        if "SLURM_NTASKS" in os.environ.keys():
+            os.environ["WORLD_SIZE"] = os.environ["SLURM_NTASKS"]
+
+        if "MASTER_ADDR" not in os.environ.keys():
+            os.environ["MASTER_ADDR"] = "127.0.0.1"
+
+        os.environ["MASTER_PORT"] = "1234"
         dist.init_process_group(backend='nccl')
         rank = dist.get_rank()
         size = dist.get_world_size()

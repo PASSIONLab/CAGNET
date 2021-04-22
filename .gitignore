@@ -25,3 +25,4 @@ gcn_distr_2d_gpu_gen.py
 gcn_distr_2d_gpu_floor_edit.py
 gcn_distr_2d_gpu_floor_old.py
 gcn_distr_2d_gpu_floor_gpu_gen.py
+*.pt
