@@ -1095,6 +1095,9 @@ def twod_partition(rank, size, inputs, adj_matrix, data, features, classes, devi
     proc_row = proc_row_size(size)
     proc_col = proc_col_size(size)
 
+    inputs = inputs.to(torch.device("cpu"))
+    adj_matrix = adj_matrix.to(torch.device("cpu"))
+
     # n_per_proc = math.ceil(float(node_count) / proc_row)
     n_per_proc = node_count // proc_row
 
@@ -1401,7 +1404,7 @@ def main():
 
     # mid_layer = 16
     if graphname == 'Cora':
-        dataset = Planetoid(path, graphname, T.NormalizeFeatures())
+        dataset = Planetoid(path, graphname, transform=T.NormalizeFeatures())
         data = dataset[0]
         num_features = dataset.num_features
         num_classes = dataset.num_classes
@@ -1463,6 +1466,18 @@ def main():
 
     if "OMPI_COMM_WORLD_RANK" in os.environ.keys():
         os.environ["RANK"] = os.environ["OMPI_COMM_WORLD_RANK"]
+
+    # Initialize distributed environment with SLURM
+    if "SLURM_PROCID" in os.environ.keys():
+        os.environ["RANK"] = os.environ["SLURM_PROCID"]
+
+    if "SLURM_NTASKS" in os.environ.keys():
+        os.environ["WORLD_SIZE"] = os.environ["SLURM_NTASKS"]
+
+    if "MASTER_ADDR" not in os.environ.keys():
+        os.environ["MASTER_ADDR"] = "127.0.0.1"
+
+    os.environ["MASTER_PORT"] = "1234"
     dist.init_process_group(backend='nccl')
     # dist.init_process_group('gloo', init_method='env://')
     rank = dist.get_rank()

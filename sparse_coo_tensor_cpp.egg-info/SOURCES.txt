@@ -1,4 +1,0 @@
-sparse_coo_tensor_cpp.egg-info/PKG-INFO
-sparse_coo_tensor_cpp.egg-info/SOURCES.txt
-sparse_coo_tensor_cpp.egg-info/dependency_links.txt
-sparse_coo_tensor_cpp.egg-info/top_level.txt

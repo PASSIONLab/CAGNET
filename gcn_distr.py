@@ -235,9 +235,10 @@ def broad_func(node_count, am_partitions, inputs, rank, size, group):
 
         tstart_comp = start_time(group, rank)
 
-        spmm_gpu(am_partitions[i].indices()[0].int(), am_partitions[i].indices()[1].int(), 
-                        am_partitions[i].values(), am_partitions[i].size(0), 
-                        am_partitions[i].size(1), inputs_recv, z_loc)
+        # spmm_gpu(am_partitions[i].indices()[0].int(), am_partitions[i].indices()[1].int(), 
+        #                 am_partitions[i].values(), am_partitions[i].size(0), 
+        #                 am_partitions[i].size(1), inputs_recv, z_loc)
+        z_loc += torch.mm(am_partitions[i], inputs_recv)
 
         dur = stop_time(group, rank, tstart_comp)
         comp_time[run][rank] += dur
@@ -472,6 +473,9 @@ def oned_partition(rank, size, inputs, adj_matrix, data, features, classes, devi
     am_partitions = None
     am_pbyp = None
 
+    inputs = inputs.to(torch.device("cpu"))
+    adj_matrix = adj_matrix.to(torch.device("cpu"))
+
     # Compute the adj_matrix and inputs partitions for this process
     # TODO: Maybe I do want grad here. Unsure.
     with torch.no_grad():
@@ -529,7 +533,6 @@ def run(rank, size, inputs, adj_matrix, data, features, classes, device):
 
     # adj_matrix_loc = torch.rand(node_count, n_per_proc)
     # inputs_loc = torch.rand(n_per_proc, inputs.size(1))
-
 
     inputs_loc, adj_matrix_loc, am_pbyp = oned_partition(rank, size, inputs, adj_matrix, data, 
                                                                 features, classes, device)
@@ -682,6 +685,7 @@ def main():
         outputs = None
         if "OMPI_COMM_WORLD_RANK" in os.environ.keys():
             os.environ["RANK"] = os.environ["OMPI_COMM_WORLD_RANK"]
+
         # Initialize distributed environment with SLURM
         if "SLURM_PROCID" in os.environ.keys():
             os.environ["RANK"] = os.environ["SLURM_PROCID"]
@@ -701,6 +705,7 @@ def main():
         # device = torch.device('cpu')
         devid = rank_to_devid(rank, acc_per_rank)
         device = torch.device('cuda:{}'.format(devid))
+        print(f"device: {device}")
         torch.cuda.set_device(device)
         curr_devid = torch.cuda.current_device()
         # print(f"curr_devid: {curr_devid}", flush=True)
@@ -708,7 +713,7 @@ def main():
 
     if graphname == "Cora":
         path = osp.join(osp.dirname(osp.realpath(__file__)), '..', 'data', graphname)
-        dataset = Planetoid(path, graphname, T.NormalizeFeatures())
+        dataset = Planetoid(path, graphname, transform=T.NormalizeFeatures())
         data = dataset[0]
         data = data.to(device)
         data.x.requires_grad = True

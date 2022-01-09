@@ -502,6 +502,9 @@ def oned_partition(rank, size, inputs, adj_matrix, data, features, classes, devi
     am_partitions = None
     am_pbyp = None
 
+    inputs = inputs.to(torch.device("cpu"))
+    adj_matrix = adj_matrix.to(torch.device("cpu"))
+
     rank_c = rank // replication
     # Compute the adj_matrix and inputs partitions for this process
     # TODO: Maybe I do want grad here. Unsure.
@@ -723,6 +726,17 @@ def main():
         if "OMPI_COMM_WORLD_RANK" in os.environ.keys():
             os.environ["RANK"] = os.environ["OMPI_COMM_WORLD_RANK"]
 
+        # Initialize distributed environment with SLURM
+        if "SLURM_PROCID" in os.environ.keys():
+            os.environ["RANK"] = os.environ["SLURM_PROCID"]
+
+        if "SLURM_NTASKS" in os.environ.keys():
+            os.environ["WORLD_SIZE"] = os.environ["SLURM_NTASKS"]
+
+        if "MASTER_ADDR" not in os.environ.keys():
+            os.environ["MASTER_ADDR"] = "127.0.0.1"
+
+        os.environ["MASTER_PORT"] = "1234"
         dist.init_process_group(backend='nccl')
         rank = dist.get_rank()
         size = dist.get_world_size()
@@ -738,7 +752,7 @@ def main():
 
     if graphname == "Cora":
         path = osp.join(osp.dirname(osp.realpath(__file__)), '..', 'data', graphname)
-        dataset = Planetoid(path, graphname, T.NormalizeFeatures())
+        dataset = Planetoid(path, graphname, transform=T.NormalizeFeatures())
         data = dataset[0]
         data = data.to(device)
         data.x.requires_grad = True
