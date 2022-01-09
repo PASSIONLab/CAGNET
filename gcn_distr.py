@@ -235,10 +235,9 @@ def broad_func(node_count, am_partitions, inputs, rank, size, group):
 
         tstart_comp = start_time(group, rank)
 
-        # spmm_gpu(am_partitions[i].indices()[0].int(), am_partitions[i].indices()[1].int(), 
-        #                 am_partitions[i].values(), am_partitions[i].size(0), 
-        #                 am_partitions[i].size(1), inputs_recv, z_loc)
-        z_loc += torch.mm(am_partitions[i], inputs_recv)
+        spmm_gpu(am_partitions[i].indices()[0].int(), am_partitions[i].indices()[1].int(), 
+                        am_partitions[i].values(), am_partitions[i].size(0), 
+                        am_partitions[i].size(1), inputs_recv, z_loc)
 
         dur = stop_time(group, rank, tstart_comp)
         comp_time[run][rank] += dur
