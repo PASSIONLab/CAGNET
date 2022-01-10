@@ -339,8 +339,6 @@ if __name__ == '__main__':
                         help="Weight for L2 loss")
     parser.add_argument("--aggregator-type", type=str, default="gcn",
                         help="Aggregator type: mean/gcn/pool/lstm")
-    parser.add_argument("--replication", type=int, default=1,
-                        help="replciation factor for 1.5D algorithm")
     parser.add_argument('--world-size', default=-1, type=int,
                          help='number of nodes for distributed training')
     parser.add_argument('--rank', default=-1, type=int,
