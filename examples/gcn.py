@@ -14,7 +14,9 @@ from torch_geometric.datasets import Planetoid, PPI
 import torch_geometric.transforms as T
 from torch_geometric.utils import add_remaining_self_loops
 import torch_sparse
-from gcn_conv import GCNConv
+
+from cagnet.nn.conv import GCNConv
+
 import socket
 
 class GCN(nn.Module):
