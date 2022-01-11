@@ -10,7 +10,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.autograd.profiler as profiler
 import torch_geometric
-from torch_geometric.datasets import Planetoid, PPI
+from torch_geometric.datasets import Planetoid, Reddit
 import torch_geometric.transforms as T
 from torch_geometric.utils import add_remaining_self_loops
 import torch_sparse
@@ -198,20 +198,24 @@ def evaluate(model, graph, features, labels, nid, nid_count, ampbyp, group):
 def main(args):
     # load and preprocess dataset
     device = torch.device('cuda')
-    graphname = "Cora"
-    if graphname == "Cora":
-        path = osp.join(osp.dirname(osp.realpath(__file__)), '../..', 'data', graphname)
-        dataset = Planetoid(path, graphname, transform=T.NormalizeFeatures())
-        data = dataset[0]
-        data = data.to(device)
-        data.x.requires_grad = True
-        inputs = data.x.to(device)
-        inputs.requires_grad = True
-        data.y = data.y.to(device)
-        edge_index = data.edge_index
-        num_features = dataset.num_features
-        num_classes = dataset.num_classes
-        adj_matrix = edge_index
+
+    path = osp.join(osp.dirname(osp.realpath(__file__)), '../..', 'data', args.dataset)
+
+    if args.dataset == "Cora":
+        dataset = Planetoid(path, args.dataset, transform=T.NormalizeFeatures())
+    elif args.dataset == "Reddit":
+        dataset = Reddit(path, transform=T.NormalizeFeatures())
+
+    data = dataset[0]
+    data = data.to(device)
+    data.x.requires_grad = True
+    inputs = data.x.to(device)
+    inputs.requires_grad = True
+    data.y = data.y.to(device)
+    edge_index = data.edge_index
+    num_features = dataset.num_features
+    num_classes = dataset.num_classes
+    adj_matrix = edge_index
 
     # Initialize distributed environment with SLURM
     if "SLURM_PROCID" in os.environ.keys():
@@ -270,6 +274,8 @@ def main(args):
     total_start = time.time()
     for epoch in range(args.n_epochs):
         print(f"Epoch: {epoch}", flush=True)
+        if epoch == 1:
+            total_start = time.time()
         model.train()
 
         # forward
@@ -277,7 +283,7 @@ def main(args):
         loss = F.cross_entropy(logits[rank_train_nids], labels_rank[rank_train_nids], reduction="sum") 
 
         loss_recv = []
-        for i in range(size // args.replication):
+        for i in range(size):
             loss_recv.append(torch.cuda.FloatTensor(loss.size()))
         dist.all_gather(loss_recv, loss, group)
         loss_recv[rank] = loss
@@ -297,6 +303,8 @@ def main(args):
               "ETputs(KTEPS) {:.2f}".format(rank, epoch, np.mean(dur), loss.item(),
                                             acc, n_edges / np.mean(dur) / 1000), flush=True)
         """
+    total_stop = time.time()
+    print(f"total_time: {total_stop - total_start}")
 
     """
     # print(prof.key_averages().table(sort_by='self_cpu_time_total', row_limit=10))
@@ -325,6 +333,8 @@ def main(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='GCN')
+    parser.add_argument("--dataset", type=str, default="Cora",
+                        help="dataset to train")
     parser.add_argument("--dropout", type=float, default=0.5,
                         help="dropout probability")
     parser.add_argument("--gpu", type=int, default=-1,
@@ -347,7 +357,7 @@ if __name__ == '__main__':
                          help='node rank for distributed training')
     parser.add_argument('--dist-url', default='env://', type=str,
                          help='url used to set up distributed training')
-    parser.add_argument('--dist-backend', default='gloo', type=str,
+    parser.add_argument('--dist-backend', default='nccl', type=str,
                             help='distributed backend')
     parser.add_argument('--hostname', default='127.0.0.1', type=str,
                             help='hostname for rank 0')
