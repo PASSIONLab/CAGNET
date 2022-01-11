@@ -3,6 +3,7 @@ import torch
 import torch.distributed as dist
 import torch.nn as nn
 
+from cagnet.partitionings import Partitioning
 from sparse_coo_tensor_cpp import spmm_gpu
 
 def broad_func(self, graph, ampbyp, inputs):
@@ -35,16 +36,20 @@ def outer_product(mata, matb, group):
     return matc
 
 class GCNConv(nn.Module):
-    def __init__(self, in_feats, out_feats, device):
+    def __init__(self, in_feats, out_feats, partitioning, device):
         super(GCNConv, self).__init__()
 
         weight_nonleaf = torch.rand(in_feats, out_feats, requires_grad=True)
         weight_nonleaf = weight_nonleaf.to(device)
         weight_nonleaf.retain_grad()
         self.weight = nn.Parameter(weight_nonleaf)
+        self.partitioning = partitioning
 
     def forward(self, gcn, graph, ampbyp, inputs):
-        return GCNFunc.apply(gcn, graph, ampbyp, inputs, self.weight)
+        if self.partitioning == Partitioning.ONED:
+            return GCNFunc.apply(gcn, graph, ampbyp, inputs, self.weight)
+        else:
+            print(f"self.partitioning: {self.partitioning}")
         
 
 class GCNFunc(torch.autograd.Function):

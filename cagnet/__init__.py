@@ -1,1 +1,1 @@
-__all__ = [ "nn" ]
+__all__ = [ "nn", "partitionings" ]

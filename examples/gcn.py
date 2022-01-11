@@ -16,26 +16,28 @@ from torch_geometric.utils import add_remaining_self_loops
 import torch_sparse
 
 from cagnet.nn.conv import GCNConv
+from cagnet.partitionings import Partitioning
 
 import socket
 
 class GCN(nn.Module):
-  def __init__(self, in_feats, n_hidden, n_classes, n_layers, rank, size, group, device):
+  def __init__(self, in_feats, n_hidden, n_classes, n_layers, rank, size, group, partitioning, device):
     super(GCN, self).__init__()
     self.layers = nn.ModuleList()
     self.rank = rank
     self.size = size
     self.group = group
     self.device = device
+    self.partitioning = partitioning
     self.timings = dict()
 
     # input layer
-    self.layers.append(GCNConv(in_feats, n_hidden, self.device))
+    self.layers.append(GCNConv(in_feats, n_hidden, self.partitioning, self.device))
     # hidden layers
     for i in range(n_layers - 1):
-        self.layers.append(GCNConv(n_hidden, n_hidden, self.device))
+        self.layers.append(GCNConv(n_hidden, n_hidden, self.partitioning, self.device))
     # output layer
-    self.layers.append(GCNConv(n_hidden, n_classes, self.device))
+    self.layers.append(GCNConv(n_hidden, n_classes, self.partitioning, self.device))
 
     # # input layer
     # self.mlp_layers.append(GCNConvMLP(in_feats, n_hidden, self.device))
@@ -254,6 +256,7 @@ def main(args):
                       rank,
                       size,
                       group,
+                      Partitioning.ONED,
                       device)
 
     # use optimizer
