@@ -1,6 +1,6 @@
 import enum
 
-class Partitioning(enum.Enum):
+class Partitioning(enum.IntEnum):
     ONED = 0
     ONE5D = 1
     TWOD = 2

@@ -21,15 +21,18 @@ import cagnet.nn.functional as CAGF
 import socket
 
 class GCN(nn.Module):
-  def __init__(self, in_feats, n_hidden, n_classes, n_layers, rank, size, partitioning, device,
+  def __init__(self, in_feats, n_hidden, n_classes, n_layers, rank, size, partitioning, replication, device,
                     group=None, row_groups=None, col_groups=None):
     super(GCN, self).__init__()
     self.layers = nn.ModuleList()
     self.rank = rank
     self.size = size
     self.group = group
+    self.row_groups = row_groups
+    self.col_groups = col_groups
     self.device = device
     self.partitioning = partitioning
+    self.replication = replication
     self.timings = dict()
 
     # input layer
@@ -49,6 +52,27 @@ class GCN(nn.Module):
 
     h = CAGF.log_softmax(h, self.partitioning, dim=1)
     return h
+
+def get_proc_groups(rank, size, replication):
+    rank_c = rank // replication
+     
+    row_procs = []
+    for i in range(0, size, replication):
+        row_procs.append(list(range(i, i + replication)))
+
+    col_procs = []
+    for i in range(replication):
+        col_procs.append(list(range(i, size, replication)))
+
+    row_groups = []
+    for i in range(len(row_procs)):
+        row_groups.append(dist.new_group(row_procs[i]))
+
+    col_groups = []
+    for i in range(len(col_procs)):
+        col_groups.append(dist.new_group(col_procs[i]))
+
+    return row_groups, col_groups
 
 # Normalize all elements according to KW's normalization rule
 def scale_elements(adj_matrix, adj_part, node_count, row_vtx, col_vtx, normalization):
@@ -103,9 +127,10 @@ def split_coo(adj_matrix, node_count, n_per_proc, dim):
 
     return am_partitions, vtx_indices
 
-def oned_partition(rank, size, inputs, adj_matrix, data, features, classes, device, normalize):
+def one5d_partition(rank, size, inputs, adj_matrix, data, features, classes, replication, normalize, device):
     node_count = inputs.size(0)
-    n_per_proc = math.ceil(float(node_count) / size)
+    # n_per_proc = math.ceil(float(node_count) / size)
+    n_per_proc = math.ceil(float(node_count) / (size / replication))
 
     am_partitions = None
     am_pbyp = None
@@ -113,30 +138,31 @@ def oned_partition(rank, size, inputs, adj_matrix, data, features, classes, devi
     inputs = inputs.to(torch.device("cpu"))
     adj_matrix = adj_matrix.to(torch.device("cpu"))
 
+    rank_c = rank // replication
     # Compute the adj_matrix and inputs partitions for this process
     # TODO: Maybe I do want grad here. Unsure.
     with torch.no_grad():
         # Column partitions
         am_partitions, vtx_indices = split_coo(adj_matrix, node_count, n_per_proc, 1)
 
-        proc_node_count = vtx_indices[rank + 1] - vtx_indices[rank]
-        am_pbyp, _ = split_coo(am_partitions[rank], node_count, n_per_proc, 0)
+        proc_node_count = vtx_indices[rank_c + 1] - vtx_indices[rank_c]
+        am_pbyp, _ = split_coo(am_partitions[rank_c], node_count, n_per_proc, 0)
         for i in range(len(am_pbyp)):
-            if i == size - 1:
+            if i == size // replication - 1:
                 last_node_count = vtx_indices[i + 1] - vtx_indices[i]
                 am_pbyp[i] = torch.sparse_coo_tensor(am_pbyp[i], torch.ones(am_pbyp[i].size(1)), 
                                                         size=(last_node_count, proc_node_count),
                                                         requires_grad=False)
 
                 am_pbyp[i] = scale_elements(adj_matrix, am_pbyp[i], node_count, vtx_indices[i], 
-                                                vtx_indices[rank], normalize)
+                                                vtx_indices[rank_c], normalize)
             else:
                 am_pbyp[i] = torch.sparse_coo_tensor(am_pbyp[i], torch.ones(am_pbyp[i].size(1)), 
                                                         size=(n_per_proc, proc_node_count),
                                                         requires_grad=False)
 
                 am_pbyp[i] = scale_elements(adj_matrix, am_pbyp[i], node_count, vtx_indices[i], 
-                                                vtx_indices[rank], normalize)
+                                                vtx_indices[rank_c], normalize)
 
         for i in range(len(am_partitions)):
             proc_node_count = vtx_indices[i + 1] - vtx_indices[i]
@@ -144,15 +170,16 @@ def oned_partition(rank, size, inputs, adj_matrix, data, features, classes, devi
                                                     torch.ones(am_partitions[i].size(1)), 
                                                     size=(node_count, proc_node_count), 
                                                     requires_grad=False)
-            am_partitions[i] = scale_elements(adj_matrix, am_partitions[i], node_count,  0, vtx_indices[i], normalize)
+            am_partitions[i] = scale_elements(adj_matrix, am_partitions[i], node_count,  0, vtx_indices[i], \
+                                                    normalize)
 
-        input_partitions = torch.split(inputs, math.ceil(float(inputs.size(0)) / size), dim=0)
+        input_partitions = torch.split(inputs, math.ceil(float(inputs.size(0)) / (size / replication)), dim=0)
 
-        adj_matrix_loc = am_partitions[rank]
-        inputs_loc = input_partitions[rank]
+        adj_matrix_loc = am_partitions[rank_c]
+        inputs_loc = input_partitions[rank_c]
 
     print(f"rank: {rank} adj_matrix_loc.size: {adj_matrix_loc.size()}", flush=True)
-    print(f"rank: {rank} inputs.size: {inputs.size()}", flush=True)
+    print(f"rank: {rank} inputs_loc.size: {inputs_loc.size()}", flush=True)
     return inputs_loc, adj_matrix_loc, am_pbyp
 
 def evaluate(model, graph, features, labels, nid, nid_count, ampbyp, group):
@@ -230,11 +257,18 @@ def main(args):
     if args.normalize:
         adj_matrix, _ = add_remaining_self_loops(adj_matrix, num_nodes=inputs.size(0))
 
-    partitioning = Partitioning.ONED
+    partitioning = Partitioning.ONE5D
 
-    group = dist.new_group(list(range(size)))
-    features_loc, g_loc, ampbyp = oned_partition(rank, size, inputs, adj_matrix, data, \
-                                                      inputs, num_classes, device, args.normalize)
+    row_groups, col_groups = get_proc_groups(rank, size, args.replication)
+
+    rank_c = rank // args.replication
+    rank_col = rank % args.replication
+    if rank_c >= (size // args.replication):
+        return
+
+    features_loc, g_loc, ampbyp = one5d_partition(rank, size, inputs, adj_matrix, data, \
+                                                      inputs, num_classes, args.replication, args.normalize, \
+                                                      args.normalize)
 
     features_loc = features_loc.to(device)
     g_loc = g_loc.to(device)
@@ -251,17 +285,19 @@ def main(args):
                       rank,
                       size,
                       partitioning,
+                      args.replication,
                       device,
-                      group)
+                      row_groups=row_groups,
+                      col_groups=col_groups)
 
     # use optimizer
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
 
-    n_per_proc = math.ceil(float(inputs.size(0)) / size)
+    n_per_proc = math.ceil(float(g_loc.size(0)) / (size / args.replication))
 
-    rank_train_mask = torch.split(data.train_mask, n_per_proc, dim=0)[rank]
-    rank_test_mask = torch.split(data.test_mask, n_per_proc, dim=0)[rank]
-    labels_rank = torch.split(data.y, n_per_proc, dim=0)[rank]
+    rank_train_mask = torch.split(data.train_mask, n_per_proc, dim=0)[rank_c]
+    rank_test_mask = torch.split(data.test_mask, n_per_proc, dim=0)[rank_c]
+    labels_rank = torch.split(data.y, n_per_proc, dim=0)[rank_c]
     rank_train_nids = rank_train_mask.nonzero().squeeze()
     rank_test_nids = rank_test_mask.nonzero().squeeze()
 
@@ -279,7 +315,7 @@ def main(args):
         # forward
         logits = model(g_loc, features_loc, ampbyp)
         loss = CAGF.cross_entropy(logits[rank_train_nids], labels_rank[rank_train_nids], train_nid.size(0), \
-                                        partitioning, rank, group, size)
+                                        partitioning, rank_c, col_groups[0], size // args.replication)
 
         optimizer.zero_grad()
         loss.backward()
@@ -355,7 +391,9 @@ if __name__ == '__main__':
                             help='hostname for rank 0')
     parser.add_argument('--normalize', action="store_true",
                             help='normalize adjacency matrix')
-    parser.add_argument('--partitioning', default='ONED', type=str,
+    parser.add_argument('--partitioning', default='ONE5D', type=str,
+                            help='partitioning strategy to use')
+    parser.add_argument('--replication', default=1, type=int,
                             help='partitioning strategy to use')
     args = parser.parse_args()
     print(args)
