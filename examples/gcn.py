@@ -43,11 +43,11 @@ class GCN(nn.Module):
   def forward(self, graph, inputs, ampbyp):
     h = inputs
     for l, layer in enumerate(self.layers):
-      h = layer(self, graph, ampbyp, h)
+      h = layer(self, graph, h, ampbyp)
       if l != len(self.layers) - 1:
         h = CAGF.relu(h, self.partitioning)
 
-    h = CAGF.log_softmax(h, self.partitioning, dim=1)
+    h = CAGF.log_softmax(self, h, self.partitioning, dim=1)
     return h
 
 # Normalize all elements according to KW's normalization rule
@@ -279,7 +279,7 @@ def main(args):
         # forward
         logits = model(g_loc, features_loc, ampbyp)
         loss = CAGF.cross_entropy(logits[rank_train_nids], labels_rank[rank_train_nids], train_nid.size(0), \
-                                        partitioning, rank, group, size)
+                                        num_classes, partitioning, rank, group, size)
 
         optimizer.zero_grad()
         loss.backward()

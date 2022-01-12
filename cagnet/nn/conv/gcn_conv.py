@@ -4,7 +4,7 @@ import torch.distributed as dist
 import torch.nn as nn
 
 from cagnet.partitionings import Partitioning
-from sparse_coo_tensor_cpp import spmm_gpu
+from sparse_coo_tensor_cpp import sparse_coo_tensor_gpu, spmm_gpu
 
 def broad_func_oned(self, graph, ampbyp, inputs):
     n_per_proc = math.ceil(float(graph.size(0) / self.size))
@@ -70,6 +70,200 @@ def broad_func_one5d(self, graph, ampbyp, inputs):
 
     return z_loc
 
+def summa_sparse(self, adj_matrix, inputs, height, middim, width):
+
+    height_per_proc = height // self.proc_row
+    width_per_proc  = width // self.proc_col
+
+    middim_per_proc = middim // self.proc_col
+
+    if self.rank_row == self.proc_row - 1:
+        height_per_proc = height - height_per_proc * (self.proc_row - 1)
+
+    if self.rank_col == self.proc_col - 1:
+        width_per_proc = width - width_per_proc * (self.proc_col - 1)
+
+    z_loc = torch.cuda.FloatTensor(height_per_proc, width_per_proc, device=self.device).fill_(0)
+
+    for k in range(self.proc_col):
+
+        row_src_rank = k + self.proc_col * self.rank_row
+        col_src_rank = k * self.proc_col + self.rank_col
+
+        if k == self.proc_col - 1:
+            middim_per_proc = middim - middim_per_proc * (self.proc_col - 1)
+
+        if row_src_rank == self.rank:
+            acol_indices_len = torch.cuda.LongTensor(
+                                            [adj_matrix.indices().contiguous()[0].size(0)], 
+                                            device=self.device)
+            acol_values_len = torch.cuda.LongTensor([adj_matrix.values().contiguous().size(0)],
+                                                    device=self.device)
+        else:
+            acol_indices_len = torch.cuda.LongTensor([0], device=self.device)
+            acol_values_len = torch.cuda.LongTensor([0], device=self.device)
+
+        dist.broadcast(acol_indices_len, row_src_rank, self.row_groups[self.rank_row])
+
+        acol_indices_len = acol_indices_len.item() # nnz
+        acol_values_len = acol_indices_len
+
+        if row_src_rank == self.rank:
+            acol_indices = adj_matrix.indices().contiguous().long()
+            acol_values = adj_matrix.values().contiguous().float()
+        else:
+            acol_indices = torch.cuda.LongTensor(2, acol_indices_len, device=self.device).fill_(0)
+            acol_values = torch.cuda.FloatTensor(acol_values_len, device=self.device).fill_(0)
+        
+        acol = torch.cat((acol_indices.float(), acol_values.unsqueeze(0)), dim=0).contiguous()
+
+        dist.broadcast(acol, row_src_rank, self.row_groups[self.rank_row])
+
+        acol_indices = acol[:2].long()
+        acol_values = acol[2].squeeze(0)
+
+        if row_src_rank == self.rank:
+            acol = adj_matrix
+        else:
+            acol = sparse_coo_tensor_gpu(acol_indices, acol_values, 
+                                            torch.Size([height_per_proc, middim_per_proc]))
+
+        if col_src_rank == self.rank:
+            brow = inputs
+        else:
+            brow = torch.cuda.FloatTensor(middim_per_proc, width_per_proc, device=self.device)
+
+        brow = brow.contiguous()
+
+        dist.broadcast(brow, col_src_rank, self.col_groups[self.rank_col])
+
+        spmm_gpu(acol_indices[0].int(), acol_indices[1].int(), acol_values, 
+                        height_per_proc, middim_per_proc, brow, z_loc)
+
+    return z_loc
+
+def summa_loc(self, mata, matb, height, middim, width):
+
+    height_per_proc = height // self.proc_row
+    width_per_proc  = width // self.proc_col
+    middim_per_proc = middim // self.proc_row
+
+    if self.rank_row == self.proc_row - 1:
+        height_per_proc = height - height_per_proc * (self.proc_row - 1)
+
+    width_per_proc = matb[self.rank].size(1)
+
+    acol_tens = torch.cuda.FloatTensor(height_per_proc, middim_per_proc, device=self.device)
+    brow_tens = torch.FloatTensor(middim_per_proc, width_per_proc)
+
+    acol = acol_tens
+    brow = brow_tens
+
+    z_loc = torch.cuda.FloatTensor(height_per_proc, width_per_proc, device=self.device).fill_(0)
+
+    for k in range(self.proc_col):
+
+        row_src_rank = k + self.proc_col * self.rank_row
+        col_src_rank = k * self.proc_col + self.rank_col
+
+        if k == self.proc_col - 1:
+            middim_per_proc -= self.proc_col * middim_per_proc - middim
+
+        if row_src_rank == self.rank:
+            acol = mata
+        else:
+            acol = acol_tens
+            acol = torch.cuda.FloatTensor(height_per_proc, matb[col_src_rank].size(0), 
+                                            device=self.device)
+        
+        acol = acol.contiguous()
+        dist.broadcast(acol, row_src_rank, self.row_groups[self.rank_row])
+
+        brow = matb[col_src_rank]
+
+        z_loc += torch.mm(acol, brow)
+
+    return z_loc
+
+def summa(self, adj_matrix, inputs, height, middim, width):
+
+    height_per_proc = height // self.proc_row
+    width_per_proc  = width // self.proc_col
+    middim_per_proc = middim // self.proc_row
+
+    if self.rank_row == self.proc_row - 1:
+        height_per_proc = height - height_per_proc * (self.proc_row - 1)
+
+    if self.rank_col == self.proc_col - 1:
+        width_per_proc = width - width_per_proc * (self.proc_col - 1)
+
+    acol_tens = torch.cuda.FloatTensor(height_per_proc, middim_per_proc, device=self.device)
+    brow_tens = torch.cuda.FloatTensor(middim_per_proc, width_per_proc, device=self.device)
+
+    acol = acol_tens
+    brow = brow_tens
+
+    z_loc = torch.cuda.FloatTensor(height_per_proc, width_per_proc, device=self.device).fill_(0)
+
+    for k in range(self.proc_col):
+
+        row_src_rank = k + self.proc_col * self.rank_row
+        col_src_rank = k * self.proc_col + self.rank_col
+
+        if k == self.proc_col - 1:
+            middim_per_proc = middim - middim_per_proc * (self.proc_col - 1)
+            acol_tens = torch.cuda.FloatTensor(height_per_proc, middim_per_proc, device=self.device)
+            brow_tens = torch.cuda.FloatTensor(middim_per_proc, width_per_proc, device=self.device)
+
+        if row_src_rank == self.rank:
+            acol = adj_matrix
+        else:
+            acol = acol_tens
+        
+        acol = acol.contiguous()
+        dist.broadcast(acol, row_src_rank, self.row_groups[self.rank_row])
+
+        if col_src_rank == self.rank:
+            brow = inputs
+        else:
+            brow = brow_tens
+
+        brow = brow.contiguous()
+        dist.broadcast(brow, col_src_rank, self.col_groups[self.rank_col])
+
+        z_loc += torch.mm(acol.float(), brow)
+
+    return z_loc
+
+def transpose(self, mat, height, width):
+    rank = self.rank_row * self.proc_col + self.rank_col
+    rank_t  = self.rank_col * self.proc_row + self.rank_row
+
+    if rank == rank_t:
+        return mat.t()
+
+    height_recv = width // self.proc_row
+    width_recv  = height // self.proc_col
+
+    if self.rank_row == self.proc_row - 1:
+        height_recv = width - height_recv * (self.proc_row - 1)
+
+    if self.rank_col == self.proc_col - 1:
+        width_recv = height - width_recv * (self.proc_col - 1)
+
+    mat_recv = torch.cuda.FloatTensor(height_recv, width_recv, device=self.device)
+
+    mat_recvs = [mat.t().contiguous(), mat_recv]
+
+    if self.rank < rank_t:
+        dist.broadcast(mat_recvs[0], src=self.rank, group=self.transpose_group)
+        dist.broadcast(mat_recvs[1], src=rank_t, group=self.transpose_group)
+    else:
+        dist.broadcast(mat_recvs[1], src=rank_t, group=self.transpose_group)
+        dist.broadcast(mat_recvs[0], src=self.rank, group=self.transpose_group)
+
+    return mat_recvs[1]
+
 def outer_product(mata, matb, group):
     matc = torch.mm(mata, matb)
     dist.all_reduce(matc, op=dist.reduce_op.SUM, group=group)
@@ -86,11 +280,13 @@ class GCNConv(nn.Module):
         self.weight = nn.Parameter(weight_nonleaf)
         self.partitioning = partitioning
 
-    def forward(self, gcn, graph, ampbyp, inputs):
+    def forward(self, gcn, graph, inputs, ampbyp=None):
         if self.partitioning == Partitioning.ONED:
             return GCNFuncONED.apply(gcn, graph, ampbyp, inputs, self.weight)
         elif self.partitioning == Partitioning.ONE5D:
             return GCNFuncONE5D.apply(gcn, graph, ampbyp, inputs, self.weight)
+        elif self.partitioning == Partitioning.TWOD:
+            return GCNFuncTWOD.apply(gcn, graph, inputs, self.weight)
         else:
             print(f"self.partitioning: {self.partitioning} one5d: {Partitioning.ONE5D}")
         
@@ -158,3 +354,128 @@ class GCNFuncONE5D(torch.autograd.Function):
         grad_weight = outer_product(inputs.t(), ag, self.group)
 
         return None, None, None, grad_input, grad_weight
+
+class GCNFuncTWOD(torch.autograd.Function):
+    @staticmethod
+    def forward(ctx, self, graph, inputs, weight):
+        # inputs: H
+        # graph: A
+        # weight; W
+
+        graph_t = graph # Only true for undirected graphs
+
+        z = summa_sparse(self, graph_t, inputs, self.node_count, self.node_count, weight.size(0))
+
+        chunk_sizes_row = []
+        chunk_sizes_col = []
+        weight_per_row = weight.size(0) // self.proc_row
+        weight_per_col = weight.size(1) // self.proc_col
+        for i in range(self.proc_row):
+            if i == self.proc_row - 1:
+                chunk_sizes_row.append(weight.size(0) - weight_per_row * (self.proc_row - 1))
+            else:
+                chunk_sizes_row.append(weight_per_row)
+
+        for i in range(self.proc_col):
+            if i == self.proc_col - 1:
+                chunk_sizes_col.append(weight.size(1) - weight_per_col * (self.proc_col - 1))
+            else:
+                chunk_sizes_col.append(weight_per_col)
+
+        weight_rows = torch.split(weight, chunk_sizes_row, dim=0)
+        weight_parts = []
+        for i in weight_rows:
+            weight_cols = torch.split(i, chunk_sizes_col, dim=1)
+            weight_parts.extend(weight_cols)
+
+        z = summa_loc(self, z, weight_parts, self.node_count, weight.size(0), weight.size(1))
+
+        ctx.save_for_backward(inputs, weight)
+        ctx.graph = graph
+        ctx.self = self
+
+        return z
+
+    @staticmethod
+    def backward(ctx, grad_output):
+        graph = ctx.graph
+        inputs, weight = ctx.saved_tensors
+        self = ctx.self
+
+        # Assumes graph is undirected and A = A^T
+        ag = summa_sparse(self, graph, grad_output, self.node_count, self.node_count, weight.t().size(0))
+
+        chunk_sizes_row = []
+        chunk_sizes_col = []
+        weight_per_row = weight.t().size(0) // self.proc_row
+        weight_per_col = weight.t().size(1) // self.proc_col
+
+        for i in range(self.proc_row):
+            if i == self.proc_row - 1:
+                chunk_sizes_row.append(weight.t().size(0) - weight_per_row * (self.proc_row - 1))
+            else:
+                chunk_sizes_row.append(weight_per_row)
+
+        for i in range(self.proc_col):
+            if i == self.proc_col - 1:
+                chunk_sizes_col.append(weight.t().size(1) - weight_per_col * (self.proc_col - 1))
+            else:
+                chunk_sizes_col.append(weight_per_col)
+
+        weight_rows = torch.split(weight.t(), chunk_sizes_row, dim=0)
+
+        weight_parts = []
+        for i in weight_rows:
+            weight_cols = torch.split(i, chunk_sizes_col, dim=1)
+            weight_parts.extend(weight_cols)
+
+        grad_input = summa_loc(self, ag, weight_parts, self.node_count, weight.t().size(0), weight.t().size(1))
+
+        # Second backprop equation (reuses the A * G^l computation)
+        inputs_t = transpose(self, inputs, self.node_count, weight.size(0))
+
+        grad_weight = summa(self, inputs_t, ag, weight.size(0), self.node_count, weight.size(1))
+
+        # Collect grad_weight's across processes
+        grad_weight_recv = []
+        max_row_chunk = max(chunk_sizes_col) #transpose
+        max_col_chunk = max(chunk_sizes_row)
+        for i in range(self.size):
+            grad_weight_recv.append(torch.cuda.FloatTensor(
+                                                max_row_chunk,
+                                                max_col_chunk,
+                                                device=self.device))
+
+        pad_row = max_row_chunk - grad_weight.size(0)
+        pad_col = max_col_chunk - grad_weight.size(1)
+
+        # TODO: make this part less hacky
+        no_occur_val = 42.1234
+        grad_weight = torch.cat((grad_weight, 
+                torch.cuda.FloatTensor(pad_row, grad_weight.size(1), device=self.device).fill_(no_occur_val)), 
+                        dim=0) 
+        grad_weight = torch.cat((grad_weight, 
+                torch.cuda.FloatTensor(grad_weight.size(0), pad_col, device=self.device).fill_(no_occur_val)), 
+                        dim=1) 
+
+        dist.all_gather(grad_weight_recv, grad_weight)
+
+        for i in range(len(grad_weight_recv)):
+            grad_weight_recv[i] = grad_weight_recv[i][(grad_weight_recv[i][:, 0] != no_occur_val)
+                                                                .nonzero().squeeze(1)]
+
+            grad_weight_recv_t = grad_weight_recv[i].t()
+            grad_weight_recv_t = grad_weight_recv_t[(grad_weight_recv_t[:, 0] != no_occur_val)
+                                                                .nonzero().squeeze(1)]
+
+            grad_weight_recv[i] = grad_weight_recv_t.t()
+        
+        grad_weight_fin = torch.cuda.FloatTensor(device=self.device)
+        for i in range(self.proc_row):
+            grad_weight_row = torch.cuda.FloatTensor(device=self.device)
+            for j in range(self.proc_col):
+                rank_wt = i * self.proc_row + j
+                grad_weight_row = torch.cat((grad_weight_row, grad_weight_recv[rank_wt]), dim=1)
+            grad_weight_fin = torch.cat((grad_weight_fin, grad_weight_row), dim=0)
+
+        return None, None, grad_input, grad_weight_fin
