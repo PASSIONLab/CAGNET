@@ -10,7 +10,7 @@ For more information, please read our ACM/IEEE SC'20 paper [Reducing Communicati
 **Contact:** Alok Tripathy (<alokt@berkeley.edu>)
 
 ## Dependencies
-- Python 3.6.10
+- Python 3.8.11
 - PyTorch 1.3.1
 - PyTorch Geometric (PyG) 1.3.2
 - CUDA 10.1

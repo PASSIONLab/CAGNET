@@ -10,6 +10,7 @@ sparse_coo_tensor_cpp.egg-info/
 .*.swp
 .nfs*
 *.txt
+!requirements.txt
 *.pt
 slurm_outputs/
 job-*
