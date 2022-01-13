@@ -22,7 +22,7 @@ module load tudatoolkit/21.3_10.2 # CUDA 10.2
 module load pytorch/1.9.0 # PyTorch and PyG
 ```
 
-On OLCF Summit, all of these dependencies can be accessed with the following
+On OLCF Summit, older versions of these dependencies can be accessed with the following
 ```bash
 module load cuda # CUDA 10.1
 module load gcc # GCC 6.4.0
