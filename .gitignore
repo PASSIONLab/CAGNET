@@ -17,3 +17,5 @@ gcn_distr.py
 gcn_distr_15d.py
 gcn_distr_2d.py
 gcn_distr_3d.py
+gcn.py
+reddit.py
