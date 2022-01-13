@@ -676,7 +676,7 @@ def main():
     global device
     global graphname
 
-    print(socket.gethostname())
+    print(socket.gethostname(), flush=True)
     seed = 0
 
     if not download:
@@ -699,7 +699,7 @@ def main():
         dist.init_process_group(backend='nccl')
         rank = dist.get_rank()
         size = dist.get_world_size()
-        print("Processes: " + str(size))
+        print("Processes: " + str(size), flush=True)
 
         # device = torch.device('cpu')
         devid = rank_to_devid(rank, acc_per_rank)
@@ -734,6 +734,8 @@ def main():
         edge_index = data.edge_index
         num_features = dataset.num_features
         num_classes = dataset.num_classes
+        print(f"edge_index.size: {edge_index.size()}")
+        print(f"edge_index: {edge_index}")
     elif graphname == 'Amazon':
         # path = osp.join(osp.dirname(osp.realpath(__file__)), '..', 'data', graphname)
         # edge_index = torch.load(path + "/processed/amazon_graph.pt")
@@ -752,6 +754,7 @@ def main():
         data.y = torch.rand(n).uniform_(0, num_classes - 1).long()
         data.train_mask = torch.ones(n).long()
         # edge_index = edge_index.to(device)
+        edge_index = edge_index.t_()
         print(f"edge_index.size: {edge_index.size()}", flush=True)
         print(f"edge_index: {edge_index}", flush=True)
         data = data.to(device)

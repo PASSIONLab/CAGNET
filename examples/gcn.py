@@ -9,6 +9,7 @@ import torch.distributed as dist
 import torch.nn as nn
 import torch.autograd.profiler as profiler
 import torch_geometric
+from torch_geometric.data import Data
 from torch_geometric.datasets import Planetoid, Reddit
 import torch_geometric.transforms as T
 from torch_geometric.utils import add_remaining_self_loops
@@ -196,21 +197,37 @@ def main(args):
 
     path = osp.join(osp.dirname(osp.realpath(__file__)), '../..', 'data', args.dataset)
 
-    if args.dataset == "Cora":
-        dataset = Planetoid(path, args.dataset, transform=T.NormalizeFeatures())
-    elif args.dataset == "Reddit":
-        dataset = Reddit(path, transform=T.NormalizeFeatures())
+    if args.dataset == "Cora" or args.dataset == "Reddit":
+        if args.dataset == "Cora":
+            dataset = Planetoid(path, args.dataset, transform=T.NormalizeFeatures())
+        elif args.dataset == "Reddit":
+            dataset = Reddit(path, transform=T.NormalizeFeatures())
 
-    data = dataset[0]
-    data = data.to(device)
-    data.x.requires_grad = True
-    inputs = data.x.to(device)
-    inputs.requires_grad = True
-    data.y = data.y.to(device)
-    edge_index = data.edge_index
-    num_features = dataset.num_features
-    num_classes = dataset.num_classes
-    adj_matrix = edge_index
+        data = dataset[0]
+        data = data.to(device)
+        data.x.requires_grad = True
+        inputs = data.x.to(device)
+        inputs.requires_grad = True
+        data.y = data.y.to(device)
+        edge_index = data.edge_index
+        num_features = dataset.num_features
+        num_classes = dataset.num_classes
+        adj_matrix = edge_index
+    elif args.dataset == "Amazon":
+        print(f"Loading coo...", flush=True)
+        edge_index = torch.load("../../data/Amazon/processed/data.pt")
+        print(f"Done loading coo", flush=True)
+        n = 14249639
+        num_features = 300
+        num_classes = 24
+        inputs = torch.rand(n, num_features)
+        data = Data()
+        data.y = torch.rand(n).uniform_(0, num_classes - 1).long()
+        data.train_mask = torch.ones(n).long()
+        adj_matrix = edge_index.t_()
+        data = data.to(device)
+        inputs.requires_grad = True
+        data.y = data.y.to(device)
 
     # Initialize distributed environment with SLURM
     if "SLURM_PROCID" in os.environ.keys():
@@ -232,9 +249,11 @@ def main(args):
 
     partitioning = Partitioning.ONED
 
+    print(f"partitioning...", flush=True)
     group = dist.new_group(list(range(size)))
     features_loc, g_loc, ampbyp = oned_partition(rank, size, inputs, adj_matrix, data, \
                                                       inputs, num_classes, device, args.normalize)
+    print(f"done partitioning", flush=True)
 
     features_loc = features_loc.to(device)
     g_loc = g_loc.to(device)
@@ -260,13 +279,10 @@ def main(args):
     n_per_proc = math.ceil(float(inputs.size(0)) / size)
 
     rank_train_mask = torch.split(data.train_mask, n_per_proc, dim=0)[rank]
-    rank_test_mask = torch.split(data.test_mask, n_per_proc, dim=0)[rank]
     labels_rank = torch.split(data.y, n_per_proc, dim=0)[rank]
     rank_train_nids = rank_train_mask.nonzero().squeeze()
-    rank_test_nids = rank_test_mask.nonzero().squeeze()
 
     train_nid = data.train_mask.nonzero().squeeze()
-    test_nid = data.test_mask.nonzero().squeeze()
 
     torch.manual_seed(0)
     total_start = time.time()
@@ -295,8 +311,9 @@ def main(args):
               "ETputs(KTEPS) {:.2f}".format(rank, epoch, np.mean(dur), loss.item(),
                                             acc, n_edges / np.mean(dur) / 1000), flush=True)
         """
+    dist.barrier()
     total_stop = time.time()
-    print(f"total_time: {total_stop - total_start}")
+    print(f"rank: {rank} total_time: {total_stop - total_start}")
 
     """
     # print(prof.key_averages().table(sort_by='self_cpu_time_total', row_limit=10))

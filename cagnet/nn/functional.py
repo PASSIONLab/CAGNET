@@ -4,11 +4,39 @@ import torch
 import torch.nn.functional as F
 import torch.distributed as dist
 
-def proc_row_size(size):
-    return math.floor(math.sqrt(size))
+def proc_row_size(size, partitioning):
+    if partitioning == Partitioning.TWOD:
+        return math.floor(math.sqrt(size))
+    elif partitioning == Partitioning.THREED:
+        cube_root = int(size ** (1./ 3.))
+        if cube_root ** 3 == size:
+            return cube_root
+        elif (cube_root + 1) ** 3 == size:
+            return cube_root + 1
+        else:
+            print(f"CUBE ROOT ERROR")
 
-def proc_col_size(size):
-    return math.floor(math.sqrt(size))
+def proc_col_size(size, partitioning):
+    if partitioning == Partitioning.TWOD:
+        return math.floor(math.sqrt(size))
+    elif partitioning == Partitioning.THREED:
+        cube_root = int(size ** (1./ 3.))
+        if cube_root ** 3 == size:
+            return cube_root
+        elif (cube_root + 1) ** 3 == size:
+            return cube_root + 1
+        else:
+            print(f"CUBE ROOT ERROR")
+
+def proc_c_size(size, partitioning):
+    if partitioning == Partitioning.THREED:
+        cube_root = int(size ** (1./ 3.))
+        if cube_root ** 3 == size:
+            return cube_root
+        elif (cube_root + 1) ** 3 == size:
+            return cube_root + 1
+        else:
+            print(f"CUBE ROOT ERROR")
 
 def relu(x, partitioning):
     return F.relu(x)
@@ -34,8 +62,8 @@ def cross_entropy(logits_rank, labels_rank, node_count, total_classes, partition
         return loss
 
     elif partitioning == Partitioning.TWOD:
-        proc_row = proc_row_size(size)
-        proc_col = proc_col_size(size)
+        proc_row = proc_row_size(size, partitioning)
+        proc_col = proc_col_size(size, partitioning)
 
         rank_row = int(rank / proc_col)
         rank_col = rank % proc_col
@@ -75,6 +103,53 @@ def cross_entropy(logits_rank, labels_rank, node_count, total_classes, partition
             loss_calc = -loss_calc / vertex_train_count
             return loss_calc
 
+        else:
+            fake_loss = (logits_rank * torch.cuda.FloatTensor(logits_rank.size()).fill_(0)).sum()
+            return fake_loss
+
+    elif partitioning == Partitioning.THREED:
+        proc_row = proc_row_size(size, partitioning)
+        proc_col = proc_col_size(size, partitioning)
+        proc_c = proc_c_size(size, partitioning)
+
+        rank_row = int((rank // proc_c) // proc_col) # i in process grid
+        rank_col = int((rank // proc_c) % proc_col)  # j in process grid
+        rank_c = rank - (rank_row * (proc_col * proc_c) + rank_col * proc_c) # k in process grid
+
+        class_per_rank = total_classes // proc_col
+
+        row_groups = group[0]
+        col_groups = group[1]
+        c_groups = group[2]
+
+        min_class = rank_col * class_per_rank
+        max_class = min((rank_col + 1) * class_per_rank, total_classes)
+        if rank_col == proc_col - 1:
+            max_class = total_classes
+
+        # Note: bool type removes warnings, unsure of perf penalty
+        if list(labels_rank.size())[0] > 0:
+            datay_ids = labels_rank.long()
+
+            filtered_indices = torch.mul(datay_ids >= min_class, datay_ids < max_class).float()
+            indices = torch.nonzero(filtered_indices * \
+                            torch.cuda.FloatTensor(datay_ids.size()).fill_(1)).squeeze()
+
+            datay_ids = labels_rank.long().view(-1, 1)
+            datay_ids = datay_ids.index_select(0, indices)
+            datay_ids -= min_class
+            outputs_ids = logits_rank.index_select(0, indices)
+
+            classes = torch.gather(outputs_ids, 1, datay_ids)
+            loss_calc = torch.sum(classes)
+            loss_calc_tens = torch.Tensor([loss_calc.item()])
+
+            dist.all_reduce(loss_calc, op=dist.reduce_op.SUM, group=row_groups[rank_row][rank_c])
+
+            vertex_train_count = (train_mask.size(0) - (train_mask == 0).sum(dim=0))
+            loss_calc = -loss_calc / vertex_train_count
+
+            return loss_calc
         else:
             fake_loss = (logits_rank * torch.cuda.FloatTensor(logits_rank.size()).fill_(0)).sum()
             return fake_loss

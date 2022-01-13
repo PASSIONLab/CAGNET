@@ -35,8 +35,8 @@ class GCN(nn.Module):
     self.n_classes = n_classes
     self.timings = dict()
 
-    proc_row = CAGF.proc_row_size(size)
-    proc_col = CAGF.proc_col_size(size)
+    proc_row = CAGF.proc_row_size(size, partitioning)
+    proc_col = CAGF.proc_col_size(size, partitioning)
     rank_row = int(rank / proc_col)
     rank_col = rank % proc_col
 
@@ -64,8 +64,8 @@ class GCN(nn.Module):
     return h
 
 def get_proc_groups(rank, size):
-    proc_row = CAGF.proc_row_size(size)
-    proc_col = CAGF.proc_col_size(size)
+    proc_row = CAGF.proc_row_size(size, Partitioning.TWOD)
+    proc_col = CAGF.proc_col_size(size, Partitioning.TWOD)
     
     rank_row = int(rank / proc_col)
     rank_col = rank % proc_col
@@ -80,10 +80,6 @@ def get_proc_groups(rank, size):
     for i in range(proc_col):
         col_groups.append(dist.new_group(list(range(i, size, proc_row))))
 
-    proc_row = CAGF.proc_row_size(size)
-    proc_col = CAGF.proc_col_size(size)
-    rank_row = int(rank / proc_col)
-    rank_col = rank % proc_col
     rank_t  = rank_col * proc_row + rank_row
 
     if rank_row >= proc_row or rank_col >= proc_col:
@@ -150,8 +146,8 @@ def scale_elements(adj_matrix, adj_part, node_count, row_vtx, col_vtx, normaliza
 # Split a COO into partitions of size n_per_proc
 # Basically torch.split but for Sparse Tensors since pytorch doesn't support that.
 def split_coo(adj_matrix, node_count, n_per_proc, dim, size):
-    proc_row = CAGF.proc_row_size(size)
-    proc_col = CAGF.proc_col_size(size)
+    proc_row = CAGF.proc_row_size(size, Partitioning.TWOD)
+    proc_col = CAGF.proc_col_size(size, Partitioning.TWOD)
 
     vtx_indices = list(range(0, node_count, n_per_proc))
     vtx_indices = vtx_indices[:proc_row]
@@ -166,10 +162,10 @@ def split_coo(adj_matrix, node_count, n_per_proc, dim, size):
 
     return am_partitions, vtx_indices
 
-def twod_partition(rank, size, inputs, adj_matrix, data, features, classes, normalize, device):
+def twod_partition(rank, size, inputs, adj_matrix, normalize, device):
     node_count = inputs.size(0)
-    proc_row = CAGF.proc_row_size(size)
-    proc_col = CAGF.proc_col_size(size)
+    proc_row = CAGF.proc_row_size(size, Partitioning.TWOD)
+    proc_col = CAGF.proc_col_size(size, Partitioning.TWOD)
 
     inputs = inputs.to(torch.device("cpu"))
     adj_matrix = adj_matrix.to(torch.device("cpu"))
@@ -313,13 +309,12 @@ def main(args):
 
     row_groups, col_groups, transpose_group = get_proc_groups(rank, size)
 
-    proc_row = CAGF.proc_row_size(size)
-    proc_col = CAGF.proc_col_size(size)
+    proc_row = CAGF.proc_row_size(size, partitioning)
+    proc_col = CAGF.proc_col_size(size, partitioning)
     rank_row = int(rank / proc_col)
     rank_col = rank % proc_col
 
-    features_loc, g_loc = twod_partition(rank, size, inputs, adj_matrix, data, \
-                                                      inputs, num_classes, args.normalize, args.normalize)
+    features_loc, g_loc = twod_partition(rank, size, inputs, adj_matrix, args.normalize, device)
 
     features_loc = features_loc.to(device)
     g_loc = g_loc.coalesce().to(device)
