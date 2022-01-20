@@ -16,6 +16,7 @@ import torch_sparse
 
 from cagnet.nn.conv import GCNConv
 from cagnet.partitionings import Partitioning
+from cagnet.samplers import ladies_sampler
 import cagnet.nn.functional as CAGF
 
 import socket
@@ -127,7 +128,28 @@ def split_coo(adj_matrix, node_count, n_per_proc, dim):
 
     return am_partitions, vtx_indices
 
-def one5d_partition(rank, size, inputs, adj_matrix, data, features, classes, replication, normalize, device):
+def row_normalize(mx):
+    """Row-normalize sparse matrix"""
+    rowsum = torch.sparse.sum(mx, 1)
+    r_inv = torch.float_power(rowsum, -1).flatten()
+    # r_inv._values = r_inv._values()[torch.isinf(r_inv._values())] = 0.
+    # r_mat_inv = torch.diag(r_inv._values())
+    r_inv_values = r_inv._values()
+    r_inv_values[torch.isinf(r_inv_values)] = 0
+    r_mat_inv = torch.sparse_coo_tensor([np.arange(0, r_inv.size(0)).tolist(),
+                                     np.arange(0, r_inv.size(0)).tolist()],
+                                     r_inv_values,
+                                     size=(r_inv.size(0), r_inv.size(0)))
+    # mx = r_mat_inv.mm(mx.float())
+    mx_indices, mx_values = torch_sparse.spspmm(r_mat_inv._indices(), r_mat_inv._values().float(), 
+                                                    mx._indices(), mx._values().float(),
+                                                    r_mat_inv.size(0), r_mat_inv.size(1), mx.size(1),
+                                                    coalesced=True)
+    mx = torch.sparse_coo_tensor(indices=mx_indices, values=mx_values, size=(r_mat_inv.size(0), mx.size(1)))
+    return mx
+
+def one5d_partition(rank, size, inputs, adj_matrix, data, features, classes, replication, \
+                            normalize):
     node_count = inputs.size(0)
     # n_per_proc = math.ceil(float(node_count) / size)
     n_per_proc = math.ceil(float(node_count) / (size / replication))
@@ -223,21 +245,37 @@ def main(args):
 
     path = osp.join(osp.dirname(osp.realpath(__file__)), '../..', 'data', args.dataset)
 
-    if args.dataset == "Cora":
-        dataset = Planetoid(path, args.dataset, transform=T.NormalizeFeatures())
-    elif args.dataset == "Reddit":
-        dataset = Reddit(path, transform=T.NormalizeFeatures())
+    if args.dataset == "cora" or args.dataset == "reddit":
+        if args.dataset == "cora":
+            dataset = Planetoid(path, args.dataset, transform=T.NormalizeFeatures())
+        elif args.dataset == "reddit":
+            dataset = Reddit(path, transform=T.NormalizeFeatures())
 
-    data = dataset[0]
-    data = data.to(device)
-    data.x.requires_grad = True
-    inputs = data.x.to(device)
-    inputs.requires_grad = True
-    data.y = data.y.to(device)
-    edge_index = data.edge_index
-    num_features = dataset.num_features
-    num_classes = dataset.num_classes
-    adj_matrix = edge_index
+        data = dataset[0]
+        data = data.to(device)
+        data.x.requires_grad = True
+        inputs = data.x.to(device)
+        inputs.requires_grad = True
+        data.y = data.y.to(device)
+        edge_index = data.edge_index
+        num_features = dataset.num_features
+        num_classes = dataset.num_classes
+        adj_matrix = edge_index
+    elif args.dataset == "Amazon":
+        print(f"Loading coo...", flush=True)
+        edge_index = torch.load("../../data/Amazon/processed/data.pt")
+        print(f"Done loading coo", flush=True)
+        n = 14249639
+        num_features = 300
+        num_classes = 24
+        inputs = torch.rand(n, num_features)
+        data = Data()
+        data.y = torch.rand(n).uniform_(0, num_classes - 1).long()
+        data.train_mask = torch.ones(n).long()
+        adj_matrix = edge_index.t_()
+        data = data.to(device)
+        inputs.requires_grad = True
+        data.y = data.y.to(device)
 
     # Initialize distributed environment with SLURM
     if "SLURM_PROCID" in os.environ.keys():
@@ -254,8 +292,7 @@ def main(args):
     size = dist.get_world_size()
     print(f"hostname: {socket.gethostname()} rank: {rank} size: {size}", flush=True)
 
-    if args.normalize:
-        adj_matrix, _ = add_remaining_self_loops(adj_matrix, num_nodes=inputs.size(0))
+    adj_matrix, _ = add_remaining_self_loops(adj_matrix, num_nodes=inputs.size(0))
 
     partitioning = Partitioning.ONE5D
 
@@ -267,14 +304,30 @@ def main(args):
         return
 
     features_loc, g_loc, ampbyp = one5d_partition(rank, size, inputs, adj_matrix, data, \
-                                                      inputs, num_classes, args.replication, args.normalize, \
+                                                      inputs, num_classes, args.replication, \
                                                       args.normalize)
+    g_loc = g_loc.coalesce()
+    g_loc = row_normalize(g_loc)
 
     features_loc = features_loc.to(device)
     g_loc = g_loc.to(device)
     for i in range(len(ampbyp)):
         ampbyp[i] = ampbyp[i].t().coalesce().to(device)
 
+    n_per_proc = math.ceil(float(g_loc.size(0)) / (size / args.replication))
+
+    rank_train_mask = torch.split(data.train_mask, n_per_proc, dim=0)[rank_c]
+    rank_test_mask = torch.split(data.test_mask, n_per_proc, dim=0)[rank_c]
+    labels_rank = torch.split(data.y, n_per_proc, dim=0)[rank_c]
+    rank_train_nids = rank_train_mask.nonzero().squeeze()
+    rank_test_nids = rank_test_mask.nonzero().squeeze()
+
+    train_nid = data.train_mask.nonzero().squeeze()
+    test_nid = data.test_mask.nonzero().squeeze()
+
+    result = ladies_sampler(g_loc, args.batch_size, args.samp_num, 1, args.n_layers, train_nid)
+
+    return result # return here while testing sampling code
 
     # create GCN model
     torch.manual_seed(0)
@@ -292,17 +345,6 @@ def main(args):
 
     # use optimizer
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
-
-    n_per_proc = math.ceil(float(g_loc.size(0)) / (size / args.replication))
-
-    rank_train_mask = torch.split(data.train_mask, n_per_proc, dim=0)[rank_c]
-    rank_test_mask = torch.split(data.test_mask, n_per_proc, dim=0)[rank_c]
-    labels_rank = torch.split(data.y, n_per_proc, dim=0)[rank_c]
-    rank_train_nids = rank_train_mask.nonzero().squeeze()
-    rank_test_nids = rank_test_mask.nonzero().squeeze()
-
-    train_nid = data.train_mask.nonzero().squeeze()
-    test_nid = data.test_mask.nonzero().squeeze()
 
     torch.manual_seed(0)
     total_start = time.time()
@@ -376,6 +418,10 @@ if __name__ == '__main__':
                         help="number of hidden gcn units")
     parser.add_argument("--n-layers", type=int, default=1,
                         help="number of hidden gcn layers")
+    parser.add_argument("--batch-size", type=int, default=512,
+                        help="number of vertices in minibatch")
+    parser.add_argument("--samp-num", type=int, default=64,
+                        help="number of vertices per layer of layer-wise minibatch")
     parser.add_argument("--weight-decay", type=float, default=5e-4,
                         help="Weight for L2 loss")
     parser.add_argument("--aggregator-type", type=str, default="gcn",
