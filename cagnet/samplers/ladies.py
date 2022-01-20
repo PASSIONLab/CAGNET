@@ -58,7 +58,7 @@ def ladies_sampler(adj_matrix, batch_size, frontier_size, mb_count, n_layers, tr
             frontier_next[dart_hits] = sampled_verts
             p._values()[hit_verts_ids] = 0.0
 
-            sampled_count += hit_count
+            sampled_count = torch.sum(frontier_next != node_count)
 
             print(f"sampled_count: {sampled_count}")
             print(f"hit_count: {hit_count}")
