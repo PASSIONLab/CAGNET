@@ -2,20 +2,31 @@ import torch
 import torch_sparse
 
 def ladies_sampler(adj_matrix, batch_size, frontier_size, mb_count, n_layers, train_nodes):
-    frontiers = torch.cuda.IntTensor(n_layers, batch_size, mb_count)
+    # frontiers = torch.cuda.IntTensor(n_layers, batch_size, mb_count)
+    batches = torch.cuda.IntTensor(batch_size, mb_count) # initially the minibatch
+    current_frontier = torch.cuda.IntTensor(batch_size + frontier_size, mb_count)
+    # frontiers = torch.cuda.IntTensor(n_layers - 1, batch_size + frontier_size, mb_count)
+    adj_matrices = [None] * n_layers
     node_count = adj_matrix.size(0)
 
     torch.manual_seed(0)
+    # Generate minibatch vertices
     for i in range(mb_count):
         idx = torch.randperm(train_nodes.size(0))[:batch_size]
-        frontiers[0,:,i] = train_nodes[idx]
+        batches[:,i] = train_nodes[idx]
 
-    for i in range(1, n_layers + 1):
-        nnz = frontiers[i - 1, :, 0].size(0)
+    for i in range(n_layers):
+        if i == 0:
+            nnz = batches[:, 0].size(0) # assumes mb_count == 1
+        else:
+            nnz = current_frontier[:, 0].size(0) # assumes mb_count == 1
 
         # A * Q^i
         # indices would change based on mb_count
-        frontier_indices = torch.stack((torch.cuda.IntTensor(batch_size).fill_(0), frontiers[i - 1,:,0]))
+        if i == 0:
+            frontier_indices = torch.stack((torch.cuda.IntTensor(nnz).fill_(0), batches[:,0]))
+        else:
+            frontier_indices = torch.stack((torch.cuda.IntTensor(nnz).fill_(0), current_frontier[:,0]))
         frontier_values = torch.cuda.FloatTensor(nnz).fill_(1.0)
         adj_mat_squared = torch.pow(adj_matrix._values(), 2)
         p_num_indices, p_num_values = torch_sparse.spspmm(frontier_indices.long(), frontier_values, 
@@ -35,7 +46,7 @@ def ladies_sampler(adj_matrix, batch_size, frontier_size, mb_count, n_layers, tr
         print(f"neighbors: {p._indices()[1,:]}")
 
         max_prob = torch.max(p._values())
-        frontier_next = torch.cuda.LongTensor(frontier_size).fill_(node_count)
+        next_frontier = torch.cuda.LongTensor(frontier_size).fill_(node_count)
         sampled_count = 0
         
         while sampled_count < frontier_size:
@@ -55,13 +66,29 @@ def ladies_sampler(adj_matrix, batch_size, frontier_size, mb_count, n_layers, tr
             sampled_verts = p._indices()[1][hit_verts_ids]
             print(f"sampled_verts: {sampled_verts}")
             
-            frontier_next[dart_hits] = sampled_verts
+            next_frontier[dart_hits] = sampled_verts
             p._values()[hit_verts_ids] = 0.0
 
-            sampled_count = torch.sum(frontier_next != node_count)
+            sampled_count = torch.sum(next_frontier != node_count)
 
             print(f"sampled_count: {sampled_count}")
             print(f"hit_count: {hit_count}")
 
-        print(f"frontier_next: {frontier_next}")
-        return p
+        next_frontier = torch.cat((next_frontier, batches[:,0]), dim=0)
+        
+        if i == 0:
+            row_select_mtx_indices = torch.stack((torch.range(nnz), batches[:,0]))
+        else:
+            row_select_mtx_indices = torch.stack((torch.range(nnz), current_frontier[:,0]))
+        row_select_mtx_values = torch.cuda.FloatTensor(nnz).fill_(1.0)
+
+        col_select_mtx_indices = torch.stack((next_frontier, torch.range(next_frontier.size(0)))
+        col_select_mtx_values = torch.cuda.FloatTensor(next_frontier.size(0)).fill_(1.0)
+
+        # multiply row_select matrix with adj_matrix
+        # multiply adj_matrix with col_select matrix
+        # layer_adj_matrix = adj_matrix[current_frontier[:,0], next_frontier]
+
+        current_frontier[:,0] = frontier_next
+
+    return adj_matrices
