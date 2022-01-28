@@ -9,6 +9,7 @@ import torch.distributed as dist
 import torch.nn as nn
 import torch.autograd.profiler as profiler
 import torch_geometric
+from torch_geometric.data import Data, Dataset
 from torch_geometric.datasets import Planetoid, Reddit
 import torch_geometric.transforms as T
 from torch_geometric.utils import add_remaining_self_loops
@@ -130,21 +131,26 @@ def split_coo(adj_matrix, node_count, n_per_proc, dim):
 
 def row_normalize(mx):
     """Row-normalize sparse matrix"""
+    print("sum + float_power", flush=True)
     rowsum = torch.sparse.sum(mx, 1)
     r_inv = torch.float_power(rowsum, -1).flatten()
     # r_inv._values = r_inv._values()[torch.isinf(r_inv._values())] = 0.
     # r_mat_inv = torch.diag(r_inv._values())
     r_inv_values = r_inv._values()
+    print("set inf", flush=True)
     r_inv_values[torch.isinf(r_inv_values)] = 0
+    print("construct tensor", flush=True)
     r_mat_inv = torch.sparse_coo_tensor([np.arange(0, r_inv.size(0)).tolist(),
                                      np.arange(0, r_inv.size(0)).tolist()],
                                      r_inv_values,
                                      size=(r_inv.size(0), r_inv.size(0)))
     # mx = r_mat_inv.mm(mx.float())
+    print("normalize spgemm", flush=True)
     mx_indices, mx_values = torch_sparse.spspmm(r_mat_inv._indices(), r_mat_inv._values().float(), 
                                                     mx._indices(), mx._values().float(),
                                                     r_mat_inv.size(0), r_mat_inv.size(1), mx.size(1),
                                                     coalesced=True)
+    print("mx construct tensor", flush=True)
     mx = torch.sparse_coo_tensor(indices=mx_indices, values=mx_values, size=(r_mat_inv.size(0), mx.size(1)))
     return mx
 
@@ -303,11 +309,17 @@ def main(args):
     if rank_c >= (size // args.replication):
         return
 
+    print("start partitioning", flush=True)
     features_loc, g_loc, ampbyp = one5d_partition(rank, size, inputs, adj_matrix, data, \
                                                       inputs, num_classes, args.replication, \
                                                       args.normalize)
+    print("end partitioning", flush=True)
+
+    print("coalescing", flush=True)
     g_loc = g_loc.coalesce()
+    print("normalizing", flush=True)
     g_loc = row_normalize(g_loc)
+    print("done normalizing", flush=True)
 
     features_loc = features_loc.to(device)
     g_loc = g_loc.to(device)
@@ -325,9 +337,11 @@ def main(args):
     train_nid = data.train_mask.nonzero().squeeze()
     test_nid = data.test_mask.nonzero().squeeze()
 
-    result = ladies_sampler(g_loc, args.batch_size, args.samp_num, 1, args.n_layers, train_nid)
+    current_frontier, next_frontier, adj_matrices = ladies_sampler(g_loc, args.batch_size, args.samp_num, 1, \
+                                                                args.n_layers, train_nid)
 
-    return result # return here while testing sampling code
+    print(f"sample: {adj_matrices}")
+    return current_frontier, next_frontier, adj_matrices, g_loc # return here while testing sampling code
 
     # create GCN model
     torch.manual_seed(0)

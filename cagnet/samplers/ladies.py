@@ -40,11 +40,6 @@ def ladies_sampler(adj_matrix, batch_size, frontier_size, mb_count, n_layers, tr
         p_den = p_den._values().item()
         p = torch.div(p_num, p_den)
 
-        print(f"p: {p}")
-        print(f"p.sum: {torch.sparse.sum(p)}")
-
-        print(f"neighbors: {p._indices()[1,:]}")
-
         max_prob = torch.max(p._values())
         next_frontier = torch.cuda.LongTensor(frontier_size).fill_(node_count)
         sampled_count = 0
@@ -64,31 +59,38 @@ def ladies_sampler(adj_matrix, batch_size, frontier_size, mb_count, n_layers, tr
             hit_count = dart_hits.sum()
             hit_verts_ids = sampled_verts_ids[dart_hits]
             sampled_verts = p._indices()[1][hit_verts_ids]
-            print(f"sampled_verts: {sampled_verts}")
             
             next_frontier[dart_hits] = sampled_verts
             p._values()[hit_verts_ids] = 0.0
 
             sampled_count = torch.sum(next_frontier != node_count)
 
-            print(f"sampled_count: {sampled_count}")
-            print(f"hit_count: {hit_count}")
-
         next_frontier = torch.cat((next_frontier, batches[:,0]), dim=0)
-        
+
         if i == 0:
-            row_select_mtx_indices = torch.stack((torch.range(nnz), batches[:,0]))
+            row_select_mtx_indices = torch.stack((torch.arange(start=0, end=nnz).cuda(), batches[:,0]))
         else:
-            row_select_mtx_indices = torch.stack((torch.range(nnz), current_frontier[:,0]))
+            row_select_mtx_indices = torch.stack((torch.arange(start=0, end=nnz).cuda(), current_frontier[:,0]))
         row_select_mtx_values = torch.cuda.FloatTensor(nnz).fill_(1.0)
 
-        col_select_mtx_indices = torch.stack((next_frontier, torch.range(next_frontier.size(0)))
+        col_select_mtx_indices = torch.stack((next_frontier, torch.arange(start=0, end=next_frontier.size(0))\
+                                                .cuda()))
         col_select_mtx_values = torch.cuda.FloatTensor(next_frontier.size(0)).fill_(1.0)
 
         # multiply row_select matrix with adj_matrix
+        sampled_indices, sampled_values = torch_sparse.spspmm(row_select_mtx_indices.long(), 
+                                                    row_select_mtx_values,
+                                                    adj_matrix._indices(), adj_matrix._values(),
+                                                    nnz, node_count, node_count, coalesced=True)
         # multiply adj_matrix with col_select matrix
+        sampled_indices, sampled_values = torch_sparse.spspmm(sampled_indices, sampled_values,
+                                                    col_select_mtx_indices.long(), col_select_mtx_values,
+                                                    nnz, node_count, next_frontier.size(0), coalesced=True)
         # layer_adj_matrix = adj_matrix[current_frontier[:,0], next_frontier]
 
-        current_frontier[:,0] = frontier_next
+        current_frontier[:,0] = next_frontier
+        adj_matrix_sample = torch.sparse_coo_tensor(indices=sampled_indices, values=sampled_values, \
+                                        size=(nnz, next_frontier.size(0)))
+        adj_matrices[i] = adj_matrix_sample
 
-    return adj_matrices
+    return batches[:, 0], next_frontier, adj_matrices
