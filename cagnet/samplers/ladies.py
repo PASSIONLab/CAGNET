@@ -112,19 +112,29 @@ def ladies_sampler(adj_matrix, batch_size, frontier_size, mb_count, n_layers, tr
             # TODO: What if a vertex is sampled more than once? (idk if w/o replacement is possible)
             start_time(start_timer)
             torch.cuda.nvtx.range_push("nvtx-rand-vtxs")
-            sampled_verts_ids = torch.randint(p._nnz(), (mb_count, frontier_size))
+            sampled_verts_ids = torch.cuda.LongTensor(mb_count, frontier_size) # indices into p._values()
+            nnz_count = 0
+            for j in range(mb_count):
+                nnz_mb_mask = p._indices()[0, :] == j
+                p_values_mb = p._values()[nnz_mb_mask]
+                sampled_verts_ids[i] = torch.randint(p_values_mb.size(0), (frontier_size,))
+                sampled_verts_ids[i] += nnz_count
+                nnz_count += p_values_mb.size(0)
             torch.cuda.nvtx.range_pop()
             timing_dict["rand_vtxs"].append(stop_time(start_timer, stop_timer))
 
             start_time(start_timer)
             torch.cuda.nvtx.range_push("nvtx-p-loc")
-            p_loc = p._values()[sampled_verts_ids] 
+            p_loc = p._values()[sampled_verts_ids.view(-1)].view(mb_count, frontier_size)
+
             torch.cuda.nvtx.range_pop()
             timing_dict["p_loc"].append(stop_time(start_timer, stop_timer))
 
             start_time(start_timer)
             torch.cuda.nvtx.range_push("nvtx-dart-throw")
-            dart_throws = torch.cuda.FloatTensor(frontier_size).uniform_(to=max_prob)
+            dart_throws = torch.cuda.FloatTensor(mb_count, frontier_size)
+            for j in range(mb_count):
+                dart_throws[i] = torch.cuda.FloatTensor(frontier_size).uniform_(to=max_prob[i])
             torch.cuda.nvtx.range_pop()
             timing_dict["dart_throw"].append(stop_time(start_timer, stop_timer))
 
@@ -132,7 +142,6 @@ def ladies_sampler(adj_matrix, batch_size, frontier_size, mb_count, n_layers, tr
             torch.cuda.nvtx.range_push("nvtx-filter-darts")
             dart_misses = p_loc <= dart_throws
             dart_hits = p_loc > dart_throws
-            hit_count = dart_hits.sum()
             hit_verts_ids = sampled_verts_ids[dart_hits]
             sampled_verts = p._indices()[1][hit_verts_ids]
             torch.cuda.nvtx.range_pop()
@@ -157,52 +166,55 @@ def ladies_sampler(adj_matrix, batch_size, frontier_size, mb_count, n_layers, tr
         # print(f"iter_count: {iter_count}")
         start_time(start_timer)
         torch.cuda.nvtx.range_push("nvtx-construct-nextf")
-        next_frontier = torch.cat((next_frontier, batches[:,0]), dim=0)
+        next_frontier = torch.cat((next_frontier, batches), dim=1)
         torch.cuda.nvtx.range_pop()
         print(f"construct-nextf: {stop_time(start_timer, stop_timer)}")
 
-        start_time(start_timer)
-        torch.cuda.nvtx.range_push("nvtx-select-mtxs")
-        if i == 0:
-            row_select_mtx_indices = torch.stack((torch.arange(start=0, end=nnz).cuda(), batches[:,0]))
-        else:
-            row_select_mtx_indices = torch.stack((torch.arange(start=0, end=nnz).cuda(), current_frontier[:,0]))
-        row_select_mtx_values = torch.cuda.FloatTensor(nnz).fill_(1.0)
+        for j in range(mb_count):
+            start_time(start_timer)
+            torch.cuda.nvtx.range_push("nvtx-select-mtxs")
+            if i == 0:
+                row_select_mtx_indices = torch.stack((torch.arange(start=0, end=nnz).cuda(), batches[j,:]))
+            else:
+                row_select_mtx_indices = torch.stack((torch.arange(start=0, end=nnz).cuda(), \
+                                                                            current_frontier[j, :]))
+            row_select_mtx_values = torch.cuda.FloatTensor(nnz).fill_(1.0)
 
-        col_select_mtx_indices = torch.stack((next_frontier, torch.arange(start=0, end=next_frontier.size(0))\
-                                                .cuda()))
-        col_select_mtx_values = torch.cuda.FloatTensor(next_frontier.size(0)).fill_(1.0)
-        torch.cuda.nvtx.range_pop()
-        print(f"select-mtxs: {stop_time(start_timer, stop_timer)}")
+            col_select_mtx_indices = torch.stack((next_frontier[j], torch.arange(start=0, \
+                                                        end=next_frontier[j].size(0)).cuda()))
+            col_select_mtx_values = torch.cuda.FloatTensor(next_frontier[j].size(0)).fill_(1.0)
+            torch.cuda.nvtx.range_pop()
+            print(f"select-mtxs: {stop_time(start_timer, stop_timer)}")
 
-        # multiply row_select matrix with adj_matrix
-        start_time(start_timer)
-        torch.cuda.nvtx.range_push("nvtx-row-select-spgemm")
-        sampled_indices, sampled_values = torch_sparse.spspmm(row_select_mtx_indices.long(), 
-                                                    row_select_mtx_values,
-                                                    adj_matrix._indices(), adj_matrix._values(),
-                                                    nnz, node_count, node_count, coalesced=True)
-        torch.cuda.nvtx.range_pop()
-        print(f"row-select-spgemm: {stop_time(start_timer, stop_timer)}")
+            # multiply row_select matrix with adj_matrix
+            start_time(start_timer)
+            torch.cuda.nvtx.range_push("nvtx-row-select-spgemm")
+            sampled_indices, sampled_values = torch_sparse.spspmm(row_select_mtx_indices.long(), 
+                                                        row_select_mtx_values,
+                                                        adj_matrix._indices(), adj_matrix._values(),
+                                                        nnz, node_count, node_count, coalesced=True)
+            torch.cuda.nvtx.range_pop()
+            print(f"row-select-spgemm: {stop_time(start_timer, stop_timer)}")
 
-        # multiply adj_matrix with col_select matrix
-        start_time(start_timer)
-        torch.cuda.nvtx.range_push("nvtx-col-select-spgemm")
-        sampled_indices, sampled_values = torch_sparse.spspmm(sampled_indices, sampled_values,
-                                                    col_select_mtx_indices.long(), col_select_mtx_values,
-                                                    nnz, node_count, next_frontier.size(0), coalesced=True)
-        torch.cuda.nvtx.range_pop()
-        print(f"col-select-spgemm: {stop_time(start_timer, stop_timer)}")
-        # layer_adj_matrix = adj_matrix[current_frontier[:,0], next_frontier]
+            # multiply adj_matrix with col_select matrix
+            start_time(start_timer)
+            torch.cuda.nvtx.range_push("nvtx-col-select-spgemm")
+            sampled_indices, sampled_values = torch_sparse.spspmm(sampled_indices, sampled_values,
+                                                        col_select_mtx_indices.long(), col_select_mtx_values,
+                                                        nnz, node_count, next_frontier[j].size(0), 
+                                                        coalesced=True)
+            torch.cuda.nvtx.range_pop()
+            print(f"col-select-spgemm: {stop_time(start_timer, stop_timer)}")
+            # layer_adj_matrix = adj_matrix[current_frontier[:,0], next_frontier]
 
-        start_time(start_timer)
-        torch.cuda.nvtx.range_push("nvtx-set-sample")
-        current_frontier[:,0] = next_frontier
-        adj_matrix_sample = torch.sparse_coo_tensor(indices=sampled_indices, values=sampled_values, \
-                                        size=(nnz, next_frontier.size(0)))
-        adj_matrices[i] = adj_matrix_sample
-        torch.cuda.nvtx.range_pop()
-        print(f"set-sample: {stop_time(start_timer, stop_timer)}")
+            start_time(start_timer)
+            torch.cuda.nvtx.range_push("nvtx-set-sample")
+            current_frontier[j, :] = next_frontier[j, :]
+            adj_matrix_sample = torch.sparse_coo_tensor(indices=sampled_indices, values=sampled_values, \
+                                            size=(nnz, next_frontier[j].size(0)))
+            adj_matrices[i] = adj_matrix_sample
+            torch.cuda.nvtx.range_pop()
+            print(f"set-sample: {stop_time(start_timer, stop_timer)}")
     
     print(f"total_time: {stop_time(total_start_timer, total_stop_timer)}")
     for k, v in timing_dict.items():
