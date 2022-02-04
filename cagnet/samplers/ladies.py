@@ -64,7 +64,7 @@ def ladies_sampler(adj_matrix, batch_size, frontier_size, mb_count, n_layers, tr
             frontier_indices_rows = frontier_indices_rows.repeat_interleave(nnz)
             forntier_indices_cols = current_frontier.view(-1)
             frontier_indices = torch.stack((frontier_indices_rows, frontier_indices_cols))
-        frontier_values = torch.cuda.FloatTensor(nnz).fill_(1.0)
+        frontier_values = torch.cuda.FloatTensor(nnz * mb_count).fill_(1.0)
         adj_mat_squared = torch.pow(adj_matrix._values(), 2)
         torch.cuda.nvtx.range_pop()
         print(f"gen-sparse-frontier: {stop_time(start_timer, stop_timer)}")
@@ -85,9 +85,11 @@ def ladies_sampler(adj_matrix, batch_size, frontier_size, mb_count, n_layers, tr
         p_num = torch.sparse_coo_tensor(indices=p_num_indices, values=p_num_values, size=(mb_count, node_count))
         p_den = torch.sparse.sum(p_num, dim=1)
 
-        # Assumes mb_count = 1
-        p_den = p_den._values().item()
-        p = torch.div(p_num, p_den)
+        for j in range(mb_count):
+            if p_den._nnz() != mb_count:
+                print("ERROR nnz: {p_den._nnz()} mb_count: {mb_count}")
+            p_den_mb = p_den._values()[j].item()
+            p = torch.div(p_num, p_den)
         torch.cuda.nvtx.range_pop()
         print(f"compute-p: {stop_time(start_timer, stop_timer)}")
 

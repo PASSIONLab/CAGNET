@@ -335,7 +335,7 @@ def main(args):
     test_nid = data.test_mask.nonzero().squeeze()
 
     # do it once before timing
-    current_frontier, next_frontier, adj_matrices = ladies_sampler(g_loc, args.batch_size, args.samp_num, 1, \
+    current_frontier, next_frontier, adj_matrices = ladies_sampler(g_loc, args.batch_size, args.samp_num, 2, \
                                                                 args.n_layers, train_nid)
 
     print()
