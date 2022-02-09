@@ -28,7 +28,7 @@ def ladies_sampler(adj_matrix, batch_size, frontier_size, mb_count, n_layers, tr
     batches = torch.cuda.IntTensor(mb_count, batch_size) # initially the minibatch, note row-major
     current_frontier = torch.cuda.IntTensor(mb_count, batch_size + frontier_size)
     # frontiers = torch.cuda.IntTensor(n_layers - 1, batch_size + frontier_size, mb_count)
-    adj_matrices = [None] * n_layers
+    adj_matrices = [[None] * n_layers for x in range(mb_count)] # adj_matrices[i][j] --  mb i layer j
     node_count = adj_matrix.size(0)
     torch.cuda.nvtx.range_pop()
     print(f"instantiations: {stop_time(start_timer, stop_timer)}")
@@ -82,14 +82,15 @@ def ladies_sampler(adj_matrix, batch_size, frontier_size, mb_count, n_layers, tr
 
         start_time(start_timer)
         torch.cuda.nvtx.range_push("nvtx-compute-p")
-        p_num = torch.sparse_coo_tensor(indices=p_num_indices, values=p_num_values, size=(mb_count, node_count))
+        p_num = torch.sparse_coo_tensor(indices=p_num_indices, values=p_num_values, \
+                                                size=(mb_count, node_count))
         p_den = torch.sparse.sum(p_num, dim=1)
 
         for j in range(mb_count):
             if p_den._nnz() != mb_count:
                 print("ERROR nnz: {p_den._nnz()} mb_count: {mb_count}")
             p_den_mb = p_den._values()[j].item()
-            p = torch.div(p_num, p_den)
+            p = torch.div(p_num, p_den_mb)
         torch.cuda.nvtx.range_pop()
         print(f"compute-p: {stop_time(start_timer, stop_timer)}")
 
@@ -105,7 +106,7 @@ def ladies_sampler(adj_matrix, batch_size, frontier_size, mb_count, n_layers, tr
 
         iter_count = 0
         torch.cuda.nvtx.range_push("nvtx-sampling")
-        while (sampled_count < frontier_size).all():
+        while (sampled_count < mb_count * frontier_size).all():
             iter_count += 1
             start_time(sample_start_timer)
             torch.cuda.nvtx.range_push("nvtx-sampling-iter")
@@ -119,8 +120,8 @@ def ladies_sampler(adj_matrix, batch_size, frontier_size, mb_count, n_layers, tr
             for j in range(mb_count):
                 nnz_mb_mask = p._indices()[0, :] == j
                 p_values_mb = p._values()[nnz_mb_mask]
-                sampled_verts_ids[i] = torch.randint(p_values_mb.size(0), (frontier_size,))
-                sampled_verts_ids[i] += nnz_count
+                sampled_verts_ids[j] = torch.randint(p_values_mb.size(0), (frontier_size,))
+                sampled_verts_ids[j] += nnz_count
                 nnz_count += p_values_mb.size(0)
             torch.cuda.nvtx.range_pop()
             timing_dict["rand_vtxs"].append(stop_time(start_timer, stop_timer))
@@ -214,7 +215,7 @@ def ladies_sampler(adj_matrix, batch_size, frontier_size, mb_count, n_layers, tr
             current_frontier[j, :] = next_frontier[j, :]
             adj_matrix_sample = torch.sparse_coo_tensor(indices=sampled_indices, values=sampled_values, \
                                             size=(nnz, next_frontier[j].size(0)))
-            adj_matrices[i] = adj_matrix_sample
+            adj_matrices[j][i] = adj_matrix_sample
             torch.cuda.nvtx.range_pop()
             print(f"set-sample: {stop_time(start_timer, stop_timer)}")
     
@@ -222,4 +223,4 @@ def ladies_sampler(adj_matrix, batch_size, frontier_size, mb_count, n_layers, tr
     for k, v in timing_dict.items():
         print(f"{k} total_time: {sum(v)} avg_time {sum(v) / len(v)}")
     print(f"iter_count: {iter_count}")
-    return batches[:, 0], next_frontier, adj_matrices
+    return batches, next_frontier, adj_matrices
