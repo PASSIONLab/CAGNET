@@ -74,6 +74,7 @@ def main(args):
     print("")
     print("Beginning LADIES sampler test")
     for i in range(args.n_bulkmb):
+        print(f"Testing minibatch {i}")
         current_frontier = current_frontier_all[i] # current_frontier for minibatch i
         next_frontier = next_frontier_all[i] # next_frontier for minibatch i
         adj_matrices = adj_matrices_all[i] # adj_matrices for minibatch i

@@ -62,7 +62,7 @@ def ladies_sampler(adj_matrix, batch_size, frontier_size, mb_count, n_layers, tr
         else:
             frontier_indices_rows = torch.arange(mb_count).cuda()
             frontier_indices_rows = frontier_indices_rows.repeat_interleave(nnz)
-            forntier_indices_cols = current_frontier.view(-1)
+            frontier_indices_cols = current_frontier.view(-1)
             frontier_indices = torch.stack((frontier_indices_rows, frontier_indices_cols))
         frontier_values = torch.cuda.FloatTensor(nnz * mb_count).fill_(1.0)
         adj_mat_squared = torch.pow(adj_matrix._values(), 2)
@@ -96,9 +96,8 @@ def ladies_sampler(adj_matrix, batch_size, frontier_size, mb_count, n_layers, tr
 
         start_time(start_timer)
         torch.cuda.nvtx.range_push("nvtx-pre-loop")
-        # max_prob = torch.sparse.max(p, dim=1)
-        p_torch_sparse = torch_sparse.tensor.SparseTensor.from_torch_sparse_coo_tensor(p)
-        max_prob = torch_sparse.reduce.reduction(p_torch_sparse, dim=1, reduce="max")
+        # p_torch_sparse = torch_sparse.tensor.SparseTensor.from_torch_sparse_coo_tensor(p)
+        # max_prob = torch_sparse.reduce.reduction(p_torch_sparse, dim=1, reduce="max")
         next_frontier = torch.cuda.LongTensor(mb_count, frontier_size).fill_(node_count)
         sampled_count = torch.cuda.IntTensor(mb_count).fill_(0)
         torch.cuda.nvtx.range_pop()
@@ -110,7 +109,7 @@ def ladies_sampler(adj_matrix, batch_size, frontier_size, mb_count, n_layers, tr
             iter_count += 1
             start_time(sample_start_timer)
             torch.cuda.nvtx.range_push("nvtx-sampling-iter")
-            # sample u.a.r. sampled_count vertices per minibatch from vertices in the minibatch's neighborhood
+            # sample u.a.r. sampled_count vertices per minibatch from vertices in the mb's neighborhood
             # neighbored is vertices with nonzero probabilities
             # TODO: What if a vertex is sampled more than once? (idk if w/o replacement is possible)
             start_time(start_timer)
@@ -125,6 +124,13 @@ def ladies_sampler(adj_matrix, batch_size, frontier_size, mb_count, n_layers, tr
                 nnz_count += p_values_mb.size(0)
             torch.cuda.nvtx.range_pop()
             timing_dict["rand_vtxs"].append(stop_time(start_timer, stop_timer))
+
+            start_time(start_timer)
+            torch.cuda.nvtx.range_push("nvtx-comp-maxprob")
+            p_torch_sparse = torch_sparse.tensor.SparseTensor.from_torch_sparse_coo_tensor(p)
+            max_prob = torch_sparse.reduce.reduction(p_torch_sparse, dim=1, reduce="max")
+            torch.cuda.nvtx.range_pop()
+            timing_dict["max-prob"].append(stop_time(start_timer, stop_timer))
 
             start_time(start_timer)
             torch.cuda.nvtx.range_push("nvtx-p-loc")
@@ -173,6 +179,7 @@ def ladies_sampler(adj_matrix, batch_size, frontier_size, mb_count, n_layers, tr
         torch.cuda.nvtx.range_pop()
         print(f"construct-nextf: {stop_time(start_timer, stop_timer)}")
 
+        torch.cuda.nvtx.range_push("nvtx-select-rowcols")
         for j in range(mb_count):
             start_time(start_timer)
             torch.cuda.nvtx.range_push("nvtx-select-mtxs")
@@ -187,7 +194,7 @@ def ladies_sampler(adj_matrix, batch_size, frontier_size, mb_count, n_layers, tr
                                                         end=next_frontier[j].size(0)).cuda()))
             col_select_mtx_values = torch.cuda.FloatTensor(next_frontier[j].size(0)).fill_(1.0)
             torch.cuda.nvtx.range_pop()
-            print(f"select-mtxs: {stop_time(start_timer, stop_timer)}")
+            timing_dict["select-mtxs"].append(stop_time(start_timer, stop_timer))
 
             # multiply row_select matrix with adj_matrix
             start_time(start_timer)
@@ -197,7 +204,7 @@ def ladies_sampler(adj_matrix, batch_size, frontier_size, mb_count, n_layers, tr
                                                         adj_matrix._indices(), adj_matrix._values(),
                                                         nnz, node_count, node_count, coalesced=True)
             torch.cuda.nvtx.range_pop()
-            print(f"row-select-spgemm: {stop_time(start_timer, stop_timer)}")
+            timing_dict["row-select-spgemm"].append(stop_time(start_timer, stop_timer))
 
             # multiply adj_matrix with col_select matrix
             start_time(start_timer)
@@ -207,7 +214,7 @@ def ladies_sampler(adj_matrix, batch_size, frontier_size, mb_count, n_layers, tr
                                                         nnz, node_count, next_frontier[j].size(0), 
                                                         coalesced=True)
             torch.cuda.nvtx.range_pop()
-            print(f"col-select-spgemm: {stop_time(start_timer, stop_timer)}")
+            timing_dict["col-select-spgemm"].append(stop_time(start_timer, stop_timer))
             # layer_adj_matrix = adj_matrix[current_frontier[:,0], next_frontier]
 
             start_time(start_timer)
@@ -217,7 +224,8 @@ def ladies_sampler(adj_matrix, batch_size, frontier_size, mb_count, n_layers, tr
                                             size=(nnz, next_frontier[j].size(0)))
             adj_matrices[j][i] = adj_matrix_sample
             torch.cuda.nvtx.range_pop()
-            print(f"set-sample: {stop_time(start_timer, stop_timer)}")
+            timing_dict["set-sample"].append(stop_time(start_timer, stop_timer))
+        torch.cuda.nvtx.range_pop()
     
     print(f"total_time: {stop_time(total_start_timer, total_stop_timer)}")
     for k, v in timing_dict.items():
