@@ -111,21 +111,6 @@ def ladies_sampler(adj_matrix, batch_size, frontier_size, mb_count, n_layers, tr
             iter_count += 1
             start_time(sample_start_timer)
             torch.cuda.nvtx.range_push("nvtx-sampling-iter")
-            # sample u.a.r. sampled_count vertices per minibatch from vertices in the mb's neighborhood
-            # neighbored is vertices with nonzero probabilities
-            # TODO: What if a vertex is sampled more than once? (idk if w/o replacement is possible)
-            start_time(start_timer)
-            torch.cuda.nvtx.range_push("nvtx-rand-vtxs")
-            sampled_verts_ids = torch.cuda.LongTensor(mb_count, frontier_size) # indices into p._values()
-            nnz_count = 0
-            for j in range(mb_count):
-                nnz_mb_mask = p._indices()[0, :] == j
-                p_values_mb = p._values()[nnz_mb_mask]
-                sampled_verts_ids[j] = torch.randint(p_values_mb.size(0), (frontier_size,))
-                sampled_verts_ids[j] += nnz_count
-                nnz_count += p_values_mb.size(0)
-            torch.cuda.nvtx.range_pop()
-            timing_dict["rand_vtxs"].append(stop_time(start_timer, stop_timer))
 
             start_time(start_timer)
             torch.cuda.nvtx.range_push("nvtx-comp-maxprob")
@@ -135,28 +120,48 @@ def ladies_sampler(adj_matrix, batch_size, frontier_size, mb_count, n_layers, tr
             timing_dict["max-prob"].append(stop_time(start_timer, stop_timer))
 
             start_time(start_timer)
-            torch.cuda.nvtx.range_push("nvtx-p-loc")
-            p_loc = p._values()[sampled_verts_ids.view(-1)].view(mb_count, frontier_size)
-
-            torch.cuda.nvtx.range_pop()
-            timing_dict["p_loc"].append(stop_time(start_timer, stop_timer))
-
-            start_time(start_timer)
             torch.cuda.nvtx.range_push("nvtx-dart-throw")
-            dart_throws = torch.cuda.FloatTensor(mb_count, frontier_size)
+            dart_throws_values = torch.cuda.FloatTensor(p._nnz())
+            mb_start = 0
             for j in range(mb_count):
-                dart_throws[i] = torch.cuda.FloatTensor(frontier_size).uniform_(to=max_prob[i])
+                neighbors_count = (p._indices()[0,:] == j).sum().item()
+                mb_end = mb_start + neighbors_count
+                dart_throws_values[mb_start:mb_end] = \
+                                torch.cuda.FloatTensor(neighbors_count).uniform_(to=max_prob[j])
+                mb_start = mb_end
             torch.cuda.nvtx.range_pop()
-            timing_dict["dart_throw"].append(stop_time(start_timer, stop_timer))
+            timing_dict["dart-throw"].append(stop_time(start_timer, stop_timer))
 
             start_time(start_timer)
             torch.cuda.nvtx.range_push("nvtx-filter-darts")
-            dart_misses = p_loc <= dart_throws
-            dart_hits = p_loc > dart_throws
-            hit_verts_ids = sampled_verts_ids[dart_hits]
-            sampled_verts = p._indices()[1][hit_verts_ids]
+            print(f"p._values.size(): {p._values().size()}")
+            print(f"p._values: {p._values()}")
+            print(f"dart_throws_values.size(): {dart_throws_values.size()}")
+            print(f"dart_throws_values: {dart_throws_values}")
+            dart_hits_values = p._values() >= dart_throws_values
+            print(f"max_prob: {max_prob}")
+            print(f"dart_hits_values.sum(): {dart_hits_values.sum()}")
+            print(f"dart_hits_values: {dart_hits_values}")
             torch.cuda.nvtx.range_pop()
             timing_dict["filter_darts"].append(stop_time(start_timer, stop_timer))
+
+            start_time(start_timer)
+            torch.cuda.nvtx.range_push("nvtx-filter-hits")
+            for j in range(mb_count):
+                neighbors_mask = p._indices()[0,:] == j
+                neighbors = (p._indices()[1,:])[neighbors_mask]
+                neighbors_count = neighbors_mask.sum()
+
+                hit_vtxs = torch.randperm(neighbors_count)
+                hit_vtxs = hit_vtxs[:frontier_size]
+                hit_vtxs = neighbors[hit_vtxs]
+            torch.cuda.nvtx.range_pop()
+            timing_dict["filter-hits"].append(stop_time(start_timer, stop_timer))
+
+            for k, v in timing_dict.items():
+                print(f"{k} total_time: {sum(v)} avg_time {sum(v) / len(v)}")
+            print(f"iter_count: {iter_count}")
+            return None, None, None
             
             start_time(start_timer)
             torch.cuda.nvtx.range_push("nvtx-set-probs")
