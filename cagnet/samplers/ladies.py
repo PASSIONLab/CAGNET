@@ -35,10 +35,12 @@ def ladies_sampler(adj_matrix, batch_size, frontier_size, mb_count, n_layers, tr
 
     start_time(start_timer)
     torch.cuda.nvtx.range_push("nvtx-gen-minibatch-vtxs")
+
     torch.manual_seed(0)
+    vertex_perm = torch.randperm(train_nodes.size(0))
     # Generate minibatch vertices
     for i in range(mb_count):
-        idx = torch.randperm(train_nodes.size(0))[:batch_size]
+        idx = vertex_perm[(i * batch_size):((i + 1) * batch_size)]
         batches[i,:] = train_nodes[idx]
     torch.cuda.nvtx.range_pop()
     print(f"get-minibatch-vtxs: {stop_time(start_timer, stop_timer)}")
