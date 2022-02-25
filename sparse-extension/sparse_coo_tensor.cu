@@ -226,7 +226,35 @@ void spmm_gpu(const at::Tensor& A_rowindices,
     C.t_();
 }
 
+__global__ void DownSample(long *q_values, long *q_rows, int *overflow, int nnz) {
+    int     id = blockIdx.x * blockDim.x + threadIdx.x;
+    int stride = blockDim.x * gridDim.x;
+
+    for (int i = id; i < nnz; i += stride) {
+        long row = q_rows[i];
+        if (q_values[i] == 1 && ((int) atomicSub((unsigned int *)&overflow[row], 1)) > 0) {
+            q_values[i] = 0;
+        }
+    }
+}
+
+void downsample_gpu(const at::Tensor& q_values, 
+                        const at::Tensor& q_rows,
+                        const at::Tensor& overflow,
+                        int nnz) {
+
+
+    int BLOCK_SIZE = 256;
+    int BLOCK_COUNT = std::ceil(nnz / ((float) BLOCK_SIZE));
+    BLOCK_COUNT = std::min(BLOCK_COUNT, 65535);
+
+    DownSample<<<BLOCK_COUNT, BLOCK_SIZE>>>(q_values.data<long>(), q_rows.data<long>(), 
+                                                                overflow.data<int>(), nnz);
+    CHECK_ERROR("downsampling error")
+}
+
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
     m.def("sparse_coo_tensor_gpu", &sparse_coo_tensor_gpu, "Sparse Tensor GPU-only constructor");
     m.def("spmm_gpu", &spmm_gpu, "SpMM wrapper for cusparse");
+    m.def("downsample_gpu", &downsample_gpu, "Downsampling for LADIES sampling algorithm");
 }

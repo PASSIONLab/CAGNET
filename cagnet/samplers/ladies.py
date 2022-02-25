@@ -2,6 +2,8 @@ import torch
 import torch_sparse
 from collections import defaultdict
 
+from sparse_coo_tensor_cpp import downsample_gpu
+
 def start_time(timer):
     timer.record()
 
@@ -106,9 +108,8 @@ def ladies_sampler(adj_matrix, batch_size, frontier_size, mb_count, n_layers, tr
         print(f"pre-loop: {stop_time(start_timer, stop_timer)}")
 
         iter_count = 0
-        print(f"p: {p}")
         torch.cuda.nvtx.range_push("nvtx-sampling")
-        while (sampled_count < frontier_size).all():
+        while (sampled_count < frontier_size).any():
             iter_count += 1
             start_time(sample_start_timer)
             torch.cuda.nvtx.range_push("nvtx-sampling-iter")
@@ -158,19 +159,26 @@ def ladies_sampler(adj_matrix, batch_size, frontier_size, mb_count, n_layers, tr
             sampled_count = torch.sparse.sum(next_frontier, dim=1)._values()
             torch.cuda.nvtx.range_pop()
             timing_dict["count_samples"].append(stop_time(start_timer, stop_timer))
+
+            start_time(start_timer)
+            torch.cuda.nvtx.range_push("nvtx-downsample")
+            overflow = torch.clamp(sampled_count - frontier_size, min=0).int()
+            downsample_gpu(next_frontier._values(), next_frontier._indices()[0,:], overflow, next_frontier._nnz())
+            torch.cuda.nvtx.range_pop()
+            timing_dict["downsample"].append(stop_time(start_timer, stop_timer))
+
             torch.cuda.nvtx.range_pop() # nvtx-sampling-iter
             timing_dict["sampling_iters"].append(stop_time(sample_start_timer, sample_stop_timer))
+
         torch.cuda.nvtx.range_pop() # nvtx-sampling
 
         # TODO: Might need to downsample if > frontier_size vertices were sampled for a minibatch
+        print(f"next_frontier.frontier-sizes: {torch.sparse.sum(next_frontier, dim=1)}")
 
         start_time(start_timer)
         torch.cuda.nvtx.range_push("nvtx-construct-nextf")
-        print(f"before next_frontier: {next_frontier}")
         next_frontier = torch.masked_select(next_frontier._indices()[1,:], \
                                                 next_frontier._values().bool()).view(mb_count, frontier_size)
-        print(f"batches: {batches}")
-        print(f"after next_frontier: {next_frontier}")
         next_frontier = torch.cat((next_frontier, batches), dim=1)
         torch.cuda.nvtx.range_pop()
         print(f"construct-nextf: {stop_time(start_timer, stop_timer)}")
