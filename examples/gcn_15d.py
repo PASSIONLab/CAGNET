@@ -337,14 +337,14 @@ def main(args):
     # do it once before timing
     current_frontier, next_frontier, adj_matrices = ladies_sampler(g_loc, args.batch_size, args.samp_num, \
                                                                         args.n_bulkmb, args.n_layers, \
-                                                                        train_nid)
+                                                                        args.n_darts, train_nid)
 
     print()
     torch.cuda.profiler.cudart().cudaProfilerStart()
     torch.cuda.nvtx.range_push("nvtx-sampler")
     current_frontier, next_frontier, adj_matrices = ladies_sampler(g_loc, args.batch_size, args.samp_num, \
                                                                         args.n_bulkmb, args.n_layers, \
-                                                                        train_nid)
+                                                                        args.n_darts, train_nid)
     torch.cuda.nvtx.range_pop()
     torch.cuda.profiler.cudart().cudaProfilerStop()
 
@@ -466,6 +466,8 @@ if __name__ == '__main__':
                             help='partitioning strategy to use')
     parser.add_argument('--n-bulkmb', default=1, type=int,
                             help='number of minibatches to sample in bulk')
+    parser.add_argument('--n-darts', default=10, type=int,
+                            help='number of darts to throw per minibatch in LADIES sampling')
     args = parser.parse_args()
     print(args)
 

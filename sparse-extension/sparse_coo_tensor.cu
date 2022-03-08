@@ -253,8 +253,84 @@ void downsample_gpu(const at::Tensor& q_values,
     CHECK_ERROR("downsampling error")
 }
 
+__global__ void ComputeDarts(float *dartx_values, float *darty_values, long *neighbor_sizes, 
+                                long *psum_neighbor_sizes, float *pmax, int n_darts, int mb_count) {
+
+    int     id = blockIdx.x * blockDim.x + threadIdx.x;
+    int stride = blockDim.x * gridDim.x;
+
+    int dart_count = n_darts * mb_count;
+    for (int i = id; i < dart_count; i += stride) {
+        long row = i / n_darts;
+        dartx_values[i] *= neighbor_sizes[row];
+        dartx_values[i] += psum_neighbor_sizes[row];
+        darty_values[i] *= pmax[row];
+    }
+}
+
+void compute_darts_gpu(const at::Tensor& dartx_values, 
+                        const at::Tensor& darty_values,
+                        const at::Tensor& neighbor_sizes,
+                        const at::Tensor& psum_neighbor_sizes,
+                        const at::Tensor& pmax,
+                        int n_darts,
+                        int mb_count) {
+
+
+    int BLOCK_SIZE = 256;
+    int BLOCK_COUNT = std::ceil((n_darts * mb_count) / ((float) BLOCK_SIZE));
+    BLOCK_COUNT = std::min(BLOCK_COUNT, 65535);
+
+    ComputeDarts<<<BLOCK_COUNT, BLOCK_SIZE>>>(dartx_values.data<float>(), 
+                                                darty_values.data<float>(), 
+                                                neighbor_sizes.data<long>(), 
+                                                psum_neighbor_sizes.data<long>(), 
+                                                pmax.data<float>(), 
+                                                n_darts,
+                                                mb_count);
+    CHECK_ERROR("dart computation error")
+}
+
+__global__ void ThrowDarts(float *dartx_values, float *darty_values, float *p_values, 
+                                long *h_values, int n_darts, int mb_count) {
+
+    int     id = blockIdx.x * blockDim.x + threadIdx.x;
+    int stride = blockDim.x * gridDim.x;
+
+    int dart_count = n_darts * mb_count;
+    for (int i = id; i < dart_count; i += stride) {
+        long dartx_val = (long) dartx_values[i];
+        if (darty_values[i] < p_values[dartx_val]) {
+            atomicCAS((unsigned long long *)&h_values[dartx_val], 0L, 1L);
+        }
+    }
+}
+
+void throw_darts_gpu(const at::Tensor& dartx_values, 
+                        const at::Tensor& darty_values,
+                        const at::Tensor& p_values,
+                        const at::Tensor& h_values,
+                        int n_darts,
+                        int mb_count) {
+
+
+    int BLOCK_SIZE = 256;
+    int BLOCK_COUNT = std::ceil((n_darts * mb_count) / ((float) BLOCK_SIZE));
+    BLOCK_COUNT = std::min(BLOCK_COUNT, 65535);
+
+    ThrowDarts<<<BLOCK_COUNT, BLOCK_SIZE>>>(dartx_values.data<float>(), 
+                                                darty_values.data<float>(), 
+                                                p_values.data<float>(), 
+                                                h_values.data<long>(), 
+                                                n_darts,
+                                                mb_count);
+    CHECK_ERROR("dart throwing error")
+}
+
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
     m.def("sparse_coo_tensor_gpu", &sparse_coo_tensor_gpu, "Sparse Tensor GPU-only constructor");
     m.def("spmm_gpu", &spmm_gpu, "SpMM wrapper for cusparse");
     m.def("downsample_gpu", &downsample_gpu, "Downsampling for LADIES sampling algorithm");
+    m.def("compute_darts_gpu", &compute_darts_gpu, "Compute dart values for LADIES sampling algorithm");
+    m.def("throw_darts_gpu", &throw_darts_gpu, "Throw darts in LADIES sampling algorithm");
 }

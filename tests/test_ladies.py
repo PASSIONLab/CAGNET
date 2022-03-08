@@ -161,6 +161,8 @@ if __name__ == '__main__':
                         help='Number of Pool')
     parser.add_argument('--n-bulkmb', type=int, default=1,
                         help='Number of minibatches to sample in bulk')
+    parser.add_argument('--n-darts', type=int, default=10,
+                        help='Number of darts to throw per minibatch in LADIES sampling')
     args = parser.parse_args()
     print(args)
 
