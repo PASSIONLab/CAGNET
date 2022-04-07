@@ -3,6 +3,7 @@ data/
 job_scripts/
 outputs/
 profs/
+sparse-extension/build.out
 sparse-extension/build/
 sparse-extension/dist/
 sparse-extension/sparse_coo_tensor_cpp.egg-info/

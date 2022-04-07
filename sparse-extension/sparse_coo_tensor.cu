@@ -226,20 +226,50 @@ void spmm_gpu(const at::Tensor& A_rowindices,
     C.t_();
 }
 
-__global__ void DownSample(long *q_values, long *q_rows, int *overflow, int nnz) {
+// __global__ void DownSample(long *q_values, long *q_rows, int *overflow, int nnz) {
+//     int     id = blockIdx.x * blockDim.x + threadIdx.x;
+//     int stride = blockDim.x * gridDim.x;
+// 
+//     for (int i = id; i < nnz; i += stride) {
+//         long row = q_rows[i];
+//         if (q_values[i] == 1 && ((int) atomicSub((unsigned int *)&overflow[row], 1)) > 0) {
+//             q_values[i] = 0;
+//         }
+//     }
+// }
+
+// void downsample_gpu(const at::Tensor& q_values, 
+//                         const at::Tensor& q_rows,
+//                         const at::Tensor& overflow,
+//                         int nnz) {
+// 
+// 
+//     int BLOCK_SIZE = 256;
+//     int BLOCK_COUNT = std::ceil(nnz / ((float) BLOCK_SIZE));
+//     BLOCK_COUNT = std::min(BLOCK_COUNT, 65535);
+// 
+//     DownSample<<<BLOCK_COUNT, BLOCK_SIZE>>>(q_values.data<long>(), q_rows.data<long>(), 
+//                                                                 overflow.data<int>(), nnz);
+//     CHECK_ERROR("downsampling error")
+// }
+
+__global__ void DownSample(long *h_mask, long *h_rows, long *ps_h_rows, long *hev_indices, int *overflow, 
+                                int nnz) {
+
     int     id = blockIdx.x * blockDim.x + threadIdx.x;
     int stride = blockDim.x * gridDim.x;
 
     for (int i = id; i < nnz; i += stride) {
-        long row = q_rows[i];
-        if (q_values[i] == 1 && ((int) atomicSub((unsigned int *)&overflow[row], 1)) > 0) {
-            q_values[i] = 0;
+        if (i - ps_h_rows[h_rows[i]] < overflow[h_rows[i]]) {
+            h_mask[hev_indices[i]] = 0;
         }
     }
 }
 
-void downsample_gpu(const at::Tensor& q_values, 
-                        const at::Tensor& q_rows,
+void downsample_gpu(const at::Tensor& h_mask, 
+                        const at::Tensor& h_rows,
+                        const at::Tensor& ps_h_rows,
+                        const at::Tensor& hev_indices,
                         const at::Tensor& overflow,
                         int nnz) {
 
@@ -248,8 +278,12 @@ void downsample_gpu(const at::Tensor& q_values,
     int BLOCK_COUNT = std::ceil(nnz / ((float) BLOCK_SIZE));
     BLOCK_COUNT = std::min(BLOCK_COUNT, 65535);
 
-    DownSample<<<BLOCK_COUNT, BLOCK_SIZE>>>(q_values.data<long>(), q_rows.data<long>(), 
-                                                                overflow.data<int>(), nnz);
+    DownSample<<<BLOCK_COUNT, BLOCK_SIZE>>>(h_mask.data<long>(), 
+                                                h_rows.data<long>(), 
+                                                ps_h_rows.data<long>(), 
+                                                hev_indices.data<long>(), 
+                                                overflow.data<int>(), 
+                                                nnz);
     CHECK_ERROR("downsampling error")
 }
 
@@ -292,7 +326,7 @@ void compute_darts_gpu(const at::Tensor& dartx_values,
 }
 
 __global__ void ThrowDarts(float *dartx_values, float *darty_values, float *p_values, 
-                                long *h_values, int n_darts, int mb_count) {
+                                long *h_values, long *h_mask, int n_darts, int mb_count) {
 
     int     id = blockIdx.x * blockDim.x + threadIdx.x;
     int stride = blockDim.x * gridDim.x;
@@ -301,7 +335,8 @@ __global__ void ThrowDarts(float *dartx_values, float *darty_values, float *p_va
     for (int i = id; i < dart_count; i += stride) {
         long dartx_val = (long) dartx_values[i];
         if (darty_values[i] < p_values[dartx_val]) {
-            atomicCAS((unsigned long long *)&h_values[dartx_val], 0L, 1L);
+            atomicCAS((unsigned long long *)&h_mask[dartx_val], 0L, 1L);
+            atomicAdd((unsigned long long *)&h_values[dartx_val], 1L);
         }
     }
 }
@@ -310,6 +345,7 @@ void throw_darts_gpu(const at::Tensor& dartx_values,
                         const at::Tensor& darty_values,
                         const at::Tensor& p_values,
                         const at::Tensor& h_values,
+                        const at::Tensor& h_mask,
                         int n_darts,
                         int mb_count) {
 
@@ -322,6 +358,7 @@ void throw_darts_gpu(const at::Tensor& dartx_values,
                                                 darty_values.data<float>(), 
                                                 p_values.data<float>(), 
                                                 h_values.data<long>(), 
+                                                h_mask.data<long>(), 
                                                 n_darts,
                                                 mb_count);
     CHECK_ERROR("dart throwing error")
