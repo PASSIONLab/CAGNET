@@ -148,15 +148,13 @@ def ladies_sampler(adj_matrix, batch_size, frontier_size, mb_count, n_layers, n_
             start_time(start_timer)
             torch.cuda.nvtx.range_push("nvtx-filter-darts")
             dart_hits_count = torch.cuda.LongTensor(p._nnz()).fill_(0)
-            dart_hits_mask = torch.cuda.LongTensor(p._nnz()).fill_(0)
-            throw_darts_gpu(dartx_values, darty_values, p._values(), dart_hits_count, dart_hits_mask, \
-                                    n_darts, mb_count)
+            throw_darts_gpu(dartx_values, darty_values, p._values(), dart_hits_count, n_darts, mb_count)
             torch.cuda.nvtx.range_pop()
             timing_dict["filter_darts"].append(stop_time(start_timer, stop_timer))
 
             start_time(start_timer)
             torch.cuda.nvtx.range_push("nvtx-add-to-frontier")
-            next_frontier_values = torch.logical_or(dart_hits_mask, next_frontier._values()).long()
+            next_frontier_values = torch.logical_or(dart_hits_count, next_frontier._values()).long()
             next_frontier_tmp = torch.sparse_coo_tensor(indices=next_frontier._indices(),
                                                             values=next_frontier_values,
                                                             size=(mb_count, node_count))
@@ -184,7 +182,7 @@ def ladies_sampler(adj_matrix, batch_size, frontier_size, mb_count, n_layers, n_
             ps_dart_hits_rows = torch.cumsum(dart_hits_rows, dim=0).roll(1)
             ps_dart_hits_rows[0] = 0
 
-            downsample_gpu(dart_hits_mask, next_frontier._indices()[0,:], \
+            downsample_gpu(dart_hits_count, next_frontier._indices()[0,:], \
                                 ps_dart_hits_rows, \
                                 dart_hits_expvar_idxs, \
                                 overflow, \
@@ -195,7 +193,7 @@ def ladies_sampler(adj_matrix, batch_size, frontier_size, mb_count, n_layers, n_
 
             start_time(start_timer)
             torch.cuda.nvtx.range_push("nvtx-add-to-frontier2")
-            next_frontier_values = torch.logical_or(dart_hits_mask, next_frontier._values()).long()
+            next_frontier_values = torch.logical_or(dart_hits_count, next_frontier._values()).long()
             next_frontier = torch.sparse_coo_tensor(indices=next_frontier._indices(),
                                                         values=next_frontier_values,
                                                         size=(mb_count, node_count))
@@ -210,7 +208,7 @@ def ladies_sampler(adj_matrix, batch_size, frontier_size, mb_count, n_layers, n_
 
             start_time(start_timer)
             torch.cuda.nvtx.range_push("nvtx-set-probs")
-            dart_hits_mask = dart_hits_mask.bool()
+            dart_hits_mask = dart_hits_count > 0
             p._values()[dart_hits_mask] = 0.0
             torch.cuda.nvtx.range_pop()
             timing_dict["set-probs"].append(stop_time(start_timer, stop_timer))
