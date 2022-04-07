@@ -172,9 +172,6 @@ def ladies_sampler(adj_matrix, batch_size, frontier_size, mb_count, n_layers, n_
             start_time(start_timer)
             torch.cuda.nvtx.range_push("nvtx-downsample")
             overflow = torch.clamp(sampled_count - frontier_size, min=0).int()
-            # downsample_gpu(dart_hits_mask, next_frontier_tmp._indices()[0,:], \
-            #                     overflow, \
-            #                     next_frontier_tmp._nnz())
             dart_hits_expvar = torch.cuda.FloatTensor(p._nnz()).uniform_()
             dart_hits_expvar = torch.pow(dart_hits_expvar, torch.reciprocal(dart_hits_count))
             dart_miss_mask = dart_hits_count == 0
@@ -187,23 +184,11 @@ def ladies_sampler(adj_matrix, batch_size, frontier_size, mb_count, n_layers, n_
             ps_dart_hits_rows = torch.cumsum(dart_hits_rows, dim=0).roll(1)
             ps_dart_hits_rows[0] = 0
 
-            # print(f"before dart_hits_mask.sum: {dart_hits_mask.sum()}")
-            # print(f"before dart_hits_mask: {dart_hits_mask}")
-            # print(f"before dart_hits_count: {dart_hits_count}")
-            # print(f"before h_rows: {next_frontier._indices()[0,:]}")
-            # print(f"before h_rows.size: {next_frontier._indices()[0,:].size()}")
-            # print(f"before ps_dart_hits_rows: {ps_dart_hits_rows}")
-            # print(f"before overflow: {overflow}")
-            # print(f"before dart_hits_expvar: {dart_hits_expvar}")
-            # print(f"before dart_hits_expvar_sorted: {dart_hits_expvar_sorted}")
-            # print(f"before dart_hits_expvar_idxs: {dart_hits_expvar_idxs}")
-            # print(f"before nnz: {next_frontier_tmp._nnz()}")
             downsample_gpu(dart_hits_mask, next_frontier._indices()[0,:], \
                                 ps_dart_hits_rows, \
                                 dart_hits_expvar_idxs, \
                                 overflow, \
                                 next_frontier_tmp._nnz())
-            # print(f"after dart_hits_mask.sum: {dart_hits_mask.sum()}")
 
             torch.cuda.nvtx.range_pop()
             timing_dict["downsample"].append(stop_time(start_timer, stop_timer))
