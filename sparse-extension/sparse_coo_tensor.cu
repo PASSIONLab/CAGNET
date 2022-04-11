@@ -262,6 +262,8 @@ __global__ void DownSample(long *h_counts, long *h_rows, long *ps_h_rows, long *
     for (int i = id; i < nnz; i += stride) {
         if (i - ps_h_rows[h_rows[i]] < overflow[h_rows[i]]) {
             h_counts[hev_indices[i]] = 0;
+        } else if (h_rows[i] == 209) {
+            printf("i: %d hev_indices[i]: %ld h_counts[hev_indices[i]]: %ld\n", i, hev_indices[i], h_counts[hev_indices[i]]);
         }
     }
 }

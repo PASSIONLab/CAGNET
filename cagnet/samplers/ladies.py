@@ -163,9 +163,12 @@ def ladies_sampler(adj_matrix, batch_size, frontier_size, mb_count, n_layers, n_
 
             start_time(start_timer)
             torch.cuda.nvtx.range_push("nvtx-count-samples")
+            print(f"next_frontier_tmp._values(): {next_frontier_tmp._values()}")
             sampled_count = torch.sparse.sum(next_frontier_tmp, dim=1)._values()
             torch.cuda.nvtx.range_pop()
             timing_dict["count_samples"].append(stop_time(start_timer, stop_timer))
+            print(f"sampled_count1: {sampled_count}")
+            print(f"sampled_count1[209]: {sampled_count[209]}")
 
             start_time(start_timer)
             torch.cuda.nvtx.range_push("nvtx-downsample")
@@ -182,11 +185,19 @@ def ladies_sampler(adj_matrix, batch_size, frontier_size, mb_count, n_layers, n_
             ps_dart_hits_rows = torch.cumsum(dart_hits_rows, dim=0).roll(1)
             ps_dart_hits_rows[0] = 0
 
+            print(f"before dart_hits_count: {dart_hits_count}")
+            print(f"before dart_hits_count.nonzero().size: {dart_hits_count.nonzero().size()}")
+            print(f"before dart_hits_count[mb 209].nonzero().size: {(dart_hits_count[next_frontier._indices()[0,:] == 209]).nonzero().size()}")
+            print(f"overflow: {overflow}")
+            print(f"overflow[209]: {overflow[209]}")
+            print(f"overflow.sum: {overflow.sum()}")
             downsample_gpu(dart_hits_count, next_frontier._indices()[0,:], \
                                 ps_dart_hits_rows, \
                                 dart_hits_expvar_idxs, \
                                 overflow, \
                                 next_frontier_tmp._nnz())
+            print(f"after dart_hits_count.nonzero().size: {dart_hits_count.nonzero().size()}")
+            print(f"after dart_hits_count[mb 209].nonzero().size: {(dart_hits_count[next_frontier._indices()[0,:] == 209]).nonzero().size()}")
 
             torch.cuda.nvtx.range_pop()
             timing_dict["downsample"].append(stop_time(start_timer, stop_timer))
@@ -205,6 +216,8 @@ def ladies_sampler(adj_matrix, batch_size, frontier_size, mb_count, n_layers, n_
             sampled_count = torch.sparse.sum(next_frontier, dim=1)._values()
             torch.cuda.nvtx.range_pop()
             timing_dict["count_samples2"].append(stop_time(start_timer, stop_timer))
+            print(f"sampled_count2: {sampled_count}")
+            print(f"sampled_count2[209]: {sampled_count[209]}")
 
             start_time(start_timer)
             torch.cuda.nvtx.range_push("nvtx-set-probs")
