@@ -163,65 +163,30 @@ def ladies_sampler(adj_matrix, batch_size, frontier_size, mb_count, n_layers, n_
 
             start_time(start_timer)
             torch.cuda.nvtx.range_push("nvtx-count-samples")
-            # print(f"next_frontier_tmp._values()[mb 209]: {next_frontier_tmp._values()[next_frontier._indices()[0,:] == 209].size()}")
-            # print(f"next_frontier_tmp._values()[mb 209]: {next_frontier_tmp._values()[next_frontier._indices()[0,:] == 209].nonzero().size()}")
             sampled_count = torch.sparse.sum(next_frontier_tmp, dim=1)._values()
             torch.cuda.nvtx.range_pop()
             timing_dict["count_samples"].append(stop_time(start_timer, stop_timer))
-            print(f"sampled_count1: {sampled_count}")
-            print(f"sampled_count1[209]: {sampled_count[209]}")
 
             start_time(start_timer)
             torch.cuda.nvtx.range_push("nvtx-downsample")
             overflow = torch.clamp(sampled_count - frontier_size, min=0).int()
             dart_hits_expvar = torch.cuda.FloatTensor(p._nnz()).uniform_()
-            print(f"dart_hits_expvar == 0.size: {(dart_hits_expvar == 0).nonzero().size()}")
-            print(f"dart_hits_expvar == 1.size: {(dart_hits_expvar == 1).nonzero().size()}")
-            print(f"before1 mod dart_hits_expvar[mb 209][580]: {(dart_hits_expvar[next_frontier._indices()[0,:] == 209])[580]}")
             dart_hits_expvar = torch.pow(dart_hits_expvar, torch.reciprocal(dart_hits_count))
             dart_miss_mask = dart_hits_count == 0
             dart_hits_expvar[dart_miss_mask] = 1.1
             max_expvar = torch.max(dart_hits_expvar)
-            print(f"before2 mod dart_hits_expvar[mb 209][580]: {(dart_hits_expvar[next_frontier._indices()[0,:] == 209])[580]}")
             dart_hits_expvar = dart_hits_expvar + max_expvar * next_frontier._indices()[0,:]
-            print(f"after mod dart_hits_expvar[mb 209][580]: {(dart_hits_expvar[next_frontier._indices()[0,:] == 209])[580]}")
-            print(f"dart_hits_expvar[mb 209]: {dart_hits_expvar[next_frontier._indices()[0,:] == 209]}")
-            print(f"dart_hits_expvar[mb 209].size: {dart_hits_expvar[next_frontier._indices()[0,:] == 209].size()}")
-            print(f"dart_hits_expvar[mb 209].nonzero().size: {(dart_hits_expvar[next_frontier._indices()[0,:] == 209] != 210).nonzero().size()}")
-            print(f"dart_hits_expvar[mb 209].nonzero(): {(dart_hits_expvar[next_frontier._indices()[0,:] == 209] != 210).nonzero()}")
             dart_hits_expvar_sorted, dart_hits_expvar_idxs = torch.sort(dart_hits_expvar)
 
             dart_hits_rows = torch.bincount(next_frontier._indices()[0,:])
             ps_dart_hits_rows = torch.cumsum(dart_hits_rows, dim=0).roll(1)
             ps_dart_hits_rows[0] = 0
 
-            print(f"before dart_hits_count: {dart_hits_count}")
-            print(f"before dart_hits_count.nonzero().size: {dart_hits_count.nonzero().size()}")
-            mb209_dart_hits = dart_hits_count[next_frontier._indices()[0,:] == 209]
-            print(f"before dart_hits_count[mb 209]: {mb209_dart_hits}")
-            print(f"before dart_hits_count[mb 209][580]: {mb209_dart_hits[580]}")
-            print(f"before dart_hits_count[mb 209].nonzero().size(): {mb209_dart_hits.nonzero().size()}")
-            print(f"before dart_hits_count[mb 209].nonzero(): {mb209_dart_hits.nonzero()}")
-            # print(f"before dart_hits_count[mb 209].sum(): {mb209_dart_hits.sum()}")
-            # print(f"before dart_hits_count[mb 209].nonzero().size: {mb209_dart_hits.nonzero().size()}")
-            # print(f"before dart_hits_expvar_idxs[mb 209]: {dart_hits_expvar_idxs[next_frontier._indices()[0,:] == 209]}")
-            # print(f"before dart_hits_expvar_idxs[mb 209].idx: {(dart_hits_expvar_idxs[next_frontier._indices()[0,:] == 209] == 389878).nonzero()}")
-            # print(f"before dart_hits_expvar_idxs[mb 209].idx[613]: {(dart_hits_expvar_idxs[next_frontier._indices()[0,:] == 209])[613]}")
-            # print(f"before dart_hits_expvar_sorted[mb 209].idx[612]: {(dart_hits_expvar_sorted[next_frontier._indices()[0,:] == 209])[612]}")
-            # print(f"before dart_hits_expvar_sorted[mb 209].idx[613]: {(dart_hits_expvar_sorted[next_frontier._indices()[0,:] == 209])[613]}")
-            # print(f"before dart_hits_expvar_sorted[mb 209].idx[614]: {(dart_hits_expvar_sorted[next_frontier._indices()[0,:] == 209])[614]}")
-            print(f"overflow: {overflow}")
-            print(f"overflow[209]: {overflow[209]}")
-            print(f"overflow.sum: {overflow.sum()}")
-            print(f"dart_hits_rows[mb 209]: {dart_hits_rows[209]}")
-            print(f"ps_dart_hits_rows[mb 209]: {ps_dart_hits_rows[209]}", flush=True)
             downsample_gpu(dart_hits_count, next_frontier._indices()[0,:], \
                                 ps_dart_hits_rows, \
                                 dart_hits_expvar_idxs, \
                                 overflow, \
                                 next_frontier_tmp._nnz())
-            print(f"after dart_hits_count.nonzero().size: {dart_hits_count.nonzero().size()}", flush=True)
-            print(f"after dart_hits_count[mb 209].nonzero().size: {(dart_hits_count[next_frontier._indices()[0,:] == 209]).nonzero().size()}")
 
             torch.cuda.nvtx.range_pop()
             timing_dict["downsample"].append(stop_time(start_timer, stop_timer))
@@ -240,8 +205,6 @@ def ladies_sampler(adj_matrix, batch_size, frontier_size, mb_count, n_layers, n_
             sampled_count = torch.sparse.sum(next_frontier, dim=1)._values()
             torch.cuda.nvtx.range_pop()
             timing_dict["count_samples2"].append(stop_time(start_timer, stop_timer))
-            print(f"sampled_count2: {sampled_count}")
-            print(f"sampled_count2[209]: {sampled_count[209]}")
 
             start_time(start_timer)
             torch.cuda.nvtx.range_push("nvtx-set-probs")
