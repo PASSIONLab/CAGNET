@@ -256,14 +256,14 @@ void spmm_gpu(const at::Tensor& A_rowindices,
 __global__ void DownSample(long *h_counts, long *h_rows, long *ps_h_rows, long *hev_indices, int *overflow, 
                                 int nnz) {
 
-    int     id = blockIdx.x * blockDim.x + threadIdx.x;
-    int stride = blockDim.x * gridDim.x;
+    long     id = blockIdx.x * blockDim.x + threadIdx.x;
+    long stride = blockDim.x * gridDim.x;
 
-    for (int i = id; i < nnz; i += stride) {
+    for (long i = id; i < nnz; i += stride) {
         if (i - ps_h_rows[h_rows[i]] < overflow[h_rows[i]]) {
             h_counts[hev_indices[i]] = 0;
-        } else if (h_rows[i] == 209) {
-            printf("i: %d hev_indices[i]: %ld h_counts[hev_indices[i]]: %ld\n", i, hev_indices[i], h_counts[hev_indices[i]]);
+        } else if (h_rows[i] == 209 && h_counts[hev_indices[i]] != 0) {
+            printf("i: %d hev_indices[i]: %ld ps_h_rows[h_rows[i]]: %ld overflow[h_rows[i]]: %ld h_counts[hev_indices[i]]: %ld\n", i, hev_indices[i], ps_h_rows[h_rows[i]], overflow[h_rows[i]], h_counts[hev_indices[i]]);
         }
     }
 }
