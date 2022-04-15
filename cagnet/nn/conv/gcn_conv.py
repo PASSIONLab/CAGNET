@@ -7,11 +7,11 @@ from cagnet.partitionings import Partitioning
 from sparse_coo_tensor_cpp import sparse_coo_tensor_gpu, spmm_gpu
 
 def broad_func_oned(self, graph, ampbyp, inputs):
-    n_per_proc = math.ceil(float(graph.size(0) / self.size))
+#    n_per_proc = math.ceil(float(graph.size(0) / self.size))
     
     z_loc = torch.cuda.FloatTensor(ampbyp[0].size(0), inputs.size(1), device=self.device).fill_(0)
     
-    inputs_recv = torch.cuda.FloatTensor(n_per_proc, inputs.size(1), device=self.device).fill_(0)
+#    inputs_recv = torch.cuda.FloatTensor(n_per_proc, inputs.size(1), device=self.device).fill_(0)
     
     counts_recv = [torch.cuda.LongTensor(1, 1, device=self.device).fill_(0) for i in range(self.size)]
 
@@ -41,9 +41,14 @@ def broad_func_oned(self, graph, ampbyp, inputs):
 
     ## how to set the call to spmm_gpu
     for i in range(self.size):
-        n_per_proc = ampbyp[i].size(1)
+        if i == self.size - 1:
+            n_per_proc = inputs.size(0)
+        else:
+            n_per_proc = math.ceil(float(graph.size(0) / self.size))
         inputs_mul = torch.cuda.FloatTensor( device = self.device).resize_(n_per_proc, inputs.size(1)).fill_(0)
-        inputs_mul[row_indices_recv[i]] =  row_data_recv[i]
+#        print(row_data_recv[i].size())
+#        print(row_indices_send[i].size())
+        inputs_mul[row_indices_send[i]] =  row_data_recv[i]
 #        for j in range(row_indices_recv[i].size(0)):
 #            inputs_mul[row_indices_recv[i][j].long().item()] = row_data_recv[i][j] 
         spmm_gpu(ampbyp[i].indices()[0].int(), ampbyp[i].indices()[1].int(),
