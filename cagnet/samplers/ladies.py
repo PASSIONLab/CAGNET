@@ -168,20 +168,33 @@ def ladies_sampler(adj_matrix, batch_size, frontier_size, mb_count, n_layers, n_
             timing_dict["count_samples"].append(stop_time(start_timer, stop_timer))
 
             start_time(start_timer)
-            torch.cuda.nvtx.range_push("nvtx-downsample")
+            torch.cuda.nvtx.range_push("nvtx-downsample-preproc")
             overflow = torch.clamp(sampled_count - frontier_size, min=0).int()
             dart_hits_expvar = torch.cuda.FloatTensor(p._nnz()).uniform_()
             dart_hits_expvar = torch.pow(dart_hits_expvar, torch.reciprocal(dart_hits_count))
             dart_miss_mask = dart_hits_count == 0
-            dart_hits_expvar[dart_miss_mask] = 1.1
+            dart_hits_expvar[dart_miss_mask] = 2
             max_expvar = torch.max(dart_hits_expvar)
             dart_hits_expvar = dart_hits_expvar + max_expvar * next_frontier._indices()[0,:]
-            dart_hits_expvar_sorted, dart_hits_expvar_idxs = torch.sort(dart_hits_expvar)
+            torch.cuda.nvtx.range_pop()
+            timing_dict["downsample-preproc"].append(stop_time(start_timer, stop_timer))
 
+            start_time(start_timer)
+            torch.cuda.nvtx.range_push("nvtx-downsample-sort")
+            dart_hits_expvar_sorted, dart_hits_expvar_idxs = torch.sort(dart_hits_expvar)
+            torch.cuda.nvtx.range_pop()
+            timing_dict["downsample-sort"].append(stop_time(start_timer, stop_timer))
+
+            start_time(start_timer)
+            torch.cuda.nvtx.range_push("nvtx-downsample-psum")
             dart_hits_rows = torch.bincount(next_frontier._indices()[0,:])
             ps_dart_hits_rows = torch.cumsum(dart_hits_rows, dim=0).roll(1)
             ps_dart_hits_rows[0] = 0
+            torch.cuda.nvtx.range_pop()
+            timing_dict["downsample-psum"].append(stop_time(start_timer, stop_timer))
 
+            start_time(start_timer)
+            torch.cuda.nvtx.range_push("nvtx-downsample-kernel")
             downsample_gpu(dart_hits_count, next_frontier._indices()[0,:], \
                                 ps_dart_hits_rows, \
                                 dart_hits_expvar_idxs, \
@@ -189,7 +202,7 @@ def ladies_sampler(adj_matrix, batch_size, frontier_size, mb_count, n_layers, n_
                                 next_frontier_tmp._nnz())
 
             torch.cuda.nvtx.range_pop()
-            timing_dict["downsample"].append(stop_time(start_timer, stop_timer))
+            timing_dict["downsample-kernel"].append(stop_time(start_timer, stop_timer))
 
             start_time(start_timer)
             torch.cuda.nvtx.range_push("nvtx-add-to-frontier2")
