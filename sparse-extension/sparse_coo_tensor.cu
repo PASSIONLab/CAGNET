@@ -325,6 +325,57 @@ void compute_darts_gpu(const at::Tensor& dartx_values,
     CHECK_ERROR("dart computation error")
 }
 
+__device__ long binary_searchl(long *arr, long val, long imin, long imax) {
+    
+    long ans = -1;
+    while (imax >= imin) {
+        long imid = (imin + imax) / 2;
+
+        if (arr[imid] <= val) {
+            imin = imid + 1;
+        } else {
+            ans = imid;
+            imax = imid - 1;
+        }
+    }
+
+    return ans;
+}
+
+__global__ void ComputeDartsSelect(float *dart_select, float *dart_hits_inv_sum, float *ps_dart_hits_inv_sum, 
+                                long *ps_overflow, long mb_count, long total_overflow) {
+
+    long      id = blockIdx.x * blockDim.x + threadIdx.x;
+    long stride = blockDim.x * gridDim.x;
+
+    for (long i = id; i < total_overflow; i += stride) {
+        long row = binary_searchl(ps_overflow, i, 0, mb_count);
+        dart_select[i] *= dart_hits_inv_sum[row];
+        dart_select[i] += ps_dart_hits_inv_sum[row];
+    }
+}
+
+void compute_darts_select_gpu(const at::Tensor& dart_select, 
+                                const at::Tensor& dart_hits_inv_sum,
+                                const at::Tensor& ps_dart_hits_inv_sum,
+                                const at::Tensor& ps_overflow,
+                                long mb_count,
+                                long total_overflow) {
+
+
+    int BLOCK_SIZE = 256;
+    int BLOCK_COUNT = std::ceil(total_overflow / ((float) BLOCK_SIZE));
+    BLOCK_COUNT = std::min(BLOCK_COUNT, 65535);
+
+    ComputeDartsSelect<<<BLOCK_COUNT, BLOCK_SIZE>>>(dart_select.data<float>(), 
+                                                        dart_hits_inv_sum.data<float>(), 
+                                                        ps_dart_hits_inv_sum.data<float>(), 
+                                                        ps_overflow.data<long>(), 
+                                                        mb_count,
+                                                        total_overflow);
+    CHECK_ERROR("selection dart computation error")
+}
+
 __global__ void ThrowDarts(float *dartx_values, float *darty_values, float *p_values, 
                                 long *h_values, int n_darts, int mb_count) {
 
@@ -361,10 +412,60 @@ void throw_darts_gpu(const at::Tensor& dartx_values,
     CHECK_ERROR("dart throwing error")
 }
 
+__device__ long binary_searchf(float *arr, float val, long imin, long imax) {
+    
+    long ans = -1;
+    while (imax >= imin) {
+        long imid = (imin + imax) / 2;
+
+        if (arr[imid] <= val) {
+            imin = imid + 1;
+        } else {
+            ans = imid;
+            imax = imid - 1;
+        }
+    }
+
+    return ans;
+}
+
+__global__ void ThrowDartsSelect(float *dart_select, float *ps_dart_hits_inv, long *dart_hits_count, 
+                                    long total_overflow, long nnz) {
+
+    long     id = blockIdx.x * blockDim.x + threadIdx.x;
+    long stride = blockDim.x * gridDim.x;
+
+    for (long i = id; i < total_overflow; i += stride) {
+        long vtx = binary_searchf(ps_dart_hits_inv, dart_select[i], 0, nnz);
+        atomicAnd((unsigned long long *)&dart_hits_count[vtx], 0L);
+    }
+}
+
+void throw_darts_select_gpu(const at::Tensor& dart_select, 
+                                const at::Tensor& ps_dart_hits_inv,
+                                const at::Tensor& dart_hits_count,
+                                long total_overflow,
+                                long nnz) {
+
+
+    int BLOCK_SIZE = 256;
+    int BLOCK_COUNT = std::ceil(total_overflow / ((float) BLOCK_SIZE));
+    BLOCK_COUNT = std::min(BLOCK_COUNT, 65535);
+
+    ThrowDartsSelect<<<BLOCK_COUNT, BLOCK_SIZE>>>(dart_select.data<float>(), 
+                                                    ps_dart_hits_inv.data<float>(), 
+                                                    dart_hits_count.data<long>(), 
+                                                    total_overflow,
+                                                    nnz);
+    CHECK_ERROR("selection dart throwing error")
+}
+
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
     m.def("sparse_coo_tensor_gpu", &sparse_coo_tensor_gpu, "Sparse Tensor GPU-only constructor");
     m.def("spmm_gpu", &spmm_gpu, "SpMM wrapper for cusparse");
     m.def("downsample_gpu", &downsample_gpu, "Downsampling for LADIES sampling algorithm");
     m.def("compute_darts_gpu", &compute_darts_gpu, "Compute dart values for LADIES sampling algorithm");
     m.def("throw_darts_gpu", &throw_darts_gpu, "Throw darts in LADIES sampling algorithm");
+    m.def("compute_darts_select_gpu", &compute_darts_select_gpu, "Compute dart values for LADIES alg selection");
+    m.def("throw_darts_select_gpu", &throw_darts_select_gpu, "Throw darts for LADIES alg selection");
 }
