@@ -176,13 +176,9 @@ def ladies_sampler(adj_matrix, batch_size, frontier_size, mb_count, n_layers, n_
                 print(f"overflow: {overflow}")
                 ps_overflow = torch.cumsum(overflow, dim=0)
                 total_overflow = ps_overflow[-1].item()
-                # ps_overflow = ps_overflow.roll(1)
-                # ps_overflow[0] = 0
 
                 dart_hits_inv = dart_hits_count.reciprocal()
                 dart_hits_inv[dart_hits_inv == float("inf")] = 0
-                # print(f"dart_hits_count: {dart_hits_count}")
-                # print(f"dart_hits_inv: {dart_hits_inv}")
                 dart_hits_inv_mtx = torch.sparse_coo_tensor(indices=next_frontier._indices(),
                                                                 values=dart_hits_inv,
                                                                 size=(mb_count, node_count))
@@ -194,23 +190,13 @@ def ladies_sampler(adj_matrix, batch_size, frontier_size, mb_count, n_layers, n_
                 dart_select = torch.cuda.FloatTensor(total_overflow).uniform_()
 
                 # Compute darts for selection 
-                # print(f"before dart_select: {dart_select}")
-                # print(f"before dart_hits_inv_sum: {dart_hits_inv_sum}")
-                # print(f"before ps_dart_hits_inv_sum: {ps_dart_hits_inv_sum}", flush=True)
                 compute_darts_select_gpu(dart_select, dart_hits_inv_sum, ps_dart_hits_inv_sum, ps_overflow,
                                                 mb_count, total_overflow)
-                # print(f"after dart_select: {dart_select}", flush=True)
 
                 # Throw selection darts 
                 ps_dart_hits_inv = torch.cumsum(dart_hits_inv, dim=0)
-                # ps_dart_hits_inv = ps_dart_hits_inv.roll(1)
-                # ps_dart_hits_inv[0] = 0
-                # print(f"before ps_dart_hits_inv: {ps_dart_hits_inv}")
-                # print(f"before ps_dart_hits_inv.size: {ps_dart_hits_inv.size()}")
-                # print(f"before dart_hits_count: {dart_hits_count}", flush=True)
                 throw_darts_select_gpu(dart_select, ps_dart_hits_inv, dart_hits_count, total_overflow,
                                             dart_hits_inv_mtx._nnz())
-                # print(f"after dart_hits_count: {dart_hits_count}", flush=True)
 
                 next_frontier_values = torch.logical_or(dart_hits_count, next_frontier._values()).long()
                 next_frontier_tmp = torch.sparse_coo_tensor(indices=next_frontier._indices(),
