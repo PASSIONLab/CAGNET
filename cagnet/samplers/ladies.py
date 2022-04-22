@@ -20,6 +20,9 @@ def ladies_sampler(adj_matrix, batch_size, frontier_size, mb_count, n_layers, n_
     sample_start_timer = torch.cuda.Event(enable_timing=True)
     sample_stop_timer = torch.cuda.Event(enable_timing=True)
 
+    select_start_timer = torch.cuda.Event(enable_timing=True)
+    select_stop_timer = torch.cuda.Event(enable_timing=True)
+
     total_start_timer = torch.cuda.Event(enable_timing=True)
     total_stop_timer = torch.cuda.Event(enable_timing=True)
 
@@ -169,45 +172,88 @@ def ladies_sampler(adj_matrix, batch_size, frontier_size, mb_count, n_layers, n_
             timing_dict["count_samples"].append(stop_time(start_timer, stop_timer))
 
             start_time(start_timer)
-            torch.cuda.nvtx.range_push("nvtx-dart-selection")
+            torch.cuda.nvtx.range_push("nvtx-select-preproc")
             overflow = torch.clamp(sampled_count - frontier_size, min=0).int()
+            overflowed_minibatches = (overflow > 0).any()
+            selection_iter_count = 0
+            timing_dict["select-preproc"].append(stop_time(start_timer, stop_timer))
 
-            while (overflow > 0).any():
-                print(f"overflow: {overflow}")
+            while overflowed_minibatches:
+                start_time(select_start_timer)
+                torch.cuda.nvtx.range_push("nvtx-dart-selection")
+
+                start_time(start_timer)
+                torch.cuda.nvtx.range_push("nvtx-select-psoverflow")
+                selection_iter_count += 1
                 ps_overflow = torch.cumsum(overflow, dim=0)
                 total_overflow = ps_overflow[-1].item()
+                timing_dict["select-psoverflow"].append(stop_time(start_timer, stop_timer))
 
+                start_time(start_timer)
+                torch.cuda.nvtx.range_push("nvtx-select-reciprocal")
                 dart_hits_inv = dart_hits_count.reciprocal()
                 dart_hits_inv[dart_hits_inv == float("inf")] = 0
+                timing_dict["select-reciprocal"].append(stop_time(start_timer, stop_timer))
+
+                start_time(start_timer)
+                torch.cuda.nvtx.range_push("nvtx-select-instmtx")
                 dart_hits_inv_mtx = torch.sparse_coo_tensor(indices=next_frontier._indices(),
                                                                 values=dart_hits_inv,
                                                                 size=(mb_count, node_count))
+                timing_dict["select-instmtx"].append(stop_time(start_timer, stop_timer))
 
-                dart_hits_inv_sum = torch.sparse.sum(dart_hits_inv_mtx, dim=1)._values()
+                start_time(start_timer)
+                torch.cuda.nvtx.range_push("nvtx-select-invsum")
+                # dart_hits_inv_sum = torch.sparse.sum(dart_hits_inv_mtx, dim=1)._values()
+                dart_hits_inv_sum = torch.cuda.FloatTensor(mb_count).fill_(0)
+                dart_hits_inv_sum.scatter_add_(0, next_frontier._indices()[0, :], dart_hits_inv)
+                timing_dict["select-invsum"].append(stop_time(start_timer, stop_timer))
+
+                start_time(start_timer)
+                torch.cuda.nvtx.range_push("nvtx-select-psinv")
                 ps_dart_hits_inv_sum = torch.cumsum(dart_hits_inv_sum, dim=0).roll(1)
                 ps_dart_hits_inv_sum[0] = 0
+                timing_dict["select-psinv"].append(stop_time(start_timer, stop_timer))
 
+                start_time(start_timer)
+                torch.cuda.nvtx.range_push("nvtx-select-computedarts")
                 dart_select = torch.cuda.FloatTensor(total_overflow).uniform_()
-
                 # Compute darts for selection 
                 compute_darts_select_gpu(dart_select, dart_hits_inv_sum, ps_dart_hits_inv_sum, ps_overflow,
                                                 mb_count, total_overflow)
+                timing_dict["select-computedarts"].append(stop_time(start_timer, stop_timer))
 
+                start_time(start_timer)
+                torch.cuda.nvtx.range_push("nvtx-select-throwdarts")
                 # Throw selection darts 
                 ps_dart_hits_inv = torch.cumsum(dart_hits_inv, dim=0)
                 throw_darts_select_gpu(dart_select, ps_dart_hits_inv, dart_hits_count, total_overflow,
-                                            dart_hits_inv_mtx._nnz())
+                                            next_frontier._nnz())
+                timing_dict["select-throwdarts"].append(stop_time(start_timer, stop_timer))
 
-                next_frontier_values = torch.logical_or(dart_hits_count, next_frontier._values()).long()
+                start_time(start_timer)
+                torch.cuda.nvtx.range_push("nvtx-select-add-to-frontier")
+                next_frontier_values = torch.logical_or(dart_hits_count, next_frontier._values()).int()
                 next_frontier_tmp = torch.sparse_coo_tensor(indices=next_frontier._indices(),
                                                                 values=next_frontier_values,
                                                                 size=(mb_count, node_count))
+                timing_dict["select-add-to-frontier"].append(stop_time(start_timer, stop_timer))
 
-                sampled_count = torch.sparse.sum(next_frontier_tmp, dim=1)._values()
+                start_time(start_timer)
+                torch.cuda.nvtx.range_push("nvtx-select-samplecount")
+                # sampled_count = torch.sparse.sum(next_frontier_tmp, dim=1)._values()
+                sampled_count = torch.cuda.IntTensor(mb_count).fill_(0)
+                sampled_count.scatter_add_(0, next_frontier_tmp._indices()[0,:], next_frontier_tmp._values())
+                timing_dict["select-samplecount"].append(stop_time(start_timer, stop_timer))
+
+                start_time(start_timer)
+                torch.cuda.nvtx.range_push("nvtx-select-overflow")
                 overflow = torch.clamp(sampled_count - frontier_size, min=0).int()
+                overflowed_minibatches = (overflow > 0).any()
+                timing_dict["select-overflow"].append(stop_time(start_timer, stop_timer))
 
-            torch.cuda.nvtx.range_pop()
-            timing_dict["dart-selection"].append(stop_time(start_timer, stop_timer))
+                torch.cuda.nvtx.range_pop()
+                timing_dict["dart-selection"].append(stop_time(select_start_timer, select_stop_timer))
 
             next_frontier_values = torch.logical_or(dart_hits_count, next_frontier._values()).long()
             next_frontier = torch.sparse_coo_tensor(indices=next_frontier._indices(),
@@ -218,7 +264,10 @@ def ladies_sampler(adj_matrix, batch_size, frontier_size, mb_count, n_layers, n_
             torch.cuda.nvtx.range_push("nvtx-set-probs")
             dart_hits_mask = dart_hits_count > 0
             p._values()[dart_hits_mask] = 0.0
-            # TODO: Set probability values to 0 for minibatches sufficiently sampled
+
+            filled_minibatches = sampled_count == frontier_size
+            filled_minibatches_mask = torch.gather(filled_minibatches, 0, p._indices()[0,:])
+            p._values()[filled_minibatches_mask] = 0
             torch.cuda.nvtx.range_pop()
             timing_dict["set-probs"].append(stop_time(start_timer, stop_timer))
 
