@@ -23,6 +23,9 @@ def ladies_sampler(adj_matrix, batch_size, frontier_size, mb_count, n_layers, n_
     select_start_timer = torch.cuda.Event(enable_timing=True)
     select_stop_timer = torch.cuda.Event(enable_timing=True)
 
+    select_iter_start_timer = torch.cuda.Event(enable_timing=True)
+    select_iter_stop_timer = torch.cuda.Event(enable_timing=True)
+
     total_start_timer = torch.cuda.Event(enable_timing=True)
     total_stop_timer = torch.cuda.Event(enable_timing=True)
 
@@ -121,6 +124,7 @@ def ladies_sampler(adj_matrix, batch_size, frontier_size, mb_count, n_layers, n_
         print(f"pre-loop: {stop_time(start_timer, stop_timer)}")
 
         iter_count = 0
+        selection_iter_count = 0
         torch.cuda.nvtx.range_push("nvtx-sampling")
         while (sampled_count < frontier_size).any():
             iter_count += 1
@@ -158,7 +162,7 @@ def ladies_sampler(adj_matrix, batch_size, frontier_size, mb_count, n_layers, n_
 
             start_time(start_timer)
             torch.cuda.nvtx.range_push("nvtx-add-to-frontier")
-            next_frontier_values = torch.logical_or(dart_hits_count, next_frontier._values()).long()
+            next_frontier_values = torch.logical_or(dart_hits_count, next_frontier._values()).int()
             next_frontier_tmp = torch.sparse_coo_tensor(indices=next_frontier._indices(),
                                                             values=next_frontier_values,
                                                             size=(mb_count, node_count))
@@ -167,7 +171,9 @@ def ladies_sampler(adj_matrix, batch_size, frontier_size, mb_count, n_layers, n_
 
             start_time(start_timer)
             torch.cuda.nvtx.range_push("nvtx-count-samples")
-            sampled_count = torch.sparse.sum(next_frontier_tmp, dim=1)._values()
+            # sampled_count = torch.sparse.sum(next_frontier_tmp, dim=1)._values()
+            sampled_count = sampled_count.fill_(0)
+            sampled_count.scatter_add_(0, next_frontier_tmp._indices()[0, :], next_frontier_values)
             torch.cuda.nvtx.range_pop()
             timing_dict["count_samples"].append(stop_time(start_timer, stop_timer))
 
@@ -175,12 +181,14 @@ def ladies_sampler(adj_matrix, batch_size, frontier_size, mb_count, n_layers, n_
             torch.cuda.nvtx.range_push("nvtx-select-preproc")
             overflow = torch.clamp(sampled_count - frontier_size, min=0).int()
             overflowed_minibatches = (overflow > 0).any()
-            selection_iter_count = 0
             timing_dict["select-preproc"].append(stop_time(start_timer, stop_timer))
 
+            start_time(select_start_timer)
+            torch.cuda.nvtx.range_push("nvtx-dart-selection")
+
             while overflowed_minibatches:
-                start_time(select_start_timer)
-                torch.cuda.nvtx.range_push("nvtx-dart-selection")
+                start_time(select_iter_start_timer)
+                torch.cuda.nvtx.range_push("nvtx-selection-iter")
 
                 start_time(start_timer)
                 torch.cuda.nvtx.range_push("nvtx-select-psoverflow")
@@ -252,8 +260,10 @@ def ladies_sampler(adj_matrix, batch_size, frontier_size, mb_count, n_layers, n_
                 overflowed_minibatches = (overflow > 0).any()
                 timing_dict["select-overflow"].append(stop_time(start_timer, stop_timer))
 
-                torch.cuda.nvtx.range_pop()
-                timing_dict["dart-selection"].append(stop_time(select_start_timer, select_stop_timer))
+                timing_dict["select-iter"].append(stop_time(select_iter_start_timer, select_iter_stop_timer))
+
+            torch.cuda.nvtx.range_pop() # nvtx-dart-selection
+            timing_dict["dart-selection"].append(stop_time(select_start_timer, select_stop_timer))
 
             next_frontier_values = torch.logical_or(dart_hits_count, next_frontier._values()).long()
             next_frontier = torch.sparse_coo_tensor(indices=next_frontier._indices(),
@@ -339,4 +349,5 @@ def ladies_sampler(adj_matrix, batch_size, frontier_size, mb_count, n_layers, n_
     for k, v in timing_dict.items():
         print(f"{k} total_time: {sum(v)} avg_time {sum(v) / len(v)}")
     print(f"iter_count: {iter_count}")
+    print(f"selection_iter_count: {selection_iter_count}")
     return batches, next_frontier, adj_matrices
