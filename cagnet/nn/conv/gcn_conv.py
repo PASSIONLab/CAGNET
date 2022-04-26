@@ -2,6 +2,7 @@ import math
 import torch
 import torch.distributed as dist
 import torch.nn as nn
+import time
 
 from cagnet.partitionings import Partitioning
 from sparse_coo_tensor_cpp import sparse_coo_tensor_gpu, spmm_gpu
@@ -18,26 +19,38 @@ def broad_func_oned(self, graph, ampbyp, inputs):
     row_indices_send = []
     row_data_send = []
 
+    start = time.time()
 
     for i in range(self.size):
         unique_cols = ampbyp[i].indices()[1].long().unique()
         counts_send.append(torch.cuda.LongTensor([unique_cols.size()], device=self.device).resize_(1, 1))
         row_indices_send.append(unique_cols)
-    
-    dist.all_to_all(counts_recv, counts_send, group=self.group)
+    self.timings["find_unique"] = time.time() - start
 
+    start = time.time()
+    dist.all_to_all(counts_recv, counts_send, group=self.group)
+    self.timings["a2a1"] = time.time() - start
+
+    
     row_indices_recv = [torch.cuda.LongTensor(device=self.device).resize_(counts_recv[i].int().item(),).fill_(0) for i in range(len(counts_recv))]
 
     row_data_recv = [torch.cuda.FloatTensor(device=self.device).resize_(counts_send[i].int().item(), inputs.size(1)).fill_(0) for i in range(len(counts_send))]
     
+    start = time.time()
     dist.all_to_all(row_indices_recv, row_indices_send, group=self.group)
+    self.timings["a2a2"] = time.time() - start
 
 
+    start = time.time()
     for i in range(self.size):
         row_data_send.append(inputs[row_indices_recv[i].long(), :])
+    self.timings["gather_row_data"] = time.time() - start
 
+    start = time.time()
     dist.all_to_all(row_data_recv, row_data_send, group=self.group)
+    self.timings["a2a3"] = time.time() - start
 
+    start = time.time()
     ## how to set the call to spmm_gpu
     for i in range(self.size):
 #        if (ampbyp[i].size(1) != inputs.size(0)):
@@ -60,6 +73,7 @@ def broad_func_oned(self, graph, ampbyp, inputs):
                         ampbyp[i].values(), ampbyp[i].size(0),
                         ampbyp[i].size(1), inputs_mul, z_loc
         )            
+    self.timings["spmm_gpu"] = time.time() - start
 
 #    for i in range(self.size):
 #        if i == self.rank:

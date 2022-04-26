@@ -314,7 +314,7 @@ def main(args):
     dist.barrier()
     total_stop = time.time()
     print(f"rank: {rank} total_time: {total_stop - total_start}")
-
+    print(f"rank: {rank} timings: {model.timings}")
     """
     # print(prof.key_averages().table(sort_by='self_cpu_time_total', row_limit=10))
     barrier_start = time.time()
