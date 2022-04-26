@@ -31,6 +31,39 @@ using namespace at::sparse;
 #define CHECK_ERROR(str) \
     {cudaDeviceSynchronize(); cudaError_t err; err = cudaGetLastError(); if(err!=0) {printf("ERROR %s:  %d %s\n", str, err, cudaGetErrorString(err)); fflush(stdout);}}
 
+__device__ long binary_searchf(float *arr, float val, long imin, long imax) {
+    
+    long ans = -1;
+    while (imax >= imin) {
+        long imid = (imin + imax) / 2;
+
+        if (arr[imid] <= val) {
+            imin = imid + 1;
+        } else {
+            ans = imid;
+            imax = imid - 1;
+        }
+    }
+
+    return ans;
+}
+
+__device__ long binary_searchl(long *arr, long val, long imin, long imax) {
+    
+    long ans = -1;
+    while (imax >= imin) {
+        long imid = (imin + imax) / 2;
+
+        if (arr[imid] <= val) {
+            imin = imid + 1;
+        } else {
+            ans = imid;
+            imax = imid - 1;
+        }
+    }
+
+    return ans;
+}
 
 at::Tensor expand_values_if_needed(const at::Tensor& values) {
     // expand
@@ -325,21 +358,37 @@ void compute_darts_gpu(const at::Tensor& dartx_values,
     CHECK_ERROR("dart computation error")
 }
 
-__device__ long binary_searchl(long *arr, long val, long imin, long imax) {
-    
-    long ans = -1;
-    while (imax >= imin) {
-        long imid = (imin + imax) / 2;
+__global__ void ComputeDarts1D(float *dart_values, float *p_rowsum, float *ps_p_rowsum, 
+                                    int n_darts, int mb_count) {
 
-        if (arr[imid] <= val) {
-            imin = imid + 1;
-        } else {
-            ans = imid;
-            imax = imid - 1;
-        }
+    int     id = blockIdx.x * blockDim.x + threadIdx.x;
+    int stride = blockDim.x * gridDim.x;
+
+    int dart_count = n_darts * mb_count;
+    for (int i = id; i < dart_count; i += stride) {
+        int row = i / n_darts;
+        dart_values[i] *= p_rowsum[row];
+        dart_values[i] += ps_p_rowsum[row];
     }
+}
 
-    return ans;
+void compute_darts1d_gpu(const at::Tensor& dart_values, 
+                        const at::Tensor& p_rowsum,
+                        const at::Tensor& ps_p_rowsum,
+                        int n_darts,
+                        int mb_count) {
+
+
+    int BLOCK_SIZE = 256;
+    int BLOCK_COUNT = std::ceil((n_darts * mb_count) / ((float) BLOCK_SIZE));
+    BLOCK_COUNT = std::min(BLOCK_COUNT, 65535);
+
+    ComputeDarts1D<<<BLOCK_COUNT, BLOCK_SIZE>>>(dart_values.data<float>(), 
+                                                p_rowsum.data<float>(), 
+                                                ps_p_rowsum.data<float>(), 
+                                                n_darts,
+                                                mb_count);
+    CHECK_ERROR("dart1d computation error")
 }
 
 __global__ void ComputeDartsSelect(float *dart_select, float *dart_hits_inv_sum, float *ps_dart_hits_inv_sum, 
@@ -412,21 +461,34 @@ void throw_darts_gpu(const at::Tensor& dartx_values,
     CHECK_ERROR("dart throwing error")
 }
 
-__device__ long binary_searchf(float *arr, float val, long imin, long imax) {
-    
-    long ans = -1;
-    while (imax >= imin) {
-        long imid = (imin + imax) / 2;
+__global__ void ThrowDarts1D(float *dart_values, float *ps_p_values, long *h_values, int dart_count, int nnz) {
 
-        if (arr[imid] <= val) {
-            imin = imid + 1;
-        } else {
-            ans = imid;
-            imax = imid - 1;
-        }
+    int     id = blockIdx.x * blockDim.x + threadIdx.x;
+    int stride = blockDim.x * gridDim.x;
+
+    for (int i = id; i < dart_count; i += stride) {
+        long vtx = binary_searchf(ps_p_values, dart_values[i], 0, nnz);
+        atomicAdd((unsigned long long *)&h_values[vtx], 1L);
     }
+}
 
-    return ans;
+void throw_darts1d_gpu(const at::Tensor& dart_values, 
+                            const at::Tensor& ps_p_values,
+                            const at::Tensor& h_values,
+                            int dart_count,
+                            int nnz) {
+
+
+    int BLOCK_SIZE = 256;
+    int BLOCK_COUNT = std::ceil((dart_count) / ((float) BLOCK_SIZE));
+    BLOCK_COUNT = std::min(BLOCK_COUNT, 65535);
+
+    ThrowDarts1D<<<BLOCK_COUNT, BLOCK_SIZE>>>(dart_values.data<float>(), 
+                                                ps_p_values.data<float>(), 
+                                                h_values.data<long>(), 
+                                                dart_count,
+                                                nnz);
+    CHECK_ERROR("dart throwing error")
 }
 
 __global__ void ThrowDartsSelect(float *dart_select, float *ps_dart_hits_inv, long *dart_hits_count, 
@@ -468,4 +530,6 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
     m.def("throw_darts_gpu", &throw_darts_gpu, "Throw darts in LADIES sampling algorithm");
     m.def("compute_darts_select_gpu", &compute_darts_select_gpu, "Compute dart values for LADIES alg selection");
     m.def("throw_darts_select_gpu", &throw_darts_select_gpu, "Throw darts for LADIES alg selection");
+    m.def("compute_darts1d_gpu", &compute_darts1d_gpu, "Compute 1D dart values for LADIES sampling algorithm");
+    m.def("throw_darts1d_gpu", &throw_darts1d_gpu, "Throw 1D darts in LADIES sampling algorithm");
 }

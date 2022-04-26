@@ -3,7 +3,7 @@ import torch_sparse
 from collections import defaultdict
 
 from sparse_coo_tensor_cpp import downsample_gpu, compute_darts_gpu, throw_darts_gpu, compute_darts_select_gpu, \
-                                    throw_darts_select_gpu
+                                    throw_darts_select_gpu, compute_darts1d_gpu, throw_darts1d_gpu
 
 def start_time(timer):
     timer.record()
@@ -126,37 +126,39 @@ def ladies_sampler(adj_matrix, batch_size, frontier_size, mb_count, n_layers, n_
         iter_count = 0
         selection_iter_count = 0
         torch.cuda.nvtx.range_push("nvtx-sampling")
+        p_rowsum = torch.cuda.FloatTensor(mb_count).fill_(0)
         while (sampled_count < frontier_size).any():
             iter_count += 1
             start_time(sample_start_timer)
             torch.cuda.nvtx.range_push("nvtx-sampling-iter")
 
             start_time(start_timer)
-            torch.cuda.nvtx.range_push("nvtx-comp-maxprob")
-            p_torch_sparse = torch_sparse.tensor.SparseTensor.from_torch_sparse_coo_tensor(p)
-            max_prob = torch_sparse.reduce.reduction(p_torch_sparse, dim=1, reduce="max")
+            torch.cuda.nvtx.range_push("nvtx-prob-rowsum")
+            p_rowsum.fill_(0)
+            p_rowsum.scatter_add_(0, p._indices()[0, :], p._values())
+            ps_p_rowsum = torch.cumsum(p_rowsum, dim=0).roll(1)
+            ps_p_rowsum[0] = 0
+            ps_p_values = torch.cumsum(p._values(), dim=0).roll(1)
+            ps_p_values[0] = 0
             torch.cuda.nvtx.range_pop()
-            timing_dict["max-prob"].append(stop_time(start_timer, stop_timer))
+            timing_dict["prob-rowsum"].append(stop_time(start_timer, stop_timer))
 
             start_time(start_timer)
             torch.cuda.nvtx.range_push("nvtx-gen-darts")
-            dartx_values = torch.cuda.FloatTensor(n_darts * mb_count).uniform_()
-            darty_values = torch.cuda.FloatTensor(n_darts * mb_count).uniform_()
+            dart_values = torch.cuda.FloatTensor(n_darts * mb_count).uniform_()
             torch.cuda.nvtx.range_pop()
             timing_dict["gen-darts"].append(stop_time(start_timer, stop_timer))
 
             start_time(start_timer)
             torch.cuda.nvtx.range_push("nvtx-dart-throw")
-            compute_darts_gpu(dartx_values, darty_values, neighbor_sizes._values(), psum_neighbor_sizes, 
-                                    max_prob, n_darts, mb_count)
-                                    
+            compute_darts1d_gpu(dart_values, p_rowsum, ps_p_rowsum, n_darts, mb_count)
             torch.cuda.nvtx.range_pop()
             timing_dict["dart-throw"].append(stop_time(start_timer, stop_timer))
 
             start_time(start_timer)
             torch.cuda.nvtx.range_push("nvtx-filter-darts")
             dart_hits_count = torch.cuda.LongTensor(p._nnz()).fill_(0)
-            throw_darts_gpu(dartx_values, darty_values, p._values(), dart_hits_count, n_darts, mb_count)
+            throw_darts1d_gpu(dart_values, ps_p_values, dart_hits_count, n_darts * mb_count, p._nnz())
             torch.cuda.nvtx.range_pop()
             timing_dict["filter_darts"].append(stop_time(start_timer, stop_timer))
 
