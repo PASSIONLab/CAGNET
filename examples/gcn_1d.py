@@ -287,7 +287,7 @@ def main(args):
     torch.manual_seed(0)
     total_start = time.time()
     for epoch in range(args.n_epochs):
-        print(f"Epoch: {epoch}", flush=True)
+        #print(f"Epoch: {epoch}", flush=True)
         if epoch == 1:
             total_start = time.time()
         model.train()
