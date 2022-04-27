@@ -13,7 +13,7 @@ def stop_time(start_timer, stop_timer):
     torch.cuda.synchronize()
     return start_timer.elapsed_time(stop_timer)
 
-def ladies_sampler(adj_matrix, batch_size, frontier_size, mb_count, n_layers, n_darts, train_nodes):
+def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count, n_layers, n_darts):
     start_timer = torch.cuda.Event(enable_timing=True)
     stop_timer = torch.cuda.Event(enable_timing=True)
 
@@ -31,28 +31,9 @@ def ladies_sampler(adj_matrix, batch_size, frontier_size, mb_count, n_layers, n_
 
     timing_dict = defaultdict(list)
 
-    start_time(start_timer)
-    torch.cuda.nvtx.range_push("nvtx-instantiations")
-    # frontiers = torch.cuda.IntTensor(n_layers, batch_size, mb_count)
-    batches = torch.cuda.IntTensor(mb_count, batch_size) # initially the minibatch, note row-major
-    current_frontier = torch.cuda.IntTensor(mb_count, batch_size + frontier_size)
-    # frontiers = torch.cuda.IntTensor(n_layers - 1, batch_size + frontier_size, mb_count)
     adj_matrices = [[None] * n_layers for x in range(mb_count)] # adj_matrices[i][j] --  mb i layer j
+    current_frontier = torch.cuda.IntTensor(mb_count, batch_size + frontier_size)
     node_count = adj_matrix.size(0)
-    torch.cuda.nvtx.range_pop()
-    print(f"instantiations: {stop_time(start_timer, stop_timer)}")
-
-    start_time(start_timer)
-    torch.cuda.nvtx.range_push("nvtx-gen-minibatch-vtxs")
-
-    torch.manual_seed(0)
-    vertex_perm = torch.randperm(train_nodes.size(0))
-    # Generate minibatch vertices
-    for i in range(mb_count):
-        idx = vertex_perm[(i * batch_size):((i + 1) * batch_size)]
-        batches[i,:] = train_nodes[idx]
-    torch.cuda.nvtx.range_pop()
-    print(f"get-minibatch-vtxs: {stop_time(start_timer, stop_timer)}")
 
     start_time(total_start_timer)
     for i in range(n_layers):

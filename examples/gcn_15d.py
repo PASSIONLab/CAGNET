@@ -317,11 +317,10 @@ def main(args):
         ampbyp[i] = ampbyp[i].t().coalesce().to(device)
 
     print("coalescing", flush=True)
-    g_loc = g_loc.coalesce()
+    g_loc = g_loc.coalesce().t()
     print("normalizing", flush=True)
     g_loc = row_normalize(g_loc)
     print("done normalizing", flush=True)
-
 
     n_per_proc = math.ceil(float(g_loc.size(0)) / (size / args.replication))
 
@@ -334,17 +333,31 @@ def main(args):
     train_nid = data.train_mask.nonzero().squeeze()
     test_nid = data.test_mask.nonzero().squeeze()
 
+    batches = torch.cuda.IntTensor(args.n_bulkmb, args.batch_size) # initially the minibatch, note row-major
+    node_count = adj_matrix.size(0)
+    torch.cuda.nvtx.range_pop()
+
+    torch.cuda.nvtx.range_push("nvtx-gen-minibatch-vtxs")
+    torch.manual_seed(0)
+    vertex_perm = torch.randperm(train_nid.size(0))
+    # Generate minibatch vertices
+    for i in range(args.n_bulkmb):
+        idx = vertex_perm[(i * args.batch_size):((i + 1) * args.batch_size)]
+        batches[i,:] = train_nid[idx]
+    torch.cuda.nvtx.range_pop()
+
+    print(f"rank: {rank} g_loc: {g_loc}")
     # do it once before timing
-    current_frontier, next_frontier, adj_matrices = ladies_sampler(g_loc, args.batch_size, args.samp_num, \
-                                                                        args.n_bulkmb, args.n_layers, \
-                                                                        args.n_darts, train_nid)
+    current_frontier, next_frontier, adj_matrices = ladies_sampler(g_loc, batches, args.batch_size, \
+                                                                        args.samp_num, args.n_bulkmb, \
+                                                                        args.n_layers, args.n_darts)
 
     print()
     torch.cuda.profiler.cudart().cudaProfilerStart()
     torch.cuda.nvtx.range_push("nvtx-sampler")
-    current_frontier, next_frontier, adj_matrices = ladies_sampler(g_loc, args.batch_size, args.samp_num, \
-                                                                        args.n_bulkmb, args.n_layers, \
-                                                                        args.n_darts, train_nid)
+    current_frontier, next_frontier, adj_matrices = ladies_sampler(g_loc, batches, args.batch_size, \
+                                                                        args.samp_num, args.n_bulkmb, \
+                                                                        args.n_layers, args.n_darts)
     torch.cuda.nvtx.range_pop()
     torch.cuda.profiler.cudart().cudaProfilerStop()
 
