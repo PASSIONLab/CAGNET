@@ -205,6 +205,11 @@ def one5d_partition(rank, size, inputs, adj_matrix, data, features, classes, rep
     print(f"rank: {rank} inputs_loc.size: {inputs_loc.size()}", flush=True)
     return inputs_loc, adj_matrix_loc, am_pbyp
 
+def oned_partition_mb(rank, size, batches, mb_count):
+    # TODO: Include replicaiton at some point
+    batch_partitions = torch.split(batches, math.ceil(float(mb_count / size)), dim=0)
+    return batch_partitions[rank]
+
 def evaluate(model, graph, features, labels, nid, nid_count, ampbyp, group):
     model.eval()
     with torch.no_grad():
@@ -346,18 +351,33 @@ def main(args):
         batches[i,:] = train_nid[idx]
     torch.cuda.nvtx.range_pop()
 
+    batches_loc = oned_partition_mb(rank, size, batches, args.n_bulkmb)
+
+    torch.cuda.nvtx.range_push("nvtx-gen-sparse-batches")
+    batches_indices_rows = torch.arange(batches_loc.size(0)).cuda()
+    batches_indices_rows = batches_indices_rows.repeat_interleave(batches_loc.size(1))
+    batches_indices_cols = batches_loc.view(-1)
+    batches_indices = torch.stack((batches_indices_rows, batches_indices_cols))
+    batches_values = torch.cuda.FloatTensor(batches_loc.size(1) * batches_loc.size(0)).fill_(1.0)
+    batches_loc = torch.sparse_coo_tensor(batches_indices, batches_values, (batches_loc.size(0), g_loc.size(1)))
+    g_loc = torch.pow(g_loc, 2)
+    torch.cuda.nvtx.range_pop()
+
     print(f"rank: {rank} g_loc: {g_loc}")
+    print(f"rank: {rank} batches_loc: {batches_loc}")
     # do it once before timing
-    current_frontier, next_frontier, adj_matrices = ladies_sampler(g_loc, batches, args.batch_size, \
+    current_frontier, next_frontier, adj_matrices = ladies_sampler(g_loc, batches_loc, args.batch_size, \
                                                                         args.samp_num, args.n_bulkmb, \
-                                                                        args.n_layers, args.n_darts)
+                                                                        args.n_layers, args.n_darts, \
+                                                                        rank, size, col_groups[0])
 
     print()
     torch.cuda.profiler.cudart().cudaProfilerStart()
     torch.cuda.nvtx.range_push("nvtx-sampler")
-    current_frontier, next_frontier, adj_matrices = ladies_sampler(g_loc, batches, args.batch_size, \
+    current_frontier, next_frontier, adj_matrices = ladies_sampler(g_loc, batches_loc, args.batch_size, \
                                                                         args.samp_num, args.n_bulkmb, \
-                                                                        args.n_layers, args.n_darts)
+                                                                        args.n_layers, args.n_darts, \
+                                                                        rank, size, col_groups[0])
     torch.cuda.nvtx.range_pop()
     torch.cuda.profiler.cudart().cudaProfilerStop()
 
