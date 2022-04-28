@@ -1,4 +1,5 @@
 import argparse
+from collections import defaultdict
 import math
 import os
 import os.path as osp
@@ -22,7 +23,7 @@ import cagnet.nn.functional as CAGF
 import socket
 
 class GCN(nn.Module):
-  def __init__(self, in_feats, n_hidden, n_classes, n_layers, rank, size, partitioning, device,
+  def __init__(self, in_feats, n_hidden, n_classes, n_layers, rank, size, timers, partitioning, device,
                     group=None, row_groups=None, col_groups=None):
     super(GCN, self).__init__()
     self.layers = nn.ModuleList()
@@ -30,8 +31,9 @@ class GCN(nn.Module):
     self.size = size
     self.group = group
     self.device = device
+    self.timers = timers
     self.partitioning = partitioning
-    self.timings = dict()
+    self.timings = defaultdict(float)
 
     # input layer
     self.layers.append(GCNConv(in_feats, n_hidden, self.partitioning, self.device))
@@ -41,8 +43,9 @@ class GCN(nn.Module):
     # output layer
     self.layers.append(GCNConv(n_hidden, n_classes, self.partitioning, self.device))
 
-  def forward(self, graph, inputs, ampbyp):
+  def forward(self, graph, inputs, ampbyp, epoch=0):
     h = inputs
+    self.epoch = epoch
     for l, layer in enumerate(self.layers):
       h = layer(self, graph, h, ampbyp)
       if l != len(self.layers) - 1:
@@ -269,6 +272,7 @@ def main(args):
                       args.n_layers,
                       rank,
                       size,
+                      args.timers,
                       partitioning,
                       device,
                       group)
@@ -293,7 +297,7 @@ def main(args):
         model.train()
 
         # forward
-        logits = model(g_loc, features_loc, ampbyp)
+        logits = model(g_loc, features_loc, ampbyp, epoch)
         loss = CAGF.cross_entropy(logits[rank_train_nids], labels_rank[rank_train_nids], train_nid.size(0), \
                                         num_classes, partitioning, rank, group, size)
 
@@ -374,6 +378,8 @@ if __name__ == '__main__':
                             help='normalize adjacency matrix')
     parser.add_argument('--partitioning', default='ONED', type=str,
                             help='partitioning strategy to use')
+    parser.add_argument('--timers', action="store_true",
+                            help='turn on timers')
     args = parser.parse_args()
     print(args)
 

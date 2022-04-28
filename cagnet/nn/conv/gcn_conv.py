@@ -6,6 +6,13 @@ import torch.nn as nn
 from cagnet.partitionings import Partitioning
 from sparse_coo_tensor_cpp import sparse_coo_tensor_gpu, spmm_gpu
 
+def stop_time(self, range_name, start):
+    if self.timers and self.epoch > 0:
+        torch.cuda.synchronize()
+        self.timings[range_name] += time.time() - start
+    else:
+        return 0.0
+
 def broad_func_oned(self, graph, ampbyp, inputs):
     n_per_proc = math.ceil(float(graph.size(0) / self.size))
 
