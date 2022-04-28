@@ -7,6 +7,13 @@ import time
 from cagnet.partitionings import Partitioning
 from sparse_coo_tensor_cpp import sparse_coo_tensor_gpu, spmm_gpu
 
+def stop_time(self, range_name, start):
+    if self.timers and self.epoch > 0:
+        torch.cuda.synchronize()
+        self.timings[range_name] += time.time() - start
+    else:
+        return 0.0
+
 def broad_func_oned(self, graph, ampbyp, inputs):
 #    n_per_proc = math.ceil(float(graph.size(0) / self.size))
     z_loc = torch.cuda.FloatTensor(ampbyp[0].size(0), inputs.size(1), device=self.device).fill_(0)
@@ -20,16 +27,18 @@ def broad_func_oned(self, graph, ampbyp, inputs):
     row_data_send = []
 
     start = time.time()
-
     for i in range(self.size):
-        unique_cols = ampbyp[i].indices()[1].long().unique()
+        unique_cols = ampbyp[i]._indices()[1].unique()
         counts_send.append(torch.cuda.LongTensor([unique_cols.size()], device=self.device).resize_(1, 1))
         row_indices_send.append(unique_cols)
-    self.timings["find_unique"] = time.time() - start
+
+    # self.timings["find_unique"] = time.time() - start
+    stop_time(self, "find_unique", start)
 
     start = time.time()
     dist.all_to_all(counts_recv, counts_send, group=self.group)
-    self.timings["a2a1"] = time.time() - start
+    # self.timings["a2a1"] = time.time() - start
+    stop_time(self, "a2a1", start)
 
     
     row_indices_recv = [torch.cuda.LongTensor(device=self.device).resize_(counts_recv[i].int().item(),).fill_(0) for i in range(len(counts_recv))]
@@ -38,17 +47,20 @@ def broad_func_oned(self, graph, ampbyp, inputs):
     
     start = time.time()
     dist.all_to_all(row_indices_recv, row_indices_send, group=self.group)
-    self.timings["a2a2"] = time.time() - start
+    # self.timings["a2a2"] = time.time() - start
+    stop_time(self, "a2a2", start)
 
 
     start = time.time()
     for i in range(self.size):
         row_data_send.append(inputs[row_indices_recv[i].long(), :])
-    self.timings["gather_row_data"] = time.time() - start
+    # self.timings["gather_row_data"] = time.time() - start
+    stop_time(self, "gather_row_data", start)
 
     start = time.time()
     dist.all_to_all(row_data_recv, row_data_send, group=self.group)
-    self.timings["a2a3"] = time.time() - start
+    # self.timings["a2a3"] = time.time() - start
+    stop_time(self, "a2a3", start)
 
     start = time.time()
     ## how to set the call to spmm_gpu
@@ -73,7 +85,8 @@ def broad_func_oned(self, graph, ampbyp, inputs):
                         ampbyp[i].values(), ampbyp[i].size(0),
                         ampbyp[i].size(1), inputs_mul, z_loc
         )            
-    self.timings["spmm_gpu"] = time.time() - start
+    # self.timings["spmm_gpu"] = time.time() - start
+    stop_time(self, "spmm_gpu", start)
 
 #    for i in range(self.size):
 #        if i == self.rank:

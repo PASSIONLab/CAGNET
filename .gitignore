@@ -3,6 +3,7 @@ data/
 job_scripts/
 outputs/
 profs/
+sparse-extension/build.out
 sparse-extension/build/
 sparse-extension/dist/
 sparse-extension/sparse_coo_tensor_cpp.egg-info/
@@ -20,3 +21,8 @@ gcn_distr_2d.py
 gcn_distr_3d.py
 gcn.py
 reddit.py
+tests/data
+tests/examples
+tests/LADIES/
+tests/*.out
+*.qdrep
