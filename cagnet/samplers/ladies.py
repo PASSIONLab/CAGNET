@@ -42,9 +42,10 @@ def dist_spgemm1D(mata, matb, rank, size, group):
         mata_chunk_indices -= chunk_col_start
         mata_chunk_values = mata._values()[chunk_col_mask]
 
-        matc_chunk_indices, matc_chunk_values = torch_sparse.spspmm(mata_chunk_indices, mata_chunk_values, 
-                                                    matb_recv_indices, matb_recv_values,
-                                                    mata.size(0), chunk_col_size, matb.size(1), coalesced=True)
+        matc_chunk_indices, matc_chunk_values = torch_sparse.spspmm(mata_chunk_indices, \
+                                                    mata_chunk_values, matb_recv_indices, \
+                                                    matb_recv_values, mata.size(0), \
+                                                    chunk_col_size, matb.size(1), coalesced=True)
 
         matc_chunk = torch.sparse_coo_tensor(matc_chunk_indices, matc_chunk_values, size=matc.size())
         matc += matc_chunk

@@ -1,5 +1,6 @@
 import argparse
 import examples.gcn_15d
+import math
 import numpy as np
 import os
 import os.path as osp
@@ -116,7 +117,7 @@ def main(args):
 
     # Run SpGEMM with only rank0, pre-partitioning
     if rank == 0:
-        ans_indices, ans_values = dist_spgemm1D(batches_loc, g_loc, 0, size, group)
+        ans_indices, ans_values = dist_spgemm1D(batches_loc, g_loc, 0, 1, row_groups[0])
 
     dist.barrier(group)
 
@@ -142,7 +143,7 @@ def main(args):
     batches_loc = torch.sparse_coo_tensor(batches_indices, batches_values, (batches_loc.size(0), g_loc.size(1)))
     g_loc = torch.pow(g_loc, 2)
 
-    group = col_groups[0] # Assume replication factor == 1
+    # group = col_groups[0] # Assume replication factor == 1
     dist.barrier(group)
 
     # Run SpGEMM with only rank0, pre-partitioning
@@ -156,6 +157,31 @@ def main(args):
 
     print(f"rank: {rank} test_indices: {test_indices}")
     print(f"rank: {rank} test_values: {test_values}")
+
+    for i in range(1, size):
+        if rank == i:
+            nnz_count = torch.cuda.LongTensor([test_values.size(0)])
+            dist.send(nnz_count, dst=0)
+            dist.send(test_indices, dst=0)
+            dist.send(test_values, dst=0)
+        elif rank == 0:
+            nnz_count = torch.cuda.LongTensor([test_values.size(0)])
+            dist.recv(nnz_count, src=i)
+            test_indices_recv = torch.cuda.LongTensor(2, nnz_count.item())
+            dist.recv(test_indices_recv, src=i)
+            test_values_recv = torch.cuda.FloatTensor(nnz_count.item())
+            dist.recv(test_values_recv, src=i)
+
+            chunk_size = math.ceil(float(args.n_bulkmb / size))
+            test_indices_recv[0, :] += i * chunk_size
+            test_indices = torch.cat((test_indices, test_indices_recv), dim=1)
+            test_values = torch.cat((test_values, test_values_recv), dim=0)
+
+    if rank == 0:
+        print(f"final test_indices: {test_indices}") 
+        print(f"final test_values: {test_values}") 
+        print(f"finaleq test_indices: {(test_indices == ans_indices).all()}") 
+        print(f"finaleq test_values: {(test_values == ans_values).all()}") 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='test distributed SpGEMM function')
