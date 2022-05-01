@@ -91,12 +91,12 @@ def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_tota
         # TODO: assume n_layers=1 for now
         start_time(start_timer)
         torch.cuda.nvtx.range_push("nvtx-probability-spgemm")
-        print(f"rank: {rank} batches: {batches}")
-        print(f"rank: {rank} adj_matrix: {adj_matrix}")
         # p_num_indices, p_num_values = torch_sparse.spspmm(batches._indices(), batches._values(), 
         #                                 adj_matrix._indices().long(), adj_matrix._values(),
         #                                 mb_count, node_count, node_count, coalesced=True)
         p_num_indices, p_num_values = dist_spgemm1D(batches, adj_matrix, rank, size, group)
+        print(f"rank: {rank} indices: {p_num_indices}")
+        print(f"rank: {rank} values: {p_num_values}")
         # # all-gather so remaining computation is not distributed
         # # p_num_indices[0, :] += rank * math.ceil(float(mb_count_total / size))
         # nnz_counts = []
