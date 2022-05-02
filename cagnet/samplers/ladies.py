@@ -96,31 +96,7 @@ def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_tota
         #                                 adj_matrix._indices().long(), adj_matrix._values(),
         #                                 mb_count, node_count, node_count, coalesced=True)
         p_num_indices, p_num_values = dist_spgemm1D(batches, adj_matrix, rank, size, group)
-        print(f"rank: {rank} indices: {p_num_indices}")
-        print(f"rank: {rank} values: {p_num_values}")
-        # # all-gather so remaining computation is not distributed
-        # # p_num_indices[0, :] += rank * math.ceil(float(mb_count_total / size))
-        # nnz_counts = []
-        # for j in range(size):
-        #     nnz_counts.append(torch.cuda.LongTensor(1))
-        # dist.all_gather(nnz_counts, torch.cuda.LongTensor([p_num_values.size(0)]), group)
-
-        # p_num_indices_recv = []
-        # p_num_values_recv = []
-        # for j in range(size):
-        #     p_num_indices_recv.append(torch.cuda.LongTensor(2, nnz_counts[i].item()))
-        #     p_num_values_recv.append(torch.cuda.FloatTensor(nnz_counts[i].item()))
-    
-        # p_num_indices_recv[rank] = p_num_indices
-        # p_num_values_recv[rank] = p_num_values
-        # for j in range(size):
-        #     dist.broadcast(p_num_indices_recv[i], src=i, group=group)
-        #     dist.broadcast(p_num_values_recv[i], src=i, group=group)
-
-        # p_num_indices = torch.cat(p_num_indices_recv, dim=1)
-        # p_num_values = torch.cat(p_num_values_recv, dim=0)
-        # # mb_count = mb_count_total
-        # # node_count = node_count_total
+        
         torch.cuda.nvtx.range_pop()
         print(f"probability-spgemm: {stop_time(start_timer, stop_timer)}")
 
@@ -131,14 +107,18 @@ def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_tota
         torch.cuda.nvtx.range_push("nvtx-compute-p")
         p_num = torch.sparse_coo_tensor(indices=p_num_indices, values=p_num_values, \
                                                 size=(mb_count, node_count_total))
-        p_den = torch.sparse.sum(p_num, dim=1)
+        # p_den = torch.sparse.sum(p_num, dim=1)
+        p_den = torch.cuda.FloatTensor(mb_count).fill_(0)
+        p_den = p_den.scatter_add_(0, p_num._indices()[0, :], p_num._values())
+        p_den = torch.reciprocal(p_den)
 
-        for j in range(mb_count):
-            if p_den._nnz() != mb_count:
-                print("ERROR nnz: {p_den._nnz()} mb_count: {mb_count}")
-            p_den_mb = p_den._values()[j].item()
-            p = torch.div(p_num, p_den_mb)
-        torch.cuda.nvtx.range_pop()
+        # for j in range(mb_count):
+        #     if p_den._nnz() != mb_count:
+        #         print("ERROR nnz: {p_den._nnz()} mb_count: {mb_count}")
+        #     p_den_mb = p_den._values()[j].item()
+        #     p = torch.div(p_num, p_den_mb)
+        # torch.cuda.nvtx.range_pop()
+        p = torch.scatter_reduce(/ga
         print(f"compute-p: {stop_time(start_timer, stop_timer)}")
 
         start_time(start_timer)
