@@ -522,6 +522,26 @@ void throw_darts_select_gpu(const at::Tensor& dart_select,
     CHECK_ERROR("selection dart throwing error")
 }
 
+__global__ void Normalize(float *output, float *input, long *index, int len) { 
+    long     id = blockIdx.x * blockDim.x + threadIdx.x;
+    long stride = blockDim.x * gridDim.x;
+
+    for (int i = id; i < len; i += stride) {
+        output[i] /= input[index[i]];
+    }
+}
+
+void normalize_gpu(const at::Tensor& output, const at::Tensor& input, const at::Tensor& index, int len) {
+
+
+    int BLOCK_SIZE = 256;
+    int BLOCK_COUNT = std::ceil(len / ((float) BLOCK_SIZE));
+    BLOCK_COUNT = std::min(BLOCK_COUNT, 65535);
+
+    Normalize<<<BLOCK_COUNT, BLOCK_SIZE>>>(output.data<float>(), input.data<float>(), index.data<long>(), len);
+    CHECK_ERROR("normalize error")
+}
+
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
     m.def("sparse_coo_tensor_gpu", &sparse_coo_tensor_gpu, "Sparse Tensor GPU-only constructor");
     m.def("spmm_gpu", &spmm_gpu, "SpMM wrapper for cusparse");
@@ -532,4 +552,5 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
     m.def("throw_darts_select_gpu", &throw_darts_select_gpu, "Throw darts for LADIES alg selection");
     m.def("compute_darts1d_gpu", &compute_darts1d_gpu, "Compute 1D dart values for LADIES sampling algorithm");
     m.def("throw_darts1d_gpu", &throw_darts1d_gpu, "Throw 1D darts in LADIES sampling algorithm");
+    m.def("normalize_gpu", &normalize_gpu, "Normalize values in an array based on a second array");
 }

@@ -5,7 +5,8 @@ import torch_sparse
 from collections import defaultdict
 
 from sparse_coo_tensor_cpp import downsample_gpu, compute_darts_gpu, throw_darts_gpu, compute_darts_select_gpu, \
-                                    throw_darts_select_gpu, compute_darts1d_gpu, throw_darts1d_gpu
+                                    throw_darts_select_gpu, compute_darts1d_gpu, throw_darts1d_gpu, \
+                                    normalize_gpu
 
 def start_time(timer):
     timer.record()
@@ -105,20 +106,12 @@ def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_tota
 
         start_time(start_timer)
         torch.cuda.nvtx.range_push("nvtx-compute-p")
-        p_num = torch.sparse_coo_tensor(indices=p_num_indices, values=p_num_values, \
+        p = torch.sparse_coo_tensor(indices=p_num_indices, values=p_num_values, \
                                                 size=(mb_count, node_count_total))
         # p_den = torch.sparse.sum(p_num, dim=1)
         p_den = torch.cuda.FloatTensor(mb_count).fill_(0)
-        p_den = p_den.scatter_add_(0, p_num._indices()[0, :], p_num._values())
-        p_den = torch.reciprocal(p_den)
-
-        # for j in range(mb_count):
-        #     if p_den._nnz() != mb_count:
-        #         print("ERROR nnz: {p_den._nnz()} mb_count: {mb_count}")
-        #     p_den_mb = p_den._values()[j].item()
-        #     p = torch.div(p_num, p_den_mb)
-        # torch.cuda.nvtx.range_pop()
-        p = torch.scatter_reduce(/ga
+        p_den = p_den.scatter_add_(0, p._indices()[0, :], p._values())
+        normalize_gpu(p._values(), p_den, p._indices()[0, :], p._nnz())
         print(f"compute-p: {stop_time(start_timer, stop_timer)}")
 
         start_time(start_timer)
