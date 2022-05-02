@@ -93,22 +93,14 @@ def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_tota
         # TODO: assume n_layers=1 for now
         start_time(start_timer)
         torch.cuda.nvtx.range_push("nvtx-probability-spgemm")
-        # p_num_indices, p_num_values = torch_sparse.spspmm(batches._indices(), batches._values(), 
-        #                                 adj_matrix._indices().long(), adj_matrix._values(),
-        #                                 mb_count, node_count, node_count, coalesced=True)
         p_num_indices, p_num_values = dist_spgemm1D(batches, adj_matrix, rank, size, group)
-        
         torch.cuda.nvtx.range_pop()
         print(f"probability-spgemm: {stop_time(start_timer, stop_timer)}")
-
-        print(f"p_num_indices.size(): {p_num_indices.size()}")
-        print(f"p_num_values.size(): {p_num_values.size()}")
 
         start_time(start_timer)
         torch.cuda.nvtx.range_push("nvtx-compute-p")
         p = torch.sparse_coo_tensor(indices=p_num_indices, values=p_num_values, \
                                                 size=(mb_count, node_count_total))
-        # p_den = torch.sparse.sum(p_num, dim=1)
         p_den = torch.cuda.FloatTensor(mb_count).fill_(0)
         p_den = p_den.scatter_add_(0, p._indices()[0, :], p._values())
         normalize_gpu(p._values(), p_den, p._indices()[0, :], p._nnz())
@@ -120,14 +112,6 @@ def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_tota
                                                     values=torch.cuda.LongTensor(p._nnz()).fill_(0),
                                                     size=(mb_count, node_count_total))
         sampled_count = torch.cuda.IntTensor(mb_count).fill_(0)
-
-        neighbor_sizes = torch.sparse_coo_tensor(indices=p._indices(),
-                                                    values=torch.cuda.LongTensor(p._nnz()).fill_(1),
-                                                    size=(mb_count, node_count_total))
-        neighbor_sizes = torch.sparse.sum(neighbor_sizes, dim=1)
-
-        psum_neighbor_sizes = torch.cumsum(neighbor_sizes._values(), dim=0).roll(1)
-        psum_neighbor_sizes[0] = 0
 
         torch.cuda.nvtx.range_pop()
         print(f"pre-loop: {stop_time(start_timer, stop_timer)}")
