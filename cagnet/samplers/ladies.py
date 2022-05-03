@@ -120,7 +120,9 @@ def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_tota
         selection_iter_count = 0
         torch.cuda.nvtx.range_push("nvtx-sampling")
         p_rowsum = torch.cuda.FloatTensor(mb_count).fill_(0)
-        while (sampled_count < frontier_size).any():
+        
+        underfull_minibatches = (sampled_count < frontier_size).any()
+        while underfull_minibatches:
             iter_count += 1
             start_time(sample_start_timer)
             torch.cuda.nvtx.range_push("nvtx-sampling-iter")
@@ -275,6 +277,12 @@ def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_tota
             p._values()[filled_minibatches_mask] = 0
             torch.cuda.nvtx.range_pop()
             timing_dict["set-probs"].append(stop_time(start_timer, stop_timer))
+
+            start_time(start_timer)
+            torch.cuda.nvtx.range_push("nvtx-compute-bool")
+            underfull_minibatches = (sampled_count < frontier_size).any()
+            torch.cuda.nvtx.range_pop()
+            timing_dict["compute-bool"].append(stop_time(start_timer, stop_timer))
 
             torch.cuda.nvtx.range_pop() # nvtx-sampling-iter
             timing_dict["sampling_iters"].append(stop_time(sample_start_timer, sample_stop_timer))
