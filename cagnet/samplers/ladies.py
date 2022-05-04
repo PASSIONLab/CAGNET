@@ -40,7 +40,7 @@ def dist_spgemm1D(mata, matb, rank, size, group):
         chunk_col_mask = (mata._indices()[1, :] >= chunk_col_start) & (mata._indices()[1, :] < chunk_col_stop)
 
         mata_chunk_indices = mata._indices()[:, chunk_col_mask]
-        mata_chunk_indices -= chunk_col_start
+        mata_chunk_indices[1,:] -= chunk_col_start
         mata_chunk_values = mata._values()[chunk_col_mask]
 
         matc_chunk_indices, matc_chunk_values = torch_sparse.spspmm(mata_chunk_indices, \
@@ -93,14 +93,19 @@ def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_tota
         # TODO: assume n_layers=1 for now
         start_time(start_timer)
         torch.cuda.nvtx.range_push("nvtx-probability-spgemm")
+        print(f"batches: {batches}")
+        print(f"adj_matrices: {adj_matrix}")
         p_num_indices, p_num_values = dist_spgemm1D(batches, adj_matrix, rank, size, group)
+        print(f"p_num_indices: {p_num_indices}")
+        print(f"p_num_values: {p_num_values}")
         torch.cuda.nvtx.range_pop()
         print(f"probability-spgemm: {stop_time(start_timer, stop_timer)}")
 
         start_time(start_timer)
         torch.cuda.nvtx.range_push("nvtx-compute-p")
-        p = torch.sparse_coo_tensor(indices=p_num_indices, values=p_num_values, \
-                                                size=(mb_count, node_count_total))
+        p = torch.sparse_coo_tensor(indices=p_num_indices, 
+                                        values=p_num_values, 
+                                        size=(mb_count, node_count_total))
         p_den = torch.cuda.FloatTensor(mb_count).fill_(0)
         p_den = p_den.scatter_add_(0, p._indices()[0, :], p._values())
         normalize_gpu(p._values(), p_den, p._indices()[0, :], p._nnz())
@@ -121,7 +126,8 @@ def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_tota
         torch.cuda.nvtx.range_push("nvtx-sampling")
         p_rowsum = torch.cuda.FloatTensor(mb_count).fill_(0)
         
-        underfull_minibatches = (sampled_count < frontier_size).any()
+        # underfull_minibatches = (sampled_count < frontier_size).any()
+        underfull_minibatches = True
         while underfull_minibatches:
             iter_count += 1
             start_time(sample_start_timer)
