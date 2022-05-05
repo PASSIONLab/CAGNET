@@ -306,13 +306,7 @@ def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_tota
                                                 batches._values().bool()).view(mb_count, batch_size)
         next_frontier_select = torch.cat((next_frontier_select, batches_select), dim=1)
 
-        print(f"rank: {rank} next_frontier_select.size: {next_frontier_select.size()}")
-        print(f"rank: {rank} batches_select.size: {batches_select.size()}")
-        print(f"rank: {rank} next_frontier_select: {next_frontier_select}")
-        print(f"rank: {rank} batches_select: {batches_select}")
-
         torch.cuda.nvtx.range_pop()
-        print(f"construct-nextf: {stop_time(start_timer, stop_timer)}")
         
         bulk_row_select_rows = torch.arange(0, batches._nnz(), device=torch.device("cuda"))
         bulk_row_select_cols = batches._indices()[1,:]
