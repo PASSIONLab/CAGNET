@@ -6,7 +6,7 @@ from collections import defaultdict
 
 from sparse_coo_tensor_cpp import downsample_gpu, compute_darts_gpu, throw_darts_gpu, compute_darts_select_gpu, \
                                     throw_darts_select_gpu, compute_darts1d_gpu, throw_darts1d_gpu, \
-                                    normalize_gpu
+                                    normalize_gpu, shift_rowselect_gpu, shift_colselect_gpu
 
 def start_time(timer):
     timer.record()
@@ -306,18 +306,6 @@ def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_tota
                                                 batches._values().bool()).view(mb_count, batch_size)
         next_frontier_select = torch.cat((next_frontier_select, batches_select), dim=1)
 
-        # next_frontier_select_recv = []
-        # for j in range(size):
-        #     next_frontier_select_recv.append(torch.cuda.LongTensor(next_frontier_select.size()))
-        # dist.all_gather(next_frontier_select_recv, next_frontier_select, group)
-        # next_frontier_select = torch.cat(next_frontier_select_recv, dim=0)
-
-        # batches_select_recv = []
-        # for j in range(size):
-        #     batches_select_recv.append(torch.cuda.LongTensor(batches_select.size()))
-        # dist.all_gather(batches_select_recv, batches_select, group)
-        # batches_select = torch.cat(batches_select_recv, dim=0)
-
         print(f"rank: {rank} next_frontier_select.size: {next_frontier_select.size()}")
         print(f"rank: {rank} batches_select.size: {batches_select.size()}")
         print(f"rank: {rank} next_frontier_select: {next_frontier_select}")
@@ -325,54 +313,94 @@ def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_tota
 
         torch.cuda.nvtx.range_pop()
         print(f"construct-nextf: {stop_time(start_timer, stop_timer)}")
+        
+        bulk_row_select_rows = torch.arange(0, batches._nnz(), device=torch.device("cuda"))
+        bulk_row_select_cols = batches._indices()[1,:]
+        bulk_row_select_indices = torch.stack((bulk_row_select_rows, bulk_row_select_cols))
+        bulk_row_select_values = torch.cuda.FloatTensor(batches._nnz()).fill_(1.0)
+        
+        sampled_indices, sampled_values = torch_sparse.spspmm(bulk_row_select_indices, bulk_row_select_values,
+                                                                adj_matrix._indices(), adj_matrix._values(),
+                                                                batch_size * mb_count, node_count_total, 
+                                                                node_count_total, coalesced=True)
 
-        torch.cuda.nvtx.range_push("nvtx-select-rowcols")
+        row_shift = torch.cuda.LongTensor(sampled_values.size(0)).fill_(0)
+        shift_rowselect_gpu(row_shift, sampled_indices[0,:], sampled_values.size(0), batch_size, node_count_total)
+        sampled_indices[1,:] += row_shift
+
+        col_shift = torch.cuda.LongTensor(next_frontier_select.numel()).fill_(0)
+        bulk_col_select_rows = next_frontier_select.reshape(-1)
+        shift_colselect_gpu(col_shift, next_frontier_select.numel(), frontier_size + batch_size, node_count_total)
+        bulk_col_select_rows += col_shift
+        bulk_col_select_cols = torch.arange(0, next_frontier_select.numel(), device=torch.device("cuda"))
+        bulk_col_select_cols = torch.remainder(bulk_col_select_cols, frontier_size + batch_size)
+        bulk_col_select_indices = torch.stack((bulk_col_select_rows, bulk_col_select_cols))
+        bulk_col_select_values = torch.cuda.FloatTensor(next_frontier_select.numel()).fill_(1.0)
+
+        sampled_indices, sampled_values = torch_sparse.spspmm(sampled_indices, sampled_values,
+                                                    bulk_col_select_indices, bulk_col_select_values,
+                                                    batch_size * mb_count, node_count_total * mb_count, 
+                                                    frontier_size + batch_size, coalesced=True)
+
         for j in range(mb_count):
-            start_time(start_timer)
-            torch.cuda.nvtx.range_push("nvtx-select-mtxs")
-            if i == 0:
-                row_select_mtx_indices = torch.stack((torch.arange(start=0, end=nnz).cuda(), batches_select[j,:]))
-            else:
-                row_select_mtx_indices = torch.stack((torch.arange(start=0, end=nnz).cuda(), \
-                                                                            current_frontier[j, :]))
-            row_select_mtx_values = torch.cuda.FloatTensor(nnz).fill_(1.0)
+            row_select_min = j * batch_size
+            row_select_max = (j + 1) * batch_size
+            sample_select_mask = (row_select_min <= sampled_indices[0,:]) & \
+                                 (sampled_indices[0,:] < row_select_max)
+            adj_matrix_sample_indices = sampled_indices[:, sample_select_mask]
+            adj_matrix_sample_values = sampled_values[sample_select_mask]
 
-            col_select_mtx_indices = torch.stack((next_frontier_select[j], torch.arange(start=0, \
-                                                        end=next_frontier_select[j].size(0)).cuda()))
-            col_select_mtx_values = torch.cuda.FloatTensor(next_frontier_select[j].size(0)).fill_(1.0)
-            torch.cuda.nvtx.range_pop()
-            timing_dict["select-mtxs"].append(stop_time(start_timer, stop_timer))
-
-            # multiply row_select matrix with adj_matrix
-            start_time(start_timer)
-            torch.cuda.nvtx.range_push("nvtx-row-select-spgemm")
-            sampled_indices, sampled_values = torch_sparse.spspmm(row_select_mtx_indices.long(), 
-                                                        row_select_mtx_values,
-                                                        adj_matrix._indices(), adj_matrix._values(),
-                                                        nnz, node_count, node_count, coalesced=True)
-            torch.cuda.nvtx.range_pop()
-            timing_dict["row-select-spgemm"].append(stop_time(start_timer, stop_timer))
-
-            # multiply adj_matrix with col_select matrix
-            start_time(start_timer)
-            torch.cuda.nvtx.range_push("nvtx-col-select-spgemm")
-            sampled_indices, sampled_values = torch_sparse.spspmm(sampled_indices, sampled_values,
-                                                        col_select_mtx_indices.long(), col_select_mtx_values,
-                                                        nnz, node_count, next_frontier_select[j].size(0), 
-                                                        coalesced=True)
-            torch.cuda.nvtx.range_pop()
-            timing_dict["col-select-spgemm"].append(stop_time(start_timer, stop_timer))
-            # layer_adj_matrix = adj_matrix[current_frontier[:,0], next_frontier]
-
-            start_time(start_timer)
-            torch.cuda.nvtx.range_push("nvtx-set-sample")
-            current_frontier[j, :] = next_frontier_select[j, :]
-            adj_matrix_sample = torch.sparse_coo_tensor(indices=sampled_indices, values=sampled_values, \
-                                            size=(nnz, next_frontier_select[j].size(0)))
+            adj_matrix_sample = torch.sparse_coo_tensor(adj_matrix_sample_indices, adj_matrix_sample_values, \
+                                            size=(batch_size, frontier_size + batch_size))
             adj_matrices[j][i] = adj_matrix_sample
-            torch.cuda.nvtx.range_pop()
-            timing_dict["set-sample"].append(stop_time(start_timer, stop_timer))
-        torch.cuda.nvtx.range_pop()
+
+        # torch.cuda.nvtx.range_push("nvtx-select-rowcols")
+        # for j in range(mb_count):
+        #     start_time(start_timer)
+        #     torch.cuda.nvtx.range_push("nvtx-select-mtxs")
+        #     if i == 0:
+        #         row_select_mtx_indices = torch.stack((torch.arange(start=0, end=nnz).cuda(), batches_select[j,:]))
+        #     else:
+        #         row_select_mtx_indices = torch.stack((torch.arange(start=0, end=nnz).cuda(), \
+        #                                                                     current_frontier[j, :]))
+        #     row_select_mtx_values = torch.cuda.FloatTensor(nnz).fill_(1.0)
+
+        #     col_select_mtx_indices = torch.stack((next_frontier_select[j], torch.arange(start=0, \
+        #                                                 end=next_frontier_select[j].size(0)).cuda()))
+        #     col_select_mtx_values = torch.cuda.FloatTensor(next_frontier_select[j].size(0)).fill_(1.0)
+        #     torch.cuda.nvtx.range_pop()
+        #     timing_dict["select-mtxs"].append(stop_time(start_timer, stop_timer))
+
+        #     # multiply row_select matrix with adj_matrix
+        #     start_time(start_timer)
+        #     torch.cuda.nvtx.range_push("nvtx-row-select-spgemm")
+        #     sampled_indices, sampled_values = torch_sparse.spspmm(row_select_mtx_indices.long(), 
+        #                                                 row_select_mtx_values,
+        #                                                 adj_matrix._indices(), adj_matrix._values(),
+        #                                                 nnz, node_count, node_count, coalesced=True)
+        #     torch.cuda.nvtx.range_pop()
+        #     timing_dict["row-select-spgemm"].append(stop_time(start_timer, stop_timer))
+
+        #     # multiply adj_matrix with col_select matrix
+        #     start_time(start_timer)
+        #     torch.cuda.nvtx.range_push("nvtx-col-select-spgemm")
+        #     sampled_indices, sampled_values = torch_sparse.spspmm(sampled_indices, sampled_values,
+        #                                                 col_select_mtx_indices.long(), col_select_mtx_values,
+        #                                                 nnz, node_count, next_frontier_select[j].size(0), 
+        #                                                 coalesced=True)
+        #     torch.cuda.nvtx.range_pop()
+        #     timing_dict["col-select-spgemm"].append(stop_time(start_timer, stop_timer))
+        #     # layer_adj_matrix = adj_matrix[current_frontier[:,0], next_frontier]
+
+        #     start_time(start_timer)
+        #     torch.cuda.nvtx.range_push("nvtx-set-sample")
+        #     current_frontier[j, :] = next_frontier_select[j, :]
+        #     adj_matrix_sample = torch.sparse_coo_tensor(indices=sampled_indices, values=sampled_values, \
+        #                                     size=(nnz, next_frontier_select[j].size(0)))
+        #     adj_matrices[j][i] = adj_matrix_sample
+        #     torch.cuda.nvtx.range_pop()
+        #     timing_dict["set-sample"].append(stop_time(start_timer, stop_timer))
+        # torch.cuda.nvtx.range_pop()
     
     print(f"total_time: {stop_time(total_start_timer, total_stop_timer)}")
     for k, v in timing_dict.items():

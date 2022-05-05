@@ -542,6 +542,53 @@ void normalize_gpu(const at::Tensor& output, const at::Tensor& input, const at::
     CHECK_ERROR("normalize error")
 }
 
+__global__ void ShiftRowSelect(long *row_shift, long *row_select_rows, int nnz, int batch_size, int node_count) { 
+    long     id = blockIdx.x * blockDim.x + threadIdx.x;
+    long stride = blockDim.x * gridDim.x;
+
+    for (int i = id; i < nnz; i += stride) {
+        long mb_row = row_select_rows[i] / batch_size;
+        row_shift[i] += mb_row * node_count;
+    }
+}
+
+void shift_rowselect_gpu(const at::Tensor& row_shift, const at::Tensor& row_select_rows,
+                            int nnz, int batch_size, int node_count) {
+
+
+    int BLOCK_SIZE = 256;
+    int BLOCK_COUNT = std::ceil(nnz / ((float) BLOCK_SIZE));
+    BLOCK_COUNT = std::min(BLOCK_COUNT, 65535);
+
+    ShiftRowSelect<<<BLOCK_COUNT, BLOCK_SIZE>>>(row_shift.data<long>(), 
+                                                    row_select_rows.data<long>(), 
+                                                    nnz,
+                                                    batch_size,
+                                                    node_count);
+    CHECK_ERROR("shift row select error")
+}
+
+__global__ void ShiftColSelect(long *col_shift, int nnz, int batch_size, int node_count) { 
+    long     id = blockIdx.x * blockDim.x + threadIdx.x;
+    long stride = blockDim.x * gridDim.x;
+
+    for (int i = id; i < nnz; i += stride) {
+        long mb_row = i / batch_size;
+        col_shift[i] += mb_row * node_count;
+    }
+}
+
+void shift_colselect_gpu(const at::Tensor& col_shift, int nnz, int batch_size, int node_count) {
+
+
+    int BLOCK_SIZE = 256;
+    int BLOCK_COUNT = std::ceil(nnz / ((float) BLOCK_SIZE));
+    BLOCK_COUNT = std::min(BLOCK_COUNT, 65535);
+
+    ShiftColSelect<<<BLOCK_COUNT, BLOCK_SIZE>>>(col_shift.data<long>(), nnz, batch_size, node_count);
+    CHECK_ERROR("shift col select error")
+}
+
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
     m.def("sparse_coo_tensor_gpu", &sparse_coo_tensor_gpu, "Sparse Tensor GPU-only constructor");
     m.def("spmm_gpu", &spmm_gpu, "SpMM wrapper for cusparse");
@@ -553,4 +600,6 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
     m.def("compute_darts1d_gpu", &compute_darts1d_gpu, "Compute 1D dart values for LADIES sampling algorithm");
     m.def("throw_darts1d_gpu", &throw_darts1d_gpu, "Throw 1D darts in LADIES sampling algorithm");
     m.def("normalize_gpu", &normalize_gpu, "Normalize values in an array based on a second array");
+    m.def("shift_rowselect_gpu", &shift_rowselect_gpu, "Shift row selection output matrix col values");
+    m.def("shift_colselect_gpu", &shift_colselect_gpu, "Shift col selection matrix row values");
 }
