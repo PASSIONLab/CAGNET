@@ -319,17 +319,21 @@ def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_tota
         
         start_time(start_timer)
         torch.cuda.nvtx.range_push("nvtx-rowselect-spgemm")
-        sampled_indices, sampled_values = torch_sparse.spspmm(bulk_row_select_indices, bulk_row_select_values,
-                                                                adj_matrix._indices(), adj_matrix._values(),
-                                                                batch_size * mb_count, node_count_total, 
-                                                                node_count_total, coalesced=True)
+        # sampled_indices, sampled_values = torch_sparse.spspmm(bulk_row_select_indices, bulk_row_select_values,
+        #                                                         adj_matrix._indices(), adj_matrix._values(),
+        #                                                         batch_size * mb_count, node_count_total, 
+        #                                                         node_count_total, coalesced=True)
+        bulk_row_select = torch.sparse_coo_tensor(bulk_row_select_indices, bulk_row_select_values, 
+                                                        (batch_size * mb_count, node_count_total))
+        sampled_indices, sampled_values = dist_spgemm1D(bulk_row_select, adj_matrix, rank, size, group)
         torch.cuda.nvtx.range_pop()
         timing_dict["rowselect-spgemm"].append(stop_time(sample_start_timer, sample_stop_timer))
 
         start_time(start_timer)
         torch.cuda.nvtx.range_push("nvtx-colselect-preproc")
         row_shift = torch.cuda.LongTensor(sampled_values.size(0)).fill_(0)
-        shift_rowselect_gpu(row_shift, sampled_indices[0,:], sampled_values.size(0), batch_size, node_count_total)
+        shift_rowselect_gpu(row_shift, sampled_indices[0,:], sampled_values.size(0), 
+                                rank, size, batch_size, node_count_total, mb_count_total)
         sampled_indices[1,:] += row_shift
 
         col_shift = torch.cuda.LongTensor(next_frontier_select.numel()).fill_(0)
@@ -345,10 +349,15 @@ def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_tota
 
         start_time(start_timer)
         torch.cuda.nvtx.range_push("nvtx-colselect-spgemm")
-        sampled_indices, sampled_values = torch_sparse.spspmm(sampled_indices, sampled_values,
-                                                    bulk_col_select_indices, bulk_col_select_values,
-                                                    batch_size * mb_count, node_count_total * mb_count, 
-                                                    frontier_size + batch_size, coalesced=True)
+        # sampled_indices, sampled_values = torch_sparse.spspmm(sampled_indices, sampled_values,
+        #                                             bulk_col_select_indices, bulk_col_select_values,
+        #                                             batch_size * mb_count, node_count_total * mb_count, 
+        #                                             frontier_size + batch_size, coalesced=True)
+        sample_mtx = torch.sparse_coo_tensor(sampled_indices, sampled_values, 
+                                                (batch_size * mb_count, node_count_total * mb_count_total))
+        bulk_col_select = torch.sparse_coo_tensor(bulk_col_select_indices, bulk_col_select_values,
+                                                    (node_count_total * mb_count, frontier_size + batch_size))
+        sampled_indices, sampled_values = dist_spgemm1D(sample_mtx, bulk_col_select, rank, size, group)
         torch.cuda.nvtx.range_pop()
         timing_dict["colselect-spgemm"].append(stop_time(sample_start_timer, sample_stop_timer))
 
