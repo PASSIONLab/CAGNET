@@ -329,7 +329,7 @@ def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_tota
         sampled_indices[1,:] += row_shift
 
         col_shift = torch.cuda.LongTensor(next_frontier_select.numel()).fill_(0)
-        bulk_col_select_rows = next_frontier_select.reshape(-1)
+        bulk_col_select_rows = next_frontier_select.clone().reshape(-1)
         shift_colselect_gpu(col_shift, next_frontier_select.numel(), frontier_size + batch_size, node_count_total)
         bulk_col_select_rows += col_shift
         bulk_col_select_cols = torch.arange(0, next_frontier_select.numel(), device=torch.device("cuda"))
@@ -348,6 +348,7 @@ def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_tota
             sample_select_mask = (row_select_min <= sampled_indices[0,:]) & \
                                  (sampled_indices[0,:] < row_select_max)
             adj_matrix_sample_indices = sampled_indices[:, sample_select_mask]
+            adj_matrix_sample_indices[0,:] -= row_select_min
             adj_matrix_sample_values = sampled_values[sample_select_mask]
 
             adj_matrix_sample = torch.sparse_coo_tensor(adj_matrix_sample_indices, adj_matrix_sample_values, \
