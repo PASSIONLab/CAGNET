@@ -73,12 +73,14 @@ def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_tota
 
     timing_dict = defaultdict(list)
 
-    adj_matrices = [[None] * n_layers for x in range(mb_count_total)] # adj_matrices[i][j] --  mb i layer j
     current_frontier = torch.cuda.IntTensor(mb_count_total, batch_size + frontier_size)
 
     node_count = adj_matrix.size(0)
     node_count_total = adj_matrix.size(1)
     mb_count = batches.size(0)
+
+    # adj_matrices = [[None] * n_layers for x in range(mb_count)] # adj_matrices[i][j] --  mb i layer j
+    adj_matrices = [None] * n_layers # adj_matrices[i] --  bulk minibatch matrix for layer j
 
     start_time(total_start_timer)
     for i in range(n_layers):
@@ -363,18 +365,21 @@ def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_tota
 
         start_time(start_timer)
         torch.cuda.nvtx.range_push("nvtx-sample-select")
-        for j in range(mb_count):
-            row_select_min = j * batch_size
-            row_select_max = (j + 1) * batch_size
-            sample_select_mask = (row_select_min <= sampled_indices[0,:]) & \
-                                 (sampled_indices[0,:] < row_select_max)
-            adj_matrix_sample_indices = sampled_indices[:, sample_select_mask]
-            adj_matrix_sample_indices[0,:] -= row_select_min
-            adj_matrix_sample_values = sampled_values[sample_select_mask]
+        # for j in range(mb_count):
+        #     row_select_min = j * batch_size
+        #     row_select_max = (j + 1) * batch_size
+        #     sample_select_mask = (row_select_min <= sampled_indices[0,:]) & \
+        #                          (sampled_indices[0,:] < row_select_max)
+        #     adj_matrix_sample_indices = sampled_indices[:, sample_select_mask]
+        #     adj_matrix_sample_indices[0,:] -= row_select_min
+        #     adj_matrix_sample_values = sampled_values[sample_select_mask]
 
-            adj_matrix_sample = torch.sparse_coo_tensor(adj_matrix_sample_indices, adj_matrix_sample_values, \
-                                            size=(batch_size, frontier_size + batch_size))
-            adj_matrices[j][i] = adj_matrix_sample
+        #     adj_matrix_sample = torch.sparse_coo_tensor(adj_matrix_sample_indices, adj_matrix_sample_values, \
+        #                                     size=(batch_size, frontier_size + batch_size))
+        #     adj_matrices[j][i] = adj_matrix_sample
+        adj_matrix_sample = torch.sparse_coo_tensor(sampled_indices, sampled_values, \
+                                        size=(batch_size * mb_count, frontier_size + batch_size))
+        adj_matrices[i] = adj_matrix_sample
         torch.cuda.nvtx.range_pop()
         timing_dict["sample-select"].append(stop_time(sample_start_timer, sample_stop_timer))
 

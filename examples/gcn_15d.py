@@ -339,7 +339,6 @@ def main(args):
     test_nid = data.test_mask.nonzero().squeeze()
 
     batches = torch.cuda.IntTensor(args.n_bulkmb, args.batch_size) # initially the minibatch, note row-major
-    node_count = adj_matrix.size(0)
     torch.cuda.nvtx.range_pop()
 
     torch.cuda.nvtx.range_push("nvtx-gen-minibatch-vtxs")
@@ -374,15 +373,43 @@ def main(args):
     print()
     torch.cuda.profiler.cudart().cudaProfilerStart()
     torch.cuda.nvtx.range_push("nvtx-sampler")
-    current_frontier, next_frontier, adj_matrices = ladies_sampler(g_loc, batches_loc, args.batch_size, \
-                                                                        args.samp_num, args.n_bulkmb, \
-                                                                        args.n_layers, args.n_darts, \
-                                                                        rank, size, col_groups[0])
+    current_frontier, next_frontier, adj_matrices_bulk = ladies_sampler(g_loc, batches_loc, args.batch_size, \
+                                                                            args.samp_num, args.n_bulkmb, \
+                                                                            args.n_layers, args.n_darts, \
+                                                                            rank, size, col_groups[0])
     torch.cuda.nvtx.range_pop()
     torch.cuda.profiler.cudart().cudaProfilerStop()
 
+    # adj_matrices[i][j] --  mb i layer j
+    rank_n_bulkmb = int(args.n_bulkmb / size)
+    adj_matrices = [[None] * args.n_layers for x in range(rank_n_bulkmb)] 
+    for i in range(args.n_layers):
+        for j in range(rank_n_bulkmb):
+            row_select_min = j * args.batch_size
+            row_select_max = (j + 1) * args.batch_size
+            
+            sampled_indices = adj_matrices_bulk[i]._indices()
+            sampled_values = adj_matrices_bulk[i]._values()
+
+            sample_select_mask = (row_select_min <= sampled_indices[0,:]) & \
+                                 (sampled_indices[0,:] < row_select_max)
+            adj_matrix_sample_indices = sampled_indices[:, sample_select_mask]
+            adj_matrix_sample_indices[0,:] -= row_select_min
+            adj_matrix_sample_values = sampled_values[sample_select_mask]
+
+            adj_matrix_sample = torch.sparse_coo_tensor(adj_matrix_sample_indices, adj_matrix_sample_values, \
+                                            size=(args.batch_size, args.samp_num + args.batch_size))
+            adj_matrices[j][i] = adj_matrix_sample
+
     print(f"sample: {adj_matrices}")
-    return current_frontier, next_frontier, adj_matrices, g_loc # return here while testing sampling code
+    node_count = inputs.size(0)
+    adj_matrix = torch.sparse_coo_tensor(adj_matrix, 
+                                            torch.cuda.FloatTensor(adj_matrix.size(1)).fill_(1.0), 
+                                            size=(node_count, node_count))
+    adj_matrix = adj_matrix.coalesce().cuda()
+    adj_matrix = row_normalize(adj_matrix)
+    adj_matrix = torch.pow(adj_matrix, 2)
+    return current_frontier, next_frontier, adj_matrices, adj_matrix # return here while testing sampling code
 
     # create GCN model
     torch.manual_seed(0)

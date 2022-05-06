@@ -4,6 +4,7 @@ import LADIES.pytorch_ladies
 
 import numpy as np
 import torch
+import torch.distributed as dist
 
 def main(args):
     """
@@ -73,7 +74,9 @@ def main(args):
 
     print("")
     print("Beginning LADIES sampler test")
-    for i in range(args.n_bulkmb):
+    size = dist.get_world_size()
+    rank_n_bulkmb = int(args.n_bulkmb / size)
+    for i in range(rank_n_bulkmb):
         print(f"Testing minibatch {i}")
         current_frontier = current_frontier_all[i] # current_frontier for minibatch i
         next_frontier = next_frontier_all[i] # next_frontier for minibatch i
