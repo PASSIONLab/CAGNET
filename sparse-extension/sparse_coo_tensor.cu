@@ -31,11 +31,11 @@ using namespace at::sparse;
 #define CHECK_ERROR(str) \
     {cudaDeviceSynchronize(); cudaError_t err; err = cudaGetLastError(); if(err!=0) {printf("ERROR %s:  %d %s\n", str, err, cudaGetErrorString(err)); fflush(stdout);}}
 
-__device__ long binary_searchf(float *arr, float val, long imin, long imax) {
+__device__ int binary_searchf(float *arr, float val, int imin, int imax) {
     
-    long ans = -1;
+    int ans = 0;
     while (imax >= imin) {
-        long imid = (imin + imax) / 2;
+        int imid = (imin + imax) / 2;
 
         if (arr[imid] <= val) {
             imin = imid + 1;
@@ -461,14 +461,17 @@ void throw_darts_gpu(const at::Tensor& dartx_values,
     CHECK_ERROR("dart throwing error")
 }
 
-__global__ void ThrowDarts1D(float *dart_values, float *ps_p_values, long *h_values, int dart_count, int nnz) {
+__global__ void ThrowDarts1D(float *dart_values, float *ps_p_values, int *h_values, int dart_count, int nnz) {
 
     int     id = blockIdx.x * blockDim.x + threadIdx.x;
     int stride = blockDim.x * gridDim.x;
 
     for (int i = id; i < dart_count; i += stride) {
-        long vtx = binary_searchf(ps_p_values, dart_values[i], 0, nnz);
-        atomicAdd((unsigned long long *)&h_values[vtx], 1L);
+        int vtx = binary_searchf(ps_p_values, dart_values[i], 0, nnz);
+        if (vtx < 0 || vtx >= nnz) {
+            printf("error i: %d vtx: %d nnz: %d\n", i, vtx, nnz);
+        }
+        atomicAdd(&h_values[vtx], 1);
     }
 }
 
@@ -485,29 +488,29 @@ void throw_darts1d_gpu(const at::Tensor& dart_values,
 
     ThrowDarts1D<<<BLOCK_COUNT, BLOCK_SIZE>>>(dart_values.data<float>(), 
                                                 ps_p_values.data<float>(), 
-                                                h_values.data<long>(), 
+                                                h_values.data<int>(), 
                                                 dart_count,
                                                 nnz);
     CHECK_ERROR("dart throwing error")
 }
 
-__global__ void ThrowDartsSelect(float *dart_select, float *ps_dart_hits_inv, long *dart_hits_count, 
-                                    long total_overflow, long nnz) {
+__global__ void ThrowDartsSelect(float *dart_select, float *ps_dart_hits_inv, int *dart_hits_count, 
+                                    int total_overflow, int nnz) {
 
-    long     id = blockIdx.x * blockDim.x + threadIdx.x;
-    long stride = blockDim.x * gridDim.x;
+    int     id = blockIdx.x * blockDim.x + threadIdx.x;
+    int stride = blockDim.x * gridDim.x;
 
-    for (long i = id; i < total_overflow; i += stride) {
-        long vtx = binary_searchf(ps_dart_hits_inv, dart_select[i], 0, nnz);
-        atomicAnd((unsigned long long *)&dart_hits_count[vtx], 0L);
+    for (int i = id; i < total_overflow; i += stride) {
+        int vtx = binary_searchf(ps_dart_hits_inv, dart_select[i], 0, nnz);
+        atomicAnd(&dart_hits_count[vtx], 0);
     }
 }
 
 void throw_darts_select_gpu(const at::Tensor& dart_select, 
                                 const at::Tensor& ps_dart_hits_inv,
                                 const at::Tensor& dart_hits_count,
-                                long total_overflow,
-                                long nnz) {
+                                int total_overflow,
+                                int nnz) {
 
 
     int BLOCK_SIZE = 256;
@@ -516,7 +519,7 @@ void throw_darts_select_gpu(const at::Tensor& dart_select,
 
     ThrowDartsSelect<<<BLOCK_COUNT, BLOCK_SIZE>>>(dart_select.data<float>(), 
                                                     ps_dart_hits_inv.data<float>(), 
-                                                    dart_hits_count.data<long>(), 
+                                                    dart_hits_count.data<int>(), 
                                                     total_overflow,
                                                     nnz);
     CHECK_ERROR("selection dart throwing error")

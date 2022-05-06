@@ -401,8 +401,9 @@ def main(args):
                                             size=(args.batch_size, args.samp_num + args.batch_size))
             adj_matrices[j][i] = adj_matrix_sample
 
-    print(f"sample: {adj_matrices}")
+    # print(f"sample: {adj_matrices}")
     node_count = inputs.size(0)
+    adj_matrix = adj_matrix.cuda()
     adj_matrix = torch.sparse_coo_tensor(adj_matrix, 
                                             torch.cuda.FloatTensor(adj_matrix.size(1)).fill_(1.0), 
                                             size=(node_count, node_count))

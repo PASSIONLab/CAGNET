@@ -48,9 +48,10 @@ def dist_spgemm1D(mata, matb, rank, size, group):
                                                     matb_recv_values, mata.size(0), \
                                                     chunk_col_size, matb.size(1), coalesced=True)
 
-        matc_chunk = torch.sparse_coo_tensor(matc_chunk_indices, matc_chunk_values, size=matc.size())
+        matc_chunk = torch.sparse_coo_tensor(matc_chunk_indices, matc_chunk_values, size=matc.size()).coalesce()
         matc += matc_chunk
 
+    matc = matc.coalesce()
     return matc._indices(), matc._values()
 
 def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_total, n_layers, n_darts, \
@@ -95,11 +96,7 @@ def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_tota
         # TODO: assume n_layers=1 for now
         start_time(start_timer)
         torch.cuda.nvtx.range_push("nvtx-probability-spgemm")
-        print(f"batches: {batches}")
-        print(f"adj_matrices: {adj_matrix}")
         p_num_indices, p_num_values = dist_spgemm1D(batches, adj_matrix, rank, size, group)
-        print(f"p_num_indices: {p_num_indices}")
-        print(f"p_num_values: {p_num_values}")
         torch.cuda.nvtx.range_pop()
         print(f"probability-spgemm: {stop_time(start_timer, stop_timer)}")
 
@@ -160,14 +157,15 @@ def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_tota
 
             start_time(start_timer)
             torch.cuda.nvtx.range_push("nvtx-filter-darts")
-            dart_hits_count = torch.cuda.LongTensor(p._nnz()).fill_(0)
+            # dart_hits_count = torch.cuda.LongTensor(p._nnz()).fill_(0)
+            dart_hits_count = torch.cuda.IntTensor(p._nnz()).fill_(0)
             throw_darts1d_gpu(dart_values, ps_p_values, dart_hits_count, n_darts * mb_count, p._nnz())
             torch.cuda.nvtx.range_pop()
             timing_dict["filter_darts"].append(stop_time(start_timer, stop_timer))
 
             start_time(start_timer)
             torch.cuda.nvtx.range_push("nvtx-add-to-frontier")
-            next_frontier_values = torch.logical_or(dart_hits_count, next_frontier._values()).int()
+            next_frontier_values = torch.logical_or(dart_hits_count, next_frontier._values().int()).int()
             next_frontier_tmp = torch.sparse_coo_tensor(indices=next_frontier._indices(),
                                                             values=next_frontier_values,
                                                             size=(mb_count, node_count_total))
@@ -296,9 +294,6 @@ def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_tota
             timing_dict["sampling-iters"].append(stop_time(sample_start_timer, sample_stop_timer))
 
         torch.cuda.nvtx.range_pop() # nvtx-sampling
-
-        # TODO: Might need to downsample if > frontier_size vertices were sampled for a minibatch
-        print(f"next_frontier.frontier-sizes: {torch.sparse.sum(next_frontier, dim=1)}")
 
         start_time(start_timer)
         torch.cuda.nvtx.range_push("nvtx-construct-nextf")
