@@ -43,6 +43,7 @@ def dist_spgemm1D(mata, matb, rank, size, group):
         mata_chunk_indices[1,:] -= chunk_col_start
         mata_chunk_values = mata._values()[chunk_col_mask]
 
+        print(f"rank: {rank} i: {i} chunk_col_size: {chunk_col_size}")
         matc_chunk_indices, matc_chunk_values = torch_sparse.spspmm(mata_chunk_indices, \
                                                     mata_chunk_values, matb_recv_indices, \
                                                     matb_recv_values, mata.size(0), \
@@ -319,11 +320,11 @@ def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_tota
 
         row_select_mtx_values = torch.cuda.FloatTensor(row_select_mtx_indices[0].size(0)).fill_(1.0)
 
-        repeated_next_frontier = next_frontier_select.repeat_interleave(nnz, dim=0)
-        scale_mtx = torch.arange(start=0, end=node_count * nnz * mb_count, step=node_count).cuda()
+        repeated_next_frontier = next_frontier_select.clone()
+        scale_mtx = torch.arange(start=0, end=node_count_total * mb_count, step=node_count_total).cuda()
         repeated_next_frontier.add_(scale_mtx[:, None])
         col_select_mtx_rows = repeated_next_frontier.view(-1)
-        col_select_mtx_cols = torch.arange(next_frontier_select.size(1)).cuda().repeat(nnz * mb_count,1).view(-1)
+        col_select_mtx_cols = torch.arange(next_frontier_select.size(1)).cuda().repeat(mb_count,1).view(-1)
         col_select_mtx_indices = torch.stack((col_select_mtx_rows, col_select_mtx_cols))
         col_select_mtx_values = torch.cuda.FloatTensor(col_select_mtx_rows.size(0)).fill_(1.0)
         torch.cuda.nvtx.range_pop()
@@ -332,27 +333,31 @@ def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_tota
         # 2. Multiply row_select matrix with adj_matrix
         start_time(start_timer)
         torch.cuda.nvtx.range_push("nvtx-row-select-spgemm")
-        sampled_indices, sampled_values = torch_sparse.spspmm(row_select_mtx_indices.long(),
-                                                    row_select_mtx_values,
-                                                    adj_matrix._indices(), adj_matrix._values(),
-                                                    nnz * mb_count, node_count, node_count, coalesced=True)
+        row_select_mtx = torch.sparse_coo_tensor(row_select_mtx_indices, row_select_mtx_values, 
+                                                        size=(nnz * mb_count, node_count_total))
+        sampled_indices, sampled_values = dist_spgemm1D(row_select_mtx, adj_matrix, rank, size, group)
+
         torch.cuda.nvtx.range_pop()
         timing_dict["row-select-spgemm"].append(stop_time(start_timer, stop_timer))
 
         # 3. Expand sampled rows
         start_time(start_timer)
         torch.cuda.nvtx.range_push("nvtx-row-select-expand")
-        sampled_indices[1,:].add_(sampled_indices[0,:], alpha=node_count)
+        row_shift = torch.cuda.LongTensor(sampled_values.size(0)).fill_(0)
+        shift_rowselect_gpu(row_shift, sampled_indices[0,:], sampled_values.size(0), 
+                                rank, size, batch_size, node_count_total, mb_count_total)
+        sampled_indices[1,:] += row_shift
         torch.cuda.nvtx.range_pop()
         timing_dict["row-select-expand"].append(stop_time(start_timer, stop_timer))
 
         # 4. Multiply sampled rows with col_select matrix
         start_time(start_timer)
         torch.cuda.nvtx.range_push("nvtx-col-select-spgemm")
-        sampled_indices, sampled_values = torch_sparse.spspmm(sampled_indices, sampled_values,
-                                                    col_select_mtx_indices.long(), col_select_mtx_values,
-                                                    nnz * mb_count, node_count * nnz * mb_count, next_frontier.size(1),
-                                                    coalesced=True)
+        sample_mtx = torch.sparse_coo_tensor(sampled_indices, sampled_values, 
+                                                size=(nnz * mb_count, node_count_total * mb_count_total))
+        col_select_mtx = torch.sparse_coo_tensor(col_select_mtx_indices, col_select_mtx_values,
+                                                size=(node_count_total * mb_count, next_frontier.size(1)))
+        sampled_indices, sampled_values = dist_spgemm1D(sample_mtx, col_select_mtx, rank, size, group)
         torch.cuda.nvtx.range_pop()
         timing_dict["col-select-spgemm"].append(stop_time(start_timer, stop_timer))
 
