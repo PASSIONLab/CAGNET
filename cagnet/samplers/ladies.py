@@ -361,9 +361,6 @@ def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_tota
         torch.cuda.nvtx.range_push("nvtx-set-sample")
         adj_matrix_sample = torch.sparse_coo_tensor(indices=sampled_indices, values=sampled_values, \
                                                     size=(nnz * mb_count, next_frontier.size(1)))
-        # for mb in range(mb_count):
-        #     mb_sampled_rows = torch.arange(start=batch_size * mb, end=batch_size * (mb + 1)).cuda()
-        #     adj_matrices[mb][i] = torch.index_select(adj_matrix_sample, 0, mb_sampled_rows)
         adj_matrices[i] = adj_matrix_sample
 
         current_frontier = next_frontier
