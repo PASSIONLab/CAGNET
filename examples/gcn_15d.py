@@ -527,7 +527,7 @@ if __name__ == '__main__':
                             help='partitioning strategy to use')
     parser.add_argument('--n-bulkmb', default=1, type=int,
                             help='number of minibatches to sample in bulk')
-    parser.add_argument('--n-darts', default=10, type=int,
+    parser.add_argument('--n-darts', default=-1, type=int,
                             help='number of darts to throw per minibatch in LADIES sampling')
     args = parser.parse_args()
     print(args)

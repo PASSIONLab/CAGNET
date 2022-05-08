@@ -43,7 +43,6 @@ def dist_spgemm1D(mata, matb, rank, size, group):
         mata_chunk_indices[1,:] -= chunk_col_start
         mata_chunk_values = mata._values()[chunk_col_mask]
 
-        print(f"rank: {rank} i: {i} chunk_col_size: {chunk_col_size}")
         matc_chunk_indices, matc_chunk_values = torch_sparse.spspmm(mata_chunk_indices, \
                                                     mata_chunk_values, matb_recv_indices, \
                                                     matb_recv_values, mata.size(0), \
@@ -110,6 +109,13 @@ def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_tota
         p_den = p_den.scatter_add_(0, p._indices()[0, :], p._values())
         normalize_gpu(p._values(), p_den, p._indices()[0, :], p._nnz())
         print(f"compute-p: {stop_time(start_timer, stop_timer)}")
+
+        if n_darts == -1:
+            min_prob = torch.min(p._values())
+            if min_prob.item() == 0:
+                print(f"probability error")
+            min_prob = min_prob.reciprocal()
+            n_darts = int(torch.sum(p._values() * min_prob).item())
 
         start_time(start_timer)
         torch.cuda.nvtx.range_push("nvtx-pre-loop")
