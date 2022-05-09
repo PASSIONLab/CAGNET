@@ -2,7 +2,7 @@ import math
 import torch
 import torch.distributed as dist
 import torch.nn as nn
-
+import time
 from cagnet.partitionings import Partitioning
 from sparse_coo_tensor_cpp import sparse_coo_tensor_gpu, spmm_gpu
 
@@ -27,13 +27,14 @@ def broad_func_oned(self, graph, ampbyp, inputs):
             inputs_recv = torch.cuda.FloatTensor(ampbyp[i].size(1), \
                                                         inputs.size(1), \
                                                         device=self.device).fill_(0)
-
+        start = time.time()
         dist.broadcast(inputs_recv, src=i, group=self.group)
-
+        stop_time(self, "bcast", start)
+        start = time.time()
         spmm_gpu(ampbyp[i].indices()[0].int(), ampbyp[i].indices()[1].int(), 
                         ampbyp[i].values(), ampbyp[i].size(0), 
                         ampbyp[i].size(1), inputs_recv, z_loc)
-
+        stop_time(self, "spmm_gpu", start)
     return z_loc
 
 def broad_func_one5d(self, graph, ampbyp, inputs):

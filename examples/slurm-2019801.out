@@ -1,0 +1,8 @@
+nid001573
+
+Lmod is automatically replacing "nvidia/21.11" with "gcc/10.3.0".
+
+
+Due to MODULEPATH changes, the following have been reloaded:
+  1) cray-mpich/8.1.13
+
