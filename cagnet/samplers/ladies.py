@@ -16,24 +16,40 @@ def stop_time(start_timer, stop_timer):
     torch.cuda.synchronize()
     return start_timer.elapsed_time(stop_timer)
 
-def dist_spgemm1D(mata, matb, rank, size, group):
+def stop_time_add(start_timer, stop_timer, timing_dict, range_name):
+    if timing_dict is not None:
+        timing_dict[range_name].append(stop_time(start_timer, stop_timer))
+
+def dist_spgemm1D(mata, matb, rank, size, group, timing_dict=None):
+    start_timer = torch.cuda.Event(enable_timing=True)
+    stop_timer = torch.cuda.Event(enable_timing=True)
+
+    start_time(start_timer)
     chunk_size = math.ceil(float(mata.size(1) / size))
     matc = torch.sparse_coo_tensor(size=(mata.size(0), matb.size(1))).cuda()
+    stop_time_add(start_timer, stop_timer, timing_dict, "spgemm-matc-inst")
 
     for i in range(size):
+        start_time(start_timer)
         matb_recv_nnz = torch.cuda.IntTensor([matb._nnz()])
         dist.broadcast(matb_recv_nnz, src=i, group=group)
+        stop_time_add(start_timer, stop_timer, timing_dict, "spgemm-bcast-nnz")
 
+        start_time(start_timer)
         if i == rank:
             matb_recv_indices = matb._indices().clone()
             matb_recv_values = matb._values().clone()
         else:
             matb_recv_indices = torch.cuda.LongTensor(2, matb_recv_nnz.item())
             matb_recv_values = torch.cuda.FloatTensor(matb_recv_nnz.item())
+        stop_time_add(start_timer, stop_timer, timing_dict, "spgemm-inst-recv")
 
+        start_time(start_timer)
         dist.broadcast(matb_recv_indices, src=i, group=group)
         dist.broadcast(matb_recv_values, src=i, group=group)
+        stop_time_add(start_timer, stop_timer, timing_dict, "spgemm-bcast-data")
 
+        start_time(start_timer)
         chunk_col_start = i * chunk_size
         chunk_col_stop = min((i + 1) * chunk_size, mata.size(1))
         chunk_col_size = chunk_col_stop - chunk_col_start
@@ -42,16 +58,31 @@ def dist_spgemm1D(mata, matb, rank, size, group):
         mata_chunk_indices = mata._indices()[:, chunk_col_mask]
         mata_chunk_indices[1,:] -= chunk_col_start
         mata_chunk_values = mata._values()[chunk_col_mask]
+        stop_time_add(start_timer, stop_timer, timing_dict, "spgemm-preproc-local")
 
+        start_time(start_timer)
         matc_chunk_indices, matc_chunk_values = torch_sparse.spspmm(mata_chunk_indices, \
                                                     mata_chunk_values, matb_recv_indices, \
                                                     matb_recv_values, mata.size(0), \
                                                     chunk_col_size, matb.size(1), coalesced=True)
+        stop_time_add(start_timer, stop_timer, timing_dict, "spgemm-local-spgemm")
 
-        matc_chunk = torch.sparse_coo_tensor(matc_chunk_indices, matc_chunk_values, size=matc.size()).coalesce()
+        start_time(start_timer)
+        matc_chunk = torch.sparse_coo_tensor(matc_chunk_indices, matc_chunk_values, size=matc.size())
+        stop_time_add(start_timer, stop_timer, timing_dict, "spgemm-chunk-inst")
+
+        start_time(start_timer)
+        matc_chunk = matc_chunk.coalesce()
+        stop_time_add(start_timer, stop_timer, timing_dict, "spgemm-chunk-coalesce")
+
+        start_time(start_timer)
         matc += matc_chunk
+        stop_time_add(start_timer, stop_timer, timing_dict, "spgemm-chunk-add")
 
+    start_time(start_timer)
     matc = matc.coalesce()
+    stop_time_add(start_timer, stop_timer, timing_dict, "spgemm-matc-coalesce")
+
     return matc._indices(), matc._values()
 
 def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_total, n_layers, n_darts, \
@@ -96,7 +127,7 @@ def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_tota
         # TODO: assume n_layers=1 for now
         start_time(start_timer)
         torch.cuda.nvtx.range_push("nvtx-probability-spgemm")
-        p_num_indices, p_num_values = dist_spgemm1D(batches, adj_matrix, rank, size, group)
+        p_num_indices, p_num_values = dist_spgemm1D(batches, adj_matrix, rank, size, group, timing_dict)
         torch.cuda.nvtx.range_pop()
         print(f"probability-spgemm: {stop_time(start_timer, stop_timer)}")
 
@@ -109,13 +140,6 @@ def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_tota
         p_den = p_den.scatter_add_(0, p._indices()[0, :], p._values())
         normalize_gpu(p._values(), p_den, p._indices()[0, :], p._nnz())
         print(f"compute-p: {stop_time(start_timer, stop_timer)}")
-
-        if n_darts == -1:
-            min_prob = torch.min(p._values())
-            if min_prob.item() == 0:
-                print(f"probability error")
-            min_prob = min_prob.reciprocal()
-            n_darts = int(torch.sum(p._values() * min_prob).item())
 
         start_time(start_timer)
         torch.cuda.nvtx.range_push("nvtx-pre-loop")

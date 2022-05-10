@@ -294,6 +294,7 @@ def main(args):
     os.environ["MASTER_ADDR"] = args.hostname 
     os.environ["MASTER_PORT"] = "1234"
     
+    print(f"hostname: {socket.gethostname()}", flush=True)
     dist.init_process_group(backend=args.dist_backend)
     rank = dist.get_rank()
     size = dist.get_world_size()
@@ -362,6 +363,13 @@ def main(args):
     g_loc = torch.pow(g_loc, 2)
     torch.cuda.nvtx.range_pop()
 
+    if args.n_darts == -1:
+        node_count = inputs.size(0)
+        edge_count = adj_matrix.size(1)
+        avg_degree = int(edge_count / node_count)
+        args.n_darts = avg_degree * args.batch_size
+        print(f"n_darts: {args.n_darts}")
+
     print(f"rank: {rank} g_loc: {g_loc}")
     print(f"rank: {rank} batches_loc: {batches_loc}")
     # do it once before timing
@@ -402,7 +410,6 @@ def main(args):
             adj_matrices[j][i] = adj_matrix_sample
 
     # print(f"sample: {adj_matrices}")
-    node_count = inputs.size(0)
     adj_matrix = adj_matrix.cuda()
     adj_matrix = torch.sparse_coo_tensor(adj_matrix, 
                                             torch.cuda.FloatTensor(adj_matrix.size(1)).fill_(1.0), 
