@@ -363,8 +363,8 @@ def main(args):
     g_loc = torch.pow(g_loc, 2)
     torch.cuda.nvtx.range_pop()
 
+    node_count = inputs.size(0)
     if args.n_darts == -1:
-        node_count = inputs.size(0)
         edge_count = adj_matrix.size(1)
         avg_degree = int(edge_count / node_count)
         args.n_darts = avg_degree * args.batch_size
