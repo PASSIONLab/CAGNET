@@ -351,6 +351,7 @@ def main(args):
         batches[i,:] = train_nid[idx]
     torch.cuda.nvtx.range_pop()
 
+    # TODO: Convert this to 1.5D partitioning
     batches_loc = oned_partition_mb(rank, size, batches, args.n_bulkmb)
 
     torch.cuda.nvtx.range_push("nvtx-gen-sparse-batches")
@@ -376,7 +377,8 @@ def main(args):
     current_frontier, next_frontier, adj_matrices = ladies_sampler(g_loc, batches_loc, args.batch_size, \
                                                                         args.samp_num, args.n_bulkmb, \
                                                                         args.n_layers, args.n_darts, \
-                                                                        rank, size, col_groups[0])
+                                                                        args.replication, rank, size, \
+                                                                        row_groups, col_groups)
 
     print()
     torch.cuda.profiler.cudart().cudaProfilerStart()
@@ -384,7 +386,8 @@ def main(args):
     current_frontier, next_frontier, adj_matrices_bulk = ladies_sampler(g_loc, batches_loc, args.batch_size, \
                                                                             args.samp_num, args.n_bulkmb, \
                                                                             args.n_layers, args.n_darts, \
-                                                                            rank, size, col_groups[0])
+                                                                            args.replication, rank, size, \
+                                                                            row_groups, col_groups)
     torch.cuda.nvtx.range_pop()
     torch.cuda.profiler.cudart().cudaProfilerStop()
 
