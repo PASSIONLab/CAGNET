@@ -205,10 +205,10 @@ def one5d_partition(rank, size, inputs, adj_matrix, data, features, classes, rep
     print(f"rank: {rank} inputs_loc.size: {inputs_loc.size()}", flush=True)
     return inputs_loc, adj_matrix_loc, am_pbyp
 
-def oned_partition_mb(rank, size, batches, mb_count):
-    # TODO: Include replicaiton at some point
-    batch_partitions = torch.split(batches, math.ceil(float(mb_count / size)), dim=0)
-    return batch_partitions[rank]
+def one5d_partition_mb(rank, size, batches, replication, mb_count):
+    rank_c = rank // replication
+    batch_partitions = torch.split(batches, math.ceil(float(mb_count / (size / replication))), dim=0)
+    return batch_partitions[rank_c]
 
 def evaluate(model, graph, features, labels, nid, nid_count, ampbyp, group):
     model.eval()
@@ -351,8 +351,7 @@ def main(args):
         batches[i,:] = train_nid[idx]
     torch.cuda.nvtx.range_pop()
 
-    # TODO: Convert this to 1.5D partitioning
-    batches_loc = oned_partition_mb(rank, size, batches, args.n_bulkmb)
+    batches_loc = one5d_partition_mb(rank, size, batches, args.replication, args.n_bulkmb)
 
     torch.cuda.nvtx.range_push("nvtx-gen-sparse-batches")
     batches_indices_rows = torch.arange(batches_loc.size(0)).cuda()

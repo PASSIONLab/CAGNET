@@ -25,7 +25,7 @@ def dist_spgemm15D(mata, matb, replication, rank, size, row_groups, col_groups, 
     stop_timer = torch.cuda.Event(enable_timing=True)
 
     start_time(start_timer)
-    chunk_size = math.ceil(float(mata.size(1) / size))
+    chunk_size = math.ceil(float(mata.size(1) / (size / replication)))
     matc = torch.sparse_coo_tensor(size=(mata.size(0), matb.size(1))).cuda()
     rank_c = rank // replication
     rank_col = rank % replication
@@ -56,8 +56,9 @@ def dist_spgemm15D(mata, matb, replication, rank, size, row_groups, col_groups, 
         stop_time_add(start_timer, stop_timer, timing_dict, "spgemm-bcast-data")
 
         start_time(start_timer)
-        chunk_col_start = i * chunk_size
-        chunk_col_stop = min((i + 1) * chunk_size, mata.size(1))
+        am_partid = rank_col * (size // replication ** 2) + i
+        chunk_col_start = am_partid * chunk_size
+        chunk_col_stop = min((am_partid + 1) * chunk_size, mata.size(1))
         chunk_col_size = chunk_col_stop - chunk_col_start
         chunk_col_mask = (mata._indices()[1, :] >= chunk_col_start) & (mata._indices()[1, :] < chunk_col_stop)
 
@@ -90,21 +91,21 @@ def dist_spgemm15D(mata, matb, replication, rank, size, row_groups, col_groups, 
     stop_time_add(start_timer, stop_timer, timing_dict, "spgemm-matc-coalesce")
 
     # dist.all_reduce(matc, op=dist.reduce_op.SUM, group=row_groups[rank_c])
-    # Implement sparse allreduce with allgather
-    matc_nnz = torch.cuda.IntTensor([matc._nnz()])
-    matc_recv_nnz = []
-    for i in range(replication):
-        matc_recv_nnz.append(torch.cuda.IntTensor([0]))
-    dist.all_gather(matc_recv_nnz, matc_nnz, row_groups[rank_c])
+    # Implement sparse allreduce w/ all_gather and padding
+    matc_nnz = torch.cuda.IntTensor(1).fill_(matc._nnz())
+    dist.all_reduce(matc_nnz, dist.ReduceOp.MAX, row_groups[rank_c])
+    matc_nnz = matc_nnz.item()
 
     matc_recv_indices = []
     matc_recv_values = []
     for i in range(replication):
-        matc_recv_indices.append(torch.cuda.LongTensor(2, matc_recv_nnz[i].item()))
-        matc_recv_values.append(torch.cuda.FloatTensor(matc_recv_nnz[i].item()))
+        matc_recv_indices.append(torch.cuda.LongTensor(2, matc_nnz).fill_(0))
+        matc_recv_values.append(torch.cuda.FloatTensor(matc_nnz).fill_(0.0))
 
-    dist.all_gather(matc_recv_indices, matc._indices(), row_groups[rank_c])
-    dist.all_gather(matc_recv_values, matc._values(), row_groups[rank_c])
+    matc_send_indices = torch.cat((matc._indices(), torch.cuda.LongTensor(2, matc_nnz - matc._nnz()).fill_(0)), 1)
+    matc_send_values = torch.cat((matc._values(), torch.cuda.LongTensor(matc_nnz - matc._nnz()).fill_(0.0)))
+    dist.all_gather(matc_recv_indices, matc_send_indices, row_groups[rank_c])
+    dist.all_gather(matc_recv_values, matc_send_values, row_groups[rank_c])
 
     matc_recv = []
     for i in range(replication):
@@ -399,6 +400,8 @@ def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_tota
                                                         size=(nnz * mb_count, node_count_total))
         sampled_indices, sampled_values = dist_spgemm15D(row_select_mtx, adj_matrix, replication, rank, size, \
                                                             row_groups, col_groups)
+        sample_mtx = torch.sparse_coo_tensor(sampled_indices, sampled_values, 
+                                                size=(nnz * mb_count, node_count_total))
 
         torch.cuda.nvtx.range_pop()
         timing_dict["row-select-spgemm"].append(stop_time(start_timer, stop_timer))
@@ -408,7 +411,7 @@ def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_tota
         torch.cuda.nvtx.range_push("nvtx-row-select-expand")
         row_shift = torch.cuda.LongTensor(sampled_values.size(0)).fill_(0)
         shift_rowselect_gpu(row_shift, sampled_indices[0,:], sampled_values.size(0), 
-                                rank, size, batch_size, node_count_total, mb_count_total)
+                                rank, size, replication, batch_size, node_count_total, mb_count_total)
         sampled_indices[1,:] += row_shift
         torch.cuda.nvtx.range_pop()
         timing_dict["row-select-expand"].append(stop_time(start_timer, stop_timer))

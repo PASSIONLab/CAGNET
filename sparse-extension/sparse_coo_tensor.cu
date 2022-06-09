@@ -546,12 +546,14 @@ void normalize_gpu(const at::Tensor& output, const at::Tensor& input, const at::
 }
 
 __global__ void ShiftRowSelect(long *row_shift, long *row_select_rows, int rank, int size,
-                                    int nnz, int batch_size, int node_count, int mb_count) { 
+                                    int replication, int nnz, int batch_size, int node_count, int mb_count) { 
 
     long     id = blockIdx.x * blockDim.x + threadIdx.x;
     long stride = blockDim.x * gridDim.x;
 
-    long proc_row_chunk = rank * ((batch_size * mb_count) / size);
+    int rank_c = rank / replication;
+    long proc_row_chunk = rank_c * ((batch_size * mb_count) / (size / replication));
+    
     for (int i = id; i < nnz; i += stride) {
         long mb_row = (row_select_rows[i] + proc_row_chunk) / batch_size;
         row_shift[i] += mb_row * node_count;
@@ -559,7 +561,8 @@ __global__ void ShiftRowSelect(long *row_shift, long *row_select_rows, int rank,
 }
 
 void shift_rowselect_gpu(const at::Tensor& row_shift, const at::Tensor& row_select_rows,
-                            int nnz, int rank, int size, int batch_size, int node_count, int mb_count) {
+                            int nnz, int rank, int size, int replication, int batch_size, int node_count, 
+                            int mb_count) {
 
 
     int BLOCK_SIZE = 256;
@@ -570,6 +573,7 @@ void shift_rowselect_gpu(const at::Tensor& row_shift, const at::Tensor& row_sele
                                                     row_select_rows.data<long>(), 
                                                     rank,
                                                     size,
+                                                    replication,
                                                     nnz,
                                                     batch_size,
                                                     node_count,
