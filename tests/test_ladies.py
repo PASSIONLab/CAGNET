@@ -75,7 +75,7 @@ def main(args):
     print("")
     print("Beginning LADIES sampler test")
     size = dist.get_world_size()
-    rank_n_bulkmb = int(args.n_bulkmb / size)
+    rank_n_bulkmb = int(args.n_bulkmb / (size / args.replication))
     for i in range(rank_n_bulkmb):
         print(f"Testing minibatch {i}")
         current_frontier = current_frontier_all[i] # current_frontier for minibatch i

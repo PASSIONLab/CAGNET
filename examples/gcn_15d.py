@@ -391,7 +391,7 @@ def main(args):
     torch.cuda.profiler.cudart().cudaProfilerStop()
 
     # adj_matrices[i][j] --  mb i layer j
-    rank_n_bulkmb = int(args.n_bulkmb / size)
+    rank_n_bulkmb = int(args.n_bulkmb / (size / args.replication))
     adj_matrices = [[None] * args.n_layers for x in range(rank_n_bulkmb)] 
     for i in range(args.n_layers):
         for j in range(rank_n_bulkmb):
@@ -400,6 +400,10 @@ def main(args):
             
             sampled_indices = adj_matrices_bulk[i]._indices()
             sampled_values = adj_matrices_bulk[i]._values()
+
+            nnz_mask = sampled_values != 0
+            sampled_indices = sampled_indices[:, nnz_mask]
+            sampled_values = sampled_values[nnz_mask]
 
             sample_select_mask = (row_select_min <= sampled_indices[0,:]) & \
                                  (sampled_indices[0,:] < row_select_max)

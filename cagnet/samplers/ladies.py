@@ -59,6 +59,7 @@ def dist_spgemm15D(mata, matb, replication, rank, size, row_groups, col_groups, 
         am_partid = rank_col * (size // replication ** 2) + i
         chunk_col_start = am_partid * chunk_size
         chunk_col_stop = min((am_partid + 1) * chunk_size, mata.size(1))
+        print(f"chunk_col_start: {chunk_col_start} chunk_col_stop: {chunk_col_stop}")
         chunk_col_size = chunk_col_stop - chunk_col_start
         chunk_col_mask = (mata._indices()[1, :] >= chunk_col_start) & (mata._indices()[1, :] < chunk_col_stop)
 
@@ -433,6 +434,7 @@ def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_tota
         torch.cuda.nvtx.range_push("nvtx-set-sample")
         adj_matrix_sample = torch.sparse_coo_tensor(indices=sampled_indices, values=sampled_values, \
                                                     size=(nnz * mb_count, next_frontier.size(1)))
+        print(f"adj_matrix_sample: {adj_matrix_sample}")
         adj_matrices[i] = adj_matrix_sample
 
         current_frontier = next_frontier
