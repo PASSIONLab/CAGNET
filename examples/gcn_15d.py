@@ -401,10 +401,6 @@ def main(args):
             sampled_indices = adj_matrices_bulk[i]._indices()
             sampled_values = adj_matrices_bulk[i]._values()
 
-            nnz_mask = sampled_values != 0
-            sampled_indices = sampled_indices[:, nnz_mask]
-            sampled_values = sampled_values[nnz_mask]
-
             sample_select_mask = (row_select_min <= sampled_indices[0,:]) & \
                                  (sampled_indices[0,:] < row_select_max)
             adj_matrix_sample_indices = sampled_indices[:, sample_select_mask]

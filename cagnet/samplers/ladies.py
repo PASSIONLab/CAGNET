@@ -59,7 +59,6 @@ def dist_spgemm15D(mata, matb, replication, rank, size, row_groups, col_groups, 
         am_partid = rank_col * (size // replication ** 2) + i
         chunk_col_start = am_partid * chunk_size
         chunk_col_stop = min((am_partid + 1) * chunk_size, mata.size(1))
-        print(f"chunk_col_start: {chunk_col_start} chunk_col_stop: {chunk_col_stop}")
         chunk_col_size = chunk_col_stop - chunk_col_start
         chunk_col_mask = (mata._indices()[1, :] >= chunk_col_start) & (mata._indices()[1, :] < chunk_col_stop)
 
@@ -115,7 +114,12 @@ def dist_spgemm15D(mata, matb, replication, rank, size, row_groups, col_groups, 
     matc_recv = torch.stack(matc_recv)
     matc = torch.sparse.sum(matc_recv, dim=0).coalesce()
 
-    return matc._indices(), matc._values()
+    nnz_mask = matc._values() != 0
+
+    matc_nnz_indices = matc._indices()[:, nnz_mask]
+    matc_nnz_values = matc._values()[nnz_mask]
+
+    return matc_nnz_indices, matc_nnz_values
 
 def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_total, n_layers, n_darts, \
                         replication, rank, size, row_groups, col_groups):
@@ -367,6 +371,7 @@ def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_tota
         batches_select = torch.masked_select(batches._indices()[1,:], \
                                                 batches._values().bool()).view(mb_count, batch_size)
         next_frontier_select = torch.cat((next_frontier_select, batches_select), dim=1)
+        print(f"next_frontier_select: {next_frontier_select}")
         torch.cuda.nvtx.range_pop()
         print(f"construct-nextf: {stop_time(start_timer, stop_timer)}")
 
