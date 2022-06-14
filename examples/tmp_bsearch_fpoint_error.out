@@ -1,0 +1,259 @@
+0: Namespace(aggregator_type='gcn', batch_size=256, dataset='reddit', dist_backend='nccl', dist_url='env://', dropout=0.5, gpu=-1, hostname='127.0.0.1', lr=0.01, n_bulkmb=512, n_darts=-1, n_epochs=1, n_hidden=16, n_layers=1, normalize=False, partitioning='ONE5D', rank=-1, replication=1, samp_num=256, weight_decay=0.0, world_size=-1)
+0: hostname: nid003637
+0: hostname: nid003637 rank: 0 size: 1
+0: start partitioning
+0: rank: 0 adj_matrix_loc.size: torch.Size([232965, 232965])
+0: rank: 0 inputs_loc.size: torch.Size([232965, 602])
+0: end partitioning
+0: coalescing
+0: normalizing
+0: done normalizing
+0: imid: 18166615 val: 0.817233 arr[imid]: 256.478424
+0: imid: 9083307 val: 0.817233 arr[imid]: 128.845200
+0: imid: 4541653 val: 0.817233 arr[imid]: 64.056862
+0: imid: 2270826 val: 0.817233 arr[imid]: 31.714394
+0: imid: 1135412 val: 0.817233 arr[imid]: 15.978425
+0: imid: 567705 val: 0.817233 arr[imid]: 8.014808
+0: imid: 283852 val: 0.817233 arr[imid]: 4.157815
+0: imid: 141925 val: 0.817233 arr[imid]: 2.047342
+0: imid: 70962 val: 0.817233 arr[imid]: 0.983242
+0: imid: 35480 val: 0.817233 arr[imid]: 0.520355
+0: imid: 53221 val: 0.817233 arr[imid]: 0.788780
+0: imid: 62091 val: 0.817233 arr[imid]: 0.865206
+0: imid: 57656 val: 0.817233 arr[imid]: 0.833535
+0: imid: 55438 val: 0.817233 arr[imid]: 0.806440
+0: imid: 56547 val: 0.817233 arr[imid]: 0.811778
+0: imid: 57101 val: 0.817233 arr[imid]: 0.821501
+0: imid: 56824 val: 0.817233 arr[imid]: 0.817087
+0: imid: 56962 val: 0.817233 arr[imid]: 0.819000
+0: imid: 56893 val: 0.817233 arr[imid]: 0.817203
+0: imid: 56927 val: 0.817233 arr[imid]: 0.818839
+0: imid: 56910 val: 0.817233 arr[imid]: 0.817225
+0: imid: 56918 val: 0.817233 arr[imid]: 0.818824
+0: imid: 56914 val: 0.817233 arr[imid]: 0.817235
+0: imid: 56912 val: 0.817233 arr[imid]: 0.817234
+0: imid: 56911 val: 0.817233 arr[imid]: 0.817233
+0: imid: 18166615 val: 0.817233 arr[imid]: 256.478424
+0: imid: 9083307 val: 0.817233 arr[imid]: 128.845184
+0: imid: 4541653 val: 0.817233 arr[imid]: 64.056938
+0: imid: 2270826 val: 0.817233 arr[imid]: 31.714397
+0: imid: 1135412 val: 0.817233 arr[imid]: 15.978395
+0: imid: 567705 val: 0.817233 arr[imid]: 8.014786
+0: imid: 283852 val: 0.817233 arr[imid]: 4.157809
+0: imid: 141925 val: 0.817233 arr[imid]: 2.047338
+0: imid: 70962 val: 0.817233 arr[imid]: 0.983241
+0: imid: 35480 val: 0.817233 arr[imid]: 0.520354
+0: imid: 53221 val: 0.817233 arr[imid]: 0.788780
+0: imid: 62091 val: 0.817233 arr[imid]: 0.865205
+0: imid: 57656 val: 0.817233 arr[imid]: 0.833534
+0: imid: 55438 val: 0.817233 arr[imid]: 0.806439
+0: imid: 56547 val: 0.817233 arr[imid]: 0.811777
+0: imid: 57101 val: 0.817233 arr[imid]: 0.821501
+0: imid: 56824 val: 0.817233 arr[imid]: 0.817087
+0: imid: 56962 val: 0.817233 arr[imid]: 0.818999
+0: imid: 56893 val: 0.817233 arr[imid]: 0.817202
+0: imid: 56927 val: 0.817233 arr[imid]: 0.818838
+0: imid: 56910 val: 0.817233 arr[imid]: 0.817224
+0: imid: 56918 val: 0.817233 arr[imid]: 0.818824
+0: imid: 56914 val: 0.817233 arr[imid]: 0.817234
+0: imid: 56912 val: 0.817233 arr[imid]: 0.817233
+0: imid: 56913 val: 0.817233 arr[imid]: 0.817233
+0: n_darts: 125952
+0: rank: 0 g_loc: tensor(indices=tensor([[     0,      0,      0,  ..., 232964, 232964, 232964],
+0:                        [     0,    242,    249,  ..., 232594, 232634, 232964]]),
+0:        values=tensor([2.0568e-07, 2.0568e-07, 2.0568e-07,  ...,
+0:                       4.1311e-06, 4.1311e-06, 4.1311e-06]),
+0:        device='cuda:0', size=(232965, 232965), nnz=114848857,
+0:        layout=torch.sparse_coo)
+0: rank: 0 batches_loc: tensor(indices=tensor([[     0,      0,      0,  ...,    511,    511,    511],
+0:                        [195991, 117560, 100852,  ..., 210813,  53334, 131122]]),
+0:        values=tensor([1., 1., 1.,  ..., 1., 1., 1.]),
+0:        device='cuda:0', size=(512, 232965), nnz=131072, layout=torch.sparse_coo)
+0: probability-spgemm: 352.7101745605469
+0: compute-p: 60.275230407714844
+0: p.nnz: 36333230
+0: pre-loop: 1.4532480239868164
+0: iter_count: 1 dart_values: tensor([0.3990, 0.5167, 0.0249,  ..., 0.3437, 0.9927, 0.5703], device='cuda:0')
+0: iter_count: 1 dart_values_scaled: tensor([3.9905e-01, 5.1668e-01, 2.4930e-02,  ..., 5.1134e+02, 5.1199e+02,
+0:         5.1157e+02], device='cuda:0')
+0: iter_count: 1 dart_hits_count.nnzidxs: tensor([[       4],
+0:         [       8],
+0:         [      11],
+0:         ...,
+0:         [36332465],
+0:         [36332476],
+0:         [36332500]], device='cuda:0')
+0: iter_count: 1 dart_hits_count.nnzidxs.size: torch.Size([3814725, 1])
+0: iter_count: 1 dart_hits_count.sum: 64487424
+0: iter_count: 1 dart_hits_map: tensor([   27406,    34971,     3442,  ..., 36296107, 36331806, 36309730],
+0:        device='cuda:0', dtype=torch.int32)
+0: iter_count: 1 dart_hits_count: tensor([[  1],
+0:         [  1],
+0:         [  1],
+0:         ...,
+0:         [ 14],
+0:         [  3],
+0:         [274]], device='cuda:0', dtype=torch.int32)
+0: iter_count: 1 ps_p_values: tensor([0.0000e+00, 1.9509e-08, 2.2447e-08,  ..., 5.1202e+02, 5.1202e+02,
+0:         5.1202e+02], device='cuda:0')
+0: construct-nextf: 0.7938240170478821
+0: total_time: 1601.1064453125
+0: spgemm-matc-inst total_time: 0.059647999703884125 avg_time 0.059647999703884125
+0: spgemm-bcast-nnz total_time: 132.69155883789062 avg_time 132.69155883789062
+0: spgemm-inst-recv total_time: 3.57206392288208 avg_time 3.57206392288208
+0: spgemm-bcast-data total_time: 0.08755200356245041 avg_time 0.08755200356245041
+0: spgemm-preproc-local total_time: 0.35334399342536926 avg_time 0.35334399342536926
+0: spgemm-local-spgemm total_time: 96.30374145507812 avg_time 96.30374145507812
+0: spgemm-chunk-inst total_time: 1.1650559902191162 avg_time 1.1650559902191162
+0: spgemm-chunk-coalesce total_time: 33.32175827026367 avg_time 33.32175827026367
+0: spgemm-chunk-add total_time: 1.1077120304107666 avg_time 1.1077120304107666
+0: spgemm-matc-coalesce total_time: 0.012768000364303589 avg_time 0.012768000364303589
+0: spgemm-reduce-nnz total_time: 36.258689880371094 avg_time 36.258689880371094
+0: spgemm-padding total_time: 1.8590400218963623 avg_time 1.8590400218963623
+0: spgemm-allgather total_time: 2.2658560276031494 avg_time 2.2658560276031494
+0: spgemm-preproc-reduce total_time: 1.1514240503311157 avg_time 1.1514240503311157
+0: spgemm-reduce total_time: 39.014591217041016 avg_time 39.014591217041016
+0: spgemm-unpad total_time: 3.0386879444122314 avg_time 3.0386879444122314
+0: prob-rowsum total_time: 0.5860480070114136 avg_time 0.5860480070114136
+0: gen-darts total_time: 0.2377600073814392 avg_time 0.2377600073814392
+0: dart-throw total_time: 1.3964799642562866 avg_time 1.3964799642562866
+0: filter_darts total_time: 9.814399719238281 avg_time 9.814399719238281
+0: add-to-frontier total_time: 1.8496639728546143 avg_time 1.8496639728546143
+0: count_samples total_time: 30.425567626953125 avg_time 30.425567626953125
+0: select-preproc total_time: 0.14537599682807922 avg_time 0.14537599682807922
+0: select-psoverflow total_time: 0.5724479965865612 avg_time 0.06360533295406236
+0: select-reciprocal total_time: 11.853407859802246 avg_time 1.317045317755805
+0: select-instmtx total_time: 10.271583795547485 avg_time 1.141287088394165
+0: select-invsum total_time: 531.1580810546875 avg_time 59.01756456163194
+0: select-psinv total_time: 0.6277760118246078 avg_time 0.0697528902027342
+0: select-computedarts total_time: 0.6289280094206333 avg_time 0.06988088993562593
+0: select-throwdarts total_time: 3.477055996656418 avg_time 0.38633955518404645
+0: select-add-to-frontier total_time: 15.113856077194214 avg_time 1.679317341910468
+0: select-samplecount total_time: 277.2289619445801 avg_time 30.80321799384223
+0: select-overflow total_time: 0.6320320069789886 avg_time 0.07022577855322096
+0: select-iter total_time: 853.6518630981445 avg_time 94.85020701090495
+0: dart-selection total_time: 853.9918212890625 avg_time 853.9918212890625
+0: set-probs total_time: 1.7295680046081543 avg_time 1.7295680046081543
+0: compute-bool total_time: 0.055904000997543335 avg_time 0.055904000997543335
+0: sampling-iters total_time: 902.2776489257812 avg_time 902.2776489257812
+0: select-mtxs total_time: 0.9269440174102783 avg_time 0.9269440174102783
+0: row-select-spgemm total_time: 200.27154541015625 avg_time 200.27154541015625
+0: row-select-expand total_time: 2.836479902267456 avg_time 2.836479902267456
+0: col-select-spgemm total_time: 79.11392211914062 avg_time 79.11392211914062
+0: set-sample total_time: 0.131071999669075 avg_time 0.131071999669075
+0: iter_count: 1
+0: selection_iter_count: 9
+0: 
+0: probability-spgemm: 184.49417114257812
+0: compute-p: 60.3001594543457
+0: p.nnz: 36333230
+0: pre-loop: 1.4463039636611938
+0: iter_count: 1 dart_values: tensor([0.3990, 0.5167, 0.0249,  ..., 0.3437, 0.9927, 0.5703], device='cuda:0')
+0: iter_count: 1 dart_values_scaled: tensor([3.9905e-01, 5.1668e-01, 2.4930e-02,  ..., 5.1134e+02, 5.1199e+02,
+0:         5.1157e+02], device='cuda:0')
+0: iter_count: 1 dart_hits_count.nnzidxs: tensor([[       4],
+0:         [       8],
+0:         [      11],
+0:         ...,
+0:         [36332465],
+0:         [36332476],
+0:         [36332500]], device='cuda:0')
+0: iter_count: 1 dart_hits_count.nnzidxs.size: torch.Size([3813474, 1])
+0: iter_count: 1 dart_hits_count.sum: 64487424
+0: iter_count: 1 dart_hits_map: tensor([   27406,    34971,     3442,  ..., 36296107, 36331806, 36309730],
+0:        device='cuda:0', dtype=torch.int32)
+0: iter_count: 1 dart_hits_count: tensor([[  1],
+0:         [  1],
+0:         [  1],
+0:         ...,
+0:         [ 12],
+0:         [  3],
+0:         [271]], device='cuda:0', dtype=torch.int32)
+0: iter_count: 1 ps_p_values: tensor([0.0000e+00, 1.9509e-08, 2.2447e-08,  ..., 5.1202e+02, 5.1202e+02,
+0:         5.1202e+02], device='cuda:0')
+0: construct-nextf: 0.8681280016899109
+0: total_time: 1430.2353515625
+0: spgemm-matc-inst total_time: 0.043327998369932175 avg_time 0.043327998369932175
+0: spgemm-bcast-nnz total_time: 0.0880960002541542 avg_time 0.0880960002541542
+0: spgemm-inst-recv total_time: 3.5996479988098145 avg_time 3.5996479988098145
+0: spgemm-bcast-data total_time: 0.06771200150251389 avg_time 0.06771200150251389
+0: spgemm-preproc-local total_time: 0.2189120054244995 avg_time 0.2189120054244995
+0: spgemm-local-spgemm total_time: 96.97039794921875 avg_time 96.97039794921875
+0: spgemm-chunk-inst total_time: 1.1507200002670288 avg_time 1.1507200002670288
+0: spgemm-chunk-coalesce total_time: 33.33875274658203 avg_time 33.33875274658203
+0: spgemm-chunk-add total_time: 1.1117119789123535 avg_time 1.1117119789123535
+0: spgemm-matc-coalesce total_time: 0.01190400030463934 avg_time 0.01190400030463934
+0: spgemm-reduce-nnz total_time: 0.09206400066614151 avg_time 0.09206400066614151
+0: spgemm-padding total_time: 1.8569920063018799 avg_time 1.8569920063018799
+0: spgemm-allgather total_time: 2.242719888687134 avg_time 2.242719888687134
+0: spgemm-preproc-reduce total_time: 1.1456639766693115 avg_time 1.1456639766693115
+0: spgemm-reduce total_time: 39.106143951416016 avg_time 39.106143951416016
+0: spgemm-unpad total_time: 3.037760019302368 avg_time 3.037760019302368
+0: prob-rowsum total_time: 0.5271360278129578 avg_time 0.5271360278129578
+0: gen-darts total_time: 0.20892800390720367 avg_time 0.20892800390720367
+0: dart-throw total_time: 1.305791974067688 avg_time 1.305791974067688
+0: filter_darts total_time: 9.789440155029297 avg_time 9.789440155029297
+0: add-to-frontier total_time: 1.8480960130691528 avg_time 1.8480960130691528
+0: count_samples total_time: 30.420608520507812 avg_time 30.420608520507812
+0: select-preproc total_time: 0.07011199742555618 avg_time 0.07011199742555618
+0: select-psoverflow total_time: 0.5702720023691654 avg_time 0.06336355581879616
+0: select-reciprocal total_time: 11.712607979774475 avg_time 1.3014008866416082
+0: select-instmtx total_time: 10.291007995605469 avg_time 1.143445332845052
+0: select-invsum total_time: 530.8290901184082 avg_time 58.981010013156464
+0: select-psinv total_time: 0.648159995675087 avg_time 0.07201777729723188
+0: select-computedarts total_time: 0.6293440014123917 avg_time 0.06992711126804352
+0: select-throwdarts total_time: 3.543071985244751 avg_time 0.39367466502719456
+0: select-add-to-frontier total_time: 15.13158392906189 avg_time 1.6812871032290988
+0: select-samplecount total_time: 277.18652725219727 avg_time 30.79850302802192
+0: select-overflow total_time: 0.641087993979454 avg_time 0.07123199933105046
+0: select-iter total_time: 853.2802658081055 avg_time 94.80891842312283
+0: dart-selection total_time: 853.6178588867188 avg_time 853.6178588867188
+0: set-probs total_time: 1.7106560468673706 avg_time 1.7106560468673706
+0: compute-bool total_time: 0.045343998819589615 avg_time 0.045343998819589615
+0: sampling-iters total_time: 901.5848999023438 avg_time 901.5848999023438
+0: select-mtxs total_time: 0.9415680170059204 avg_time 0.9415680170059204
+0: row-select-spgemm total_time: 198.17837524414062 avg_time 198.17837524414062
+0: row-select-expand total_time: 2.817023992538452 avg_time 2.817023992538452
+0: col-select-spgemm total_time: 79.16553497314453 avg_time 79.16553497314453
+0: set-sample total_time: 0.13356800377368927 avg_time 0.13356800377368927
+0: iter_count: 1
+0: selection_iter_count: 9
+0: 
+0: return_dart_count1.nnzidxs: tensor([       4,        8,       11,  ..., 36332465, 36332476, 36332500],
+0:        device='cuda:0')
+0: return_dart_count1: tensor([  1,   1,   1,  ...,  14,   3, 274], device='cuda:0',
+0:        dtype=torch.int32)
+0: return_dart_map1: tensor([   27406,    34971,     3442,  ..., 36296107, 36331806, 36309730],
+0:        device='cuda:0', dtype=torch.int32)
+0: return_dart_val1: tensor([3.9905e-01, 5.1668e-01, 2.4930e-02,  ..., 5.1134e+02, 5.1199e+02,
+0:         5.1157e+02], device='cuda:0')
+0: return_dart_count2.nnzidxs: tensor([       4,        8,       11,  ..., 36332465, 36332476, 36332500],
+0:        device='cuda:0')
+0: return_dart_count2: tensor([  1,   1,   1,  ...,  12,   3, 271], device='cuda:0',
+0:        dtype=torch.int32)
+0: return_dart_map2: tensor([   27406,    34971,     3442,  ..., 36296107, 36331806, 36309730],
+0:        device='cuda:0', dtype=torch.int32)
+0: return_dart_val2: tensor([3.9905e-01, 5.1668e-01, 2.4930e-02,  ..., 5.1134e+02, 5.1199e+02,
+0:         5.1157e+02], device='cuda:0')
+0: 
+0: unmatched_darts: tensor([      92,       93,      106,  ..., 64487413, 64487416, 64487417],
+0:        device='cuda:0')
+0: dart_map1[unmatched]: tensor([   56912,    45262,    50443,  ..., 36330476, 36267481, 36273438],
+0:        device='cuda:0', dtype=torch.int32)
+0: dart_map2[unmatched]: tensor([   56914,    45263,    50444,  ..., 36330467, 36267509, 36273436],
+0:        device='cuda:0', dtype=torch.int32)
+0: 
+0: dart_vals1[unmatched]: tensor([  0.8172,   0.6601,   0.7475,  ..., 511.9604, 511.0260, 511.1345],
+0:        device='cuda:0')
+0: dart_vals2[unmatched]: tensor([  0.8172,   0.6601,   0.7475,  ..., 511.9604, 511.0260, 511.1345],
+0:        device='cuda:0')
+0: 
+0: ps_pvals1[map1unmatched]: tensor([  0.8172,   0.6601,   0.7475,  ..., 511.9605, 511.0261, 511.1346],
+0:        device='cuda:0')
+0: ps_pvals2[map1unmatched]: tensor([  0.8172,   0.6601,   0.7475,  ..., 511.9606, 511.0259, 511.1347],
+0:        device='cuda:0')
+0: 
+0: ps_pvals1[map2unmatched]: tensor([  0.8172,   0.6601,   0.7475,  ..., 511.9604, 511.0264, 511.1344],
+0:        device='cuda:0')
+0: ps_pvals2[map2unmatched]: tensor([  0.8172,   0.6601,   0.7475,  ..., 511.9605, 511.0262, 511.1346],
+0:        device='cuda:0')

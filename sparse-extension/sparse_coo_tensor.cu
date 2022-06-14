@@ -31,11 +31,29 @@ using namespace at::sparse;
 #define CHECK_ERROR(str) \
     {cudaDeviceSynchronize(); cudaError_t err; err = cudaGetLastError(); if(err!=0) {printf("ERROR %s:  %d %s\n", str, err, cudaGetErrorString(err)); fflush(stdout);}}
 
-__device__ int binary_searchf(float *arr, float val, int imin, int imax) {
+__device__ int binary_searchf(double *arr, double val, int imin, int imax) {
     
     int ans = 0;
     while (imax >= imin) {
         int imid = (imin + imax) / 2;
+
+        if (arr[imid] < val) {
+            imin = imid + 1;
+        } else {
+            ans = imid;
+            imax = imid - 1;
+        }
+    }
+
+    return ans;
+}
+
+__device__ int binary_searchfpf(double *arr, double val, int imin, int imax) {
+    
+    int ans = 0;
+    while (imax >= imin) {
+        int imid = (imin + imax) / 2;
+        printf("imid: %d val: %f arr[imid]: %f\n", imid, val, arr[imid]);
 
         if (arr[imid] <= val) {
             imin = imid + 1;
@@ -358,8 +376,7 @@ void compute_darts_gpu(const at::Tensor& dartx_values,
     CHECK_ERROR("dart computation error")
 }
 
-__global__ void ComputeDarts1D(float *dart_values, float *p_rowsum, float *ps_p_rowsum, 
-                                    int n_darts, int mb_count) {
+__global__ void ComputeDarts1D(double *dart_values, int n_darts, int mb_count) {
 
     int     id = blockIdx.x * blockDim.x + threadIdx.x;
     int stride = blockDim.x * gridDim.x;
@@ -367,31 +384,23 @@ __global__ void ComputeDarts1D(float *dart_values, float *p_rowsum, float *ps_p_
     int dart_count = n_darts * mb_count;
     for (int i = id; i < dart_count; i += stride) {
         int row = i / n_darts;
-        dart_values[i] *= p_rowsum[row];
-        dart_values[i] += ps_p_rowsum[row];
+        dart_values[i] += (double)row;
     }
 }
 
-void compute_darts1d_gpu(const at::Tensor& dart_values, 
-                        const at::Tensor& p_rowsum,
-                        const at::Tensor& ps_p_rowsum,
-                        int n_darts,
-                        int mb_count) {
-
+void compute_darts1d_gpu(const at::Tensor& dart_values, int n_darts, int mb_count) {
 
     int BLOCK_SIZE = 256;
     int BLOCK_COUNT = std::ceil((n_darts * mb_count) / ((float) BLOCK_SIZE));
     BLOCK_COUNT = std::min(BLOCK_COUNT, 65535);
 
-    ComputeDarts1D<<<BLOCK_COUNT, BLOCK_SIZE>>>(dart_values.data<float>(), 
-                                                p_rowsum.data<float>(), 
-                                                ps_p_rowsum.data<float>(), 
+    ComputeDarts1D<<<BLOCK_COUNT, BLOCK_SIZE>>>(dart_values.data<double>(), 
                                                 n_darts,
                                                 mb_count);
     CHECK_ERROR("dart1d computation error")
 }
 
-__global__ void ComputeDartsSelect(float *dart_select, float *dart_hits_inv_sum, float *ps_dart_hits_inv_sum, 
+__global__ void ComputeDartsSelect(double *dart_select, double *dart_hits_inv_sum, double *ps_dart_hits_inv_sum, 
                                 long *ps_overflow, long mb_count, long total_overflow) {
 
     long      id = blockIdx.x * blockDim.x + threadIdx.x;
@@ -416,9 +425,9 @@ void compute_darts_select_gpu(const at::Tensor& dart_select,
     int BLOCK_COUNT = std::ceil(total_overflow / ((float) BLOCK_SIZE));
     BLOCK_COUNT = std::min(BLOCK_COUNT, 65535);
 
-    ComputeDartsSelect<<<BLOCK_COUNT, BLOCK_SIZE>>>(dart_select.data<float>(), 
-                                                        dart_hits_inv_sum.data<float>(), 
-                                                        ps_dart_hits_inv_sum.data<float>(), 
+    ComputeDartsSelect<<<BLOCK_COUNT, BLOCK_SIZE>>>(dart_select.data<double>(), 
+                                                        dart_hits_inv_sum.data<double>(), 
+                                                        ps_dart_hits_inv_sum.data<double>(), 
                                                         ps_overflow.data<long>(), 
                                                         mb_count,
                                                         total_overflow);
@@ -461,23 +470,32 @@ void throw_darts_gpu(const at::Tensor& dartx_values,
     CHECK_ERROR("dart throwing error")
 }
 
-__global__ void ThrowDarts1D(float *dart_values, float *ps_p_values, int *h_values, int dart_count, int nnz) {
+__global__ void ThrowDarts1D(double *dart_values, double *ps_p_values, int *h_values, int *h_map, 
+                                int dart_count, int nnz) {
 
     int     id = blockIdx.x * blockDim.x + threadIdx.x;
     int stride = blockDim.x * gridDim.x;
 
     for (int i = id; i < dart_count; i += stride) {
-        int vtx = binary_searchf(ps_p_values, dart_values[i], 0, nnz);
+        int vtx = -1;
+        // if (i == 92 || i == 53224) {
+        if (i == 53224) {
+            vtx = binary_searchfpf(ps_p_values, dart_values[i], 0, nnz);
+        } else {
+            vtx = binary_searchf(ps_p_values, dart_values[i], 0, nnz);
+        }
         if (vtx < 0 || vtx >= nnz) {
             printf("error i: %d vtx: %d nnz: %d\n", i, vtx, nnz);
-        }
+        } 
         atomicAdd(&h_values[vtx], 1);
+        h_map[i] = vtx;
     }
 }
 
 void throw_darts1d_gpu(const at::Tensor& dart_values, 
                             const at::Tensor& ps_p_values,
                             const at::Tensor& h_values,
+                            const at::Tensor& h_map,
                             int dart_count,
                             int nnz) {
 
@@ -486,15 +504,16 @@ void throw_darts1d_gpu(const at::Tensor& dart_values,
     int BLOCK_COUNT = std::ceil((dart_count) / ((float) BLOCK_SIZE));
     BLOCK_COUNT = std::min(BLOCK_COUNT, 65535);
 
-    ThrowDarts1D<<<BLOCK_COUNT, BLOCK_SIZE>>>(dart_values.data<float>(), 
-                                                ps_p_values.data<float>(), 
+    ThrowDarts1D<<<BLOCK_COUNT, BLOCK_SIZE>>>(dart_values.data<double>(), 
+                                                ps_p_values.data<double>(), 
                                                 h_values.data<int>(), 
+                                                h_map.data<int>(), 
                                                 dart_count,
                                                 nnz);
     CHECK_ERROR("dart throwing error")
 }
 
-__global__ void ThrowDartsSelect(float *dart_select, float *ps_dart_hits_inv, int *dart_hits_count, 
+__global__ void ThrowDartsSelect(double *dart_select, double *ps_dart_hits_inv, int *dart_hits_count, 
                                     int total_overflow, int nnz) {
 
     int     id = blockIdx.x * blockDim.x + threadIdx.x;
@@ -517,15 +536,15 @@ void throw_darts_select_gpu(const at::Tensor& dart_select,
     int BLOCK_COUNT = std::ceil(total_overflow / ((float) BLOCK_SIZE));
     BLOCK_COUNT = std::min(BLOCK_COUNT, 65535);
 
-    ThrowDartsSelect<<<BLOCK_COUNT, BLOCK_SIZE>>>(dart_select.data<float>(), 
-                                                    ps_dart_hits_inv.data<float>(), 
+    ThrowDartsSelect<<<BLOCK_COUNT, BLOCK_SIZE>>>(dart_select.data<double>(), 
+                                                    ps_dart_hits_inv.data<double>(), 
                                                     dart_hits_count.data<int>(), 
                                                     total_overflow,
                                                     nnz);
     CHECK_ERROR("selection dart throwing error")
 }
 
-__global__ void Normalize(float *output, float *input, long *index, int len) { 
+__global__ void Normalize(double *output, double *input, long *index, int len) { 
     long     id = blockIdx.x * blockDim.x + threadIdx.x;
     long stride = blockDim.x * gridDim.x;
 
@@ -541,7 +560,7 @@ void normalize_gpu(const at::Tensor& output, const at::Tensor& input, const at::
     int BLOCK_COUNT = std::ceil(len / ((float) BLOCK_SIZE));
     BLOCK_COUNT = std::min(BLOCK_COUNT, 65535);
 
-    Normalize<<<BLOCK_COUNT, BLOCK_SIZE>>>(output.data<float>(), input.data<float>(), index.data<long>(), len);
+    Normalize<<<BLOCK_COUNT, BLOCK_SIZE>>>(output.data<double>(), input.data<double>(), index.data<long>(), len);
     CHECK_ERROR("normalize error")
 }
 
