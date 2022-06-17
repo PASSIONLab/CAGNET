@@ -135,7 +135,7 @@ def row_normalize(mx):
     r_inv = torch.float_power(rowsum, -1).flatten()
     # r_inv._values = r_inv._values()[torch.isinf(r_inv._values())] = 0.
     # r_mat_inv = torch.diag(r_inv._values())
-    r_inv_values = r_inv._values()
+    r_inv_values = r_inv._values().double()
     r_inv_values[torch.isinf(r_inv_values)] = 0
     r_mat_inv = torch.sparse_coo_tensor([np.arange(0, r_inv.size(0)).tolist(),
                                      np.arange(0, r_inv.size(0)).tolist()],
@@ -146,7 +146,8 @@ def row_normalize(mx):
                                                     mx._indices(), mx._values().float(),
                                                     r_mat_inv.size(0), r_mat_inv.size(1), mx.size(1),
                                                     coalesced=True)
-    mx = torch.sparse_coo_tensor(indices=mx_indices, values=mx_values, size=(r_mat_inv.size(0), mx.size(1)))
+    mx = torch.sparse_coo_tensor(indices=mx_indices, values=mx_values.double(), 
+                                    size=(r_mat_inv.size(0), mx.size(1)))
     return mx
 
 def one5d_partition(rank, size, inputs, adj_matrix, data, features, classes, replication, \
@@ -403,16 +404,16 @@ def main(args):
     print()
     unmatched_darts = ((dart_map1 == dart_map2) == 0).nonzero().squeeze()
     print(f"unmatched_darts: {unmatched_darts}")
-    # print(f"unmatched_darts.size: {unmatched_darts.size()}")
-    # print(f"dart_map1[unmatched]: {dart_map1[unmatched_darts]}")
-    # print(f"dart_map2[unmatched]: {dart_map2[unmatched_darts]}")
-    # print()
-    # print(f"dart_vals1[unmatched]: {dart_vals1[unmatched_darts]}")
-    # print(f"dart_vals2[unmatched]: {dart_vals2[unmatched_darts]}")
-    # print()
-    # print(f"ps_pvasl1.size: {ps_pvals1.size()}")
-    # print(f"ps_pvals1: {ps_pvals1}")
-    # print(f"ps_pvals2: {ps_pvals2}")
+    print(f"unmatched_darts.size: {unmatched_darts.size()}")
+    print(f"dart_map1[unmatched]: {dart_map1[unmatched_darts]}")
+    print(f"dart_map2[unmatched]: {dart_map2[unmatched_darts]}")
+    print()
+    print(f"dart_vals1[unmatched]: {dart_vals1[unmatched_darts]}")
+    print(f"dart_vals2[unmatched]: {dart_vals2[unmatched_darts]}")
+    print()
+    print(f"ps_pvasl1.size: {ps_pvals1.size()}")
+    print(f"ps_pvals1: {ps_pvals1}")
+    print(f"ps_pvals2: {ps_pvals2}")
     # print(f"ps_pvals1[map1unmatched]: {ps_pvals1[dart_map1[unmatched_darts].long()]}")
     # print(f"ps_pvals2[map1unmatched]: {ps_pvals2[dart_map1[unmatched_darts].long()]}")
     # print()
