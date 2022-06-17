@@ -106,12 +106,18 @@ def dist_spgemm15D(mata, matb, replication, rank, size, row_groups, col_groups, 
         matc_recv_values.append(torch.cuda.DoubleTensor(matc_nnz).fill_(-1.0))
 
     matc_send_indices = torch.cat((matc._indices(), torch.cuda.LongTensor(2, matc_nnz - matc._nnz()).fill_(0)), 1)
-    matc_send_values = torch.cat((matc._values(), torch.cuda.LongTensor(matc_nnz - matc._nnz()).fill_(0.0)))
+    matc_send_values = torch.cat((matc._values(), torch.cuda.DoubleTensor(matc_nnz - matc._nnz()).fill_(-1.0)))
     stop_time_add(start_timer, stop_timer, timing_dict, "spgemm-padding")
 
     start_time(start_timer)
     dist.all_gather(matc_recv_indices, matc_send_indices, row_groups[rank_c])
+    print(f"before matc_send_values: {matc_send_values}")
+    print(f"before matc_send_values.size: {matc_send_values.size()}")
+    print(f"before matc_recv_values[0]: {matc_recv_values[0]}")
+    print(f"before matc_recv_values[0].size: {matc_recv_values[0].size()}")
     dist.all_gather(matc_recv_values, matc_send_values, row_groups[rank_c])
+    print(f"after matc_recv_values[0]: {matc_recv_values[0]}")
+    print(f"after matc_recv_values[0].size: {matc_recv_values[0].size()}")
     stop_time_add(start_timer, stop_timer, timing_dict, "spgemm-allgather")
 
     start_time(start_timer)
@@ -127,7 +133,6 @@ def dist_spgemm15D(mata, matb, replication, rank, size, row_groups, col_groups, 
 
     start_time(start_timer)
     nnz_mask = matc._values() != -1.0
-    print(f"matc.nnz: {matc._nnz()}")
     matc_nnz_indices = matc._indices()[:, nnz_mask]
     matc_nnz_values = matc._values()[nnz_mask]
     stop_time_add(start_timer, stop_timer, timing_dict, "spgemm-unpad")
@@ -176,10 +181,6 @@ def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_tota
         # TODO: assume n_layers=1 for now
         start_time(start_timer)
         torch.cuda.nvtx.range_push("nvtx-probability-spgemm")
-        print(f"before batches: {batches._indices()[1, :]}")
-        print(f"before adj_matrix: {adj_matrix._indices()}")
-        print(f"batches.nnz: {batches._nnz()}")
-        print(f"adj_matrix.nnz: {adj_matrix._nnz()}")
         p_num_indices, p_num_values = dist_spgemm15D(batches, adj_matrix, replication, rank, size, row_groups, \
                                                         col_groups, timing_dict)
 
@@ -188,6 +189,7 @@ def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_tota
         #                                 mb_count, node_count, node_count, coalesced=True)
         torch.cuda.nvtx.range_pop()
         print(f"probability-spgemm: {stop_time(start_timer, stop_timer)}")
+        print(f"p_num_values: {p_num_values}")
 
         start_time(start_timer)
         torch.cuda.nvtx.range_push("nvtx-compute-p")
@@ -196,11 +198,8 @@ def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_tota
         p = torch.sparse_coo_tensor(indices=p_num_indices, 
                                         values=p_num_values, 
                                         size=(mb_count, node_count_total))
-        print(f"before p._values(): {p._values()}")
         # print(f"before p._values()[56912]: {p._values()[56912]} p_den[row[56912]]: {p_den[p._indices()[0, 56912]]}")
         print(f"p.nnz: {p._nnz()}")
-        print(f"p.values.size: {p._values().size()}")
-        print(f"p_num_values.size: {p_num_values.size()}")
         normalize_gpu(p._values(), p_den, p._indices()[0, :], p._nnz())
         print(f"compute-p: {stop_time(start_timer, stop_timer)}")
 
