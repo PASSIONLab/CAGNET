@@ -135,19 +135,18 @@ def row_normalize(mx):
     r_inv = torch.float_power(rowsum, -1).flatten()
     # r_inv._values = r_inv._values()[torch.isinf(r_inv._values())] = 0.
     # r_mat_inv = torch.diag(r_inv._values())
-    r_inv_values = r_inv._values().double()
+    r_inv_values = r_inv._values()
     r_inv_values[torch.isinf(r_inv_values)] = 0
     r_mat_inv = torch.sparse_coo_tensor([np.arange(0, r_inv.size(0)).tolist(),
                                      np.arange(0, r_inv.size(0)).tolist()],
                                      r_inv_values,
                                      size=(r_inv.size(0), r_inv.size(0)))
     # mx = r_mat_inv.mm(mx.float())
-    mx_indices, mx_values = torch_sparse.spspmm(r_mat_inv._indices(), r_mat_inv._values().float(), 
-                                                    mx._indices(), mx._values().float(),
+    mx_indices, mx_values = torch_sparse.spspmm(r_mat_inv._indices(), r_mat_inv._values().double(), 
+                                                    mx._indices(), mx._values().double(),
                                                     r_mat_inv.size(0), r_mat_inv.size(1), mx.size(1),
                                                     coalesced=True)
-    mx = torch.sparse_coo_tensor(indices=mx_indices, values=mx_values.double(), 
-                                    size=(r_mat_inv.size(0), mx.size(1)))
+    mx = torch.sparse_coo_tensor(indices=mx_indices, values=mx_values, size=(r_mat_inv.size(0), mx.size(1)))
     return mx
 
 def one5d_partition(rank, size, inputs, adj_matrix, data, features, classes, replication, \
@@ -326,7 +325,7 @@ def main(args):
     print("coalescing", flush=True)
     g_loc = g_loc.coalesce().t()
     print("normalizing", flush=True)
-    # g_loc = row_normalize(g_loc)
+    g_loc = row_normalize(g_loc)
     print("done normalizing", flush=True)
 
     n_per_proc = math.ceil(float(g_loc.size(0)) / (size / args.replication))
@@ -375,7 +374,7 @@ def main(args):
     print(f"rank: {rank} batches_loc: {batches_loc}")
     # do it once before timing
     torch.manual_seed(0)
-    current_frontier, next_frontier, adj_matrices, dart_count1, dart_map1, dart_vals1, ps_pvals1 = \
+    current_frontier, next_frontier, adj_matrices = \
                                     ladies_sampler(g_loc, batches_loc, args.batch_size, \
                                                                         args.samp_num, args.n_bulkmb, \
                                                                         args.n_layers, args.n_darts, \
@@ -386,39 +385,12 @@ def main(args):
     torch.cuda.profiler.cudart().cudaProfilerStart()
     torch.cuda.nvtx.range_push("nvtx-sampler")
     torch.manual_seed(0)
-    current_frontier, next_frontier, adj_matrices_bulk, dart_count2, dart_map2, dart_vals2, ps_pvals2  = \
+    current_frontier, next_frontier, adj_matrices_bulk = \
                                     ladies_sampler(g_loc, batches_loc, args.batch_size, \
                                                                             args.samp_num, args.n_bulkmb, \
                                                                             args.n_layers, args.n_darts, \
                                                                             args.replication, rank, size, \
                                                                             row_groups, col_groups)
-    print()
-    print(f"return_dart_count1.nnzidxs: {dart_count1.nonzero().squeeze()}")
-    print(f"return_dart_count1: {dart_count1[dart_count1.nonzero().squeeze()]}")
-    print(f"return_dart_map1: {dart_map1}")
-    print(f"return_dart_val1: {dart_vals1}")
-    print(f"return_dart_count2.nnzidxs: {dart_count2.nonzero().squeeze()}")
-    print(f"return_dart_count2: {dart_count2[dart_count2.nonzero().squeeze()]}")
-    print(f"return_dart_map2: {dart_map2}")
-    print(f"return_dart_val2: {dart_vals2}")
-    print()
-    unmatched_darts = ((dart_map1 == dart_map2) == 0).nonzero().squeeze()
-    print(f"unmatched_darts: {unmatched_darts}")
-    print(f"unmatched_darts.size: {unmatched_darts.size()}")
-    print(f"dart_map1[unmatched]: {dart_map1[unmatched_darts]}")
-    print(f"dart_map2[unmatched]: {dart_map2[unmatched_darts]}")
-    print()
-    print(f"dart_vals1[unmatched]: {dart_vals1[unmatched_darts]}")
-    print(f"dart_vals2[unmatched]: {dart_vals2[unmatched_darts]}")
-    print()
-    print(f"ps_pvasl1.size: {ps_pvals1.size()}")
-    print(f"ps_pvals1: {ps_pvals1}")
-    print(f"ps_pvals2: {ps_pvals2}")
-    # print(f"ps_pvals1[map1unmatched]: {ps_pvals1[dart_map1[unmatched_darts].long()]}")
-    # print(f"ps_pvals2[map1unmatched]: {ps_pvals2[dart_map1[unmatched_darts].long()]}")
-    # print()
-    # print(f"ps_pvals1[map2unmatched]: {ps_pvals1[dart_map2[unmatched_darts].long()]}")
-    # print(f"ps_pvals2[map2unmatched]: {ps_pvals2[dart_map2[unmatched_darts].long()]}")
     torch.cuda.nvtx.range_pop()
     torch.cuda.profiler.cudart().cudaProfilerStop()
 

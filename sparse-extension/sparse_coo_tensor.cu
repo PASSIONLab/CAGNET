@@ -48,24 +48,6 @@ __device__ int binary_searchf(double *arr, double val, int imin, int imax) {
     return ans;
 }
 
-__device__ int binary_searchfpf(double *arr, double val, int imin, int imax) {
-    
-    int ans = 0;
-    while (imax >= imin) {
-        int imid = (imin + imax) / 2;
-        printf("imid: %d val: %f arr[imid]: %f\n", imid, val, arr[imid]);
-
-        if (arr[imid] <= val) {
-            imin = imid + 1;
-        } else {
-            ans = imid;
-            imax = imid - 1;
-        }
-    }
-
-    return ans;
-}
-
 __device__ long binary_searchl(long *arr, long val, long imin, long imax) {
     
     long ans = -1;
@@ -477,13 +459,7 @@ __global__ void ThrowDarts1D(double *dart_values, double *ps_p_values, int *h_va
     int stride = blockDim.x * gridDim.x;
 
     for (int i = id; i < dart_count; i += stride) {
-        int vtx = -1;
-        // if (i == 92 || i == 53224) {
-        if (i == 53224) {
-            vtx = binary_searchfpf(ps_p_values, dart_values[i], 0, nnz);
-        } else {
-            vtx = binary_searchf(ps_p_values, dart_values[i], 0, nnz);
-        }
+        int vtx = binary_searchf(ps_p_values, dart_values[i], 0, nnz);
         if (vtx < 0 || vtx >= nnz) {
             printf("error i: %d vtx: %d nnz: %d\n", i, vtx, nnz);
         } 

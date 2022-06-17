@@ -111,13 +111,7 @@ def dist_spgemm15D(mata, matb, replication, rank, size, row_groups, col_groups, 
 
     start_time(start_timer)
     dist.all_gather(matc_recv_indices, matc_send_indices, row_groups[rank_c])
-    print(f"before matc_send_values: {matc_send_values}")
-    print(f"before matc_send_values.size: {matc_send_values.size()}")
-    print(f"before matc_recv_values[0]: {matc_recv_values[0]}")
-    print(f"before matc_recv_values[0].size: {matc_recv_values[0].size()}")
     dist.all_gather(matc_recv_values, matc_send_values, row_groups[rank_c])
-    print(f"after matc_recv_values[0]: {matc_recv_values[0]}")
-    print(f"after matc_recv_values[0].size: {matc_recv_values[0].size()}")
     stop_time_add(start_timer, stop_timer, timing_dict, "spgemm-allgather")
 
     start_time(start_timer)
@@ -184,12 +178,8 @@ def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_tota
         p_num_indices, p_num_values = dist_spgemm15D(batches, adj_matrix, replication, rank, size, row_groups, \
                                                         col_groups, timing_dict)
 
-        # p_num_indices, p_num_values = torch_sparse.spspmm(batches._indices(), batches._values(), 
-        #                                 adj_matrix._indices().long(), adj_matrix._values(),
-        #                                 mb_count, node_count, node_count, coalesced=True)
         torch.cuda.nvtx.range_pop()
         print(f"probability-spgemm: {stop_time(start_timer, stop_timer)}")
-        print(f"p_num_values: {p_num_values}")
 
         start_time(start_timer)
         torch.cuda.nvtx.range_push("nvtx-compute-p")
@@ -198,7 +188,6 @@ def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_tota
         p = torch.sparse_coo_tensor(indices=p_num_indices, 
                                         values=p_num_values, 
                                         size=(mb_count, node_count_total))
-        # print(f"before p._values()[56912]: {p._values()[56912]} p_den[row[56912]]: {p_den[p._indices()[0, 56912]]}")
         print(f"p.nnz: {p._nnz()}")
         normalize_gpu(p._values(), p_den, p._indices()[0, :], p._nnz())
         print(f"compute-p: {stop_time(start_timer, stop_timer)}")
@@ -233,7 +222,6 @@ def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_tota
             torch.cuda.nvtx.range_push("nvtx-prob-rowsum")
             ps_p_values = torch.cumsum(p._values().double(), dim=0).roll(1)
             ps_p_values[0] = 0
-            # print(f"p._values()[56912]: {p._values()[56912]} ps_p_values[56912]: {ps_p_values[56912]}")
             torch.cuda.nvtx.range_pop()
             timing_dict["prob-rowsum"].append(stop_time(start_timer, stop_timer))
 
@@ -245,9 +233,7 @@ def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_tota
 
             start_time(start_timer)
             torch.cuda.nvtx.range_push("nvtx-dart-throw")
-            print(f"iter_count: {iter_count} dart_values: {dart_values}")
             compute_darts1d_gpu(dart_values, n_darts, mb_count)
-            print(f"iter_count: {iter_count} dart_values_scaled: {dart_values}")
             torch.cuda.nvtx.range_pop()
             timing_dict["dart-throw"].append(stop_time(start_timer, stop_timer))
 
@@ -264,12 +250,6 @@ def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_tota
                 return_dart_val = dart_values.clone()
                 return_ps_pvals = ps_p_values.clone()
 
-            print(f"iter_count: {iter_count} dart_hits_count.nnzidxs: {dart_hits_count.nonzero()}")
-            print(f"iter_count: {iter_count} dart_hits_count.nnzidxs.size: {dart_hits_count.nonzero().size()}")
-            print(f"iter_count: {iter_count} dart_hits_count.sum: {torch.sum(dart_hits_count)}")
-            print(f"iter_count: {iter_count} dart_hits_map: {dart_hits_map}")
-            print(f"iter_count: {iter_count} dart_hits_count: {dart_hits_count[dart_hits_count.nonzero()]}")
-            print(f"iter_count: {iter_count} ps_p_values: {ps_p_values}", flush=True)
             torch.cuda.nvtx.range_pop()
             timing_dict["filter_darts"].append(stop_time(start_timer, stop_timer))
 
@@ -397,7 +377,6 @@ def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_tota
             start_time(start_timer)
             torch.cuda.nvtx.range_push("nvtx-compute-bool")
             underfull_minibatches = (sampled_count < frontier_size).any()
-            print(f"sampled_count: {sampled_count} frontier_size: {frontier_size} underfull: {underfull_minibatches}")
             torch.cuda.nvtx.range_pop()
             timing_dict["compute-bool"].append(stop_time(start_timer, stop_timer))
 
@@ -493,4 +472,4 @@ def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_tota
         print(f"{k} total_time: {sum(v)} avg_time {sum(v) / len(v)}")
     print(f"iter_count: {iter_count}")
     print(f"selection_iter_count: {selection_iter_count}")
-    return batches_select, next_frontier_select, adj_matrices, return_dart_counts, return_dart_map, return_dart_val, return_ps_pvals
+    return batches_select, next_frontier_select, adj_matrices

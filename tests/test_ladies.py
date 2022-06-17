@@ -1,10 +1,13 @@
 import argparse
 import examples.gcn_15d
-import LADIES.pytorch_ladies
+# import LADIES.pytorch_ladies
 
+import math
 import numpy as np
 import torch
 import torch.distributed as dist
+
+eps = 1e-4
 
 def main(args):
     """
@@ -120,7 +123,7 @@ def main(args):
                 
                 if v_vtx in neighbors:
                     v_vtx_idx = (neighbors == v_vtx).nonzero().item()
-                    if adj_matrix._values()[nnz_count] != neighbors_nnz[v_vtx_idx]:
+                    if math.fabs(adj_matrix._values()[nnz_count] - neighbors_nnz[v_vtx_idx]) > eps:
                         print(f"nnz differs u: {u_vtx} v: {v_vtx} sample_nnz: {adj_matrix._values()[nnz_count]} g_loc_nnz: {neighbors_nnz[v_vtx_idx]}")
                         edges_match = False
                     nnz_count += 1
@@ -164,7 +167,7 @@ if __name__ == '__main__':
                         help='Number of Pool')
     parser.add_argument('--n-bulkmb', type=int, default=1,
                         help='Number of minibatches to sample in bulk')
-    parser.add_argument('--n-darts', type=int, default=10,
+    parser.add_argument('--n-darts', type=int, default=-1,
                         help='Number of darts to throw per minibatch in LADIES sampling')
     args = parser.parse_args()
     print(args)
