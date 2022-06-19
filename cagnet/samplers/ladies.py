@@ -4,9 +4,10 @@ import torch.distributed as dist
 import torch_sparse
 from collections import defaultdict
 
-from sparse_coo_tensor_cpp import downsample_gpu, compute_darts_gpu, throw_darts_gpu, compute_darts_select_gpu, \
-                                    throw_darts_select_gpu, compute_darts1d_gpu, throw_darts1d_gpu, \
-                                    normalize_gpu, shift_rowselect_gpu, shift_colselect_gpu
+from sparse_coo_tensor_cpp import downsample_gpu, compute_darts_gpu, throw_darts_gpu, \
+                                    compute_darts_select_gpu, throw_darts_select_gpu, \
+                                    compute_darts1d_gpu, throw_darts1d_gpu, normalize_gpu, \
+                                    shift_rowselect_gpu, shift_colselect_gpu
 
 def start_time(timer):
     timer.record()
@@ -20,7 +21,9 @@ def stop_time_add(start_timer, stop_timer, timing_dict, range_name):
     if timing_dict is not None:
         timing_dict[range_name].append(stop_time(start_timer, stop_timer))
 
-def dist_spgemm15D(mata, matb, replication, rank, size, row_groups, col_groups, timing_dict=None):
+def dist_spgemm15D(mata, matb, replication, rank, size, row_groups, col_groups, \
+                            timing_dict=None):
+
     start_timer = torch.cuda.Event(enable_timing=True)
     stop_timer = torch.cuda.Event(enable_timing=True)
 
@@ -103,10 +106,10 @@ def dist_spgemm15D(mata, matb, replication, rank, size, row_groups, col_groups, 
     matc_recv_values = []
     for i in range(replication):
         matc_recv_indices.append(torch.cuda.LongTensor(2, matc_nnz).fill_(0))
-        matc_recv_values.append(torch.cuda.DoubleTensor(matc_nnz).fill_(-1.0))
+        matc_recv_values.append(torch.cuda.DoubleTensor(matc_nnz).fill_(0.0))
 
     matc_send_indices = torch.cat((matc._indices(), torch.cuda.LongTensor(2, matc_nnz - matc._nnz()).fill_(0)), 1)
-    matc_send_values = torch.cat((matc._values(), torch.cuda.DoubleTensor(matc_nnz - matc._nnz()).fill_(-1.0)))
+    matc_send_values = torch.cat((matc._values(), torch.cuda.DoubleTensor(matc_nnz - matc._nnz()).fill_(0.0)))
     stop_time_add(start_timer, stop_timer, timing_dict, "spgemm-padding")
 
     start_time(start_timer)
@@ -180,6 +183,8 @@ def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_tota
 
         torch.cuda.nvtx.range_pop()
         print(f"probability-spgemm: {stop_time(start_timer, stop_timer)}")
+        print(f"p_num_values.size: {p_num_values.size()}")
+        print(f"p_num_values: {p_num_values}")
 
         start_time(start_timer)
         torch.cuda.nvtx.range_push("nvtx-compute-p")
@@ -214,6 +219,7 @@ def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_tota
         return_ps_pvals = None
 
         while underfull_minibatches:
+            print(f"iter_count: {iter_count}")
             iter_count += 1
             start_time(sample_start_timer)
             torch.cuda.nvtx.range_push("nvtx-sampling-iter")

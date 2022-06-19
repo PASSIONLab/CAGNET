@@ -376,10 +376,10 @@ def main(args):
     torch.manual_seed(0)
     current_frontier, next_frontier, adj_matrices = \
                                     ladies_sampler(g_loc, batches_loc, args.batch_size, \
-                                                                        args.samp_num, args.n_bulkmb, \
-                                                                        args.n_layers, args.n_darts, \
-                                                                        args.replication, rank, size, \
-                                                                        row_groups, col_groups)
+                                                                args.samp_num, args.n_bulkmb, \
+                                                                args.n_layers, args.n_darts, \
+                                                                args.replication, rank, size, \
+                                                                row_groups, col_groups)
 
     print()
     torch.cuda.profiler.cudart().cudaProfilerStart()
@@ -387,10 +387,10 @@ def main(args):
     torch.manual_seed(0)
     current_frontier, next_frontier, adj_matrices_bulk = \
                                     ladies_sampler(g_loc, batches_loc, args.batch_size, \
-                                                                            args.samp_num, args.n_bulkmb, \
-                                                                            args.n_layers, args.n_darts, \
-                                                                            args.replication, rank, size, \
-                                                                            row_groups, col_groups)
+                                                                args.samp_num, args.n_bulkmb, \
+                                                                args.n_layers, args.n_darts, \
+                                                                args.replication, rank, size, \
+                                                                row_groups, col_groups)
     torch.cuda.nvtx.range_pop()
     torch.cuda.profiler.cudart().cudaProfilerStop()
 
@@ -411,19 +411,21 @@ def main(args):
             adj_matrix_sample_indices[0,:] -= row_select_min
             adj_matrix_sample_values = sampled_values[sample_select_mask]
 
-            adj_matrix_sample = torch.sparse_coo_tensor(adj_matrix_sample_indices, adj_matrix_sample_values, \
-                                            size=(args.batch_size, args.samp_num + args.batch_size))
+            adj_matrix_sample = torch.sparse_coo_tensor(adj_matrix_sample_indices, \
+                                            adj_matrix_sample_values, \
+                                            (args.batch_size, args.samp_num + args.batch_size))
             adj_matrices[j][i] = adj_matrix_sample
 
     # print(f"sample: {adj_matrices}")
     adj_matrix = adj_matrix.cuda()
     adj_matrix = torch.sparse_coo_tensor(adj_matrix, 
-                                            torch.cuda.FloatTensor(adj_matrix.size(1)).fill_(1.0), 
-                                            size=(node_count, node_count))
+                                        torch.cuda.FloatTensor(adj_matrix.size(1)).fill_(1.0), 
+                                        size=(node_count, node_count))
     adj_matrix = adj_matrix.coalesce().cuda()
     adj_matrix = row_normalize(adj_matrix)
     adj_matrix = torch.pow(adj_matrix, 2)
-    return current_frontier, next_frontier, adj_matrices, adj_matrix # return here while testing sampling code
+    # return here while testing sampling code
+    return current_frontier, next_frontier, adj_matrices, adj_matrix 
 
     # create GCN model
     torch.manual_seed(0)
