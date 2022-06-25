@@ -7,7 +7,8 @@ from collections import defaultdict
 from sparse_coo_tensor_cpp import downsample_gpu, compute_darts_gpu, throw_darts_gpu, \
                                     compute_darts_select_gpu, throw_darts_select_gpu, \
                                     compute_darts1d_gpu, throw_darts1d_gpu, normalize_gpu, \
-                                    shift_rowselect_gpu, shift_colselect_gpu
+                                    shift_rowselect_gpu, shift_colselect_gpu, \
+                                    scatterd_add_gpu, scatteri_add_gpu
 
 def start_time(timer):
     timer.record()
@@ -183,13 +184,12 @@ def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_tota
 
         torch.cuda.nvtx.range_pop()
         print(f"probability-spgemm: {stop_time(start_timer, stop_timer)}")
-        print(f"p_num_values.size: {p_num_values.size()}")
-        print(f"p_num_values: {p_num_values}")
 
         start_time(start_timer)
         torch.cuda.nvtx.range_push("nvtx-compute-p")
         p_den = torch.cuda.DoubleTensor(mb_count).fill_(0)
-        p_den = p_den.scatter_add_(0, p_num_indices[0, :], p_num_values)
+        # p_den = p_den.scatter_add_(0, p_num_indices[0, :], p_num_values)
+        scatterd_add_gpu(p_den, p_num_indices[0, :], p_num_values, p_num_values.size(0))
         p = torch.sparse_coo_tensor(indices=p_num_indices, 
                                         values=p_num_values, 
                                         size=(mb_count, node_count_total))
@@ -213,13 +213,8 @@ def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_tota
         
         # underfull_minibatches = (sampled_count < frontier_size).any()
         underfull_minibatches = True
-        return_dart_counts = None
-        return_dart_map = None
-        return_dart_val = None
-        return_ps_pvals = None
 
         while underfull_minibatches:
-            print(f"iter_count: {iter_count}")
             iter_count += 1
             start_time(sample_start_timer)
             torch.cuda.nvtx.range_push("nvtx-sampling-iter")
@@ -250,12 +245,6 @@ def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_tota
             dart_hits_map = torch.cuda.IntTensor(n_darts * mb_count)
             throw_darts1d_gpu(dart_values, ps_p_values, dart_hits_count, dart_hits_map, \
                                     n_darts * mb_count, p._nnz())
-            if iter_count == 1:
-                return_dart_counts = dart_hits_count.clone()
-                return_dart_map = dart_hits_map.clone()
-                return_dart_val = dart_values.clone()
-                return_ps_pvals = ps_p_values.clone()
-
             torch.cuda.nvtx.range_pop()
             timing_dict["filter_darts"].append(stop_time(start_timer, stop_timer))
 
@@ -272,7 +261,9 @@ def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_tota
             torch.cuda.nvtx.range_push("nvtx-count-samples")
             # sampled_count = torch.sparse.sum(next_frontier_tmp, dim=1)._values()
             sampled_count = sampled_count.fill_(0)
-            sampled_count.scatter_add_(0, next_frontier_tmp._indices()[0, :], next_frontier_values)
+            # sampled_count.scatter_add_(0, next_frontier_tmp._indices()[0, :], next_frontier_values)
+            scatteri_add_gpu(sampled_count, next_frontier_tmp._indices()[0, :], next_frontier_values, \
+                                next_frontier_values.size(0))
             torch.cuda.nvtx.range_pop()
             timing_dict["count_samples"].append(stop_time(start_timer, stop_timer))
 
@@ -313,7 +304,9 @@ def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_tota
                 torch.cuda.nvtx.range_push("nvtx-select-invsum")
                 # dart_hits_inv_sum = torch.sparse.sum(dart_hits_inv_mtx, dim=1)._values()
                 dart_hits_inv_sum = torch.cuda.DoubleTensor(mb_count).fill_(0)
-                dart_hits_inv_sum.scatter_add_(0, next_frontier._indices()[0, :], dart_hits_inv)
+                # dart_hits_inv_sum.scatter_add_(0, next_frontier._indices()[0, :], dart_hits_inv)
+                scatterd_add_gpu(dart_hits_inv_sum, next_frontier._indices()[0, :], dart_hits_inv, \
+                                    dart_hits_inv.size(0))
                 timing_dict["select-invsum"].append(stop_time(start_timer, stop_timer))
 
                 start_time(start_timer)
@@ -350,7 +343,9 @@ def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_tota
                 torch.cuda.nvtx.range_push("nvtx-select-samplecount")
                 # sampled_count = torch.sparse.sum(next_frontier_tmp, dim=1)._values()
                 sampled_count = torch.cuda.IntTensor(mb_count).fill_(0)
-                sampled_count.scatter_add_(0, next_frontier_tmp._indices()[0,:], next_frontier_tmp._values())
+                # sampled_count.scatter_add_(0, next_frontier_tmp._indices()[0,:], next_frontier_tmp._values())
+                scatteri_add_gpu(sampled_count, next_frontier_tmp._indices()[0,:], next_frontier_tmp._values(), \
+                                    next_frontier_tmp._nnz())
                 timing_dict["select-samplecount"].append(stop_time(start_timer, stop_timer))
 
                 start_time(start_timer)

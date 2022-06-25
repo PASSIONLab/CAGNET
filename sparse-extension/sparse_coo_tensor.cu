@@ -597,6 +597,52 @@ void shift_colselect_gpu(const at::Tensor& col_shift, int nnz, int batch_size, i
     CHECK_ERROR("shift col select error")
 }
 
+__global__ void ScatterAddD(double *src, long *indices, double *values, int num_vals) { 
+    int     id = blockIdx.x * blockDim.x + threadIdx.x;
+    int stride = blockDim.x * gridDim.x;
+
+    for (int i = id; i < num_vals; i += stride) {
+        atomicAdd(&src[indices[i]], values[i]);
+    } 
+}
+
+void scatterd_add_gpu(const at::Tensor& src, const at::Tensor& indices, const at::Tensor& values, int num_vals) {
+
+
+    int BLOCK_SIZE = 256;
+    int BLOCK_COUNT = std::ceil(num_vals / ((float) BLOCK_SIZE));
+    BLOCK_COUNT = std::min(BLOCK_COUNT, 65535);
+
+    ScatterAddD<<<BLOCK_COUNT, BLOCK_SIZE>>>(src.data<double>(), 
+                                                indices.data<long>(), 
+                                                values.data<double>(),
+                                                num_vals);
+    CHECK_ERROR("scatter add doubles error")
+}
+
+__global__ void ScatterAddI(int *src, long *indices, int *values, int num_vals) { 
+    int     id = blockIdx.x * blockDim.x + threadIdx.x;
+    int stride = blockDim.x * gridDim.x;
+
+    for (int i = id; i < num_vals; i += stride) {
+        atomicAdd(&src[indices[i]], values[i]);
+    } 
+}
+
+void scatteri_add_gpu(const at::Tensor& src, const at::Tensor& indices, const at::Tensor& values, int num_vals) {
+
+
+    int BLOCK_SIZE = 256;
+    int BLOCK_COUNT = std::ceil(num_vals / ((float) BLOCK_SIZE));
+    BLOCK_COUNT = std::min(BLOCK_COUNT, 65535);
+
+    ScatterAddI<<<BLOCK_COUNT, BLOCK_SIZE>>>(src.data<int>(), 
+                                                indices.data<long>(), 
+                                                values.data<int>(),
+                                                num_vals);
+    CHECK_ERROR("scatter add ints error")
+}
+
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
     m.def("sparse_coo_tensor_gpu", &sparse_coo_tensor_gpu, "Sparse Tensor GPU-only constructor");
     m.def("spmm_gpu", &spmm_gpu, "SpMM wrapper for cusparse");
@@ -610,4 +656,6 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
     m.def("normalize_gpu", &normalize_gpu, "Normalize values in an array based on a second array");
     m.def("shift_rowselect_gpu", &shift_rowselect_gpu, "Shift row selection output matrix col values");
     m.def("shift_colselect_gpu", &shift_colselect_gpu, "Shift col selection matrix row values");
+    m.def("scatterd_add_gpu", &scatterd_add_gpu, "Implementation of scatter_add_ for doubles");
+    m.def("scatteri_add_gpu", &scatteri_add_gpu, "Implementation of scatter_add_ for ints");
 }
