@@ -142,8 +142,8 @@ def row_normalize(mx):
                                      r_inv_values,
                                      size=(r_inv.size(0), r_inv.size(0)))
     # mx = r_mat_inv.mm(mx.float())
-    mx_indices, mx_values = torch_sparse.spspmm(r_mat_inv._indices(), r_mat_inv._values().float(), 
-                                                    mx._indices(), mx._values().float(),
+    mx_indices, mx_values = torch_sparse.spspmm(r_mat_inv._indices(), r_mat_inv._values().double(), 
+                                                    mx._indices(), mx._values().double(),
                                                     r_mat_inv.size(0), r_mat_inv.size(1), mx.size(1),
                                                     coalesced=True)
     mx = torch.sparse_coo_tensor(indices=mx_indices, values=mx_values, size=(r_mat_inv.size(0), mx.size(1)))
@@ -190,7 +190,7 @@ def one5d_partition(rank, size, inputs, adj_matrix, data, features, classes, rep
         for i in range(len(am_partitions)):
             proc_node_count = vtx_indices[i + 1] - vtx_indices[i]
             am_partitions[i] = torch.sparse_coo_tensor(am_partitions[i], 
-                                                    torch.ones(am_partitions[i].size(1)).float(), 
+                                                    torch.ones(am_partitions[i].size(1)).double(), 
                                                     size=(node_count, proc_node_count), 
                                                     requires_grad=False)
             am_partitions[i] = scale_elements(adj_matrix, am_partitions[i], node_count,  0, vtx_indices[i], \
@@ -358,7 +358,7 @@ def main(args):
     batches_indices_rows = batches_indices_rows.repeat_interleave(batches_loc.size(1))
     batches_indices_cols = batches_loc.view(-1)
     batches_indices = torch.stack((batches_indices_rows, batches_indices_cols))
-    batches_values = torch.cuda.FloatTensor(batches_loc.size(1) * batches_loc.size(0)).fill_(1.0)
+    batches_values = torch.cuda.DoubleTensor(batches_loc.size(1) * batches_loc.size(0)).fill_(1.0)
     batches_loc = torch.sparse_coo_tensor(batches_indices, batches_values, (batches_loc.size(0), g_loc.size(1)))
     g_loc = torch.pow(g_loc, 2)
     torch.cuda.nvtx.range_pop()

@@ -31,7 +31,7 @@ using namespace at::sparse;
 #define CHECK_ERROR(str) \
     {cudaDeviceSynchronize(); cudaError_t err; err = cudaGetLastError(); if(err!=0) {printf("ERROR %s:  %d %s\n", str, err, cudaGetErrorString(err)); fflush(stdout);}}
 
-__device__ int binary_searchf(float *arr, float val, int imin, int imax) {
+__device__ int binary_searchf(double *arr, double val, int imin, int imax) {
     
     int ans = 0;
     while (imax >= imin) {
@@ -358,7 +358,7 @@ void compute_darts_gpu(const at::Tensor& dartx_values,
     CHECK_ERROR("dart computation error")
 }
 
-__global__ void ComputeDarts1D(float *dart_values, int n_darts, int mb_count) {
+__global__ void ComputeDarts1D(double *dart_values, int n_darts, int mb_count) {
 
     int     id = blockIdx.x * blockDim.x + threadIdx.x;
     int stride = blockDim.x * gridDim.x;
@@ -366,7 +366,7 @@ __global__ void ComputeDarts1D(float *dart_values, int n_darts, int mb_count) {
     int dart_count = n_darts * mb_count;
     for (int i = id; i < dart_count; i += stride) {
         int row = i / n_darts;
-        dart_values[i] += (float)row;
+        dart_values[i] += (double)row;
     }
 }
 
@@ -376,13 +376,13 @@ void compute_darts1d_gpu(const at::Tensor& dart_values, int n_darts, int mb_coun
     int BLOCK_COUNT = std::ceil((n_darts * mb_count) / ((float) BLOCK_SIZE));
     BLOCK_COUNT = std::min(BLOCK_COUNT, 65535);
 
-    ComputeDarts1D<<<BLOCK_COUNT, BLOCK_SIZE>>>(dart_values.data<float>(), 
+    ComputeDarts1D<<<BLOCK_COUNT, BLOCK_SIZE>>>(dart_values.data<double>(), 
                                                 n_darts,
                                                 mb_count);
     CHECK_ERROR("dart1d computation error")
 }
 
-__global__ void ComputeDartsSelect(float *dart_select, float *dart_hits_inv_sum, float *ps_dart_hits_inv_sum, 
+__global__ void ComputeDartsSelect(double *dart_select, double *dart_hits_inv_sum, double *ps_dart_hits_inv_sum, 
                                 long *ps_overflow, long mb_count, long total_overflow) {
 
     long      id = blockIdx.x * blockDim.x + threadIdx.x;
@@ -407,9 +407,9 @@ void compute_darts_select_gpu(const at::Tensor& dart_select,
     int BLOCK_COUNT = std::ceil(total_overflow / ((float) BLOCK_SIZE));
     BLOCK_COUNT = std::min(BLOCK_COUNT, 65535);
 
-    ComputeDartsSelect<<<BLOCK_COUNT, BLOCK_SIZE>>>(dart_select.data<float>(), 
-                                                        dart_hits_inv_sum.data<float>(), 
-                                                        ps_dart_hits_inv_sum.data<float>(), 
+    ComputeDartsSelect<<<BLOCK_COUNT, BLOCK_SIZE>>>(dart_select.data<double>(), 
+                                                        dart_hits_inv_sum.data<double>(), 
+                                                        ps_dart_hits_inv_sum.data<double>(), 
                                                         ps_overflow.data<long>(), 
                                                         mb_count,
                                                         total_overflow);
@@ -452,7 +452,7 @@ void throw_darts_gpu(const at::Tensor& dartx_values,
     CHECK_ERROR("dart throwing error")
 }
 
-__global__ void ThrowDarts1D(float *dart_values, float *ps_p_values, int *h_values, int *h_map, 
+__global__ void ThrowDarts1D(double *dart_values, double *ps_p_values, int *h_values, int *h_map, 
                                 int dart_count, int nnz) {
 
     int     id = blockIdx.x * blockDim.x + threadIdx.x;
@@ -480,8 +480,8 @@ void throw_darts1d_gpu(const at::Tensor& dart_values,
     int BLOCK_COUNT = std::ceil((dart_count) / ((float) BLOCK_SIZE));
     BLOCK_COUNT = std::min(BLOCK_COUNT, 65535);
 
-    ThrowDarts1D<<<BLOCK_COUNT, BLOCK_SIZE>>>(dart_values.data<float>(), 
-                                                ps_p_values.data<float>(), 
+    ThrowDarts1D<<<BLOCK_COUNT, BLOCK_SIZE>>>(dart_values.data<double>(), 
+                                                ps_p_values.data<double>(), 
                                                 h_values.data<int>(), 
                                                 h_map.data<int>(), 
                                                 dart_count,
@@ -489,7 +489,7 @@ void throw_darts1d_gpu(const at::Tensor& dart_values,
     CHECK_ERROR("dart throwing error")
 }
 
-__global__ void ThrowDartsSelect(float *dart_select, float *ps_dart_hits_inv, int *dart_hits_count, 
+__global__ void ThrowDartsSelect(double *dart_select, double *ps_dart_hits_inv, int *dart_hits_count, 
                                     int total_overflow, int nnz) {
 
     int     id = blockIdx.x * blockDim.x + threadIdx.x;
@@ -512,15 +512,15 @@ void throw_darts_select_gpu(const at::Tensor& dart_select,
     int BLOCK_COUNT = std::ceil(total_overflow / ((float) BLOCK_SIZE));
     BLOCK_COUNT = std::min(BLOCK_COUNT, 65535);
 
-    ThrowDartsSelect<<<BLOCK_COUNT, BLOCK_SIZE>>>(dart_select.data<float>(), 
-                                                    ps_dart_hits_inv.data<float>(), 
+    ThrowDartsSelect<<<BLOCK_COUNT, BLOCK_SIZE>>>(dart_select.data<double>(), 
+                                                    ps_dart_hits_inv.data<double>(), 
                                                     dart_hits_count.data<int>(), 
                                                     total_overflow,
                                                     nnz);
     CHECK_ERROR("selection dart throwing error")
 }
 
-__global__ void Normalize(float *output, float *input, long *index, int len) { 
+__global__ void Normalize(double *output, double *input, long *index, int len) { 
     long     id = blockIdx.x * blockDim.x + threadIdx.x;
     long stride = blockDim.x * gridDim.x;
 
@@ -536,7 +536,7 @@ void normalize_gpu(const at::Tensor& output, const at::Tensor& input, const at::
     int BLOCK_COUNT = std::ceil(len / ((float) BLOCK_SIZE));
     BLOCK_COUNT = std::min(BLOCK_COUNT, 65535);
 
-    Normalize<<<BLOCK_COUNT, BLOCK_SIZE>>>(output.data<float>(), input.data<float>(), index.data<long>(), len);
+    Normalize<<<BLOCK_COUNT, BLOCK_SIZE>>>(output.data<double>(), input.data<double>(), index.data<long>(), len);
     CHECK_ERROR("normalize error")
 }
 
@@ -597,7 +597,7 @@ void shift_colselect_gpu(const at::Tensor& col_shift, int nnz, int batch_size, i
     CHECK_ERROR("shift col select error")
 }
 
-__global__ void ScatterAddD(float *src, long *indices, float *values, int num_vals) { 
+__global__ void ScatterAddD(double *src, long *indices, double *values, int num_vals) { 
     int     id = blockIdx.x * blockDim.x + threadIdx.x;
     int stride = blockDim.x * gridDim.x;
 
@@ -606,18 +606,18 @@ __global__ void ScatterAddD(float *src, long *indices, float *values, int num_va
     } 
 }
 
-void scatterf_add_gpu(const at::Tensor& src, const at::Tensor& indices, const at::Tensor& values, int num_vals) {
+void scatterd_add_gpu(const at::Tensor& src, const at::Tensor& indices, const at::Tensor& values, int num_vals) {
 
 
     int BLOCK_SIZE = 256;
     int BLOCK_COUNT = std::ceil(num_vals / ((float) BLOCK_SIZE));
     BLOCK_COUNT = std::min(BLOCK_COUNT, 65535);
 
-    ScatterAddD<<<BLOCK_COUNT, BLOCK_SIZE>>>(src.data<float>(), 
+    ScatterAddD<<<BLOCK_COUNT, BLOCK_SIZE>>>(src.data<double>(), 
                                                 indices.data<long>(), 
-                                                values.data<float>(),
+                                                values.data<double>(),
                                                 num_vals);
-    CHECK_ERROR("scatter add floats error")
+    CHECK_ERROR("scatter add doubles error")
 }
 
 __global__ void ScatterAddI(int *src, long *indices, int *values, int num_vals) { 
@@ -656,6 +656,6 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
     m.def("normalize_gpu", &normalize_gpu, "Normalize values in an array based on a second array");
     m.def("shift_rowselect_gpu", &shift_rowselect_gpu, "Shift row selection output matrix col values");
     m.def("shift_colselect_gpu", &shift_colselect_gpu, "Shift col selection matrix row values");
-    m.def("scatterf_add_gpu", &scatterf_add_gpu, "Implementation of scatter_add_ for floats");
+    m.def("scatterd_add_gpu", &scatterd_add_gpu, "Implementation of scatter_add_ for doubles");
     m.def("scatteri_add_gpu", &scatteri_add_gpu, "Implementation of scatter_add_ for ints");
 }
