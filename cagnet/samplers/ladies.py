@@ -20,7 +20,15 @@ def stop_time(start_timer, stop_timer):
 
 def stop_time_add(start_timer, stop_timer, timing_dict, range_name):
     if timing_dict is not None:
-        timing_dict[range_name].append(stop_time(start_timer, stop_timer))
+        misc_range = range_name.startswith("spgemm-") and range_name != "spgemm-bcast-nnz" and \
+                                                            range_name != "spgemm-bcast-data" and \
+                                                            range_name != "spgemm-local-spgemm" and \
+                                                            range_name != "spgemm-reduce-nnz" and \
+                                                            range_name != "spgemm-reduce"
+        if misc_range:
+            timing_dict["spgemm-misc"].append(stop_time(start_timer, stop_timer))
+        else:
+            timing_dict[range_name].append(stop_time(start_timer, stop_timer))
 
 def dist_spgemm15D(mata, matb, replication, rank, size, row_groups, col_groups, \
                             timing_dict=None):
@@ -126,8 +134,11 @@ def dist_spgemm15D(mata, matb, replication, rank, size, row_groups, col_groups, 
 
     start_time(start_timer)
     matc_recv = torch.stack(matc_recv)
-    matc = torch.sparse.sum(matc_recv, dim=0).coalesce()
+    matc = torch.sparse.sum(matc_recv, dim=0)
     stop_time_add(start_timer, stop_timer, timing_dict, "spgemm-reduce")
+    start_time(start_timer)
+    matc = matc.coalesce()
+    stop_time_add(start_timer, stop_timer, timing_dict, "spgemm-reduce-coalesce")
 
     start_time(start_timer)
     nnz_mask = matc._values() != -1.0
@@ -425,10 +436,8 @@ def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_tota
         torch.cuda.nvtx.range_push("nvtx-row-select-spgemm")
         row_select_mtx = torch.sparse_coo_tensor(row_select_mtx_indices, row_select_mtx_values, 
                                                         size=(nnz * mb_count, node_count_total))
-        print(f"before row selection")
         sampled_indices, sampled_values = dist_spgemm15D(row_select_mtx, adj_matrix, replication, rank, size, \
-                                                            row_groups, col_groups)
-        print(f"after row selection")
+                                                            row_groups, col_groups, timing_dict)
         sample_mtx = torch.sparse_coo_tensor(sampled_indices, sampled_values, 
                                                 size=(nnz * mb_count, node_count_total))
 
@@ -453,7 +462,7 @@ def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_tota
         col_select_mtx = torch.sparse_coo_tensor(col_select_mtx_indices, col_select_mtx_values,
                                                 size=(node_count_total * mb_count, next_frontier.size(1)))
         sampled_indices, sampled_values = dist_spgemm15D(sample_mtx, col_select_mtx, replication, rank, size, \
-                                                            row_groups, col_groups)
+                                                            row_groups, col_groups, timing_dict)
         torch.cuda.nvtx.range_pop()
         timing_dict["col-select-spgemm"].append(stop_time(start_timer, stop_timer))
 
@@ -473,6 +482,8 @@ def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_tota
     print(f"total_time: {stop_time(total_start_timer, total_stop_timer)}", flush=True)
     for k, v in timing_dict.items():
         print(f"{k} total_time: {sum(v)} avg_time {sum(v) / len(v)} len: {len(v)}")
+        if k.startswith("spgemm") and k != "spgemm-misc":
+            print(f"{k} times: {v}")
     print(f"iter_count: {iter_count}")
     print(f"selection_iter_count: {selection_iter_count}")
     return batches_select, next_frontier_select, adj_matrices
