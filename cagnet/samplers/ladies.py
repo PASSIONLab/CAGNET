@@ -254,7 +254,6 @@ def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_tota
             torch.cuda.nvtx.range_push("nvtx-filter-darts")
             # dart_hits_count = torch.cuda.LongTensor(p._nnz()).fill_(0)
             dart_hits_count = torch.cuda.IntTensor(p._nnz()).fill_(0)
-            print(f"ps_p.values.size: {ps_p_values.size()} p.nnz: {p._nnz()}")
             throw_darts1d_gpu(dart_values, ps_p_values, dart_hits_count, \
                                     n_darts * mb_count, p._nnz())
             torch.cuda.nvtx.range_pop()

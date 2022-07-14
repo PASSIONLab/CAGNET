@@ -477,18 +477,10 @@ __global__ void ThrowDarts1D(double *dart_values, double *ps_p_values, int *h_va
     int stride = blockDim.x * gridDim.x;
 
     for (int i = id; i < dart_count; i += stride) {
-        int vtx = -1;
-        if (i == 1954) {
-            vtx = binary_searchfpf(ps_p_values, dart_values[i], 0, nnz - 1);
-            if (vtx < 0 || vtx >= nnz) {
-                printf("error i: %d vtx: %d nnz: %d\n", i, vtx, nnz);
-            } 
-        } else {
-            vtx = binary_searchf(ps_p_values, dart_values[i], 0, nnz - 1);
-            if (vtx < 0 || vtx >= nnz) {
-                printf("error i: %d vtx: %d nnz: %d\n", i, vtx, nnz);
-            } 
-        }
+        int vtx = binary_searchf(ps_p_values, dart_values[i], 0, nnz - 1);
+        if (vtx < 0 || vtx >= nnz) {
+            printf("error i: %d vtx: %d nnz: %d\n", i, vtx, nnz);
+        } 
         atomicAdd(&h_values[vtx], 1);
     }
 }
