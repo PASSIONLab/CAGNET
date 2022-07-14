@@ -48,6 +48,24 @@ __device__ int binary_searchf(double *arr, double val, int imin, int imax) {
     return ans;
 }
 
+__device__ int binary_searchfpf(double *arr, double val, int imin, int imax) {
+
+    int ans = 0;
+    while (imax >= imin) {
+        int imid = (imin + imax) / 2;
+        printf("imid: %d val: %f arr[imid]: %f\n", imid, val, arr[imid]);
+
+        if (arr[imid] < val) {
+            imin = imid + 1;
+        } else {
+            ans = imid;
+            imax = imid - 1;
+        }
+    }
+
+    return ans;
+}
+
 __device__ long binary_searchl(long *arr, long val, long imin, long imax) {
     
     long ans = -1;
@@ -452,26 +470,32 @@ void throw_darts_gpu(const at::Tensor& dartx_values,
     CHECK_ERROR("dart throwing error")
 }
 
-__global__ void ThrowDarts1D(double *dart_values, double *ps_p_values, int *h_values, int *h_map, 
+__global__ void ThrowDarts1D(double *dart_values, double *ps_p_values, int *h_values, 
                                 int dart_count, int nnz) {
 
     int     id = blockIdx.x * blockDim.x + threadIdx.x;
     int stride = blockDim.x * gridDim.x;
 
     for (int i = id; i < dart_count; i += stride) {
-        int vtx = binary_searchf(ps_p_values, dart_values[i], 0, nnz);
-        if (vtx < 0 || vtx >= nnz) {
-            printf("error i: %d vtx: %d nnz: %d\n", i, vtx, nnz);
-        } 
+        int vtx = -1;
+        if (i == 1954) {
+            vtx = binary_searchfpf(ps_p_values, dart_values[i], 0, nnz - 1);
+            if (vtx < 0 || vtx >= nnz) {
+                printf("error i: %d vtx: %d nnz: %d\n", i, vtx, nnz);
+            } 
+        } else {
+            vtx = binary_searchf(ps_p_values, dart_values[i], 0, nnz - 1);
+            if (vtx < 0 || vtx >= nnz) {
+                printf("error i: %d vtx: %d nnz: %d\n", i, vtx, nnz);
+            } 
+        }
         atomicAdd(&h_values[vtx], 1);
-        h_map[i] = vtx;
     }
 }
 
 void throw_darts1d_gpu(const at::Tensor& dart_values, 
                             const at::Tensor& ps_p_values,
                             const at::Tensor& h_values,
-                            const at::Tensor& h_map,
                             int dart_count,
                             int nnz) {
 
@@ -483,7 +507,6 @@ void throw_darts1d_gpu(const at::Tensor& dart_values,
     ThrowDarts1D<<<BLOCK_COUNT, BLOCK_SIZE>>>(dart_values.data<double>(), 
                                                 ps_p_values.data<double>(), 
                                                 h_values.data<int>(), 
-                                                h_map.data<int>(), 
                                                 dart_count,
                                                 nnz);
     CHECK_ERROR("dart throwing error")

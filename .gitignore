@@ -9,6 +9,7 @@ sparse-extension/dist/
 sparse-extension/sparse_coo_tensor_cpp.egg-info/
 sparse_coo_tensor_cpp.egg-info/
 .*.swp
+.*.swo
 .nfs*
 *.txt
 !requirements.txt
