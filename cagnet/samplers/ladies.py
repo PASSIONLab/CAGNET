@@ -227,7 +227,6 @@ def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_tota
 
         while underfull_minibatches:
             iter_count += 1
-            print(f"iter_count: {iter_count}", flush=True)
             start_time(sample_start_timer)
             torch.cuda.nvtx.range_push("nvtx-sampling-iter")
 
@@ -252,7 +251,6 @@ def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_tota
 
             start_time(start_timer)
             torch.cuda.nvtx.range_push("nvtx-filter-darts")
-            # dart_hits_count = torch.cuda.LongTensor(p._nnz()).fill_(0)
             dart_hits_count = torch.cuda.IntTensor(p._nnz()).fill_(0)
             throw_darts1d_gpu(dart_values, ps_p_values, dart_hits_count, \
                                     n_darts * mb_count, p._nnz())
@@ -481,7 +479,7 @@ def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_tota
 
     print(f"total_time: {stop_time(total_start_timer, total_stop_timer)}", flush=True)
     for k, v in timing_dict.items():
-        if k.startswith("spgemm") and k != "spgemm-misc":
+        if (k.startswith("spgemm") and k != "spgemm-misc") or k == "probability-spgemm" or k == "row-select-spgemm" or k == "col-select-spgemm":
             # print(f"{k} times: {v}")
             v_tens = torch.cuda.FloatTensor([sum(v)])
             v_tens_recv = []
