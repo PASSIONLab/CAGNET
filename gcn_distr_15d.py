@@ -353,6 +353,7 @@ def train(inputs, weight1, weight2, adj_matrix, am_partitions, optimizer, data, 
     optimizer.zero_grad()
 
     rank_c = rank // replication
+    node_count = adj_matrix.size(0)
     n_per_proc = int(math.ceil(float(node_count) / (size / replication)))
     rank_train_mask = torch.split(data.train_mask.bool(), n_per_proc, dim=0)[rank_c]
     datay_rank = torch.split(data.y, n_per_proc, dim=0)[rank_c]
