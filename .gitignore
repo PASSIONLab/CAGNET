@@ -11,3 +11,7 @@ sparse_coo_tensor_cpp.egg-info/
 .nfs*
 *.txt
 *.pt
+*.qdrep
+tests/
+job*
+slurm_outputs/

@@ -155,7 +155,8 @@ void spmm_gpu(const at::Tensor& A_rowindices,
     cusparseSpMatDescr_t matA;
     CHECK_CUSPARSE(cusparseCreateCsr(&matA,
 					  n, 		// rows
-					  b_col, 	// cols
+					  // b_col, 	// cols
+					  m, 	// cols
 					  nnz, 		// nnz
 					  d_a_csrrows, 	// csrRowOffsets
 					  A_colindices.data<int>(), // csrColInd
@@ -165,11 +166,19 @@ void spmm_gpu(const at::Tensor& A_rowindices,
 					  CUSPARSE_INDEX_BASE_ZERO, // idxBase,
 					  CUDA_R_32F)); 	    // valueType
 
+    // Row-major to column-major
+    B.t_();
+    B.set_data(B.contiguous());
+    B.set_data(B.view({b_row, b_col}));
+
     cusparseDnMatDescr_t matB;
     CHECK_CUSPARSE(cusparseCreateDnMat(&matB, 
-                                            B.size(1), // rows
+                                            // b_col, // rows
+                                            b_row, // rows
+                                            // b_row, // cols
                                             b_col, // cols
-                                            B.size(1), // ld
+                                            // b_col, // ld
+                                            b_row, // ld
                                             B.data<float>(), // values
                                             CUDA_R_32F,      // valueType
                                             CUSPARSE_ORDER_COL)); // order
@@ -183,6 +192,7 @@ void spmm_gpu(const at::Tensor& A_rowindices,
     CHECK_CUSPARSE(cusparseCreateDnMat(&matC, 
                                             n, // rows
                                             B.size(1), // cols
+                                            // n, // ld
                                             n, // ld
                                             C.data<float>(), // values
                                             CUDA_R_32F,      // valueType
@@ -191,7 +201,8 @@ void spmm_gpu(const at::Tensor& A_rowindices,
     size_t bufferSize;
     CHECK_CUSPARSE(cusparseSpMM_bufferSize(handle, // handle,
                                                 CUSPARSE_OPERATION_NON_TRANSPOSE,   // opA
-                                                CUSPARSE_OPERATION_TRANSPOSE,       // opB
+                                                // CUSPARSE_OPERATION_TRANSPOSE,       // opB
+                                                CUSPARSE_OPERATION_NON_TRANSPOSE,       // opB
                                                 &alpha,                             // alpha
                                                 matA,                               // matA
                                                 matB,                               // matB
@@ -207,7 +218,8 @@ void spmm_gpu(const at::Tensor& A_rowindices,
 
     CHECK_CUSPARSE(cusparseSpMM(handle, // handle,
                                     CUSPARSE_OPERATION_NON_TRANSPOSE,   // opA
-                                    CUSPARSE_OPERATION_TRANSPOSE,       // opB
+                                    // CUSPARSE_OPERATION_TRANSPOSE,       // opB
+                                    CUSPARSE_OPERATION_NON_TRANSPOSE,       // opB
                                     &alpha,                             // alpha
                                     matA,                               // matA
                                     matB,                               // matB
@@ -218,12 +230,16 @@ void spmm_gpu(const at::Tensor& A_rowindices,
                                     d_buffer));                         // buffer
 
 
-    cudaFree(d_a_csrrows);
-    cudaFree(d_buffer);
+    CHECK_ERROR(cudaFree(d_a_csrrows));
+    CHECK_ERROR(cudaFree(d_buffer));
 
     // Column-major to row-major
     C.set_data(C.view({c_col, c_row}));
     C.t_();
+
+    // Column-major to row-major
+    B.set_data(B.view({b_col, b_row}));
+    B.t_();
 }
 
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {

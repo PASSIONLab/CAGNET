@@ -353,9 +353,9 @@ def train(inputs, weight1, weight2, adj_matrix, am_partitions, optimizer, data, 
     optimizer.zero_grad()
 
     rank_c = rank // replication
-
-    rank_train_mask = torch.split(data.train_mask.bool(), outputs.size(0), dim=0)[rank_c]
-    datay_rank = torch.split(data.y, outputs.size(0), dim=0)[rank_c]
+    n_per_proc = int(math.ceil(float(node_count) / (size / replication)))
+    rank_train_mask = torch.split(data.train_mask.bool(), n_per_proc, dim=0)[rank_c]
+    datay_rank = torch.split(data.y, n_per_proc, dim=0)[rank_c]
 
     # Note: bool type removes warnings, unsure of perf penalty
     # loss = F.nll_loss(outputs[data.train_mask.bool()], data.y[data.train_mask.bool()])

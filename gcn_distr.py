@@ -321,6 +321,7 @@ class GCNFunc(torch.autograd.Function):
                 sigmap = torch.autograd.grad(outputs=func_eval, inputs=z, grad_outputs=grad_output)[0]
                 grad_output = sigmap
 
+
         # First backprop equation
         ag = broad_func(adj_matrix.size(0), am_partitions, grad_output, rank, size, group)
 
@@ -342,8 +343,11 @@ def train(inputs, weight1, weight2, adj_matrix, am_partitions, optimizer, data, 
     outputs = GCNFunc.apply(outputs, weight2, adj_matrix, am_partitions, rank, size, group, F.log_softmax)
 
     optimizer.zero_grad()
-    rank_train_mask = torch.split(data.train_mask.bool(), outputs.size(0), dim=0)[rank]
-    datay_rank = torch.split(data.y, outputs.size(0), dim=0)[rank]
+
+    node_count = adj_matrix.size(0)
+    n_per_proc = int(math.ceil(float(node_count) / size))
+    rank_train_mask = torch.split(data.train_mask.bool(), n_per_proc, dim=0)[rank]
+    datay_rank = torch.split(data.y, n_per_proc, dim=0)[rank]
 
     # Note: bool type removes warnings, unsure of perf penalty
     # loss = F.nll_loss(outputs[data.train_mask.bool()], data.y[data.train_mask.bool()])
