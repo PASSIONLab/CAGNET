@@ -369,19 +369,6 @@ def main(args):
         edge_count = adj_matrix.size(1)
         avg_degree = int(edge_count / node_count)
         args.n_darts = avg_degree * args.batch_size
-        
-        degs = torch.cuda.IntTensor(node_count).fill_(0)
-        degs.scatter_add_(0, adj_matrix[0, :].long(), torch.cuda.IntTensor(edge_count).fill_(1))
-        degs = degs[degs.nonzero()]
-        print(f"degs: {degs.squeeze()}")
-        max_degree = torch.max(degs).item()
-        med_degree = torch.median(degs).item()
-        print(f"degs.size: {degs.size()}")
-        print(f"degs.nnz.size: {degs.nonzero().squeeze().size()}")
-
-        print(f"edge_count: {edge_count} node_count: {node_count} avg_degree: {avg_degree} max_degree: {max_degree} med_degree: {med_degree}")
-
-        args.n_darts = int(max_degree / avg_degree)
         print(f"n_darts: {args.n_darts}")
 
     print(f"rank: {rank} g_loc: {g_loc}")
