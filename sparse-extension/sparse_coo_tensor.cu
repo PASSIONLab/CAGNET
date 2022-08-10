@@ -11,7 +11,7 @@
 
 #include <pybind11/pybind11.h>
 
-#include <THC/THCGeneral.hpp>
+// #include <THC/THCGeneral.hpp>
 
 #include <torch/extension.h>
 
@@ -173,7 +173,7 @@ void spmm_gpu(const at::Tensor& A_rowindices,
 
     // cusparseHandle_t handle;
     // CHECK_CUSPARSE(cusparseCreate(&handle));
-    auto state = at::globalContext().lazyInitCUDA();
+    // auto state = at::globalContext().lazyInitCUDA();
     // auto handle = THCState_getCurrentSparseHandle(state);
     auto handle = at::cuda::getCurrentCUDASparseHandle();
 

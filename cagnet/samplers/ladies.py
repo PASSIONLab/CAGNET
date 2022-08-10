@@ -49,6 +49,7 @@ def dist_spgemm15D(mata, matb, replication, rank, size, row_groups, col_groups, 
     for i in range(stages):
         start_time(start_timer)
         q = (rank_col * (size // (replication ** 2)) + i) * replication + rank_col
+
         matb_recv_nnz = torch.cuda.IntTensor([matb._nnz()])
         dist.broadcast(matb_recv_nnz, src=q, group=col_groups[rank_col])
         stop_time_add(start_timer, stop_timer, timing_dict, f"spgemm-bcast-nnz-{name}")
