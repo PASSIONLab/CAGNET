@@ -503,7 +503,6 @@ def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_tota
                 # Compute darts for selection 
                 compute_darts_select_gpu(dart_select, dart_hits_inv_sum, ps_dart_hits_inv_sum, ps_overflow,
                                                 mb_count, total_overflow)
-                print(flush=True)
                 timing_dict["select-computedarts"].append(stop_time(start_timer, stop_timer))
 
                 start_time(start_timer)
