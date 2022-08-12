@@ -378,12 +378,6 @@ def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_tota
                                         values=p_num_values, 
                                         size=(mb_count, node_count_total))
         print(f"p.nnz: {p._nnz()}")
-        print(f"p.indices: {p._indices()}")
-        print(f"p.indices[row 0].size: {(p._indices()[0,:] == 0).nonzero().squeeze().size()}")
-        print(f"p.indices[row 1].size: {(p._indices()[0,:] == 1).nonzero().squeeze().size()}")
-        print(f"p.indices[row 2].size: {(p._indices()[0,:] == 2).nonzero().squeeze().size()}")
-        print(f"p.indices[row 3].size: {(p._indices()[0,:] == 3).nonzero().squeeze().size()}")
-        print(f"p.values: {p._values()}")
         normalize_gpu(p._values(), p_den, p._indices()[0, :], p._nnz())
         timing_dict["compute-p"].append(stop_time(start_timer, stop_timer))
 
