@@ -675,14 +675,14 @@ void scatteri_add_gpu(const at::Tensor& src, const at::Tensor& indices, const at
     CHECK_ERROR("scatter add ints error")
 }
 
-__global__ void RowSelectCoo(long *nnz_cols, long *row_ids, long *mask, int nnz_col_count, int row_count) { 
+__global__ void RowSelectCoo(long *nnz_cols, long *row_ids, bool *mask, int nnz_col_count, int row_count) { 
     int     id = blockIdx.x * blockDim.x + threadIdx.x;
     int stride = blockDim.x * gridDim.x;
 
     for (int i = id; i < row_count; i += stride) {
         long idx = binary_search_rowselect(nnz_cols, row_ids[i], 0L, nnz_col_count);
         if (nnz_cols[idx] == row_ids[i]) {
-            mask[i] = 1L;
+            mask[i] = true;
         }
     } 
 }
@@ -701,7 +701,7 @@ void rowselect_coo_gpu(const at::Tensor& nnz_cols, const at::Tensor& rows, const
 
     RowSelectCoo<<<BLOCK_COUNT, BLOCK_SIZE>>>(nnz_cols.data<long>(), 
                                                 rows.data<long>(), 
-                                                mask.data<long>(), 
+                                                mask.data<bool>(), 
                                                 nnz_col_count,
                                                 row_count);
     CHECK_ERROR("rowselect coo error")

@@ -28,3 +28,4 @@ tests/LADIES/
 tests/*.out
 *.qdrep
 *.out
+*.nsys-rep

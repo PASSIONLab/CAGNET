@@ -375,12 +375,17 @@ def main(args):
     print(f"rank: {rank} batches_loc: {batches_loc}")
     # do it once before timing
     torch.manual_seed(0)
+    nnz_row_masks = torch.cuda.BoolTensor((size // args.replication) * g_loc._indices().size(1)) # for sa-spgemm
+    nnz_row_masks.fill_(0)
+    
+    nnz_recv_upperbound = adj_matrix.size(1) // (size // args.replication)
+    sa_recv_buff = torch.cuda.DoubleTensor(3 * nnz_recv_upperbound).fill_(0)
     current_frontier, next_frontier, adj_matrices = \
                                     ladies_sampler(g_loc, batches_loc, args.batch_size, \
                                                                 args.samp_num, args.n_bulkmb, \
                                                                 args.n_layers, args.n_darts, \
-                                                                args.replication, rank, size, \
-                                                                row_groups, col_groups)
+                                                                args.replication, nnz_row_masks, sa_recv_buff, \
+                                                                rank, size, row_groups, col_groups)
 
     print()
     torch.cuda.profiler.cudart().cudaProfilerStart()
@@ -390,8 +395,8 @@ def main(args):
                                     ladies_sampler(g_loc, batches_loc, args.batch_size, \
                                                                 args.samp_num, args.n_bulkmb, \
                                                                 args.n_layers, args.n_darts, \
-                                                                args.replication, rank, size, \
-                                                                row_groups, col_groups)
+                                                                args.replication, nnz_row_masks, sa_recv_buff, \
+                                                                rank, size, row_groups, col_groups)
     torch.cuda.nvtx.range_pop()
     torch.cuda.profiler.cudart().cudaProfilerStop()
 

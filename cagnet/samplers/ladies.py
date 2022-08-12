@@ -20,18 +20,26 @@ def stop_time(start_timer, stop_timer):
 
 def stop_time_add(start_timer, stop_timer, timing_dict, range_name):
     if timing_dict is not None:
-        misc_range = range_name.startswith("spgemm-") and not range_name.startswith("spgemm-bcast-nnz") and \
-                                                            not range_name.startswith("spgemm-bcast-data") and \
-                                                            not range_name.startswith("spgemm-local-spgemm") and \
-                                                            not range_name.startswith("spgemm-reduce-nnz") and \
-                                                            not range_name.startswith("spgemm-reduce")
-        if misc_range:
+        # misc_range = range_name.startswith("spgemm-") and not range_name.startswith("spgemm-bcast-nnz") and \
+        #                                                     not range_name.startswith("spgemm-bcast-data") and \
+        #                                                     not range_name.startswith("spgemm-local-spgemm") and \
+        #                                                     not range_name.startswith("spgemm-reduce-nnz") and \
+        #                                                     not range_name.startswith("spgemm-reduce")
+        if False and misc_range:
             timing_dict["spgemm-misc"].append(stop_time(start_timer, stop_timer))
         else:
             timing_dict[range_name].append(stop_time(start_timer, stop_timer))
 
+saspgemm_data = 0
+spgemm_data = 0
+
 def dist_spgemm15D(mata, matb, replication, rank, size, row_groups, col_groups, \
                             name, timing_dict=None):
+
+    global spgemm_data
+
+    if name == "prob":
+        spgemm_data = 0
 
     start_timer = torch.cuda.Event(enable_timing=True)
     stop_timer = torch.cuda.Event(enable_timing=True)
@@ -67,6 +75,9 @@ def dist_spgemm15D(mata, matb, replication, rank, size, row_groups, col_groups, 
         dist.broadcast(matb_recv_indices, src=q, group=col_groups[rank_col])
         dist.broadcast(matb_recv_values, src=q, group=col_groups[rank_col])
         stop_time_add(start_timer, stop_timer, timing_dict, f"spgemm-bcast-data-{name}")
+
+        if name == "prob":
+            spgemm_data += matb_recv_indices.numel() + matb_recv_values.numel()
 
         start_time(start_timer)
         am_partid = rank_col * (size // replication ** 2) + i
@@ -150,10 +161,16 @@ def dist_spgemm15D(mata, matb, replication, rank, size, row_groups, col_groups, 
     return matc_nnz_indices, matc_nnz_values
 
 def dist_saspgemm15D(mata, matb, replication, rank, size, row_groups, col_groups, \
-                            name, timing_dict=None):
+                            name, nnz_row_masks, matb_recv_buff, timing_dict=None):
+
+    global saspgemm_data
+    saspgemm_data = 0
 
     start_timer = torch.cuda.Event(enable_timing=True)
     stop_timer = torch.cuda.Event(enable_timing=True)
+
+    start_inner_timer = torch.cuda.Event(enable_timing=True)
+    stop_inner_timer = torch.cuda.Event(enable_timing=True)
 
     start_time(start_timer)
     chunk_size = math.ceil(float(mata.size(1) / (size / replication)))
@@ -183,10 +200,13 @@ def dist_saspgemm15D(mata, matb, replication, rank, size, row_groups, col_groups
         stop_time_add(start_timer, stop_timer, timing_dict, f"spgemm-preproc-local-{name}")
 
         # Determine number of nonzero columns in chunk of mata
+        start_time(start_timer)
         nnz_cols = torch.unique(mata_chunk_indices[1,:])
         nnz_cols_count = torch.cuda.IntTensor(1).fill_(nnz_cols.size(0))
+        stop_time_add(start_timer, stop_timer, timing_dict, f"spgemm-unique-{name}")
 
         # Gather nnz column counts on rank q
+        start_time(start_timer)
         if rank == q:
             nnz_cols_count_list = []
             for j in range(size // replication):
@@ -194,14 +214,18 @@ def dist_saspgemm15D(mata, matb, replication, rank, size, row_groups, col_groups
             dist.gather(nnz_cols_count, nnz_cols_count_list, dst=q, group=col_groups[rank_col])
         else:
             dist.gather(nnz_cols_count, dst=q, group=col_groups[rank_col])
+        stop_time_add(start_timer, stop_timer, timing_dict, f"spgemm-gather-nnzcounts-{name}")
 
         # Rank q allocates recv buffer for nnz col ids
+        start_time(start_timer)
         if rank == q:
             nnz_col_ids = []
             for nnz_count in nnz_cols_count_list:
                 nnz_col_ids.append(torch.cuda.LongTensor(nnz_count.item()).fill_(0))
+        stop_time_add(start_timer, stop_timer, timing_dict, f"spgemm-alloc-nnzbuff-{name}")
         
         # isend/irecv nnz col ids to rank q
+        start_time(start_timer)
         if rank == q:
             recv_objs = []
             for j in range(size // replication):
@@ -214,37 +238,87 @@ def dist_saspgemm15D(mata, matb, replication, rank, size, row_groups, col_groups
                 obj.wait()
         else:
             dist.isend(nnz_cols, dst=q).wait()
+        stop_time_add(start_timer, stop_timer, timing_dict, f"spgemm-send-nnzcols-{name}")
 
-        # Send selected rows count selected rows from block row of matb from nnz_col_ids
+        # Send selected rows count 
+        torch.cuda.nvtx.range_push("nvtx-send-nnzrows")
+        start_time(start_timer)
         if rank == q:
-            send_objs = []
+            send_objs = [None] * (size // replication)
+            matb_send_list = [None] * (size // replication)
             for j in range(size // replication):
                 recv_rank = rank_col + j * replication
-                nnz_row_mask = torch.cuda.LongTensor(matb._indices().size(1)).fill_(0)
-                # nnz_row_mask[nnz_col_ids[j].long()] = True
+                start_time(start_inner_timer)
+                nnz_row_mask = nnz_row_masks[(j * matb._indices().size(1)):((j + 1) * matb._indices().size(1))]
+                stop_time_add(start_inner_timer, stop_inner_timer, timing_dict, f"spgemm-send-rowselectalc-{name}")
+                start_time(start_inner_timer)
                 rowselect_coo_gpu(nnz_col_ids[j].long(), matb._indices()[0,:], nnz_row_mask, \
                                         nnz_col_ids[j].size(0), matb._indices().size(1))
-                nnz_row_mask = nnz_row_mask.bool()
+                stop_time_add(start_inner_timer, stop_inner_timer, timing_dict, f"spgemm-send-rowselect-{name}")
 
-                matb_send_indices = matb._indices()[:, nnz_row_mask].float()
+                start_time(start_inner_timer)
+                matb_send_indices = torch.cuda.LongTensor(2, nnz_row_mask.nonzero().size(1))
+                stop_time_add(start_inner_timer, stop_inner_timer, timing_dict, f"spgemm-send-maskindalc-{name}")
+
+                start_time(start_inner_timer)
+                matb_send_indices = matb._indices()[:, nnz_row_mask]
+                stop_time_add(start_inner_timer, stop_inner_timer, timing_dict, f"spgemm-send-maskind-{name}")
+
+                start_time(start_inner_timer)
+                matb_send_indices = matb_send_indices.float()
+                stop_time_add(start_inner_timer, stop_inner_timer, timing_dict, f"spgemm-send-indfloat-{name}")
+
+                start_time(start_inner_timer)
                 matb_send_values = matb._values()[nnz_row_mask].unsqueeze(dim=0)
+                stop_time_add(start_inner_timer, stop_inner_timer, timing_dict, f"spgemm-send-maskval-{name}")
+
+                start_time(start_inner_timer)
                 matb_send = torch.cat((matb_send_indices, matb_send_values), dim=0)
+                stop_time_add(start_inner_timer, stop_inner_timer, timing_dict, f"spgemm-send-cat-{name}")
+
+                matb_send_list[j] = matb_send
 
                 if recv_rank != q:
                     selected_rows_count = torch.cuda.IntTensor(1).fill_(matb_send.size(1))
-                    send_objs.append(dist.isend(selected_rows_count, tag=0, dst=recv_rank))
-                    send_objs.append(dist.isend(matb_send, tag=1, dst=recv_rank))
+                    send_objs[j] = dist.isend(selected_rows_count, dst=recv_rank)
                 else:
                     matb_select_recv = matb_send.clone()
 
+            start_time(start_inner_timer)
             for obj in send_objs:
-                obj.wait()
+                if obj is not None:
+                    obj.wait()
+            stop_time_add(start_inner_timer, stop_inner_timer, timing_dict, f"spgemm-send-wait-{name}")
         else:
-            selected_rows_count_recv = torch.cuda.IntTensor(1).fill_(0)
-            dist.irecv(selected_rows_count_recv, tag=0, src=q).wait()
+            start_time(start_inner_timer)
+            selected_rows_count_recv = torch.cuda.IntTensor(1)
+            stop_time_add(start_inner_timer, stop_inner_timer, timing_dict, f"spgemm-recv-alloccount-{name}")
+            dist.irecv(selected_rows_count_recv, src=q).wait()
 
-            matb_select_recv = torch.cuda.DoubleTensor(3, selected_rows_count_recv.item()).fill_(0)
-            dist.irecv(matb_select_recv, tag=1, src=q).wait()
+            start_time(start_inner_timer)
+            matb_select_recv = matb_recv_buff[:(3 *selected_rows_count_recv.item())].view(3, -1)
+            stop_time_add(start_inner_timer, stop_inner_timer, timing_dict, f"spgemm-recv-alloc-{name}")
+
+        stop_time_add(start_timer, stop_timer, timing_dict, f"spgemm-send-rowcounts-{name}")
+        torch.cuda.nvtx.range_pop()
+
+        # Send selected rows from block row of matb from nnz_col_ids
+        start_time(start_timer)
+        if rank == q:
+            send_objs = [None] * (size // replication)
+            for j in range(size // replication):
+                recv_rank = rank_col + j * replication
+                if recv_rank != q:
+                    send_objs[j] = dist.isend(matb_send_list[j], dst=recv_rank)
+                    if name == "prob":
+                        saspgemm_data += matb_send.numel()
+            for obj in send_objs:
+                if obj is not None:
+                    obj.wait()
+        else:
+            dist.irecv(matb_select_recv, src=q).wait()
+        stop_time_add(start_timer, stop_timer, timing_dict, f"spgemm-send-nnzrows-{name}")
+        torch.cuda.nvtx.range_pop()
 
         matb_recv_indices = matb_select_recv[:2, :].long()
         matb_recv_values = matb_select_recv[2, :].double()
@@ -320,7 +394,10 @@ def dist_saspgemm15D(mata, matb, replication, rank, size, row_groups, col_groups
     return matc_nnz_indices, matc_nnz_values
 
 def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_total, n_layers, n_darts, \
-                        replication, rank, size, row_groups, col_groups):
+                        replication, sa_masks, sa_recv_buff, rank, size, row_groups, col_groups):
+
+    global spgemm_data
+    global saspgemm_data
 
     start_timer = torch.cuda.Event(enable_timing=True)
     stop_timer = torch.cuda.Event(enable_timing=True)
@@ -361,10 +438,11 @@ def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_tota
         # TODO: assume n_layers=1 for now
         start_time(start_timer)
         torch.cuda.nvtx.range_push("nvtx-probability-spgemm")
-        p_num_indices, p_num_values = dist_spgemm15D(batches, adj_matrix, replication, rank, size, \
-                                                        row_groups, col_groups, "prob", timing_dict)
-        # p_num_indices, p_num_values = dist_saspgemm15D(batches, adj_matrix, replication, rank, size, \
+        # p_num_indices, p_num_values = dist_spgemm15D(batches, adj_matrix, replication, rank, size, \
         #                                                 row_groups, col_groups, "prob", timing_dict)
+        p_num_indices, p_num_values = dist_saspgemm15D(batches, adj_matrix, replication, rank, size, \
+                                                        row_groups, col_groups, "prob", sa_masks, sa_recv_buff,
+                                                        timing_dict)
 
         torch.cuda.nvtx.range_pop()
         timing_dict["probability-spgemm"].append(stop_time(start_timer, stop_timer))
@@ -651,13 +729,13 @@ def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_tota
         torch.cuda.nvtx.range_pop()
 
     print(f"total_time: {stop_time(total_start_timer, total_stop_timer)}", flush=True)
-    for k, v in timing_dict.items():
+    for k, v in sorted(timing_dict.items()):
         if (k.startswith("spgemm") and k != "spgemm-misc") or k == "probability-spgemm" or k == "row-select-spgemm" or k == "col-select-spgemm":
             # print(f"{k} times: {v}")
-            v_tens = torch.cuda.FloatTensor([sum(v)])
+            v_tens = torch.cuda.FloatTensor(1).fill_(sum(v))
             v_tens_recv = []
             for i in range(size):
-                v_tens_recv.append(torch.cuda.FloatTensor(1))
+                v_tens_recv.append(torch.cuda.FloatTensor(1).fill_(0))
             dist.all_gather(v_tens_recv, v_tens)
 
             if rank == 0:
@@ -667,8 +745,11 @@ def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_tota
                 med_time = sorted(v_tens_recv)[size // 2].item()
 
                 print(f"{k} min: {min_time} max: {max_time} avg: {avg_time} med: {med_time}")
+        dist.barrier()
     for k, v in timing_dict.items():
         print(f"{k} total_time: {sum(v)} avg_time {sum(v) / len(v)} len: {len(v)}")
     print(f"iter_count: {iter_count}")
     print(f"selection_iter_count: {selection_iter_count}")
+    print(f"spgemm_data: {spgemm_data}")
+    print(f"saspgemm_data: {saspgemm_data}")
     return batches_select, next_frontier_select, adj_matrices
