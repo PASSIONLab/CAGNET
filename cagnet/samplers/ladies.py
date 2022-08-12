@@ -142,7 +142,7 @@ def dist_spgemm15D(mata, matb, replication, rank, size, row_groups, col_groups, 
     stop_time_add(start_timer, stop_timer, timing_dict, f"spgemm-reduce-coalesce-{name}")
 
     start_time(start_timer)
-    nnz_mask = matc._values() != -1.0
+    nnz_mask = matc._values() > 0
     matc_nnz_indices = matc._indices()[:, nnz_mask]
     matc_nnz_values = matc._values()[nnz_mask]
     stop_time_add(start_timer, stop_timer, timing_dict, f"spgemm-unpad-{name}")
@@ -311,7 +311,8 @@ def dist_saspgemm15D(mata, matb, replication, rank, size, row_groups, col_groups
     stop_time_add(start_timer, stop_timer, timing_dict, f"spgemm-reduce-coalesce-{name}")
 
     start_time(start_timer)
-    nnz_mask = matc._values() != -1.0
+    # nnz_mask = matc._values() != -1.0
+    nnz_mask = matc._values() > 0
     matc_nnz_indices = matc._indices()[:, nnz_mask]
     matc_nnz_values = matc._values()[nnz_mask]
     stop_time_add(start_timer, stop_timer, timing_dict, f"spgemm-unpad-{name}")
