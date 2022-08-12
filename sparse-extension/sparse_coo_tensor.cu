@@ -74,13 +74,30 @@ __device__ long binary_searchl(long *arr, long val, long imin, long imax) {
 
         if (arr[imid] <= val) {
             imin = imid + 1;
-        } else {
+        } else if (arr[imid] > val) {
             ans = imid;
             imax = imid - 1;
         }
     }
 
     return ans;
+}
+
+// Binary search that returns exact location, not insertion point (for COO row selection)
+__device__ long binary_search_rowselect(long *arr, long val, long imin, long imax) {
+    while (imax >= imin) {
+        long imid = (imin + imax) / 2;
+
+        if (arr[imid] < val) {
+            imin = imid + 1;
+        } else if (arr[imid] > val) {
+            imax = imid - 1;
+        } else {
+            return imid;
+        }
+    }
+
+    return imin + 1;
 }
 
 at::Tensor expand_values_if_needed(const at::Tensor& values) {
@@ -658,6 +675,38 @@ void scatteri_add_gpu(const at::Tensor& src, const at::Tensor& indices, const at
     CHECK_ERROR("scatter add ints error")
 }
 
+__global__ void RowSelectCoo(long *nnz_cols, long *row_ids, long *mask, int nnz_col_count, int row_count) { 
+    int     id = blockIdx.x * blockDim.x + threadIdx.x;
+    int stride = blockDim.x * gridDim.x;
+
+    for (int i = id; i < row_count; i += stride) {
+        long idx = binary_search_rowselect(nnz_cols, row_ids[i], 0L, nnz_col_count);
+        if (nnz_cols[idx] == row_ids[i]) {
+            mask[i] = 1L;
+        }
+    } 
+}
+
+void rowselect_coo_gpu(const at::Tensor& nnz_cols, const at::Tensor& rows, const at::Tensor& mask, 
+                            int nnz_col_count, int row_count) {
+
+
+    int BLOCK_SIZE = 256;
+    int BLOCK_COUNT = std::ceil(nnz_col_count / ((float) BLOCK_SIZE));
+    BLOCK_COUNT = std::min(BLOCK_COUNT, 65535);
+
+    if (nnz_col_count == 0) {
+        return;
+    }
+
+    RowSelectCoo<<<BLOCK_COUNT, BLOCK_SIZE>>>(nnz_cols.data<long>(), 
+                                                rows.data<long>(), 
+                                                mask.data<long>(), 
+                                                nnz_col_count,
+                                                row_count);
+    CHECK_ERROR("rowselect coo error")
+}
+
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
     m.def("sparse_coo_tensor_gpu", &sparse_coo_tensor_gpu, "Sparse Tensor GPU-only constructor");
     m.def("spmm_gpu", &spmm_gpu, "SpMM wrapper for cusparse");
@@ -673,4 +722,5 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
     m.def("shift_colselect_gpu", &shift_colselect_gpu, "Shift col selection matrix row values");
     m.def("scatterd_add_gpu", &scatterd_add_gpu, "Implementation of scatter_add_ for doubles");
     m.def("scatteri_add_gpu", &scatteri_add_gpu, "Implementation of scatter_add_ for ints");
+    m.def("rowselect_coo_gpu", &rowselect_coo_gpu, "Row selection for sparsity-aware spgemm");
 }
