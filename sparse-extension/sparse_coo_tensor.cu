@@ -692,7 +692,7 @@ void rowselect_coo_gpu(const at::Tensor& nnz_cols, const at::Tensor& rows, const
 
 
     int BLOCK_SIZE = 256;
-    int BLOCK_COUNT = std::ceil(nnz_col_count / ((float) BLOCK_SIZE));
+    int BLOCK_COUNT = std::ceil(row_count / ((float) BLOCK_SIZE));
     BLOCK_COUNT = std::min(BLOCK_COUNT, 65535);
 
     if (nnz_col_count == 0) {

@@ -234,8 +234,6 @@ def dist_saspgemm15D(mata, matb, replication, rank, size, row_groups, col_groups
                     recv_objs.append(dist.irecv(nnz_col_ids[j], src=recv_rank))
                 else:
                     nnz_col_ids[j] = nnz_cols
-            for obj in recv_objs:
-                obj.wait()
         else:
             dist.isend(nnz_cols, dst=q).wait()
         stop_time_add(start_timer, stop_timer, timing_dict, f"spgemm-send-nnzcols-{name}")
@@ -244,80 +242,68 @@ def dist_saspgemm15D(mata, matb, replication, rank, size, row_groups, col_groups
         torch.cuda.nvtx.range_push("nvtx-send-nnzrows")
         start_time(start_timer)
         if rank == q:
-            send_objs = [None] * (size // replication)
-            matb_send_list = [None] * (size // replication)
             for j in range(size // replication):
                 recv_rank = rank_col + j * replication
                 start_time(start_inner_timer)
+
+                # start_time(start_inner_timer)
                 nnz_row_mask = nnz_row_masks[(j * matb._indices().size(1)):((j + 1) * matb._indices().size(1))]
-                stop_time_add(start_inner_timer, stop_inner_timer, timing_dict, f"spgemm-send-rowselectalc-{name}")
-                start_time(start_inner_timer)
+                # stop_time_add(start_inner_timer, stop_inner_timer, timing_dict, f"spgemm-send-rowselectalc-{name}")
+
+                # start_time(start_inner_timer)
                 rowselect_coo_gpu(nnz_col_ids[j].long(), matb._indices()[0,:], nnz_row_mask, \
                                         nnz_col_ids[j].size(0), matb._indices().size(1))
-                stop_time_add(start_inner_timer, stop_inner_timer, timing_dict, f"spgemm-send-rowselect-{name}")
+                # stop_time_add(start_inner_timer, stop_inner_timer, timing_dict, f"spgemm-send-rowselect-{name}")
 
-                start_time(start_inner_timer)
+                # start_time(start_inner_timer)
                 matb_send_indices = torch.cuda.LongTensor(2, nnz_row_mask.nonzero().size(1))
-                stop_time_add(start_inner_timer, stop_inner_timer, timing_dict, f"spgemm-send-maskindalc-{name}")
+                # stop_time_add(start_inner_timer, stop_inner_timer, timing_dict, f"spgemm-send-maskindalc-{name}")
 
-                start_time(start_inner_timer)
+                # start_time(start_inner_timer)
                 matb_send_indices = matb._indices()[:, nnz_row_mask]
-                stop_time_add(start_inner_timer, stop_inner_timer, timing_dict, f"spgemm-send-maskind-{name}")
+                # stop_time_add(start_inner_timer, stop_inner_timer, timing_dict, f"spgemm-send-maskind-{name}")
 
-                start_time(start_inner_timer)
+                # start_time(start_inner_timer)
                 matb_send_indices = matb_send_indices.float()
-                stop_time_add(start_inner_timer, stop_inner_timer, timing_dict, f"spgemm-send-indfloat-{name}")
+                # stop_time_add(start_inner_timer, stop_inner_timer, timing_dict, f"spgemm-send-indfloat-{name}")
 
-                start_time(start_inner_timer)
+                # start_time(start_inner_timer)
                 matb_send_values = matb._values()[nnz_row_mask].unsqueeze(dim=0)
-                stop_time_add(start_inner_timer, stop_inner_timer, timing_dict, f"spgemm-send-maskval-{name}")
+                # stop_time_add(start_inner_timer, stop_inner_timer, timing_dict, f"spgemm-send-maskval-{name}")
+
+                # start_time(start_inner_timer)
+                matb_send = torch.cat((matb_send_indices, matb_send_values), dim=0)
+                # stop_time_add(start_inner_timer, stop_inner_timer, timing_dict, f"spgemm-send-cat-{name}")
+
+                stop_time_add(start_inner_timer, stop_inner_timer, timing_dict, f"spgemm-send-ovhd-{name}")
 
                 start_time(start_inner_timer)
-                matb_send = torch.cat((matb_send_indices, matb_send_values), dim=0)
-                stop_time_add(start_inner_timer, stop_inner_timer, timing_dict, f"spgemm-send-cat-{name}")
-
-                matb_send_list[j] = matb_send
-
                 if recv_rank != q:
                     selected_rows_count = torch.cuda.IntTensor(1).fill_(matb_send.size(1))
-                    send_objs[j] = dist.isend(selected_rows_count, dst=recv_rank)
+                    dist.isend(selected_rows_count, tag=0, dst=recv_rank)
+                    dist.isend(matb_send, tag=1, dst=recv_rank)
                 else:
                     matb_select_recv = matb_send.clone()
+                stop_time_add(start_inner_timer, stop_inner_timer, timing_dict, f"spgemm-send-isend-{name}")
 
-            start_time(start_inner_timer)
-            for obj in send_objs:
-                if obj is not None:
-                    obj.wait()
-            stop_time_add(start_inner_timer, stop_inner_timer, timing_dict, f"spgemm-send-wait-{name}")
         else:
             start_time(start_inner_timer)
             selected_rows_count_recv = torch.cuda.IntTensor(1)
             stop_time_add(start_inner_timer, stop_inner_timer, timing_dict, f"spgemm-recv-alloccount-{name}")
-            dist.irecv(selected_rows_count_recv, src=q).wait()
+
+            start_time(start_inner_timer)
+            dist.irecv(selected_rows_count_recv, tag=0, src=q).wait()
+            stop_time_add(start_inner_timer, stop_inner_timer, timing_dict, f"spgemm-recv-rowcounts-{name}")
 
             start_time(start_inner_timer)
             matb_select_recv = matb_recv_buff[:(3 *selected_rows_count_recv.item())].view(3, -1)
             stop_time_add(start_inner_timer, stop_inner_timer, timing_dict, f"spgemm-recv-alloc-{name}")
 
-        stop_time_add(start_timer, stop_timer, timing_dict, f"spgemm-send-rowcounts-{name}")
-        torch.cuda.nvtx.range_pop()
+            start_time(start_inner_timer)
+            dist.irecv(matb_select_recv, tag=1, src=q).wait()
+            stop_time_add(start_inner_timer, stop_inner_timer, timing_dict, f"spgemm-recv-rowdata-{name}")
 
-        # Send selected rows from block row of matb from nnz_col_ids
-        start_time(start_timer)
-        if rank == q:
-            send_objs = [None] * (size // replication)
-            for j in range(size // replication):
-                recv_rank = rank_col + j * replication
-                if recv_rank != q:
-                    send_objs[j] = dist.isend(matb_send_list[j], dst=recv_rank)
-                    if name == "prob":
-                        saspgemm_data += matb_send.numel()
-            for obj in send_objs:
-                if obj is not None:
-                    obj.wait()
-        else:
-            dist.irecv(matb_select_recv, src=q).wait()
-        stop_time_add(start_timer, stop_timer, timing_dict, f"spgemm-send-nnzrows-{name}")
+        stop_time_add(start_timer, stop_timer, timing_dict, f"spgemm-send-rowcounts-{name}")
         torch.cuda.nvtx.range_pop()
 
         matb_recv_indices = matb_select_recv[:2, :].long()
