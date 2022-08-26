@@ -242,6 +242,20 @@ def dist_saspgemm15D(mata, matb, replication, rank, size, row_groups, col_groups
         torch.cuda.nvtx.range_push("nvtx-send-nnzrows")
         start_time(start_timer)
         if rank == q:
+            
+            # Add timings to timing_dict for src process for timing printouts
+            if f"spgemm-recv-alloccount-{name}" not in timing_dict:
+                timing_dict[f"spgemm-recv-alloccount-{name}"] = []
+
+            if f"spgemm-recv-rowcounts-{name}" not in timing_dict:
+                timing_dict[f"spgemm-recv-rowcounts-{name}"] = []
+
+            if f"spgemm-recv-alloc-{name}" not in timing_dict:
+                timing_dict[f"spgemm-recv-alloc-{name}"] = []
+
+            if f"spgemm-recv-rowdata-{name}" not in timing_dict:
+                timing_dict[f"spgemm-recv-rowdata-{name}"] = []
+
             for j in range(size // replication):
                 recv_rank = rank_col + j * replication
                 start_time(start_inner_timer)
@@ -287,6 +301,12 @@ def dist_saspgemm15D(mata, matb, replication, rank, size, row_groups, col_groups
                 stop_time_add(start_inner_timer, stop_inner_timer, timing_dict, f"spgemm-send-isend-{name}")
 
         else:
+            if f"spgemm-send-ovhd-{name}" not in timing_dict:
+                timing_dict[f"spgemm-send-ovhd-{name}"] = []
+
+            if f"spgemm-send-isend-{name}" not in timing_dict:
+                timing_dict[f"spgemm-send-isend-{name}"] = []
+
             start_time(start_inner_timer)
             selected_rows_count_recv = torch.cuda.IntTensor(1)
             stop_time_add(start_inner_timer, stop_inner_timer, timing_dict, f"spgemm-recv-alloccount-{name}")
@@ -424,8 +444,6 @@ def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_tota
         # TODO: assume n_layers=1 for now
         start_time(start_timer)
         torch.cuda.nvtx.range_push("nvtx-probability-spgemm")
-        # p_num_indices, p_num_values = dist_spgemm15D(batches, adj_matrix, replication, rank, size, \
-        #                                                 row_groups, col_groups, "prob", timing_dict)
         p_num_indices, p_num_values = dist_saspgemm15D(batches, adj_matrix, replication, rank, size, \
                                                         row_groups, col_groups, "prob", sa_masks, sa_recv_buff,
                                                         timing_dict)
@@ -671,8 +689,11 @@ def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_tota
         torch.cuda.nvtx.range_push("nvtx-row-select-spgemm")
         row_select_mtx = torch.sparse_coo_tensor(row_select_mtx_indices, row_select_mtx_values, 
                                                         size=(nnz * mb_count, node_count_total))
-        sampled_indices, sampled_values = dist_spgemm15D(row_select_mtx, adj_matrix, replication, rank, size, \
-                                                            row_groups, col_groups, "rowsel", timing_dict)
+        sa_masks.fill_(0)
+        sa_recv_buff.fill_(0)
+        sampled_indices, sampled_values = dist_saspgemm15D(row_select_mtx, adj_matrix, replication, rank, size, \
+                                                            row_groups, col_groups, "rowsel", sa_masks, 
+                                                            sa_recv_buff, timing_dict)
         sample_mtx = torch.sparse_coo_tensor(sampled_indices, sampled_values, 
                                                 size=(nnz * mb_count, node_count_total))
 
@@ -733,7 +754,11 @@ def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_tota
                 print(f"{k} min: {min_time} max: {max_time} avg: {avg_time} med: {med_time}")
         dist.barrier()
     for k, v in timing_dict.items():
-        print(f"{k} total_time: {sum(v)} avg_time {sum(v) / len(v)} len: {len(v)}")
+        if len(v) > 0:
+            avg_time = sum(v) / len(v)
+        else:
+            avg_time = -1.0
+        print(f"{k} total_time: {sum(v)} avg_time {avg_time} len: {len(v)}")
     print(f"iter_count: {iter_count}")
     print(f"selection_iter_count: {selection_iter_count}")
     print(f"spgemm_data: {spgemm_data}")
