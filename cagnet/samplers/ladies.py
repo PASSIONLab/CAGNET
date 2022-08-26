@@ -510,7 +510,7 @@ def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_tota
             throw_darts1d_gpu(dart_values, ps_p_values, dart_hits_count, \
                                     n_darts * mb_count, p._nnz())
             torch.cuda.nvtx.range_pop()
-            timing_dict["filter_darts"].append(stop_time(start_timer, stop_timer))
+            timing_dict["filter-darts"].append(stop_time(start_timer, stop_timer))
 
             start_time(start_timer)
             torch.cuda.nvtx.range_push("nvtx-add-to-frontier")
@@ -566,11 +566,11 @@ def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_tota
 
                 start_time(start_timer)
                 torch.cuda.nvtx.range_push("nvtx-select-invsum")
-                # dart_hits_inv_sum = torch.sparse.sum(dart_hits_inv_mtx, dim=1)._values()
                 dart_hits_inv_sum = torch.cuda.DoubleTensor(mb_count).fill_(0)
                 # dart_hits_inv_sum.scatter_add_(0, next_frontier._indices()[0, :], dart_hits_inv)
-                scatterd_add_gpu(dart_hits_inv_sum, next_frontier._indices()[0, :], dart_hits_inv, \
-                                    dart_hits_inv.size(0))
+                dart_hits_inv_nnzidxs = dart_hits_inv.nonzero().squeeze()
+                indices_nnz_idxs = next_frontier._indices()[0,dart_hits_inv_nnzidxs]
+                dart_hits_inv_sum.scatter_add_(0, indices_nnz_idxs, dart_hits_inv[dart_hits_inv_nnzidxs])
                 timing_dict["select-invsum"].append(stop_time(start_timer, stop_timer))
 
                 start_time(start_timer)
@@ -605,11 +605,12 @@ def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_tota
 
                 start_time(start_timer)
                 torch.cuda.nvtx.range_push("nvtx-select-samplecount")
-                # sampled_count = torch.sparse.sum(next_frontier_tmp, dim=1)._values()
                 sampled_count = torch.cuda.IntTensor(mb_count).fill_(0)
                 # sampled_count.scatter_add_(0, next_frontier_tmp._indices()[0,:], next_frontier_tmp._values())
-                scatteri_add_gpu(sampled_count, next_frontier_tmp._indices()[0,:], next_frontier_tmp._values(), \
-                                    next_frontier_tmp._nnz())
+                next_frontier_nnzvals = next_frontier_tmp._values().nonzero().squeeze()
+                next_frontier_nnzidxs = next_frontier_tmp._indices()[0,next_frontier_nnzvals]
+                sampled_count.scatter_add_(0, next_frontier_nnzidxs, \
+                                                next_frontier_tmp._values()[next_frontier_nnzvals])
                 timing_dict["select-samplecount"].append(stop_time(start_timer, stop_timer))
 
                 start_time(start_timer)
