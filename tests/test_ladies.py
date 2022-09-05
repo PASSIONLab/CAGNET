@@ -82,7 +82,9 @@ def main(args):
     for i in range(rank_n_bulkmb):
         print(f"Testing minibatch {i}")
         current_frontier = current_frontier_all[i] # current_frontier for minibatch i
-        next_frontier = next_frontier_all[i] # next_frontier for minibatch i
+        # next_frontier = next_frontier_all[i] # next_frontier for minibatch i
+        # current_frontier = current_frontier_all[i].unique(sorted=True) # current_frontier for minibatch i
+        next_frontier = next_frontier_all[i].unique(sorted=True) # next_frontier for minibatch i
         adj_matrices = adj_matrices_all[i] # adj_matrices for minibatch i
 
         agg_neighbors = []

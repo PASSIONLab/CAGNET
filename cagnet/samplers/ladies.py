@@ -30,16 +30,21 @@ def stop_time_add(start_timer, stop_timer, timing_dict, range_name):
         else:
             timing_dict[range_name].append(stop_time(start_timer, stop_timer))
 
-saspgemm_data = 0
-spgemm_data = 0
+saspgemm_prob_data = 0
+spgemm_prob_data = 0
+saspgemm_rowsel_data = 0
+spgemm_rowsel_data = 0
 
 def dist_spgemm15D(mata, matb, replication, rank, size, row_groups, col_groups, \
                             name, timing_dict=None):
 
-    global spgemm_data
+    global spgemm_prob_data
+    global spgemm_rowsel_data
 
     if name == "prob":
-        spgemm_data = 0
+        spgemm_prob_data = 0
+    if name == "rowsel":
+        spgemm_rowsel_data = 0
 
     start_timer = torch.cuda.Event(enable_timing=True)
     stop_timer = torch.cuda.Event(enable_timing=True)
@@ -77,7 +82,9 @@ def dist_spgemm15D(mata, matb, replication, rank, size, row_groups, col_groups, 
         stop_time_add(start_timer, stop_timer, timing_dict, f"spgemm-bcast-data-{name}")
 
         if name == "prob":
-            spgemm_data += matb_recv_indices.numel() + matb_recv_values.numel()
+            spgemm_prob_data += matb_recv_indices.numel() + matb_recv_values.numel()
+        if name == "rowsel":
+            spgemm_rowsel_data += matb_recv_indices.numel() + matb_recv_values.numel()
 
         start_time(start_timer)
         am_partid = rank_col * (size // replication ** 2) + i
@@ -163,8 +170,13 @@ def dist_spgemm15D(mata, matb, replication, rank, size, row_groups, col_groups, 
 def dist_saspgemm15D(mata, matb, replication, rank, size, row_groups, col_groups, \
                             name, nnz_row_masks, matb_recv_buff, timing_dict=None):
 
-    global saspgemm_data
-    saspgemm_data = 0
+    global saspgemm_prob_data
+    global saspgemm_rowsel_data
+
+    if name == "prob":
+        saspgemm_prob_data = 0
+    if name == "rowsel":
+        saspgemm_rowsel_data = 0
 
     start_timer = torch.cuda.Event(enable_timing=True)
     stop_timer = torch.cuda.Event(enable_timing=True)
@@ -295,6 +307,11 @@ def dist_saspgemm15D(mata, matb, replication, rank, size, row_groups, col_groups
                 if recv_rank != q:
                     selected_rows_count = torch.cuda.IntTensor(1).fill_(matb_send.size(1))
                     dist.isend(selected_rows_count, tag=0, dst=recv_rank)
+
+                    if name == "prob":
+                        saspgemm_prob_data += matb_send.numel()
+                    if name == "rowsel":
+                        saspgemm_rowsel_data += matb_send.numel()
                     dist.isend(matb_send, tag=1, dst=recv_rank)
                 else:
                     matb_select_recv = matb_send.clone()
@@ -525,11 +542,13 @@ def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_tota
             torch.cuda.nvtx.range_push("nvtx-count-samples")
             # sampled_count = torch.sparse.sum(next_frontier_tmp, dim=1)._values()
             sampled_count = sampled_count.fill_(0)
+            next_frontier_nnzmask = next_frontier_values.nonzero().squeeze()
+            next_frontier_nnzvals = next_frontier_values[next_frontier_nnzmask]
+            next_frontier_nnzidxs = next_frontier_tmp._indices()[0, next_frontier_nnzmask]
             # sampled_count.scatter_add_(0, next_frontier_tmp._indices()[0, :], next_frontier_values)
-            scatteri_add_gpu(sampled_count, next_frontier_tmp._indices()[0, :], next_frontier_values, \
-                                next_frontier_values.size(0))
+            sampled_count.scatter_add_(0, next_frontier_nnzidxs, next_frontier_nnzvals)
             torch.cuda.nvtx.range_pop()
-            timing_dict["count_samples"].append(stop_time(start_timer, stop_timer))
+            timing_dict["count-samples"].append(stop_time(start_timer, stop_timer))
 
             start_time(start_timer)
             torch.cuda.nvtx.range_push("nvtx-select-preproc")
@@ -681,7 +700,15 @@ def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_tota
         col_select_mtx_rows = repeated_next_frontier.view(-1)
         col_select_mtx_cols = torch.arange(next_frontier_select.size(1)).cuda().repeat(mb_count,1).view(-1)
         col_select_mtx_indices = torch.stack((col_select_mtx_rows, col_select_mtx_cols))
-        col_select_mtx_values = torch.cuda.DoubleTensor(col_select_mtx_rows.size(0)).fill_(1.0)
+
+        # col_select_mtx_values = torch.cuda.DoubleTensor(col_select_mtx_rows.size(0)).fill_(1.0)
+
+        col_select_mtx_values = torch.cuda.DoubleTensor(col_select_mtx_rows.size(0)).fill_(0.0)
+        col_unique_rows, col_inverse = torch.unique(col_select_mtx_rows, sorted=True, return_inverse=True)
+        col_rows_perm = torch.arange(col_inverse.size(0), dtype=col_inverse.dtype, device=col_inverse.device)
+        col_row_mask = col_inverse.new_empty(col_unique_rows.size(0)).scatter_(0, col_inverse, col_rows_perm)
+        col_select_mtx_values[col_row_mask] = 1.0
+
         torch.cuda.nvtx.range_pop()
         timing_dict["select-mtxs"].append(stop_time(start_timer, stop_timer))
 
@@ -762,6 +789,8 @@ def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_tota
         print(f"{k} total_time: {sum(v)} avg_time {avg_time} len: {len(v)}")
     print(f"iter_count: {iter_count}")
     print(f"selection_iter_count: {selection_iter_count}")
-    print(f"spgemm_data: {spgemm_data}")
-    print(f"saspgemm_data: {saspgemm_data}")
+    print(f"spgemm_prob_data: {spgemm_prob_data}")
+    print(f"spgemm_rowsel_data: {spgemm_rowsel_data}")
+    print(f"saspgemm_prob_data: {saspgemm_prob_data}")
+    print(f"saspgemm_rowsel_data: {saspgemm_rowsel_data}")
     return batches_select, next_frontier_select, adj_matrices
