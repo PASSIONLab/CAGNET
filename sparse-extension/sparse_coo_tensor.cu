@@ -442,6 +442,10 @@ void compute_darts_select_gpu(const at::Tensor& dart_select,
     int BLOCK_COUNT = std::ceil(total_overflow / ((float) BLOCK_SIZE));
     BLOCK_COUNT = std::min(BLOCK_COUNT, 65535);
 
+    if (total_overflow == 0) {
+        return;
+    }
+
     ComputeDartsSelect<<<BLOCK_COUNT, BLOCK_SIZE>>>(dart_select.data<double>(), 
                                                         dart_hits_inv_sum.data<double>(), 
                                                         ps_dart_hits_inv_sum.data<double>(), 
@@ -543,6 +547,10 @@ void throw_darts_select_gpu(const at::Tensor& dart_select,
     int BLOCK_SIZE = 256;
     int BLOCK_COUNT = std::ceil(total_overflow / ((float) BLOCK_SIZE));
     BLOCK_COUNT = std::min(BLOCK_COUNT, 65535);
+
+    if (total_overflow == 0) {
+        return;
+    }
 
     ThrowDartsSelect<<<BLOCK_COUNT, BLOCK_SIZE>>>(dart_select.data<double>(), 
                                                     ps_dart_hits_inv.data<double>(), 

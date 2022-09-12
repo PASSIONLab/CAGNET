@@ -294,6 +294,7 @@ def main(args, batches=None):
     os.environ["MASTER_ADDR"] = args.hostname 
     os.environ["MASTER_PORT"] = "1234"
     
+    print(f"device_count: {torch.cuda.device_count()}")
     print(f"hostname: {socket.gethostname()}", flush=True)
     if not dist.is_initialized():
         dist.init_process_group(backend=args.dist_backend)
@@ -346,7 +347,7 @@ def main(args, batches=None):
         print("beginning constructing batches")
         batches = torch.cuda.IntTensor(args.n_bulkmb, args.batch_size) # initially the minibatch, note row-major
         torch.cuda.nvtx.range_push("nvtx-gen-minibatch-vtxs")
-        # torch.manual_seed(0)
+        torch.manual_seed(0)
         vertex_perm = torch.randperm(train_nid.size(0))
         # Generate minibatch vertices
         for i in range(args.n_bulkmb):
@@ -364,7 +365,7 @@ def main(args, batches=None):
     batches_indices = torch.stack((batches_indices_rows, batches_indices_cols))
     batches_values = torch.cuda.DoubleTensor(batches_loc.size(1) * batches_loc.size(0)).fill_(1.0)
     batches_loc = torch.sparse_coo_tensor(batches_indices, batches_values, (batches_loc.size(0), g_loc.size(1)))
-    # g_loc = torch.pow(g_loc, 2)
+    g_loc = torch.pow(g_loc, 2)
     torch.cuda.nvtx.range_pop()
     print(f"g_loc: {g_loc}")
 
@@ -379,23 +380,24 @@ def main(args, batches=None):
     print(f"rank: {rank} g_loc: {g_loc}")
     print(f"rank: {rank} batches_loc: {batches_loc}")
     # do it once before timing
-    # torch.manual_seed(0)
+    torch.manual_seed(0)
     nnz_row_masks = torch.cuda.BoolTensor((size // args.replication) * g_loc._indices().size(1)) # for sa-spgemm
     nnz_row_masks.fill_(0)
     
     nnz_recv_upperbound = adj_matrix.size(1) // (size // args.replication)
     sa_recv_buff = torch.cuda.DoubleTensor(3 * nnz_recv_upperbound).fill_(0)
-    # current_frontier, next_frontier, adj_matrices = \
-    #                                 ladies_sampler(g_loc, batches_loc, args.batch_size, \
-    #                                                             args.samp_num, args.n_bulkmb, \
-    #                                                             args.n_layers, args.n_darts, \
-    #                                                             args.replication, nnz_row_masks, sa_recv_buff, \
-    #                                                             rank, size, row_groups, col_groups)
+    torch.manual_seed(rank_col)
+    current_frontier, next_frontier, adj_matrices = \
+                                    ladies_sampler(g_loc, batches_loc, args.batch_size, \
+                                                                args.samp_num, args.n_bulkmb, \
+                                                                args.n_layers, args.n_darts, \
+                                                                args.replication, nnz_row_masks, sa_recv_buff, \
+                                                                rank, size, row_groups, col_groups)
 
     print()
     torch.cuda.profiler.cudart().cudaProfilerStart()
     torch.cuda.nvtx.range_push("nvtx-sampler")
-    # torch.manual_seed(0)
+    torch.manual_seed(rank_col)
     current_frontier, next_frontier, adj_matrices_bulk = \
                                     ladies_sampler(g_loc, batches_loc, args.batch_size, \
                                                                 args.samp_num, args.n_bulkmb, \
