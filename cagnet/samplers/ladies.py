@@ -247,14 +247,13 @@ def dist_saspgemm15D(mata, matb, replication, rank, size, row_groups, col_groups
                 else:
                     nnz_col_ids[j] = nnz_cols
         else:
-            dist.isend(nnz_cols, dst=q).wait()
+            dist.isend(nnz_cols, dst=q)
         stop_time_add(start_timer, stop_timer, timing_dict, f"spgemm-send-nnzcols-{name}")
 
         # Send selected rows count 
         torch.cuda.nvtx.range_push("nvtx-send-nnzrows")
         start_time(start_timer)
         if rank == q:
-            
             # Add timings to timing_dict for src process for timing printouts
             if f"spgemm-recv-alloccount-{name}" not in timing_dict:
                 timing_dict[f"spgemm-recv-alloccount-{name}"] = []
@@ -316,7 +315,6 @@ def dist_saspgemm15D(mata, matb, replication, rank, size, row_groups, col_groups
                 else:
                     matb_select_recv = matb_send.clone()
                 stop_time_add(start_inner_timer, stop_inner_timer, timing_dict, f"spgemm-send-isend-{name}")
-
         else:
             if f"spgemm-send-ovhd-{name}" not in timing_dict:
                 timing_dict[f"spgemm-send-ovhd-{name}"] = []
@@ -479,13 +477,14 @@ def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_tota
         start_time(start_timer)
         torch.cuda.nvtx.range_push("nvtx-compute-p")
         p_den = torch.cuda.DoubleTensor(mb_count).fill_(0)
-        # p_den = p_den.scatter_add_(0, p_num_indices[0, :], p_num_values)
+        p_num_values = torch.square(p_num_values)
         scatterd_add_gpu(p_den, p_num_indices[0, :], p_num_values, p_num_values.size(0))
+        # p_den = p_den.scatter_add_(0, p_num_indices[0, :], p_num_values)
         p = torch.sparse_coo_tensor(indices=p_num_indices, 
                                         values=p_num_values, 
                                         size=(mb_count, node_count_total))
-        print(f"p.nnz: {p._nnz()}")
         normalize_gpu(p._values(), p_den, p._indices()[0, :], p._nnz())
+        print(f"p.nnz: {p._nnz()}")
         timing_dict["compute-p"].append(stop_time(start_timer, stop_timer))
 
         start_time(start_timer)
@@ -505,6 +504,7 @@ def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_tota
         # underfull_minibatches = (sampled_count < frontier_size).any()
         underfull_minibatches = True
 
+        p_rowsum = torch.cuda.DoubleTensor(mb_count).fill_(0)
         while underfull_minibatches:
             iter_count += 1
             start_time(sample_start_timer)
@@ -514,6 +514,9 @@ def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_tota
             torch.cuda.nvtx.range_push("nvtx-prob-rowsum")
             ps_p_values = torch.cumsum(p._values(), dim=0).roll(1)
             ps_p_values[0] = 0
+            p_rowsum.scatter_add_(0, p._indices()[0, :], p._values())
+            ps_p_rowsum = torch.cumsum(p_rowsum, dim=0).roll(1)
+            ps_p_rowsum[0] = 0
             torch.cuda.nvtx.range_pop()
             timing_dict["prob-rowsum"].append(stop_time(start_timer, stop_timer))
 
@@ -527,7 +530,9 @@ def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_tota
             start_time(start_timer)
             torch.cuda.nvtx.range_push("nvtx-dart-throw")
             # compute_darts1d_gpu(dart_values, n_darts, mb_count)
-            compute_darts1d_gpu(dart_values, n_darts_col, mb_count)
+            # compute_darts1d_gpu(dart_values, n_darts_col, mb_count)
+            compute_darts1d_gpu(dart_values, p_rowsum, ps_p_rowsum, n_darts, mb_count)
+
             torch.cuda.nvtx.range_pop()
             timing_dict["dart-throw"].append(stop_time(start_timer, stop_timer))
 

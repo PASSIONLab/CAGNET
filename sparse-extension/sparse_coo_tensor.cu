@@ -393,7 +393,8 @@ void compute_darts_gpu(const at::Tensor& dartx_values,
     CHECK_ERROR("dart computation error")
 }
 
-__global__ void ComputeDarts1D(double *dart_values, int n_darts, int mb_count) {
+__global__ void ComputeDarts1D(double *dart_values, double *p_rowsum, double *ps_p_rowsum, 
+                                    int n_darts, int mb_count) {
 
     int     id = blockIdx.x * blockDim.x + threadIdx.x;
     int stride = blockDim.x * gridDim.x;
@@ -401,17 +402,22 @@ __global__ void ComputeDarts1D(double *dart_values, int n_darts, int mb_count) {
     int dart_count = n_darts * mb_count;
     for (int i = id; i < dart_count; i += stride) {
         int row = i / n_darts;
-        dart_values[i] += (double)row;
+        // dart_values[i] += (double)row;
+        dart_values[i] *= p_rowsum[row];
+        dart_values[i] += ps_p_rowsum[row];
     }
 }
 
-void compute_darts1d_gpu(const at::Tensor& dart_values, int n_darts, int mb_count) {
+void compute_darts1d_gpu(const at::Tensor& dart_values, const at::Tensor& p_rowsum, 
+				const at::Tensor& ps_p_rowsum, int n_darts, int mb_count) {
 
     int BLOCK_SIZE = 256;
     int BLOCK_COUNT = std::ceil((n_darts * mb_count) / ((float) BLOCK_SIZE));
     BLOCK_COUNT = std::min(BLOCK_COUNT, 65535);
 
     ComputeDarts1D<<<BLOCK_COUNT, BLOCK_SIZE>>>(dart_values.data<double>(), 
+                                                p_rowsum.data<double>(),
+                                                ps_p_rowsum.data<double>(),
                                                 n_darts,
                                                 mb_count);
     CHECK_ERROR("dart1d computation error")

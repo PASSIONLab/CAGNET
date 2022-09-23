@@ -329,6 +329,7 @@ def main(args, batches=None):
     print("normalizing", flush=True)
     g_loc = row_normalize(g_loc)
     print("done normalizing", flush=True)
+    torch.set_printoptions(precision=10)
 
     n_per_proc = math.ceil(float(g_loc.size(0)) / (size / args.replication))
 
@@ -347,7 +348,7 @@ def main(args, batches=None):
         print("beginning constructing batches")
         batches = torch.cuda.IntTensor(args.n_bulkmb, args.batch_size) # initially the minibatch, note row-major
         torch.cuda.nvtx.range_push("nvtx-gen-minibatch-vtxs")
-        torch.manual_seed(0)
+        # torch.manual_seed(0)
         vertex_perm = torch.randperm(train_nid.size(0))
         # Generate minibatch vertices
         for i in range(args.n_bulkmb):
@@ -365,7 +366,7 @@ def main(args, batches=None):
     batches_indices = torch.stack((batches_indices_rows, batches_indices_cols))
     batches_values = torch.cuda.DoubleTensor(batches_loc.size(1) * batches_loc.size(0)).fill_(1.0)
     batches_loc = torch.sparse_coo_tensor(batches_indices, batches_values, (batches_loc.size(0), g_loc.size(1)))
-    g_loc = torch.pow(g_loc, 2)
+    # g_loc = torch.pow(g_loc, 2)
     torch.cuda.nvtx.range_pop()
     print(f"g_loc: {g_loc}")
 
@@ -380,19 +381,19 @@ def main(args, batches=None):
     print(f"rank: {rank} g_loc: {g_loc}")
     print(f"rank: {rank} batches_loc: {batches_loc}")
     # do it once before timing
-    torch.manual_seed(0)
+    # torch.manual_seed(0)
     nnz_row_masks = torch.cuda.BoolTensor((size // args.replication) * g_loc._indices().size(1)) # for sa-spgemm
     nnz_row_masks.fill_(0)
     
     nnz_recv_upperbound = adj_matrix.size(1) // (size // args.replication)
     sa_recv_buff = torch.cuda.DoubleTensor(3 * nnz_recv_upperbound).fill_(0)
-    torch.manual_seed(rank_col)
-    current_frontier, next_frontier, adj_matrices = \
-                                    ladies_sampler(g_loc, batches_loc, args.batch_size, \
-                                                                args.samp_num, args.n_bulkmb, \
-                                                                args.n_layers, args.n_darts, \
-                                                                args.replication, nnz_row_masks, sa_recv_buff, \
-                                                                rank, size, row_groups, col_groups)
+    # torch.manual_seed(rank_col)
+    # current_frontier, next_frontier, adj_matrices = \
+    #                                 ladies_sampler(g_loc, batches_loc, args.batch_size, \
+    #                                                             args.samp_num, args.n_bulkmb, \
+    #                                                             args.n_layers, args.n_darts, \
+    #                                                             args.replication, nnz_row_masks, sa_recv_buff, \
+    #                                                             rank, size, row_groups, col_groups)
 
     print()
     torch.cuda.profiler.cudart().cudaProfilerStart()
@@ -435,8 +436,8 @@ def main(args, batches=None):
                                         torch.cuda.FloatTensor(adj_matrix.size(1)).fill_(1.0), 
                                         size=(node_count, node_count))
     adj_matrix = adj_matrix.coalesce().cuda()
-    adj_matrix = row_normalize(adj_matrix)
-    adj_matrix = torch.pow(adj_matrix, 2)
+    # adj_matrix = row_normalize(adj_matrix)
+    # adj_matrix = torch.pow(adj_matrix, 2)
     # return here while testing sampling code
     return current_frontier, next_frontier, adj_matrices, adj_matrix 
 
