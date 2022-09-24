@@ -348,7 +348,7 @@ def main(args, batches=None):
         print("beginning constructing batches")
         batches = torch.cuda.IntTensor(args.n_bulkmb, args.batch_size) # initially the minibatch, note row-major
         torch.cuda.nvtx.range_push("nvtx-gen-minibatch-vtxs")
-        # torch.manual_seed(0)
+        torch.manual_seed(0)
         vertex_perm = torch.randperm(train_nid.size(0))
         # Generate minibatch vertices
         for i in range(args.n_bulkmb):
@@ -381,19 +381,19 @@ def main(args, batches=None):
     print(f"rank: {rank} g_loc: {g_loc}")
     print(f"rank: {rank} batches_loc: {batches_loc}")
     # do it once before timing
-    # torch.manual_seed(0)
+    torch.manual_seed(0)
     nnz_row_masks = torch.cuda.BoolTensor((size // args.replication) * g_loc._indices().size(1)) # for sa-spgemm
     nnz_row_masks.fill_(0)
     
     nnz_recv_upperbound = adj_matrix.size(1) // (size // args.replication)
     sa_recv_buff = torch.cuda.DoubleTensor(3 * nnz_recv_upperbound).fill_(0)
-    # torch.manual_seed(rank_col)
-    # current_frontier, next_frontier, adj_matrices = \
-    #                                 ladies_sampler(g_loc, batches_loc, args.batch_size, \
-    #                                                             args.samp_num, args.n_bulkmb, \
-    #                                                             args.n_layers, args.n_darts, \
-    #                                                             args.replication, nnz_row_masks, sa_recv_buff, \
-    #                                                             rank, size, row_groups, col_groups)
+    torch.manual_seed(rank_col)
+    current_frontier, next_frontier, adj_matrices = \
+                                    ladies_sampler(g_loc, batches_loc, args.batch_size, \
+                                                                args.samp_num, args.n_bulkmb, \
+                                                                args.n_layers, args.n_darts, \
+                                                                args.replication, nnz_row_masks, sa_recv_buff, \
+                                                                rank, size, row_groups, col_groups)
 
     print()
     torch.cuda.profiler.cudart().cudaProfilerStart()
