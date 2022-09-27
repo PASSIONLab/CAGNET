@@ -19,7 +19,7 @@ def stop_time(start_timer, stop_timer):
     torch.cuda.synchronize()
     return start_timer.elapsed_time(stop_timer)
 
-def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_total, n_layers, n_darts, \
+def sage_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_total, n_layers, n_darts, \
                         replication, sa_masks, sa_recv_buff, rank, size, row_groups, col_groups):
 
     total_start_timer = torch.cuda.Event(enable_timing=True)
@@ -41,8 +41,9 @@ def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_tota
         n_darts_col = n_darts - (replication - 1) * n_darts_col
     n_darts_col = n_darts
 
-    # adj_matrices = [[None] * n_layers for x in range(mb_count)] # adj_matrices[i][j] --  mb i layer j
-    adj_matrices = [None] * n_layers # adj_matrices[i] --  bulk minibatch matrix for layer j
+    # adj_matrices = [[None] * n_layers for x in range(mb_count)] 
+    # adj_matrices[i][j] --  mb i layer j
+    adj_matrices = [None] * n_layers # adj_matrices[i] --  bulk mb mtx for layer j
 
     start_time(total_start_timer)
     for i in range(n_layers):
@@ -51,16 +52,50 @@ def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_tota
         else:
             nnz = current_frontier[0, :].size(0)
 
-        p = gen_prob_dist(batches, adj_matrix, mb_count, node_count_total, replication, rank, size, \
-                            row_groups, col_groups, sa_masks, sa_recv_buff, timing_dict)
+        # Expand batches matrix
+        batches_expand_rows = torch.arange(mb_count * nnz, \
+                                                device=torch.device("cuda:0"))
+        batches_expand_idxs = torch.stack(
+                                (batches_expand_rows, batches._indices()[1, :])
+                                )
+        batches_expand = torch.sparse_coo_tensor(
+                                batches_expand_idxs,
+                                batches._values(), 
+                                size=(mb_count * nnz, node_count_total))
 
-        next_frontier = sample(p, frontier_size, mb_count, node_count_total, n_darts, replication, rank, size, \
-                                    row_groups, col_groups, timing_dict)
+        p = gen_prob_dist(batches_expand, adj_matrix, mb_count, node_count_total,
+                                replication, rank, size, row_groups, col_groups,
+                                sa_masks, sa_recv_buff, timing_dict, "sage")
+
+        next_frontier = sample(p, frontier_size, mb_count, node_count_total, n_darts,
+                                    replication, rank, size, row_groups, col_groups,
+                                    timing_dict)
+
+        # Collapse next_frontier matrix
+        next_frontier_nnz = next_frontier._values().nonzero().squeeze()
+        frontier_nnz_sizes = torch.histc(next_frontier._indices()[0,:], 
+                                            bins=p.size(0)).int()
+
+        frontier_nnz_sizes = torch.clamp(frontier_nnz_sizes, max=frontier_size)
+        print(f"frontier_nnz_sizes: {frontier_nnz_sizes}")
+        frontier_nnz_sizes = frontier_nnz_sizes.sum() # just for mb=1
+        next_frontier_rows = torch.repeat_interleave(
+                                torch.arange(mb_count, device=torch.device("cuda:0")),
+                                frontier_nnz_sizes)
+        next_frontier_idxs = torch.stack(
+                                (next_frontier_rows, 
+                                next_frontier._indices()[1, next_frontier_nnz]))
+        next_frontier = torch.sparse_coo_tensor(next_frontier_idxs, 
+                                            next_frontier._values()[next_frontier_nnz],
+                                            size=(mb_count, node_count_total))
+        next_frontier = next_frontier.coalesce()
+        next_frontier._values().fill_(1)
 
         batches_select, next_frontier_select, adj_matrix_sample = \
-                    select(next_frontier, adj_matrix, batches, sa_masks, sa_recv_buff, nnz, \
-                                    batch_size, frontier_size, mb_count, mb_count_total, node_count_total, \
-                                    replication, rank, size, row_groups, col_groups, timing_dict, i)
+                    select(next_frontier, adj_matrix, batches, sa_masks, sa_recv_buff, 
+                                nnz, batch_size, batch_size * frontier_size, mb_count, 
+                                mb_count_total, node_count_total, replication, rank, 
+                                size, row_groups, col_groups, timing_dict, i)
 
         adj_matrices[i] = adj_matrix_sample
         current_frontier = next_frontier

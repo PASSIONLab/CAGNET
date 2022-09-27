@@ -17,7 +17,7 @@ import torch_sparse
 
 from cagnet.nn.conv import GCNConv
 from cagnet.partitionings import Partitioning
-from cagnet.samplers import ladies_sampler
+from cagnet.samplers import ladies_sampler, sage_sampler
 import cagnet.nn.functional as CAGF
 
 import socket
@@ -367,6 +367,7 @@ def main(args, batches=None):
     batches_values = torch.cuda.DoubleTensor(batches_loc.size(1) * batches_loc.size(0)).fill_(1.0)
     batches_loc = torch.sparse_coo_tensor(batches_indices, batches_values, (batches_loc.size(0), g_loc.size(1)))
     # g_loc = torch.pow(g_loc, 2)
+    print(f"g_loc[3]: {(g_loc._indices()[0, :] == 3).nonzero().squeeze().size()}")
     torch.cuda.nvtx.range_pop()
     print(f"g_loc: {g_loc}")
 
@@ -375,7 +376,10 @@ def main(args, batches=None):
     if args.n_darts == -1:
         edge_count = adj_matrix.size(1)
         avg_degree = int(edge_count / node_count)
-        args.n_darts = avg_degree * args.batch_size
+        if args.sample_method == "ladies":
+            args.n_darts = avg_degree * args.batch_size
+        elif args.sample_method == "sage":
+            args.n_darts = avg_degree
         print(f"n_darts: {args.n_darts}")
 
     print(f"rank: {rank} g_loc: {g_loc}")
@@ -387,24 +391,46 @@ def main(args, batches=None):
     
     nnz_recv_upperbound = adj_matrix.size(1) // (size // args.replication)
     sa_recv_buff = torch.cuda.DoubleTensor(3 * nnz_recv_upperbound).fill_(0)
-    torch.manual_seed(rank_col)
-    current_frontier, next_frontier, adj_matrices = \
-                                    ladies_sampler(g_loc, batches_loc, args.batch_size, \
-                                                                args.samp_num, args.n_bulkmb, \
-                                                                args.n_layers, args.n_darts, \
-                                                                args.replication, nnz_row_masks, sa_recv_buff, \
-                                                                rank, size, row_groups, col_groups)
 
-    print()
-    torch.cuda.profiler.cudart().cudaProfilerStart()
-    torch.cuda.nvtx.range_push("nvtx-sampler")
-    torch.manual_seed(rank_col)
-    current_frontier, next_frontier, adj_matrices_bulk = \
-                                    ladies_sampler(g_loc, batches_loc, args.batch_size, \
-                                                                args.samp_num, args.n_bulkmb, \
-                                                                args.n_layers, args.n_darts, \
-                                                                args.replication, nnz_row_masks, sa_recv_buff, \
-                                                                rank, size, row_groups, col_groups)
+    if args.sample_method == "ladies":
+        torch.manual_seed(rank_col)
+        current_frontier, next_frontier, adj_matrices = \
+                                        ladies_sampler(g_loc, batches_loc, args.batch_size, \
+                                                                    args.samp_num, args.n_bulkmb, \
+                                                                    args.n_layers, args.n_darts, \
+                                                                    args.replication, nnz_row_masks, sa_recv_buff, \
+                                                                    rank, size, row_groups, col_groups)
+
+        print()
+        torch.cuda.profiler.cudart().cudaProfilerStart()
+        torch.cuda.nvtx.range_push("nvtx-sampler")
+        torch.manual_seed(rank_col)
+        current_frontier, next_frontier, adj_matrices_bulk = \
+                                        ladies_sampler(g_loc, batches_loc, args.batch_size, \
+                                                                    args.samp_num, args.n_bulkmb, \
+                                                                    args.n_layers, args.n_darts, \
+                                                                    args.replication, nnz_row_masks, sa_recv_buff, \
+                                                                    rank, size, row_groups, col_groups)
+    elif args.sample_method == "sage":
+        torch.manual_seed(rank_col)
+        current_frontier, next_frontier, adj_matrices = \
+                                        sage_sampler(g_loc, batches_loc, args.batch_size, \
+                                                                    args.samp_num, args.n_bulkmb, \
+                                                                    args.n_layers, args.n_darts, \
+                                                                    args.replication, nnz_row_masks, sa_recv_buff, \
+                                                                    rank, size, row_groups, col_groups)
+
+        print()
+        torch.cuda.profiler.cudart().cudaProfilerStart()
+        torch.cuda.nvtx.range_push("nvtx-sampler")
+        torch.manual_seed(rank_col)
+        current_frontier, next_frontier, adj_matrices_bulk = \
+                                        sage_sampler(g_loc, batches_loc, args.batch_size, \
+                                                                    args.samp_num, args.n_bulkmb, \
+                                                                    args.n_layers, args.n_darts, \
+                                                                    args.replication, nnz_row_masks, sa_recv_buff, \
+                                                                    rank, size, row_groups, col_groups)
+
     torch.cuda.nvtx.range_pop()
     torch.cuda.profiler.cudart().cudaProfilerStop()
 
@@ -425,9 +451,14 @@ def main(args, batches=None):
             adj_matrix_sample_indices[0,:] -= row_select_min
             adj_matrix_sample_values = sampled_values[sample_select_mask]
 
-            adj_matrix_sample = torch.sparse_coo_tensor(adj_matrix_sample_indices, \
-                                            adj_matrix_sample_values, \
-                                            (args.batch_size, args.samp_num + args.batch_size))
+            if args.sample_method == "ladies":
+                adj_matrix_sample = torch.sparse_coo_tensor(adj_matrix_sample_indices, \
+                                                adj_matrix_sample_values, \
+                                                (args.batch_size, args.samp_num + args.batch_size))
+            else:
+                adj_matrix_sample = torch.sparse_coo_tensor(adj_matrix_sample_indices, \
+                                                adj_matrix_sample_values, \
+                                                (args.batch_size, args.batch_size + args.samp_num * args.batch_size))
             adj_matrices[j][i] = adj_matrix_sample
 
     # print(f"sample: {adj_matrices}")
@@ -518,6 +549,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='GCN')
     parser.add_argument("--dataset", type=str, default="Cora",
                         help="dataset to train")
+    parser.add_argument("--sample-method", type=str, default="ladies",
+                        help="sampling algorithm for training")
     parser.add_argument("--dropout", type=float, default=0.5,
                         help="dropout probability")
     parser.add_argument("--gpu", type=int, default=-1,
