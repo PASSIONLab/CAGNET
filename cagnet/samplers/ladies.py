@@ -55,7 +55,7 @@ def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_tota
                             row_groups, col_groups, sa_masks, sa_recv_buff, timing_dict, "ladies")
 
         next_frontier = sample(p, frontier_size, mb_count, node_count_total, n_darts, replication, rank, size, \
-                                    row_groups, col_groups, timing_dict)
+                                    row_groups, col_groups, timing_dict, "ladies")
 
         batches_select, next_frontier_select, adj_matrix_sample = \
                     select(next_frontier, adj_matrix, batches, sa_masks, sa_recv_buff, nnz, \

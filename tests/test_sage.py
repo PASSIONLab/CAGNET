@@ -20,16 +20,23 @@ def main(args):
     print(f"g_loc: {g_loc}")
 
     print("")
-    print("Beginning LADIES sampler test")
+    print("Beginning SAGE sampler test")
     size = dist.get_world_size()
-    rank_n_bulkmb = int(args.n_bulkmb / (size / args.replication))
+    rank_n_bulkmb = int(args.n_bulkmb / (size / args.replication)) * args.batch_size
     for i in range(rank_n_bulkmb):
-        print(f"Testing minibatch {i}")
+        print(f"Testing {i}")
         current_frontier = current_frontier_all[i] # current_frontier for minibatch i
         # next_frontier = next_frontier_all[i] # next_frontier for minibatch i
         # current_frontier = current_frontier_all[i].unique(sorted=True) # current_frontier for minibatch i
         next_frontier = next_frontier_all[i].unique(sorted=True) # next_frontier for minibatch i
-        adj_matrices = adj_matrices_all[i] # adj_matrices for minibatch i
+
+        mb_id = i // args.batch_size
+        adj_matrices = adj_matrices_all[mb_id] # adj_matrices for minibatch i
+
+        vtx_mask = adj_matrices[0]._indices()[0,:] == (i % args.batch_size)
+        vtx_indices = adj_matrices[0]._indices()[:, vtx_mask]
+        vtx_values = adj_matrices[0]._values()[vtx_mask]
+        adj_matrices = [torch.sparse_coo_tensor(vtx_indices, vtx_values, size=adj_matrices[0].size())]
 
         agg_neighbors = []
         for v in current_frontier:
@@ -105,7 +112,7 @@ if __name__ == '__main__':
                             help='partitioning strategy to use')
     parser.add_argument('--cuda', type=int, default=0,
                         help='Avaiable GPU ID')
-    parser.add_argument('--sample-method', type=str, default='ladies',
+    parser.add_argument('--sample-method', type=str, default='sage',
                         help='Sampled Algorithms: ladies/fastgcn/full')
     parser.add_argument('--batch-num', type=int, default= 10,
                         help='Maximum Batch Number')

@@ -366,7 +366,7 @@ def main(args, batches=None):
     batches_indices = torch.stack((batches_indices_rows, batches_indices_cols))
     batches_values = torch.cuda.DoubleTensor(batches_loc.size(1) * batches_loc.size(0)).fill_(1.0)
     batches_loc = torch.sparse_coo_tensor(batches_indices, batches_values, (batches_loc.size(0), g_loc.size(1)))
-    # g_loc = torch.pow(g_loc, 2)
+    g_loc = torch.pow(g_loc, 2)
     print(f"g_loc[3]: {(g_loc._indices()[0, :] == 3).nonzero().squeeze().size()}")
     torch.cuda.nvtx.range_pop()
     print(f"g_loc: {g_loc}")
@@ -467,8 +467,8 @@ def main(args, batches=None):
                                         torch.cuda.FloatTensor(adj_matrix.size(1)).fill_(1.0), 
                                         size=(node_count, node_count))
     adj_matrix = adj_matrix.coalesce().cuda()
-    # adj_matrix = row_normalize(adj_matrix)
-    # adj_matrix = torch.pow(adj_matrix, 2)
+    adj_matrix = row_normalize(adj_matrix)
+    adj_matrix = torch.pow(adj_matrix, 2)
     # return here while testing sampling code
     return current_frontier, next_frontier, adj_matrices, adj_matrix 
 

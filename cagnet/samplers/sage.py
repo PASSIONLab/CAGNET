@@ -72,7 +72,7 @@ def sage_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_total,
 
         next_frontier = sample(p, frontier_size, mb_count, node_count_total, n_darts,
                                     replication, rank, size, row_groups, col_groups,
-                                    timing_dict)
+                                    timing_dict, "sage")
 
         # add explicit 0's to next_frontier
         next_frontier_nnz = next_frontier._values().nonzero().squeeze()
@@ -88,7 +88,7 @@ def sage_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_total,
         ps_f_remain[0] = 0
         nextf_cols_idxs += torch.repeat_interleave(ps_f_remain, frontier_nnz_sizes)
         next_frontier_cols = torch.cuda.LongTensor(next_frontier_rows.size(0)).fill_(0)
-        next_frontier_cols.scatter_(0, nextf_cols_idxs, next_frontier._indices()[1,:])
+        next_frontier_cols.scatter_(0, nextf_cols_idxs, next_frontier._indices()[1,next_frontier_nnz])
 
         next_frontier_idxs = torch.stack((next_frontier_rows, next_frontier_cols))
         next_frontier_values = torch.cuda.LongTensor(next_frontier_rows.size(0)).fill_(0)
@@ -96,7 +96,6 @@ def sage_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_total,
         next_frontier = torch.sparse_coo_tensor(next_frontier_idxs, 
                                             next_frontier_values,
                                             size=(batch_size * mb_count, node_count_total))
-        print(f"next_frontier: {next_frontier}")
         # next_frontier = next_frontier.coalesce()
         # next_frontier._values().fill_(1)
 
