@@ -52,7 +52,7 @@ def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_tota
             nnz = current_frontier[0, :].size(0)
 
         p = gen_prob_dist(batches, adj_matrix, mb_count, node_count_total, replication, rank, size, \
-                            row_groups, col_groups, sa_masks, sa_recv_buff, timing_dict)
+                            row_groups, col_groups, sa_masks, sa_recv_buff, timing_dict, "ladies")
 
         next_frontier = sample(p, frontier_size, mb_count, node_count_total, n_darts, replication, rank, size, \
                                     row_groups, col_groups, timing_dict)
@@ -60,7 +60,7 @@ def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_tota
         batches_select, next_frontier_select, adj_matrix_sample = \
                     select(next_frontier, adj_matrix, batches, sa_masks, sa_recv_buff, nnz, \
                                     batch_size, frontier_size, mb_count, mb_count_total, node_count_total, \
-                                    replication, rank, size, row_groups, col_groups, timing_dict, i)
+                                    replication, rank, size, row_groups, col_groups, timing_dict, i, "ladies")
 
         adj_matrices[i] = adj_matrix_sample
         current_frontier = next_frontier

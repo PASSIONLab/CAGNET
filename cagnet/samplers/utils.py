@@ -197,9 +197,15 @@ def dist_saspgemm15D(mata, matb, replication, rank, size, row_groups, col_groups
             nnz_cols_count_list = []
             for j in range(size // replication):
                 nnz_cols_count_list.append(torch.cuda.IntTensor(1).fill_(0))
-            dist.gather(nnz_cols_count, nnz_cols_count_list, dst=q, group=col_groups[rank_col])
+                recv_rank = rank_col + j * replication
+                if recv_rank == q:
+                    nnz_cols_count_list[-1] = nnz_cols_count
+                else:
+                    dist.irecv(nnz_cols_count[-1], src=recv_rank, group=col_groups[rank_col]).wait()
+            # dist.gather(nnz_cols_count, nnz_cols_count_list, dst=q, group=col_groups[rank_col])
         else:
-            dist.gather(nnz_cols_count, dst=q, group=col_groups[rank_col])
+            # dist.gather(nnz_cols_count, dst=q, group=col_groups[rank_col])
+            dist.isend(nnz_cols_count, dst=q, group=col_groups[rank_col])
         stop_time_add(start_timer, stop_timer, timing_dict, f"spgemm-gather-nnzcounts-{name}")
 
         # Rank q allocates recv buffer for nnz col ids
@@ -217,7 +223,7 @@ def dist_saspgemm15D(mata, matb, replication, rank, size, row_groups, col_groups
             for j in range(size // replication):
                 recv_rank = rank_col + j * replication
                 if recv_rank != q:
-                    recv_objs.append(dist.irecv(nnz_col_ids[j], src=recv_rank))
+                    recv_objs.append(dist.irecv(nnz_col_ids[j], src=recv_rank).wait())
                 else:
                     nnz_col_ids[j] = nnz_cols
         else:
@@ -403,12 +409,16 @@ def gen_prob_dist(numerator, adj_matrix, mb_count, node_count_total, replication
 
     start_time(start_timer)
     torch.cuda.nvtx.range_push("nvtx-compute-p")
-    p_den = torch.cuda.DoubleTensor(numerator.size(0)).fill_(0)
+    # p_den = torch.cuda.DoubleTensor(numerator.size(0)).fill_(0)
+    p_den = torch.cuda.FloatTensor(numerator.size(0)).fill_(0)
     if name == "ladies":
         p_num_values = torch.square(p_num_values)
     elif name == "sage":
         p_num_values = torch.cuda.DoubleTensor(p_num_values.size(0)).fill_(1.0)
+    p_num_values = p_num_values.float() # just for Summit, no 64-bit fp atomicadd
     scatterd_add_gpu(p_den, p_num_indices[0, :], p_num_values, p_num_values.size(0))
+    p_num_values = p_num_values.double()
+    p_den = p_den.double()
     p = torch.sparse_coo_tensor(indices=p_num_indices, 
                                     values=p_num_values, 
                                     size=(numerator.size(0), node_count_total))
@@ -695,17 +705,22 @@ def sample(p, frontier_size, mb_count, node_count_total, n_darts, replication,
 
 def select(next_frontier, adj_matrix, batches, sa_masks, sa_recv_buff, nnz, \
                 batch_size, frontier_size, mb_count, mb_count_total, node_count_total, replication, \
-                rank, size, row_groups, col_groups, timing_dict, layer_id):
+                rank, size, row_groups, col_groups, timing_dict, layer_id, name):
 
     start_timer = torch.cuda.Event(enable_timing=True)
     stop_timer = torch.cuda.Event(enable_timing=True)
 
     start_time(start_timer)
     torch.cuda.nvtx.range_push("nvtx-construct-nextf")
-    next_frontier_select = torch.masked_select(next_frontier._indices()[1,:], \
-                                            next_frontier._values().bool()).view(mb_count, frontier_size)
-    batches_select = torch.masked_select(batches._indices()[1,:], \
-                                            batches._values().bool()).view(mb_count, batch_size)
+    if name == "ladies":
+        next_frontier_select = torch.masked_select(next_frontier._indices()[1,:], \
+                                                next_frontier._values().bool()).view(mb_count, frontier_size)
+        batches_select = torch.masked_select(batches._indices()[1,:], \
+                                                batches._values().bool()).view(mb_count, batch_size)
+    elif name == "sage":
+        next_frontier_select = next_frontier._indices()[1,:].view(mb_count * batch_size, frontier_size)
+        batches_select = torch.masked_select(batches._indices()[1,:], \
+                                                batches._values().bool()).view(mb_count * batch_size, 1)
     next_frontier_select = torch.cat((next_frontier_select, batches_select), dim=1)
     torch.cuda.nvtx.range_pop()
     timing_dict["construct-nextf"].append(stop_time(start_timer, stop_timer))
@@ -725,10 +740,19 @@ def select(next_frontier, adj_matrix, batches, sa_masks, sa_recv_buff, nnz, \
     row_select_mtx_values = torch.cuda.DoubleTensor(row_select_mtx_indices[0].size(0)).fill_(1.0)
 
     repeated_next_frontier = next_frontier_select.clone()
-    scale_mtx = torch.arange(start=0, end=node_count_total * mb_count, step=node_count_total).cuda()
-    repeated_next_frontier.add_(scale_mtx[:, None])
+    if name == "ladies":
+        scale_mtx = torch.arange(start=0, end=node_count_total * mb_count, step=node_count_total).cuda()
+    elif name == "sage":
+        scale_mtx = torch.arange(start=0, end=node_count_total * mb_count * batch_size, 
+                                        step=node_count_total).cuda()
+        print(f"scale_mtx: {scale_mtx}")
+        print(f"next_frontier_select: {next_frontier_select}")
+    scale_mtx = scale_mtx[:, None]
+    repeated_next_frontier.add_(scale_mtx)
     col_select_mtx_rows = repeated_next_frontier.view(-1)
-    col_select_mtx_cols = torch.arange(next_frontier_select.size(1)).cuda().repeat(mb_count,1).view(-1)
+    col_select_mtx_cols = torch.arange(next_frontier_select.size(1) * batch_size).cuda().repeat(
+                                    mb_count,1).view(-1)
+    print(f"col_select_mtx_cols: {col_select_mtx_cols}")
     col_select_mtx_indices = torch.stack((col_select_mtx_rows, col_select_mtx_cols))
 
     # col_select_mtx_values = torch.cuda.DoubleTensor(col_select_mtx_rows.size(0)).fill_(1.0)
@@ -747,6 +771,7 @@ def select(next_frontier, adj_matrix, batches, sa_masks, sa_recv_buff, nnz, \
     torch.cuda.nvtx.range_push("nvtx-row-select-spgemm")
     row_select_mtx = torch.sparse_coo_tensor(row_select_mtx_indices, row_select_mtx_values, 
                                                     size=(nnz * mb_count, node_count_total))
+    print(f"row_select_mtx: {row_select_mtx}")
     sa_masks.fill_(0)
     sa_recv_buff.fill_(0)
     sampled_indices, sampled_values = dist_saspgemm15D(row_select_mtx, adj_matrix, replication, rank, size, \
@@ -757,13 +782,19 @@ def select(next_frontier, adj_matrix, batches, sa_masks, sa_recv_buff, nnz, \
 
     torch.cuda.nvtx.range_pop()
     timing_dict["row-select-spgemm"].append(stop_time(start_timer, stop_timer))
+    print(f"before sample_mtx: {sample_mtx}")
 
     # 3. Expand sampled rows
     start_time(start_timer)
     torch.cuda.nvtx.range_push("nvtx-row-select-expand")
     row_shift = torch.cuda.LongTensor(sampled_values.size(0)).fill_(0)
-    shift_rowselect_gpu(row_shift, sampled_indices[0,:], sampled_values.size(0), 
-                            rank, size, replication, batch_size, node_count_total, mb_count_total)
+    if name == "ladies":
+        shift_rowselect_gpu(row_shift, sampled_indices[0,:], sampled_values.size(0), 
+                                rank, size, replication, batch_size, node_count_total, mb_count_total, 
+                                batch_size)
+    elif name == "sage":
+        shift_rowselect_gpu(row_shift, sampled_indices[0,:], sampled_values.size(0), 
+                                rank, size, replication, batch_size, node_count_total, mb_count_total, 1)
     sampled_indices[1,:] += row_shift
     torch.cuda.nvtx.range_pop()
     timing_dict["row-select-expand"].append(stop_time(start_timer, stop_timer))
@@ -771,10 +802,20 @@ def select(next_frontier, adj_matrix, batches, sa_masks, sa_recv_buff, nnz, \
     # 4. Multiply sampled rows with col_select matrix
     start_time(start_timer)
     torch.cuda.nvtx.range_push("nvtx-col-select-spgemm")
-    sample_mtx = torch.sparse_coo_tensor(sampled_indices, sampled_values, 
-                                            size=(nnz * mb_count, node_count_total * mb_count_total))
-    col_select_mtx = torch.sparse_coo_tensor(col_select_mtx_indices, col_select_mtx_values,
-                                            size=(node_count_total * mb_count, next_frontier.size(1)))
+    if name == "ladies":
+        sample_mtx = torch.sparse_coo_tensor(sampled_indices, sampled_values, 
+                                                size=(nnz * mb_count, node_count_total * mb_count_total))
+    elif name == "sage":
+        sample_mtx = torch.sparse_coo_tensor(sampled_indices, sampled_values, 
+                                                size=(nnz * mb_count, node_count_total * mb_count_total * nnz))
+    print(f"after sample_mtx: {sample_mtx}")
+    if name == "ladies":
+        col_select_mtx = torch.sparse_coo_tensor(col_select_mtx_indices, col_select_mtx_values,
+                                                size=(node_count_total * mb_count, next_frontier.size(1)))
+    elif name == "sage":
+        col_select_mtx = torch.sparse_coo_tensor(col_select_mtx_indices, col_select_mtx_values,
+                            size=(node_count_total * mb_count * batch_size, next_frontier.size(1) * batch_size))
+    print(f"col_select_mtx: {col_select_mtx}")
     sampled_indices, sampled_values = dist_spgemm15D(sample_mtx, col_select_mtx, replication, rank, size, \
                                                         row_groups, col_groups, "colsel", timing_dict)
     torch.cuda.nvtx.range_pop()

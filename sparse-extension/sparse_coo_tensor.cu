@@ -587,7 +587,8 @@ void normalize_gpu(const at::Tensor& output, const at::Tensor& input, const at::
 }
 
 __global__ void ShiftRowSelect(long *row_shift, long *row_select_rows, int rank, int size,
-                                    int replication, int nnz, int batch_size, int node_count, int mb_count) { 
+                                    int replication, int nnz, int batch_size, int node_count, int mb_count,
+                                    int shift_size) { 
 
     long     id = blockIdx.x * blockDim.x + threadIdx.x;
     long stride = blockDim.x * gridDim.x;
@@ -596,14 +597,14 @@ __global__ void ShiftRowSelect(long *row_shift, long *row_select_rows, int rank,
     long proc_row_chunk = rank_c * ((batch_size * mb_count) / (size / replication));
     
     for (int i = id; i < nnz; i += stride) {
-        long mb_row = (row_select_rows[i] + proc_row_chunk) / batch_size;
+        long mb_row = (row_select_rows[i] + proc_row_chunk) / shift_size;
         row_shift[i] += mb_row * node_count;
     }
 }
 
 void shift_rowselect_gpu(const at::Tensor& row_shift, const at::Tensor& row_select_rows,
                             int nnz, int rank, int size, int replication, int batch_size, int node_count, 
-                            int mb_count) {
+                            int mb_count, int shift_size) {
 
 
     int BLOCK_SIZE = 256;
@@ -618,7 +619,8 @@ void shift_rowselect_gpu(const at::Tensor& row_shift, const at::Tensor& row_sele
                                                     nnz,
                                                     batch_size,
                                                     node_count,
-                                                    mb_count);
+                                                    mb_count,
+                                                    shift_size);
     CHECK_ERROR("shift row select error")
 }
 
@@ -643,7 +645,7 @@ void shift_colselect_gpu(const at::Tensor& col_shift, int nnz, int batch_size, i
     CHECK_ERROR("shift col select error")
 }
 
-__global__ void ScatterAddD(double *src, long *indices, double *values, int num_vals) { 
+__global__ void ScatterAddD(float *src, long *indices, float *values, int num_vals) {
     int     id = blockIdx.x * blockDim.x + threadIdx.x;
     int stride = blockDim.x * gridDim.x;
 
@@ -659,9 +661,9 @@ void scatterd_add_gpu(const at::Tensor& src, const at::Tensor& indices, const at
     int BLOCK_COUNT = std::ceil(num_vals / ((float) BLOCK_SIZE));
     BLOCK_COUNT = std::min(BLOCK_COUNT, 65535);
 
-    ScatterAddD<<<BLOCK_COUNT, BLOCK_SIZE>>>(src.data<double>(), 
+    ScatterAddD<<<BLOCK_COUNT, BLOCK_SIZE>>>(src.data<float>(), 
                                                 indices.data<long>(), 
-                                                values.data<double>(),
+                                                values.data<float>(),
                                                 num_vals);
     CHECK_ERROR("scatter add doubles error")
 }
