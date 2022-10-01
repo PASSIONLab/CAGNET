@@ -9,15 +9,23 @@ from sparse_coo_tensor_cpp import downsample_gpu, compute_darts_gpu, throw_darts
                                     compute_darts_select_gpu, throw_darts_select_gpu, \
                                     compute_darts1d_gpu, throw_darts1d_gpu, normalize_gpu, \
                                     shift_rowselect_gpu, shift_colselect_gpu, \
-                                    scatterd_add_gpu, scatteri_add_gpu, rowselect_coo_gpu
+                                    scatterd_add_gpu, scatteri_add_gpu, rowselect_coo_gpu, \
+                                    sparse_coo_tensor_gpu
+
+
+timing = True
 
 def start_time(timer):
-    timer.record()
+    if timing == True:
+        timer.record()
 
 def stop_time(start_timer, stop_timer):
-    stop_timer.record()
-    torch.cuda.synchronize()
-    return start_timer.elapsed_time(stop_timer)
+    if timing == True:
+        stop_timer.record()
+        torch.cuda.synchronize()
+        return start_timer.elapsed_time(stop_timer)
+    else:
+        return 0.0
 
 def sage_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_total, n_layers, n_darts, \
                         replication, sa_masks, sa_recv_buff, rank, size, row_groups, col_groups):
@@ -48,7 +56,7 @@ def sage_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_total,
     # adj_matrices[i][j] --  mb i layer j
     adj_matrices = [None] * n_layers # adj_matrices[i] --  bulk mb mtx for layer j
 
-    start_time(total_start_timer)
+    # start_time(total_start_timer)
     for i in range(n_layers):
         if i == 0:
             nnz = batch_size
@@ -56,6 +64,7 @@ def sage_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_total,
             nnz = current_frontier[0, :].size(0)
 
         # Expand batches matrix
+        total_start_timer.record()
         batches_expand_rows = torch.arange(mb_count * nnz, \
                                                 device=torch.device("cuda:0"))
         batches_expand_idxs = torch.stack(
@@ -73,6 +82,10 @@ def sage_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_total,
         next_frontier = sample(p, frontier_size, mb_count, node_count_total, n_darts,
                                     replication, rank, size, row_groups, col_groups,
                                     timing_dict, "sage")
+        total_stop_timer.record()
+        torch.cuda.synchronize()
+        total_time = total_start_timer.elapsed_time(total_stop_timer)
+        print(f"total_time: {total_time}", flush=True)
 
         # add explicit 0's to next_frontier
         next_frontier_nnz = next_frontier._values().nonzero().squeeze()
@@ -93,9 +106,11 @@ def sage_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_total,
         next_frontier_idxs = torch.stack((next_frontier_rows, next_frontier_cols))
         next_frontier_values = torch.cuda.LongTensor(next_frontier_rows.size(0)).fill_(0)
         next_frontier_values[nextf_cols_idxs] = 1
+
         next_frontier = torch.sparse_coo_tensor(next_frontier_idxs, 
                                             next_frontier_values,
                                             size=(batch_size * mb_count, node_count_total))
+
         # next_frontier = next_frontier.coalesce()
         # next_frontier._values().fill_(1)
 
@@ -108,8 +123,6 @@ def sage_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_total,
         adj_matrices[i] = adj_matrix_sample
         current_frontier = next_frontier
 
-
-    print(f"total_time: {stop_time(total_start_timer, total_stop_timer)}", flush=True)
     for k, v in sorted(timing_dict.items()):
         if (k.startswith("spgemm") and k != "spgemm-misc") or k == "probability-spgemm" or k == "row-select-spgemm" or k == "col-select-spgemm":
             # print(f"{k} times: {v}")

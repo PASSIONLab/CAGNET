@@ -188,10 +188,6 @@ void spmm_gpu(const at::Tensor& A_rowindices,
                         at::Tensor& B,
                         at::Tensor& C) {
 
-    // cusparseHandle_t handle;
-    // CHECK_CUSPARSE(cusparseCreate(&handle));
-    // auto state = at::globalContext().lazyInitCUDA();
-    // auto handle = THCState_getCurrentSparseHandle(state);
     auto handle = at::cuda::getCurrentCUDASparseHandle();
 
     // Impl1 -- coo2csr + csrmm2
@@ -271,7 +267,8 @@ void spmm_gpu(const at::Tensor& A_rowindices,
 
 
     void* d_buffer = NULL;
-    CHECK_ERROR(cudaMalloc(&d_buffer, bufferSize));
+    // CHECK_ERROR(cudaMalloc(&d_buffer, bufferSize));
+    cudaMalloc(&d_buffer, bufferSize);
 
     CHECK_CUSPARSE(cusparseSpMM(handle, // handle,
                                     CUSPARSE_OPERATION_NON_TRANSPOSE,   // opA
@@ -294,32 +291,253 @@ void spmm_gpu(const at::Tensor& A_rowindices,
     C.t_();
 }
 
-// __global__ void DownSample(long *q_values, long *q_rows, int *overflow, int nnz) {
-//     int     id = blockIdx.x * blockDim.x + threadIdx.x;
-//     int stride = blockDim.x * gridDim.x;
-// 
-//     for (int i = id; i < nnz; i += stride) {
-//         long row = q_rows[i];
-//         if (q_values[i] == 1 && ((int) atomicSub((unsigned int *)&overflow[row], 1)) > 0) {
-//             q_values[i] = 0;
-//         }
-//     }
-// }
+std::vector<at::Tensor> spgemm_gpu(
+        const at::Tensor& A_rowindices, 
+        const at::Tensor& A_colindices,
+        const at::Tensor& A_values, 
+        const at::Tensor& B_rowindices, 
+        const at::Tensor& B_colindices,
+        const at::Tensor& B_values,
+        int32_t n,
+        int32_t k,
+        int32_t m) {
 
-// void downsample_gpu(const at::Tensor& q_values, 
-//                         const at::Tensor& q_rows,
-//                         const at::Tensor& overflow,
-//                         int nnz) {
-// 
-// 
-//     int BLOCK_SIZE = 256;
-//     int BLOCK_COUNT = std::ceil(nnz / ((float) BLOCK_SIZE));
-//     BLOCK_COUNT = std::min(BLOCK_COUNT, 65535);
-// 
-//     DownSample<<<BLOCK_COUNT, BLOCK_SIZE>>>(q_values.data<long>(), q_rows.data<long>(), 
-//                                                                 overflow.data<int>(), nnz);
-//     CHECK_ERROR("downsampling error")
-// }
+    
+    printf("before spgemm\n"); fflush(stdout);
+    // SpGEMM between A (n x k)  and B (k x m)
+    auto handle = at::cuda::getCurrentCUDASparseHandle();
+
+    int32_t *d_a_csrrows = NULL;
+    int32_t *d_b_csrrows = NULL;
+    int *tmp;
+
+    int32_t A_nnz = A_values.size(0);
+    int32_t B_nnz = B_values.size(0);
+    printf("A_nnz: %d\n", A_nnz); fflush(stdout);
+    printf("B_nnz: %d\n", B_nnz); fflush(stdout);
+
+    printf("before coo2csr\n"); fflush(stdout);
+    // Construct CSR offsets array for A and B
+    // CHECK_ERROR(cudaMalloc(&d_a_csrrows, (n + 1) * sizeof(int32_t)));
+    cudaMalloc(&d_a_csrrows, (n + 1) * sizeof(int32_t));
+    std::cout << "d_a_csrrows: " << d_a_csrrows << std::endl;
+    cudaMemset(d_a_csrrows, 0, (n + 1) * sizeof(int32_t));
+    std::cout << "n: " << n << std::endl;
+    std::cout << "handle: " << handle << std::endl;
+    cudaDeviceSynchronize();
+    cudaError_t err;
+    err = cudaGetLastError();
+    printf("err: %s\n", cudaGetErrorString(err)); fflush(stdout);
+
+    int *d_a_indices = A_rowindices.data<int>();
+    printf("d_a_indices: %x\n", d_a_indices); fflush(stdout);
+    int *h_a_indices = new int[A_nnz]();
+    cudaMemcpy(h_a_indices, d_a_indices, A_nnz * sizeof(int), cudaMemcpyDeviceToHost);
+    for (int i = 0; i < A_nnz; i++) {
+        printf("%d ", h_a_indices[i]); fflush(stdout);
+    }
+    printf("\n"); fflush(stdout);
+    cudaDeviceSynchronize();
+    err = cudaGetLastError();
+    printf("after printouts\n"); fflush(stdout);
+    printf("err: %s\n", cudaGetErrorString(err)); fflush(stdout);
+    CHECK_CUSPARSE(cusparseXcoo2csr(handle, 
+                                        A_rowindices.data<int>(), 
+                                        A_nnz, 
+                                        n, 
+                                        d_a_csrrows, 
+                                        CUSPARSE_INDEX_BASE_ZERO));
+    cudaDeviceSynchronize();
+    err = cudaGetLastError();
+    printf("after coo2csr\n"); fflush(stdout);
+    printf("err: %s\n", cudaGetErrorString(err)); fflush(stdout);
+    // CHECK_ERROR(cudaMalloc(&d_b_csrrows, (k + 1) * sizeof(int32_t)));
+    cudaMalloc(&d_b_csrrows, (k + 1) * sizeof(int32_t));
+    printf("after balloc\n"); fflush(stdout);
+
+    CHECK_CUSPARSE(cusparseXcoo2csr(handle, 
+                                        B_rowindices.data<int>(), 
+                                        B_nnz, 
+                                        k, 
+                                        d_b_csrrows, 
+                                        CUSPARSE_INDEX_BASE_ZERO));
+    printf("after coo2csr\n"); fflush(stdout);
+    
+    float alpha = 1;
+    float beta = 0;
+
+    // Construct CSR matrix structs for A, B, and C (empty CSR)
+    printf("before csr_construct\n"); fflush(stdout);
+    cusparseSpMatDescr_t matA;
+    CHECK_CUSPARSE(cusparseCreateCsr(&matA,
+					  n, 		// rows
+					  k, 	        // cols
+					  A_nnz, 	// nnz
+					  d_a_csrrows, 	// csrRowOffsets
+					  A_colindices.data<int>(), // csrColInd
+					  A_values.data<double>(),  // csrValues
+					  CUSPARSE_INDEX_32I, 	    // csrRowOffsetsType
+					  CUSPARSE_INDEX_32I, 	    // csrColIndType
+					  CUSPARSE_INDEX_BASE_ZERO, // idxBase,
+					  CUDA_R_64F)); 	    // valueType
+
+    cusparseSpMatDescr_t matB;
+    CHECK_CUSPARSE(cusparseCreateCsr(&matB,
+					  k, 		// rows
+					  m, 	        // cols
+					  B_nnz, 	// nnz
+					  d_b_csrrows, 	// csrRowOffsets
+					  B_colindices.data<int>(), // csrColInd
+					  B_values.data<double>(),  // csrValues
+					  CUSPARSE_INDEX_32I, 	    // csrRowOffsetsType
+					  CUSPARSE_INDEX_32I, 	    // csrColIndType
+					  CUSPARSE_INDEX_BASE_ZERO, // idxBase,
+					  CUDA_R_64F)); 	    // valueType
+
+    cusparseSpMatDescr_t matC;
+    CHECK_CUSPARSE(cusparseCreateCsr(&matC,
+					  n, 		// rows
+					  m, 	        // cols
+					  0, 	        // nnz
+					  NULL, 	// csrRowOffsets
+					  NULL,         // csrColInd
+					  NULL,         // csrValues
+					  CUSPARSE_INDEX_32I, 	    // csrRowOffsetsType
+					  CUSPARSE_INDEX_32I, 	    // csrColIndType
+					  CUSPARSE_INDEX_BASE_ZERO, // idxBase,
+					  CUDA_R_64F)); 	    // valueType
+    printf("after csr_construct\n"); fflush(stdout);
+
+    printf("before spgemm_workest\n"); fflush(stdout);
+    cusparseSpGEMMDescr_t spgemmDescr;
+    CHECK_CUSPARSE(cusparseSpGEMM_createDescr(&spgemmDescr));
+
+    void *dBuffer1 = NULL;
+    void *dBuffer2 = NULL;
+    size_t bufferSize1 = 0;
+    size_t bufferSize2 = 0;
+    printf("bufferSize1: %ld\n", bufferSize1); fflush(stdout);
+    CHECK_CUSPARSE(cusparseSpGEMM_workEstimation(handle,            // handle
+                                  CUSPARSE_OPERATION_NON_TRANSPOSE, // opA
+                                  CUSPARSE_OPERATION_NON_TRANSPOSE, // opB
+                                  &alpha,                           // alpha
+                                  matA,                             // matA
+                                  matB,                             // matB
+                                  &beta,                            // beta
+                                  matC,                             // matC
+                                  CUDA_R_64F,                       // computeType
+                                  CUSPARSE_SPGEMM_DEFAULT,          // alg
+                                  spgemmDescr,                      // spgemmDescr
+                                  &bufferSize1,                     // bufferSize1
+                                  NULL));                           // externalBuffer1
+    printf("after spgemm_workest1\n"); fflush(stdout);
+
+    printf("sizeof(bufferSize1): %d\n", sizeof(bufferSize1)); fflush(stdout);
+    printf("bufferSize1: %ld\n", bufferSize1); fflush(stdout);
+    //CHECK_ERROR(cudaMalloc(&dBuffer1, bufferSize1));
+    CHECK_ERROR("before cudamalloc error");
+    cudaMalloc(&dBuffer1, bufferSize1);
+    CHECK_ERROR("after cudamalloc error");
+    printf("before cudamalloc1 %x\n", dBuffer1); fflush(stdout);
+    printf("after cudamalloc1 %x\n", dBuffer1); fflush(stdout);
+
+    CHECK_CUSPARSE(cusparseSpGEMM_workEstimation(handle,            // handle
+                                  CUSPARSE_OPERATION_NON_TRANSPOSE, // opA
+                                  CUSPARSE_OPERATION_NON_TRANSPOSE, // opB
+                                  &alpha,                           // alpha
+                                  matA,                             // matA
+                                  matB,                             // matB
+                                  &beta,                            // beta
+                                  matC,                             // matC
+                                  CUDA_R_64F,                       // computeType
+                                  CUSPARSE_SPGEMM_DEFAULT,          // alg
+                                  spgemmDescr,                      // spgemmDescr
+                                  &bufferSize1,                     // bufferSize1
+                                  dBuffer1));                       // externalBuffer1
+    printf("after workest2\n"); fflush(stdout);
+
+    CHECK_CUSPARSE(cusparseSpGEMM_compute(handle,
+				CUSPARSE_OPERATION_NON_TRANSPOSE, // opA
+			  	CUSPARSE_OPERATION_NON_TRANSPOSE, // opB
+			   	&alpha,				  // alpha
+			   	matA, 				  // matA
+			   	matB,				  // matB
+			   	&beta,				  // beta
+			   	matC,				  // matC
+			  	CUDA_R_64F,                       // computeType
+                                CUSPARSE_SPGEMM_DEFAULT,          // alg
+                                spgemmDescr,                      // spgemmDescr
+			   	&bufferSize2,			  // bufferSize2
+			   	NULL));				  // externalBuffer2
+    printf("after spgemm1\n"); fflush(stdout);
+
+    // CHECK_ERROR(cudaMalloc((void**)&dBuffer2, bufferSize2));
+    cudaMalloc((void**)&dBuffer2, bufferSize2);
+    printf("after cudamalloc2\n"); fflush(stdout);
+
+    CHECK_CUSPARSE(cusparseSpGEMM_compute(handle,
+				CUSPARSE_OPERATION_NON_TRANSPOSE, // opA
+			  	CUSPARSE_OPERATION_NON_TRANSPOSE, // opB
+			   	&alpha,				  // alpha
+			   	matA, 				  // matA
+			   	matB,				  // matB
+			   	&beta,				  // beta
+			   	matC,				  // matC
+			  	CUDA_R_64F,                       // computeType
+                                CUSPARSE_SPGEMM_DEFAULT,          // alg
+                                spgemmDescr,                      // spgemmDescr
+			   	&bufferSize2,			  // bufferSize2
+			   	dBuffer2));			  // externalBuffer2
+    printf("after spgemm2\n"); fflush(stdout);
+
+    int64_t C_num_rows1, C_num_cols1, C_nnz1;
+    CHECK_CUSPARSE(cusparseSpMatGetSize(matC, &C_num_rows1, &C_num_cols1, &C_nnz1));
+    
+    int32_t *dC_csrOffsets;
+    int32_t *dC_columns;
+    double *dC_values;
+    cudaMalloc(&dC_csrOffsets, (n + 1) * sizeof(int32_t));
+    cudaMalloc(&dC_columns, C_nnz1 * sizeof(int32_t));
+    cudaMalloc(&dC_values,  C_nnz1 * sizeof(double));
+    printf("after cudamalloc3\n"); fflush(stdout);
+
+    CHECK_CUSPARSE(cusparseCsrSetPointers(matC, dC_csrOffsets, dC_columns, dC_values));
+    CHECK_CUSPARSE(cusparseSpGEMM_copy(handle,
+                            CUSPARSE_OPERATION_NON_TRANSPOSE, // opA
+                            CUSPARSE_OPERATION_NON_TRANSPOSE, // opB
+                            &alpha,                           // alpha
+                            matA,                             // matA
+                            matB,                             // matB
+                            &beta,                            // beta
+                            matC,                             // matC
+                            CUDA_R_64F,                       // computeType
+                            CUSPARSE_SPGEMM_DEFAULT,          // alg
+                            spgemmDescr));
+    printf("after spgemm_copy\n"); fflush(stdout);
+    
+
+    cudaFree(dBuffer1);
+    cudaFree(dBuffer2);
+
+    CHECK_CUSPARSE(cusparseSpGEMM_destroyDescr(spgemmDescr));
+    CHECK_CUSPARSE(cusparseDestroySpMat(matA));
+    CHECK_CUSPARSE(cusparseDestroySpMat(matB));
+    CHECK_CUSPARSE(cusparseDestroySpMat(matC));
+    printf("after destroys\n"); fflush(stdout);
+
+    auto rows_dim = torch::IntArrayRef{n};
+    auto nnz_dim = torch::IntArrayRef{C_nnz1};
+
+    auto c_csrOffsets = torch::from_blob(dC_csrOffsets, rows_dim, torch::TensorOptions().device(torch::kCUDA));
+    auto c_columns = torch::from_blob(dC_columns, nnz_dim, torch::TensorOptions().device(torch::kCUDA));
+    auto c_values = torch::from_blob(dC_values, nnz_dim, torch::TensorOptions().device(torch::kCUDA));
+    printf("after tensor_casts\n"); fflush(stdout);
+
+    CHECK_ERROR("error");
+    printf("after spgemm\n"); fflush(stdout);
+    return {c_csrOffsets, c_columns, c_values};
+}
+
 
 __global__ void DownSample(long *h_counts, long *h_rows, long *ps_h_rows, long *hev_indices, int *overflow, 
                                 int nnz) {
@@ -726,6 +944,7 @@ void rowselect_coo_gpu(const at::Tensor& nnz_cols, const at::Tensor& rows, const
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
     m.def("sparse_coo_tensor_gpu", &sparse_coo_tensor_gpu, "Sparse Tensor GPU-only constructor");
     m.def("spmm_gpu", &spmm_gpu, "SpMM wrapper for cusparse");
+    m.def("spgemm_gpu", &spgemm_gpu, "SpGEMM wrapper for cusparse");
     m.def("downsample_gpu", &downsample_gpu, "Downsampling for LADIES sampling algorithm");
     m.def("compute_darts_gpu", &compute_darts_gpu, "Compute dart values for LADIES sampling algorithm");
     m.def("throw_darts_gpu", &throw_darts_gpu, "Throw darts in LADIES sampling algorithm");

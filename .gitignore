@@ -25,6 +25,8 @@ reddit.py
 tests/data
 tests/examples
 tests/LADIES/
+tests/pytorch_geometric/
+tests/torch-quiver/
 tests/*.out
 *.qdrep
 *.out

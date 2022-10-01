@@ -303,6 +303,7 @@ def main(args, batches=None):
     print(f"hostname: {socket.gethostname()} rank: {rank} size: {size}", flush=True)
 
     adj_matrix, _ = add_remaining_self_loops(adj_matrix, num_nodes=inputs.size(0))
+    edge_count = adj_matrix.size(1)
 
     partitioning = Partitioning.ONE5D
 
@@ -317,6 +318,8 @@ def main(args, batches=None):
     features_loc, g_loc, ampbyp = one5d_partition(rank, size, inputs, adj_matrix, data, \
                                                       inputs, num_classes, args.replication, \
                                                       args.normalize)
+    del inputs
+
     print("end partitioning", flush=True)
 
     features_loc = features_loc.to(device)
@@ -367,20 +370,20 @@ def main(args, batches=None):
     batches_values = torch.cuda.DoubleTensor(batches_loc.size(1) * batches_loc.size(0)).fill_(1.0)
     batches_loc = torch.sparse_coo_tensor(batches_indices, batches_values, (batches_loc.size(0), g_loc.size(1)))
     g_loc = torch.pow(g_loc, 2)
-    print(f"g_loc[3]: {(g_loc._indices()[0, :] == 3).nonzero().squeeze().size()}")
     torch.cuda.nvtx.range_pop()
     print(f"g_loc: {g_loc}")
 
-    node_count = inputs.size(0)
+    node_count = g_loc.size(1)
     adj_matrix = adj_matrix.cuda()
     if args.n_darts == -1:
-        edge_count = adj_matrix.size(1)
         avg_degree = int(edge_count / node_count)
         if args.sample_method == "ladies":
             args.n_darts = avg_degree * args.batch_size
         elif args.sample_method == "sage":
             args.n_darts = avg_degree
         print(f"n_darts: {args.n_darts}")
+
+    # del adj_matrix # Comment when testing
 
     print(f"rank: {rank} g_loc: {g_loc}")
     print(f"rank: {rank} batches_loc: {batches_loc}")
@@ -389,7 +392,7 @@ def main(args, batches=None):
     nnz_row_masks = torch.cuda.BoolTensor((size // args.replication) * g_loc._indices().size(1)) # for sa-spgemm
     nnz_row_masks.fill_(0)
     
-    nnz_recv_upperbound = adj_matrix.size(1) // (size // args.replication)
+    nnz_recv_upperbound = edge_count // (size // args.replication)
     sa_recv_buff = torch.cuda.DoubleTensor(3 * nnz_recv_upperbound).fill_(0)
 
     if args.sample_method == "ladies":
@@ -462,6 +465,7 @@ def main(args, batches=None):
             adj_matrices[j][i] = adj_matrix_sample
 
     # print(f"sample: {adj_matrices}")
+    # adj_matrix = None # Uncomment bottom for testing
     adj_matrix = adj_matrix.cuda()
     adj_matrix = torch.sparse_coo_tensor(adj_matrix, 
                                         torch.cuda.FloatTensor(adj_matrix.size(1)).fill_(1.0), 
