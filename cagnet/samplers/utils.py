@@ -89,39 +89,39 @@ def dist_spgemm15D(mata, matb, replication, rank, size, row_groups, col_groups, 
         stop_time_add(start_timer, stop_timer, timing_dict, f"spgemm-preproc-local-{name}")
 
         start_time(start_timer)
-        # matc_chunk_indices, matc_chunk_values = torch_sparse.spspmm(mata_chunk_indices, \
-        #                                             mata_chunk_values, matb_recv_indices, \
-        #                                             matb_recv_values, mata.size(0), \
-        #                                             chunk_col_size, matb.size(1), coalesced=True)
+        matc_chunk_indices, matc_chunk_values = torch_sparse.spspmm(mata_chunk_indices, \
+                                                    mata_chunk_values, matb_recv_indices, \
+                                                    matb_recv_values, mata.size(0), \
+                                                    chunk_col_size, matb.size(1), coalesced=True)
 
-        print(f"before spgemm_gpu", flush=True)
-        print(f"mata_chunk_indices[0,:]: {mata_chunk_indices[0,:].int()}", flush=True)
-        print(f"mata_chunk_indices[0,:].size: {mata_chunk_indices[0,:].int().size()}", flush=True)
-        print(f"mata.size(0): {mata.size(0)}", flush=True)
-        mata_chunk_indices = mata_chunk_indices.int()
-        matb_recv_indices = matb_recv_indices.int()
-        matc_outputs = spgemm_gpu(mata_chunk_indices[0,:],      # A_rows
-                                    mata_chunk_indices[1,:],    # A_cols
-                                    mata_chunk_values,                # A_vals
-                                    matb_recv_indices[0,:],     # B_rows
-                                    matb_recv_indices[1,:],     # B_cols
-                                    matb_recv_values,                 # B_vals
-                                    mata.size(0),                     # n
-                                    chunk_col_size,                   # k
-                                    matb.size(1))                     # m
-        print(f"after spgemm_gpu", flush=True)
-        mata_chunk_indices = mata_chunk_indices.long()
-        matb_recv_indices = matb_recv_indices.long()
-        matc_chunk_rows = matc_outputs[0]
-        matc_chunk_cols = matc_outputs[1]
-        matc_chunk_values = matc_outputs[2]
+        # print(f"before spgemm_gpu", flush=True)
+        # print(f"mata_chunk_indices[0,:]: {mata_chunk_indices[0,:].int()}", flush=True)
+        # print(f"mata_chunk_indices[0,:].size: {mata_chunk_indices[0,:].int().size()}", flush=True)
+        # print(f"mata.size(0): {mata.size(0)}", flush=True)
+        # mata_chunk_indices = mata_chunk_indices.int()
+        # matb_recv_indices = matb_recv_indices.int()
+        # matc_outputs = spgemm_gpu(mata_chunk_indices[0,:],      # A_rows
+        #                             mata_chunk_indices[1,:],    # A_cols
+        #                             mata_chunk_values.float(),  # A_vals
+        #                             matb_recv_indices[0,:],     # B_rows
+        #                             matb_recv_indices[1,:],     # B_cols
+        #                             matb_recv_values.float(),   # B_vals
+        #                             mata.size(0),               # n
+        #                             chunk_col_size,             # k
+        #                             matb.size(1))               # m
+        # print(f"after spgemm_gpu", flush=True)
+        # mata_chunk_indices = mata_chunk_indices.long()
+        # matb_recv_indices = matb_recv_indices.long()
+        # matc_chunk_rows = matc_outputs[0].long()
+        # matc_chunk_cols = matc_outputs[1].long()
+        # matc_chunk_values = matc_outputs[2].double()
 
-        print(f"before matc_chunk_rows: {matc_chunk_rows}")
-        matc_chunk_counts = torch.diff(matc_chunk_rows)
-        matc_chunk_rows = torch.repeat_interleave(torch.arange(0, mata.size(0), device=torch.device("cuda:0")),
-                                                    matc_chunk_counts)
-        print(f"after matc_chunk_rows: {matc_chunk_rows}")
-        matc_chunk_indices = torch.stack((matc_chunk_rows, matc_chunk_cols))
+        # print(f"before matc_chunk_rows: {matc_chunk_rows}")
+        # matc_chunk_counts = torch.diff(matc_chunk_rows)
+        # matc_chunk_rows = torch.repeat_interleave(torch.arange(0, mata.size(0), device=torch.device("cuda:0")),
+        #                                             matc_chunk_counts)
+        # print(f"after matc_chunk_rows: {matc_chunk_rows}")
+        # matc_chunk_indices = torch.stack((matc_chunk_rows, matc_chunk_cols))
         stop_time_add(start_timer, stop_timer, timing_dict, f"spgemm-local-spgemm-{name}")
 
         start_time(start_timer)
@@ -354,11 +354,31 @@ def dist_saspgemm15D(mata, matb, replication, rank, size, row_groups, col_groups
         matb_recv_values = matb_select_recv[2, :].double()
 
         start_time(start_timer)
-        print(f"type(mata_chunk_indices): {mata_chunk_indices.dtype}")
-        matc_chunk_indices, matc_chunk_values = torch_sparse.spspmm(mata_chunk_indices, \
-                                                    mata_chunk_values, matb_recv_indices, \
-                                                    matb_recv_values, mata.size(0), \
-                                                    chunk_col_size, matb.size(1), coalesced=True)
+        # matc_chunk_indices, matc_chunk_values = torch_sparse.spspmm(mata_chunk_indices, \
+        #                                             mata_chunk_values, matb_recv_indices, \
+        #                                             matb_recv_values, mata.size(0), \
+        #                                             chunk_col_size, matb.size(1), coalesced=True)
+        mata_chunk_indices = mata_chunk_indices.int()
+        matb_recv_indices = matb_recv_indices.int()
+        matc_outputs = spgemm_gpu(mata_chunk_indices[0,:],      # A_rows
+                                    mata_chunk_indices[1,:],    # A_cols
+                                    mata_chunk_values.float(),  # A_vals
+                                    matb_recv_indices[0,:],     # B_rows
+                                    matb_recv_indices[1,:],     # B_cols
+                                    matb_recv_values.float(),   # B_vals
+                                    mata.size(0),               # n
+                                    chunk_col_size,             # k
+                                    matb.size(1))               # m
+        mata_chunk_indices = mata_chunk_indices.long()
+        matb_recv_indices = matb_recv_indices.long()
+        matc_chunk_rows = matc_outputs[0].long()
+        matc_chunk_cols = matc_outputs[1].long()
+        matc_chunk_values = matc_outputs[2].double()
+        matc_chunk_counts = torch.diff(matc_chunk_rows)
+        matc_chunk_rows = torch.repeat_interleave(torch.arange(0, mata.size(0), device=torch.device("cuda:0")),
+                                                    matc_chunk_counts)
+        matc_chunk_indices = torch.stack((matc_chunk_rows, matc_chunk_cols))
+        matc_chunk_indices = torch.stack((matc_chunk_rows, matc_chunk_cols))
         stop_time_add(start_timer, stop_timer, timing_dict, f"spgemm-local-spgemm-{name}")
 
         start_time(start_timer)

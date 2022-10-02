@@ -303,71 +303,36 @@ std::vector<at::Tensor> spgemm_gpu(
         int32_t m) {
 
     
-    printf("before spgemm\n"); fflush(stdout);
     // SpGEMM between A (n x k)  and B (k x m)
     auto handle = at::cuda::getCurrentCUDASparseHandle();
 
     int32_t *d_a_csrrows = NULL;
     int32_t *d_b_csrrows = NULL;
-    int *tmp;
 
     int32_t A_nnz = A_values.size(0);
     int32_t B_nnz = B_values.size(0);
-    printf("A_nnz: %d\n", A_nnz); fflush(stdout);
-    printf("B_nnz: %d\n", B_nnz); fflush(stdout);
 
-    printf("before coo2csr\n"); fflush(stdout);
     // Construct CSR offsets array for A and B
-    // CHECK_ERROR(cudaMalloc(&d_a_csrrows, (n + 1) * sizeof(int32_t)));
     cudaMalloc(&d_a_csrrows, (n + 1) * sizeof(int32_t));
-    std::cout << "d_a_csrrows: " << d_a_csrrows << std::endl;
-    cudaMemset(d_a_csrrows, 0, (n + 1) * sizeof(int32_t));
-    std::cout << "n: " << n << std::endl;
-    std::cout << "handle: " << handle << std::endl;
-    cudaDeviceSynchronize();
-    cudaError_t err;
-    err = cudaGetLastError();
-    printf("err: %s\n", cudaGetErrorString(err)); fflush(stdout);
-
-    int *d_a_indices = A_rowindices.data<int>();
-    printf("d_a_indices: %x\n", d_a_indices); fflush(stdout);
-    int *h_a_indices = new int[A_nnz]();
-    cudaMemcpy(h_a_indices, d_a_indices, A_nnz * sizeof(int), cudaMemcpyDeviceToHost);
-    for (int i = 0; i < A_nnz; i++) {
-        printf("%d ", h_a_indices[i]); fflush(stdout);
-    }
-    printf("\n"); fflush(stdout);
-    cudaDeviceSynchronize();
-    err = cudaGetLastError();
-    printf("after printouts\n"); fflush(stdout);
-    printf("err: %s\n", cudaGetErrorString(err)); fflush(stdout);
     CHECK_CUSPARSE(cusparseXcoo2csr(handle, 
                                         A_rowindices.data<int>(), 
                                         A_nnz, 
                                         n, 
                                         d_a_csrrows, 
                                         CUSPARSE_INDEX_BASE_ZERO));
-    cudaDeviceSynchronize();
-    err = cudaGetLastError();
-    printf("after coo2csr\n"); fflush(stdout);
-    printf("err: %s\n", cudaGetErrorString(err)); fflush(stdout);
-    // CHECK_ERROR(cudaMalloc(&d_b_csrrows, (k + 1) * sizeof(int32_t)));
     cudaMalloc(&d_b_csrrows, (k + 1) * sizeof(int32_t));
-    printf("after balloc\n"); fflush(stdout);
-
+    
     CHECK_CUSPARSE(cusparseXcoo2csr(handle, 
                                         B_rowindices.data<int>(), 
                                         B_nnz, 
                                         k, 
                                         d_b_csrrows, 
                                         CUSPARSE_INDEX_BASE_ZERO));
-    printf("after coo2csr\n"); fflush(stdout);
     
     float alpha = 1;
     float beta = 0;
 
     // Construct CSR matrix structs for A, B, and C (empty CSR)
-    printf("before csr_construct\n"); fflush(stdout);
     cusparseSpMatDescr_t matA;
     CHECK_CUSPARSE(cusparseCreateCsr(&matA,
 					  n, 		// rows
@@ -375,11 +340,11 @@ std::vector<at::Tensor> spgemm_gpu(
 					  A_nnz, 	// nnz
 					  d_a_csrrows, 	// csrRowOffsets
 					  A_colindices.data<int>(), // csrColInd
-					  A_values.data<double>(),  // csrValues
+					  A_values.data<float>(),  // csrValues
 					  CUSPARSE_INDEX_32I, 	    // csrRowOffsetsType
 					  CUSPARSE_INDEX_32I, 	    // csrColIndType
 					  CUSPARSE_INDEX_BASE_ZERO, // idxBase,
-					  CUDA_R_64F)); 	    // valueType
+					  CUDA_R_32F)); 	    // valueType
 
     cusparseSpMatDescr_t matB;
     CHECK_CUSPARSE(cusparseCreateCsr(&matB,
@@ -388,11 +353,11 @@ std::vector<at::Tensor> spgemm_gpu(
 					  B_nnz, 	// nnz
 					  d_b_csrrows, 	// csrRowOffsets
 					  B_colindices.data<int>(), // csrColInd
-					  B_values.data<double>(),  // csrValues
+					  B_values.data<float>(),  // csrValues
 					  CUSPARSE_INDEX_32I, 	    // csrRowOffsetsType
 					  CUSPARSE_INDEX_32I, 	    // csrColIndType
 					  CUSPARSE_INDEX_BASE_ZERO, // idxBase,
-					  CUDA_R_64F)); 	    // valueType
+					  CUDA_R_32F)); 	    // valueType
 
     cusparseSpMatDescr_t matC;
     CHECK_CUSPARSE(cusparseCreateCsr(&matC,
@@ -405,10 +370,8 @@ std::vector<at::Tensor> spgemm_gpu(
 					  CUSPARSE_INDEX_32I, 	    // csrRowOffsetsType
 					  CUSPARSE_INDEX_32I, 	    // csrColIndType
 					  CUSPARSE_INDEX_BASE_ZERO, // idxBase,
-					  CUDA_R_64F)); 	    // valueType
-    printf("after csr_construct\n"); fflush(stdout);
-
-    printf("before spgemm_workest\n"); fflush(stdout);
+					  CUDA_R_32F)); 	    // valueType
+    
     cusparseSpGEMMDescr_t spgemmDescr;
     CHECK_CUSPARSE(cusparseSpGEMM_createDescr(&spgemmDescr));
 
@@ -416,7 +379,6 @@ std::vector<at::Tensor> spgemm_gpu(
     void *dBuffer2 = NULL;
     size_t bufferSize1 = 0;
     size_t bufferSize2 = 0;
-    printf("bufferSize1: %ld\n", bufferSize1); fflush(stdout);
     CHECK_CUSPARSE(cusparseSpGEMM_workEstimation(handle,            // handle
                                   CUSPARSE_OPERATION_NON_TRANSPOSE, // opA
                                   CUSPARSE_OPERATION_NON_TRANSPOSE, // opB
@@ -425,21 +387,14 @@ std::vector<at::Tensor> spgemm_gpu(
                                   matB,                             // matB
                                   &beta,                            // beta
                                   matC,                             // matC
-                                  CUDA_R_64F,                       // computeType
+                                  CUDA_R_32F,                       // computeType
                                   CUSPARSE_SPGEMM_DEFAULT,          // alg
                                   spgemmDescr,                      // spgemmDescr
                                   &bufferSize1,                     // bufferSize1
                                   NULL));                           // externalBuffer1
-    printf("after spgemm_workest1\n"); fflush(stdout);
 
-    printf("sizeof(bufferSize1): %d\n", sizeof(bufferSize1)); fflush(stdout);
-    printf("bufferSize1: %ld\n", bufferSize1); fflush(stdout);
     //CHECK_ERROR(cudaMalloc(&dBuffer1, bufferSize1));
-    CHECK_ERROR("before cudamalloc error");
     cudaMalloc(&dBuffer1, bufferSize1);
-    CHECK_ERROR("after cudamalloc error");
-    printf("before cudamalloc1 %x\n", dBuffer1); fflush(stdout);
-    printf("after cudamalloc1 %x\n", dBuffer1); fflush(stdout);
 
     CHECK_CUSPARSE(cusparseSpGEMM_workEstimation(handle,            // handle
                                   CUSPARSE_OPERATION_NON_TRANSPOSE, // opA
@@ -449,12 +404,11 @@ std::vector<at::Tensor> spgemm_gpu(
                                   matB,                             // matB
                                   &beta,                            // beta
                                   matC,                             // matC
-                                  CUDA_R_64F,                       // computeType
+                                  CUDA_R_32F,                       // computeType
                                   CUSPARSE_SPGEMM_DEFAULT,          // alg
                                   spgemmDescr,                      // spgemmDescr
                                   &bufferSize1,                     // bufferSize1
                                   dBuffer1));                       // externalBuffer1
-    printf("after workest2\n"); fflush(stdout);
 
     CHECK_CUSPARSE(cusparseSpGEMM_compute(handle,
 				CUSPARSE_OPERATION_NON_TRANSPOSE, // opA
@@ -464,16 +418,13 @@ std::vector<at::Tensor> spgemm_gpu(
 			   	matB,				  // matB
 			   	&beta,				  // beta
 			   	matC,				  // matC
-			  	CUDA_R_64F,                       // computeType
+			  	CUDA_R_32F,                       // computeType
                                 CUSPARSE_SPGEMM_DEFAULT,          // alg
                                 spgemmDescr,                      // spgemmDescr
 			   	&bufferSize2,			  // bufferSize2
 			   	NULL));				  // externalBuffer2
-    printf("after spgemm1\n"); fflush(stdout);
 
-    // CHECK_ERROR(cudaMalloc((void**)&dBuffer2, bufferSize2));
-    cudaMalloc((void**)&dBuffer2, bufferSize2);
-    printf("after cudamalloc2\n"); fflush(stdout);
+    cudaMalloc(&dBuffer2, bufferSize2);
 
     CHECK_CUSPARSE(cusparseSpGEMM_compute(handle,
 				CUSPARSE_OPERATION_NON_TRANSPOSE, // opA
@@ -483,23 +434,21 @@ std::vector<at::Tensor> spgemm_gpu(
 			   	matB,				  // matB
 			   	&beta,				  // beta
 			   	matC,				  // matC
-			  	CUDA_R_64F,                       // computeType
+			  	CUDA_R_32F,                       // computeType
                                 CUSPARSE_SPGEMM_DEFAULT,          // alg
                                 spgemmDescr,                      // spgemmDescr
 			   	&bufferSize2,			  // bufferSize2
 			   	dBuffer2));			  // externalBuffer2
-    printf("after spgemm2\n"); fflush(stdout);
 
     int64_t C_num_rows1, C_num_cols1, C_nnz1;
     CHECK_CUSPARSE(cusparseSpMatGetSize(matC, &C_num_rows1, &C_num_cols1, &C_nnz1));
     
     int32_t *dC_csrOffsets;
     int32_t *dC_columns;
-    double *dC_values;
+    float *dC_values;
     cudaMalloc(&dC_csrOffsets, (n + 1) * sizeof(int32_t));
     cudaMalloc(&dC_columns, C_nnz1 * sizeof(int32_t));
-    cudaMalloc(&dC_values,  C_nnz1 * sizeof(double));
-    printf("after cudamalloc3\n"); fflush(stdout);
+    cudaMalloc(&dC_values,  C_nnz1 * sizeof(float));
 
     CHECK_CUSPARSE(cusparseCsrSetPointers(matC, dC_csrOffsets, dC_columns, dC_values));
     CHECK_CUSPARSE(cusparseSpGEMM_copy(handle,
@@ -510,12 +459,24 @@ std::vector<at::Tensor> spgemm_gpu(
                             matB,                             // matB
                             &beta,                            // beta
                             matC,                             // matC
-                            CUDA_R_64F,                       // computeType
+                            CUDA_R_32F,                       // computeType
                             CUSPARSE_SPGEMM_DEFAULT,          // alg
                             spgemmDescr));
-    printf("after spgemm_copy\n"); fflush(stdout);
     
+    auto rows_dim = torch::IntArrayRef{n + 1};
+    auto nnz_dim = torch::IntArrayRef{C_nnz1};
 
+    auto c_csrOffsets = torch::from_blob(dC_csrOffsets, rows_dim, torch::TensorOptions()
+                                                                    .dtype(torch::kInt32)
+                                                                    .device(torch::kCUDA));
+    auto c_columns = torch::from_blob(dC_columns, nnz_dim, torch::TensorOptions()
+                                                                    .dtype(torch::kInt32)
+                                                                    .device(torch::kCUDA));
+    auto c_values = torch::from_blob(dC_values, nnz_dim, torch::TensorOptions()
+                                                                    .dtype(torch::kFloat32)
+                                                                    .device(torch::kCUDA));
+
+    CHECK_ERROR("spgemm_gpu error");
     cudaFree(dBuffer1);
     cudaFree(dBuffer2);
 
@@ -523,18 +484,7 @@ std::vector<at::Tensor> spgemm_gpu(
     CHECK_CUSPARSE(cusparseDestroySpMat(matA));
     CHECK_CUSPARSE(cusparseDestroySpMat(matB));
     CHECK_CUSPARSE(cusparseDestroySpMat(matC));
-    printf("after destroys\n"); fflush(stdout);
 
-    auto rows_dim = torch::IntArrayRef{n};
-    auto nnz_dim = torch::IntArrayRef{C_nnz1};
-
-    auto c_csrOffsets = torch::from_blob(dC_csrOffsets, rows_dim, torch::TensorOptions().device(torch::kCUDA));
-    auto c_columns = torch::from_blob(dC_columns, nnz_dim, torch::TensorOptions().device(torch::kCUDA));
-    auto c_values = torch::from_blob(dC_values, nnz_dim, torch::TensorOptions().device(torch::kCUDA));
-    printf("after tensor_casts\n"); fflush(stdout);
-
-    CHECK_ERROR("error");
-    printf("after spgemm\n"); fflush(stdout);
     return {c_csrOffsets, c_columns, c_values};
 }
 
