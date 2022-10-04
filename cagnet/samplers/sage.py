@@ -14,6 +14,7 @@ from sparse_coo_tensor_cpp import downsample_gpu, compute_darts_gpu, throw_darts
 
 
 timing = True
+baseline_compare = False
 
 def start_time(timer):
     if timing == True:
@@ -56,7 +57,8 @@ def sage_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_total,
     # adj_matrices[i][j] --  mb i layer j
     adj_matrices = [None] * n_layers # adj_matrices[i] --  bulk mb mtx for layer j
 
-    # start_time(total_start_timer)
+    if not baseline_compare:
+        start_time(total_start_timer)
     for i in range(n_layers):
         if i == 0:
             nnz = batch_size
@@ -64,7 +66,8 @@ def sage_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_total,
             nnz = current_frontier[0, :].size(0)
 
         # Expand batches matrix
-        total_start_timer.record()
+        if baseline_compare:
+            total_start_timer.record()
         batches_expand_rows = torch.arange(mb_count * nnz, \
                                                 device=torch.device("cuda:0"))
         batches_expand_idxs = torch.stack(
@@ -82,10 +85,17 @@ def sage_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_total,
         next_frontier = sample(p, frontier_size, mb_count, node_count_total, n_darts,
                                     replication, rank, size, row_groups, col_groups,
                                     timing_dict, "sage")
-        total_stop_timer.record()
-        torch.cuda.synchronize()
-        total_time = total_start_timer.elapsed_time(total_stop_timer)
-        print(f"total_time: {total_time}", flush=True)
+
+        if baseline_compare:
+            total_stop_timer.record()
+            torch.cuda.synchronize()
+            total_time = total_start_timer.elapsed_time(total_stop_timer)
+            print(f"total_time: {total_time}", flush=True)
+
+            batches_select = None
+            next_frontier_select = None
+            adj_matrices = None
+            break # for comparing with quiver
 
         # add explicit 0's to next_frontier
         next_frontier_nnz = next_frontier._values().nonzero().squeeze()
@@ -123,6 +133,7 @@ def sage_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_total,
         adj_matrices[i] = adj_matrix_sample
         current_frontier = next_frontier
 
+    print(f"total_time: {stop_time(total_start_timer, total_stop_timer)}", flush=True)
     for k, v in sorted(timing_dict.items()):
         if (k.startswith("spgemm") and k != "spgemm-misc") or k == "probability-spgemm" or k == "row-select-spgemm" or k == "col-select-spgemm":
             # print(f"{k} times: {v}")

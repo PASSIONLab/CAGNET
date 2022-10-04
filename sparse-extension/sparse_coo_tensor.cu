@@ -312,6 +312,7 @@ std::vector<at::Tensor> spgemm_gpu(
     int32_t A_nnz = A_values.size(0);
     int32_t B_nnz = B_values.size(0);
 
+
     // Construct CSR offsets array for A and B
     cudaMalloc(&d_a_csrrows, (n + 1) * sizeof(int32_t));
     CHECK_CUSPARSE(cusparseXcoo2csr(handle, 
