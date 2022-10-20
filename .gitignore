@@ -10,6 +10,8 @@ sparse-extension/sparse_coo_tensor_cpp.egg-info/
 sparse_coo_tensor_cpp.egg-info/
 .*.swp
 .*.swo
+.*.swm
+.*.swn
 .nfs*
 *.txt
 !requirements.txt
@@ -31,3 +33,4 @@ tests/*.out
 *.qdrep
 *.out
 *.nsys-rep
+*.ncu-rep

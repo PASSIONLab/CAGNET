@@ -290,6 +290,167 @@ void spmm_gpu(const at::Tensor& A_rowindices,
     C.set_data(C.view({c_col, c_row}));
     C.t_();
 }
+std::vector<at::Tensor> coogeam_gpu(
+        const at::Tensor& A_rowindices, 
+        const at::Tensor& A_colindices,
+        const at::Tensor& A_values, 
+        const at::Tensor& B_rowindices, 
+        const at::Tensor& B_colindices,
+        const at::Tensor& B_values,
+        int32_t m,
+        int32_t n) {
+
+
+    // sum matrix A (m x n) and B (m x n)
+    auto handle = at::cuda::getCurrentCUDASparseHandle();
+
+    int32_t *d_a_csrrows = NULL;
+    int32_t *d_b_csrrows = NULL;
+
+    int32_t A_nnz = A_values.size(0);
+    int32_t B_nnz = B_values.size(0);
+
+
+    // Construct CSR offsets array for A and B
+    cudaMalloc(&d_a_csrrows, (m + 1) * sizeof(int32_t));
+    CHECK_CUSPARSE(cusparseXcoo2csr(handle, 
+                                        A_rowindices.data<int>(), 
+                                        A_nnz, 
+                                        m,
+                                        d_a_csrrows, 
+                                        CUSPARSE_INDEX_BASE_ZERO));
+
+    cudaMalloc(&d_b_csrrows, (m + 1) * sizeof(int32_t));
+    CHECK_CUSPARSE(cusparseXcoo2csr(handle, 
+                                        B_rowindices.data<int>(), 
+                                        B_nnz, 
+                                        m, 
+                                        d_b_csrrows, 
+                                        CUSPARSE_INDEX_BASE_ZERO));
+    
+    double alpha = 1;
+    double beta = 1;
+
+    // Construct CSR matrix structs for A, B, and C (empty CSR)
+    cusparseMatDescr_t matA;
+    cusparseCreateMatDescr(&matA);
+
+    cusparseMatDescr_t matB;
+    cusparseCreateMatDescr(&matB);
+
+    int32_t *d_c_csrrows = NULL;
+    int32_t *d_c_columns = NULL;
+    double *d_c_values = NULL;
+
+    cudaMalloc(&d_c_csrrows, (m + 1) * sizeof(int32_t));
+    cusparseMatDescr_t matC;
+    cusparseCreateMatDescr(&matC);
+
+    char *buffer = NULL;
+    size_t bufferSize;
+    CHECK_CUSPARSE(cusparseDcsrgeam2_bufferSizeExt(handle,    // handle,
+                                    m,                        //  m,
+                                    n,                        //  n,
+                                    &alpha,                   //  alpha,
+                                    matA,                     //  descrA,
+                                    A_nnz,                    //  nnzA,
+                                    A_values.data<double>(),  //  csrSortedValA,
+                                    d_a_csrrows,              //  csrSortedRowPtrA,
+                                    A_colindices.data<int>(), //  csrSortedColIndA,
+                                    &beta,                    //  beta,
+                                    matB,                     //  descrB,
+                                    B_nnz,                    //  nnzB,
+                                    B_values.data<double>(),  //  csrSortedValB,
+                                    d_b_csrrows,              //  csrSortedRowPtrB,
+                                    B_colindices.data<int>(), //  csrSortedColIndB,
+                                    matC,                     //  descrC,
+                                    d_c_values,               //  csrSortedValC,
+                                    d_c_csrrows,              //  csrSortedRowPtrC,
+                                    d_c_columns,              //  csrSortedColIndC,
+                                    &bufferSize));            //  pBufferSizeInBytes)
+
+    cudaMalloc(&buffer, bufferSize * sizeof(char));
+
+    int32_t C_nnz;
+    int32_t *C_nnz_ptr = &C_nnz;
+    // std::cout << "m: " << m << std::endl;
+    // std::cout << "n: " << n << std::endl;
+    // std::cout << "A_nnz: " << A_nnz << std::endl;
+    // std::cout << "B_nnz: " << B_nnz << std::endl;
+    // std::cout << "d_a_csrrows: " << d_a_csrrows << std::endl;
+    // std::cout << "d_b_csrrows: " << d_b_csrrows << std::endl;
+    // std::cout << "d_c_csrrows: " << d_c_csrrows << std::endl;
+    // std::cout << "A_colindices.size(0): " << A_colindices.size(0) << std::endl;
+    // std::cout << "B_colindices.size(0): " << B_colindices.size(0) << std::endl;
+    CHECK_CUSPARSE(cusparseXcsrgeam2Nnz(handle,                         // handle,
+                                             m,                         // m,
+                                             n,                         // n,
+                                             matA,                      // descrA,
+                                             A_nnz,                     // nnzA,
+                                             d_a_csrrows,               // csrSortedRowPtrA,
+                                             A_colindices.data<int>(),  // csrSortedColIndA,
+                                             matB,                      // descrB,
+                                             B_nnz,                     // nnzB,
+                                             d_b_csrrows,               // csrSortedRowPtrB,
+                                             B_colindices.data<int>(),  // csrSortedColIndB,
+                                             matC,                      // descrC,
+                                             d_c_csrrows,               // csrSortedRowPtrC,
+                                             C_nnz_ptr,                 // nnzTotalDevHostPtr,
+                                             buffer));                 // workspace
+    CHECK_ERROR("after 2nnz");
+    if (NULL != C_nnz_ptr) {
+        C_nnz = *C_nnz_ptr;
+    } else {
+        int32_t baseC;
+        cudaMemcpy(&C_nnz, d_c_csrrows + m, sizeof(int32_t), cudaMemcpyDeviceToHost);
+        cudaMemcpy(&baseC, d_c_csrrows, sizeof(int32_t), cudaMemcpyDeviceToHost);
+        C_nnz -= baseC;
+    }
+
+    cudaMalloc(&d_c_columns, C_nnz * sizeof(int32_t));
+    cudaMalloc(&d_c_values, C_nnz * sizeof(double));
+
+    CHECK_CUSPARSE(cusparseDcsrgeam2(handle,                            // handle,
+                                          m,                            // m,
+                                          n,                            // n,
+                                          &alpha,                       // alpha,
+                                          matA,                         // descrA,
+                                          A_nnz,                        // nnzA,
+                                          A_values.data<double>(),      // csrSortedValA,
+                                          d_a_csrrows,                  // csrSortedRowPtrA,
+                                          A_colindices.data<int>(),     // csrSortedColIndA,
+                                          &beta,                        // beta,
+                                          matB,                         // descrB,
+                                          B_nnz,                        // nnzB,
+                                          B_values.data<double>(),      // csrSortedValB,
+                                          d_b_csrrows,                  // csrSortedRowPtrB,
+                                          B_colindices.data<int>(),     // csrSortedColIndB,
+                                          matC,                         // descrC,
+                                          d_c_values,                   // csrSortedValC,
+                                          d_c_csrrows,                  // csrSortedRowPtrC,
+                                          d_c_columns,                  // csrSortedColIndC,
+                                          buffer));                     // pBuffer)
+
+    auto rows_dim = torch::IntArrayRef{m + 1};
+    auto nnz_dim = torch::IntArrayRef{C_nnz};
+
+    auto c_csrOffsets = torch::from_blob(d_c_csrrows, rows_dim, torch::TensorOptions()
+                                                                    .dtype(torch::kInt32)
+                                                                    .device(torch::kCUDA));
+    auto c_columns = torch::from_blob(d_c_columns, nnz_dim, torch::TensorOptions()
+                                                                    .dtype(torch::kInt32)
+                                                                    .device(torch::kCUDA));
+    auto c_values = torch::from_blob(d_c_values, nnz_dim, torch::TensorOptions()
+                                                                    .dtype(torch::kFloat64)
+                                                                    .device(torch::kCUDA));
+    cudaFree(buffer);
+
+    CHECK_CUSPARSE(cusparseDestroyMatDescr(matA));
+    CHECK_CUSPARSE(cusparseDestroyMatDescr(matB));
+    CHECK_CUSPARSE(cusparseDestroyMatDescr(matC));
+
+    return {c_csrOffsets, c_columns, c_values};
+}
 
 std::vector<at::Tensor> spgemm_gpu(
         const at::Tensor& A_rowindices, 
@@ -909,4 +1070,5 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
     m.def("scatterd_add_gpu", &scatterd_add_gpu, "Implementation of scatter_add_ for doubles");
     m.def("scatteri_add_gpu", &scatteri_add_gpu, "Implementation of scatter_add_ for ints");
     m.def("rowselect_coo_gpu", &rowselect_coo_gpu, "Row selection for sparsity-aware spgemm");
+    m.def("coogeam_gpu", &coogeam_gpu, "csrgeam2 wrapper for cusparse");
 }

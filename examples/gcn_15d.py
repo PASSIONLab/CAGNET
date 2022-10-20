@@ -4,6 +4,7 @@ import os
 import os.path as osp
 import time
 import numpy as np
+
 import torch
 import torch.distributed as dist
 import torch.nn as nn
@@ -19,6 +20,9 @@ from cagnet.nn.conv import GCNConv
 from cagnet.partitionings import Partitioning
 from cagnet.samplers import ladies_sampler, sage_sampler
 import cagnet.nn.functional as CAGF
+
+import ogb
+from ogb.nodeproppred import PygNodePropPredDataset
 
 import socket
 
@@ -135,7 +139,9 @@ def row_normalize(mx):
     r_inv = torch.float_power(rowsum, -1).flatten()
     # r_inv._values = r_inv._values()[torch.isinf(r_inv._values())] = 0.
     # r_mat_inv = torch.diag(r_inv._values())
-    r_inv_values = r_inv._values()
+    r_inv_values = torch.cuda.DoubleTensor(r_inv.size(0)).fill_(0)
+    r_inv_values[r_inv._indices()[0,:]] = r_inv._values()
+    # r_inv_values = r_inv._values()
     r_inv_values[torch.isinf(r_inv_values)] = 0
     r_mat_inv = torch.sparse_coo_tensor([np.arange(0, r_inv.size(0)).tolist(),
                                      np.arange(0, r_inv.size(0)).tolist()],
@@ -283,6 +289,29 @@ def main(args, batches=None):
         data = data.to(device)
         inputs.requires_grad = True
         data.y = data.y.to(device)
+    elif args.dataset.startswith("ogb"):
+        dataset = PygNodePropPredDataset(name=args.dataset, root="../../data")
+	 
+        split_idx = dataset.get_idx_split() 
+        # train_loader = DataLoader(dataset[split_idx["train"]], batch_size=32, shuffle=True)
+        # valid_loader = DataLoader(dataset[split_idx["valid"]], batch_size=32, shuffle=False)
+        # test_loader = DataLoader(dataset[split_idx["test"]], batch_size=32, shuffle=False)
+        data = dataset[0]
+        # data = data.to(device)
+        # data.x.requires_grad = True
+        # inputs = data.x.to(device)
+        inputs = data.x
+        # inputs.requires_grad = True
+        # data.y = data.y.to(device)
+        edge_index = data.edge_index
+        num_features = dataset.num_features
+        num_classes = dataset.num_classes
+        adj_matrix = edge_index
+        split_idx = dataset.get_idx_split()
+        train_idx = split_idx['train'].to(device)
+
+    print(f"adj_matrix.size(): {adj_matrix.size()}")
+    print(f"adj_matrix: {adj_matrix}")
 
     # Initialize distributed environment with SLURM
     if "SLURM_PROCID" in os.environ.keys():
@@ -318,11 +347,10 @@ def main(args, batches=None):
     features_loc, g_loc, ampbyp = one5d_partition(rank, size, inputs, adj_matrix, data, \
                                                       inputs, num_classes, args.replication, \
                                                       args.normalize)
-    del inputs
 
     print("end partitioning", flush=True)
 
-    features_loc = features_loc.to(device)
+    # features_loc = features_loc.to(device)
     g_loc = g_loc.to(device)
     for i in range(len(ampbyp)):
         ampbyp[i] = ampbyp[i].t().coalesce().to(device)
@@ -336,22 +364,25 @@ def main(args, batches=None):
 
     n_per_proc = math.ceil(float(g_loc.size(0)) / (size / args.replication))
 
-    rank_train_mask = torch.split(data.train_mask, n_per_proc, dim=0)[rank_c]
-    rank_test_mask = torch.split(data.test_mask, n_per_proc, dim=0)[rank_c]
-    labels_rank = torch.split(data.y, n_per_proc, dim=0)[rank_c]
-    rank_train_nids = rank_train_mask.nonzero().squeeze()
-    rank_test_nids = rank_test_mask.nonzero().squeeze()
+    # rank_train_mask = torch.split(data.train_mask, n_per_proc, dim=0)[rank_c]
+    # rank_test_mask = torch.split(data.test_mask, n_per_proc, dim=0)[rank_c]
+    # labels_rank = torch.split(data.y, n_per_proc, dim=0)[rank_c]
+    # rank_train_nids = rank_train_mask.nonzero().squeeze()
+    # rank_test_nids = rank_test_mask.nonzero().squeeze()
 
-    train_nid = data.train_mask.nonzero().squeeze()
-    test_nid = data.test_mask.nonzero().squeeze()
-
+    if not args.dataset.startswith("ogb"):
+        train_nid = data.train_mask.nonzero().squeeze()
+        test_nid = data.test_mask.nonzero().squeeze()
+    else:
+        train_nid = train_idx
+    
     torch.cuda.nvtx.range_pop()
 
     if batches is None:
         print("beginning constructing batches")
         batches = torch.cuda.IntTensor(args.n_bulkmb, args.batch_size) # initially the minibatch, note row-major
         torch.cuda.nvtx.range_push("nvtx-gen-minibatch-vtxs")
-        # torch.manual_seed(0)
+        torch.manual_seed(0)
         vertex_perm = torch.randperm(train_nid.size(0))
         # Generate minibatch vertices
         for i in range(args.n_bulkmb):
@@ -388,7 +419,7 @@ def main(args, batches=None):
     print(f"rank: {rank} g_loc: {g_loc}")
     print(f"rank: {rank} batches_loc: {batches_loc}")
     # do it once before timing
-    # torch.manual_seed(0)
+    torch.manual_seed(0)
     nnz_row_masks = torch.cuda.BoolTensor((size // args.replication) * g_loc._indices().size(1)) # for sa-spgemm
     nnz_row_masks.fill_(0)
     
@@ -401,8 +432,9 @@ def main(args, batches=None):
                                         ladies_sampler(g_loc, batches_loc, args.batch_size, \
                                                                     args.samp_num, args.n_bulkmb, \
                                                                     args.n_layers, args.n_darts, \
-                                                                    args.replication, nnz_row_masks, sa_recv_buff, \
-                                                                    rank, size, row_groups, col_groups)
+                                                                    args.replication, nnz_row_masks, 
+                                                                    sa_recv_buff, rank, size, row_groups, 
+                                                                    col_groups, args.timing)
 
         print()
         torch.cuda.profiler.cudart().cudaProfilerStart()
@@ -412,16 +444,18 @@ def main(args, batches=None):
                                         ladies_sampler(g_loc, batches_loc, args.batch_size, \
                                                                     args.samp_num, args.n_bulkmb, \
                                                                     args.n_layers, args.n_darts, \
-                                                                    args.replication, nnz_row_masks, sa_recv_buff, \
-                                                                    rank, size, row_groups, col_groups)
+                                                                    args.replication, nnz_row_masks, 
+                                                                    sa_recv_buff, rank, size, row_groups, 
+                                                                    col_groups, args.timing)
     elif args.sample_method == "sage":
-        # torch.manual_seed(rank_col)
+        torch.manual_seed(rank_col)
         current_frontier, next_frontier, adj_matrices = \
                                         sage_sampler(g_loc, batches_loc, args.batch_size, \
                                                                     args.samp_num, args.n_bulkmb, \
                                                                     args.n_layers, args.n_darts, \
-                                                                    args.replication, nnz_row_masks, sa_recv_buff, \
-                                                                    rank, size, row_groups, col_groups)
+                                                                    args.replication, nnz_row_masks, 
+                                                                    sa_recv_buff, rank, size, row_groups, 
+                                                                    col_groups, args.timing, args.baseline)
 
         print()
         torch.cuda.profiler.cudart().cudaProfilerStart()
@@ -431,8 +465,9 @@ def main(args, batches=None):
                                         sage_sampler(g_loc, batches_loc, args.batch_size, \
                                                                     args.samp_num, args.n_bulkmb, \
                                                                     args.n_layers, args.n_darts, \
-                                                                    args.replication, nnz_row_masks, sa_recv_buff, \
-                                                                    rank, size, row_groups, col_groups)
+                                                                    args.replication, nnz_row_masks, 
+                                                                    sa_recv_buff, rank, size, row_groups, 
+                                                                    col_groups, args.timing, args.baseline)
 
     torch.cuda.nvtx.range_pop()
     torch.cuda.profiler.cudart().cudaProfilerStop()
@@ -605,6 +640,10 @@ if __name__ == '__main__':
                             help='number of minibatches to sample in bulk')
     parser.add_argument('--n-darts', default=-1, type=int,
                             help='number of darts to throw per minibatch in LADIES sampling')
+    parser.add_argument('--timing', action="store_true",
+                            help='whether to turn on timers')
+    parser.add_argument('--baseline', action="store_true",
+                            help='whether to avoid col selection for baseline comparison')
     args = parser.parse_args()
     print(args)
 

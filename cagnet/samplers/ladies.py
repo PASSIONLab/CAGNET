@@ -11,6 +11,7 @@ from sparse_coo_tensor_cpp import downsample_gpu, compute_darts_gpu, throw_darts
                                     shift_rowselect_gpu, shift_colselect_gpu, \
                                     scatterd_add_gpu, scatteri_add_gpu, rowselect_coo_gpu
 
+
 def start_time(timer):
     timer.record()
 
@@ -18,9 +19,9 @@ def stop_time(start_timer, stop_timer):
     stop_timer.record()
     torch.cuda.synchronize()
     return start_timer.elapsed_time(stop_timer)
-
+    
 def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_total, n_layers, n_darts, \
-                        replication, sa_masks, sa_recv_buff, rank, size, row_groups, col_groups):
+                        replication, sa_masks, sa_recv_buff, rank, size, row_groups, col_groups, timing):
 
     total_start_timer = torch.cuda.Event(enable_timing=True)
     total_stop_timer = torch.cuda.Event(enable_timing=True)
@@ -52,7 +53,7 @@ def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_tota
             nnz = current_frontier[0, :].size(0)
 
         p = gen_prob_dist(batches, adj_matrix, mb_count, node_count_total, replication, rank, size, \
-                            row_groups, col_groups, sa_masks, sa_recv_buff, timing_dict, "ladies")
+                            row_groups, col_groups, sa_masks, sa_recv_buff, timing_dict, "ladies", timing)
 
         next_frontier = sample(p, frontier_size, mb_count, node_count_total, n_darts, replication, rank, size, \
                                     row_groups, col_groups, timing_dict, "ladies")

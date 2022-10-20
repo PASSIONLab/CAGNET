@@ -14,14 +14,14 @@ from sparse_coo_tensor_cpp import downsample_gpu, compute_darts_gpu, throw_darts
 
 
 timing = True
-baseline_compare = False
+baseline_compare = True
 
 def start_time(timer):
-    if timing == True:
+    if timing:
         timer.record()
 
 def stop_time(start_timer, stop_timer):
-    if timing == True:
+    if timing:
         stop_timer.record()
         torch.cuda.synchronize()
         return start_timer.elapsed_time(stop_timer)
@@ -29,7 +29,14 @@ def stop_time(start_timer, stop_timer):
         return 0.0
 
 def sage_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_total, n_layers, n_darts, \
-                        replication, sa_masks, sa_recv_buff, rank, size, row_groups, col_groups):
+                        replication, sa_masks, sa_recv_buff, rank, size, row_groups, col_groups,
+                        timing_arg, baseline_arg):
+
+    global timing
+    global baseline_compare
+
+    timing = timing_arg
+    baseline_compare = baseline_arg
 
     total_start_timer = torch.cuda.Event(enable_timing=True)
     total_stop_timer = torch.cuda.Event(enable_timing=True)
@@ -58,7 +65,8 @@ def sage_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_total,
     adj_matrices = [None] * n_layers # adj_matrices[i] --  bulk mb mtx for layer j
 
     if not baseline_compare:
-        start_time(total_start_timer)
+        # start_time(total_start_timer)
+        total_start_timer.record()
     for i in range(n_layers):
         if i == 0:
             nnz = batch_size
@@ -80,7 +88,8 @@ def sage_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_total,
 
         p = gen_prob_dist(batches_expand, adj_matrix, mb_count, node_count_total,
                                 replication, rank, size, row_groups, col_groups,
-                                sa_masks, sa_recv_buff, timing_dict, "sage")
+                                sa_masks, sa_recv_buff, timing_dict, "sage",
+                                timing_arg)
 
         next_frontier = sample(p, frontier_size, mb_count, node_count_total, n_darts,
                                     replication, rank, size, row_groups, col_groups,
@@ -133,24 +142,28 @@ def sage_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_total,
         adj_matrices[i] = adj_matrix_sample
         current_frontier = next_frontier
 
-    print(f"total_time: {stop_time(total_start_timer, total_stop_timer)}", flush=True)
-    for k, v in sorted(timing_dict.items()):
-        if (k.startswith("spgemm") and k != "spgemm-misc") or k == "probability-spgemm" or k == "row-select-spgemm" or k == "col-select-spgemm":
-            # print(f"{k} times: {v}")
-            v_tens = torch.cuda.FloatTensor(1).fill_(sum(v))
-            v_tens_recv = []
-            for i in range(size):
-                v_tens_recv.append(torch.cuda.FloatTensor(1).fill_(0))
-            dist.all_gather(v_tens_recv, v_tens)
+    # print(f"total_time: {stop_time(total_start_timer, total_stop_timer)}", flush=True)
+    total_stop_timer.record()
+    torch.cuda.synchronize()
+    total_time = total_start_timer.elapsed_time(total_stop_timer)
+    print(f"total_time: {total_time}", flush=True)
+    # for k, v in sorted(timing_dict.items()):
+    #     if (k.startswith("spgemm") and k != "spgemm-misc") or k == "probability-spgemm" or k == "row-select-spgemm" or k == "col-select-spgemm":
+    #         # print(f"{k} times: {v}")
+    #         v_tens = torch.cuda.FloatTensor(1).fill_(sum(v))
+    #         v_tens_recv = []
+    #         for i in range(size):
+    #             v_tens_recv.append(torch.cuda.FloatTensor(1).fill_(0))
+    #         dist.all_gather(v_tens_recv, v_tens)
 
-            if rank == 0:
-                min_time = min(v_tens_recv).item()
-                max_time = max(v_tens_recv).item()
-                avg_time = sum(v_tens_recv).item() / size
-                med_time = sorted(v_tens_recv)[size // 2].item()
+    #         if rank == 0:
+    #             min_time = min(v_tens_recv).item()
+    #             max_time = max(v_tens_recv).item()
+    #             avg_time = sum(v_tens_recv).item() / size
+    #             med_time = sorted(v_tens_recv)[size // 2].item()
 
-                print(f"{k} min: {min_time} max: {max_time} avg: {avg_time} med: {med_time}")
-        dist.barrier()
+    #             print(f"{k} min: {min_time} max: {max_time} avg: {avg_time} med: {med_time}")
+    #     dist.barrier()
     for k, v in timing_dict.items():
         if len(v) > 0:
             avg_time = sum(v) / len(v)
