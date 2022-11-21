@@ -15,10 +15,13 @@ from sparse_coo_tensor_cpp import downsample_gpu, compute_darts_gpu, throw_darts
 def start_time(timer):
     timer.record()
 
-def stop_time(start_timer, stop_timer):
+def stop_time(start_timer, stop_timer, barrier=False):
     stop_timer.record()
     torch.cuda.synchronize()
-    return start_timer.elapsed_time(stop_timer)
+    time_taken = start_timer.elapsed_time(stop_timer)
+    if barrier:
+        dist.barrier()
+    return time_taken
     
 def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_total, n_layers, n_darts, \
                         replication, sa_masks, sa_recv_buff, rank, size, row_groups, col_groups, timing):

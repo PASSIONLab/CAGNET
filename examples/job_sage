@@ -1,0 +1,20 @@
+#!/bin/bash
+#SBATCH --qos=regular
+#SBATCH --time=00:30:00
+#SBATCH --nodes=9
+#SBATCH --gpus=36
+#SBATCH --ntasks-per-node=4
+#SBATCH --constraint=gpu
+#SBATCH --account=m1982_g
+
+module load pytorch
+export PYTHONPATH="/global/homes/a/alokt/CAGNET:$PYTHONPATH"
+export PYTHONPATH="/global/homes/a/alokt/CAGNET/sparse-extension/build/lib/python3.9/site-packages/sparse_coo_tensor_cpp-0.0.0-py3.9-linux-x86_64.egg:$PYTHONPATH"
+
+hostname=$(scontrol show hostnames | head -n 1)
+echo $hostname
+srun -l -n 36 --ntasks-per-node 4 --gpus-per-task=1 --gpu-bind=map_gpu:0,1,2,3 python gcn_15d.py --dataset Protein --batch-size 512 --samp-num 10 --n-bulkmb 256 --replication 1 --sample-method sage --timing --baseline --hostname $hostname &> tmp_protein_sage_bs512sn10_mb256_p36c1_coogeam.out
+
+srun -l -n 36 --ntasks-per-node 4 --gpus-per-task=1 --gpu-bind=map_gpu:0,1,2,3 python gcn_15d.py --dataset Protein --batch-size 512 --samp-num 10 --n-bulkmb 256 --replication 2 --sample-method sage --timing --baseline --hostname $hostname &> tmp_protein_sage_bs512sn10_mb256_p36c2_coogeam.out
+
+srun -l -n 36 --ntasks-per-node 4 --gpus-per-task=1 --gpu-bind=map_gpu:0,1,2,3 python gcn_15d.py --dataset Protein --batch-size 512 --samp-num 10 --n-bulkmb 256 --replication 6 --sample-method sage --timing --baseline --hostname $hostname &> tmp_protein_sage_bs512sn10_mb256_p36c6_coogeam.out

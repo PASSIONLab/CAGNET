@@ -289,6 +289,22 @@ def main(args, batches=None):
         data = data.to(device)
         inputs.requires_grad = True
         data.y = data.y.to(device)
+    elif args.dataset == "Protein":
+        print(f"Loading coo...", flush=True)
+        edge_index = torch.load("../../data/protein/processed/protein.pt")
+        print(f"Done loading coo", flush=True)
+        n = 8745542
+        num_features = 128
+        num_classes = 256
+        inputs = torch.rand(n, num_features)
+        data = Data()
+        data.y = torch.rand(n).uniform_(0, num_classes - 1).long()
+        data.train_mask = torch.ones(n).long()
+        data.test_mask = torch.ones(n).long()
+        adj_matrix = edge_index.t_()
+        data = data.to(device)
+        inputs.requires_grad = True
+        data.y = data.y.to(device)
     elif args.dataset.startswith("ogb"):
         dataset = PygNodePropPredDataset(name=args.dataset, root="../../data")
 	 
