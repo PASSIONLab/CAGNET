@@ -433,7 +433,7 @@ def main(args, batches=None):
     # del adj_matrix # Comment when testing
 
     print(f"rank: {rank} g_loc: {g_loc}")
-    print(f"rank: {rank} batches_loc: {batches_loc}")
+    print(f"rank: {rank} batches_loc: {batches_loc}", flush=True)
     # do it once before timing
     torch.manual_seed(0)
     nnz_row_masks = torch.cuda.BoolTensor((size // args.replication) * g_loc._indices().size(1)) # for sa-spgemm
