@@ -266,11 +266,11 @@ def dist_saspgemm15D(mata, matb, replication, rank, size, row_groups, col_groups
             for j in range(size // replication):
                 recv_rank = rank_col + j * replication
                 if recv_rank != q:
-                    recv_objs.append(dist.irecv(nnz_col_ids[j], src=recv_rank).wait())
+                    recv_objs.append(dist.recv(nnz_col_ids[j], src=recv_rank))
                 else:
                     nnz_col_ids[j] = nnz_cols
         else:
-            dist.isend(nnz_cols, dst=q)
+            dist.send(nnz_cols, dst=q)
         stop_time_add(start_timer, stop_timer, timing_dict, f"spgemm-send-colids-{name}", barrier=True)
         torch.cuda.nvtx.range_pop() # send-nnzcols
 
@@ -309,10 +309,14 @@ def dist_saspgemm15D(mata, matb, replication, rank, size, row_groups, col_groups
                     # selected_rows_count = torch.cuda.IntTensor(1).fill_(matb_send.size(1))
                     selected_rows_count = torch.cuda.IntTensor(1).fill_(matb_send_indices.size(1))
                     nnz_count += 3 * matb_send_indices.size(1)
-                    dist.isend(selected_rows_count, tag=0, dst=recv_rank)
+                    rows_count_obj = dist.isend(selected_rows_count, tag=0, dst=recv_rank)
                     # dist.isend(matb_send, tag=1, dst=recv_rank)
-                    dist.isend(matb_send_indices, tag=1, dst=recv_rank)
-                    dist.isend(matb_send_values, tag=2, dst=recv_rank)
+                    matb_indices_obj = dist.isend(matb_send_indices, tag=1, dst=recv_rank)
+                    matb_values_obj = dist.isend(matb_send_values, tag=2, dst=recv_rank)
+
+                    rows_count_obj.wait()
+                    matb_indices_obj.wait()
+                    matb_values_obj.wait()
                 else:
                     # matb_select_recv = matb_send.clone()
                     matb_recv_indices = matb_send_indices.clone()
@@ -543,10 +547,8 @@ def sample(p, frontier_size, mb_count, node_count_total, n_darts, replication,
     # frontier_nnz_sizes = torch.histc(next_frontier._indices()[0,:], bins=p.size(0)).int()
 
     frontier_nnz_sizes = torch.cuda.IntTensor(p.size(0)).fill_(0)
-    frontier_nnz_sizes.scatter_add_(0, next_frontier._indices()[0,:], next_frontier._indices()[0,:].int())
-    frontier_nnz_sizes = torch.div(frontier_nnz_sizes,
-                                         torch.arange(0, p.size(0), device=torch.device("cuda:0")),
-                                         rounding_mode="floor").int()
+    ones = torch.cuda.IntTensor(next_frontier._indices()[0,:].size(0)).fill_(1)
+    frontier_nnz_sizes.scatter_add_(0, next_frontier._indices()[0,:], ones)
     zero_count = (next_frontier._indices()[0,:] == 0).nonzero().size(0)
     frontier_nnz_sizes[0] = zero_count
 
