@@ -13,6 +13,7 @@ def stop_time(self, range_name, start):
         self.timings[range_name] += time.time() - start
     else:
         return 0.0
+    # dist.barrier()
 
 def broad_func_oned(self, graph, ampbyp, inputs):
 #    n_per_proc = math.ceil(float(graph.size(0) / self.size))
@@ -34,7 +35,6 @@ def broad_func_oned(self, graph, ampbyp, inputs):
 
     # self.timings["find_unique"] = time.time() - start
     stop_time(self, "find_unique", start)
-
     start = time.time()
     dist.all_to_all(counts_recv, counts_send, group=self.group)
     # self.timings["a2a1"] = time.time() - start
@@ -44,7 +44,6 @@ def broad_func_oned(self, graph, ampbyp, inputs):
     row_indices_recv = [torch.cuda.LongTensor(device=self.device).resize_(counts_recv[i].int().item(),).fill_(0) for i in range(len(counts_recv))]
 
     row_data_recv = [torch.cuda.FloatTensor(device=self.device).resize_(counts_send[i].int().item(), inputs.size(1)).fill_(0) for i in range(len(counts_send))]
-    
     start = time.time()
     dist.all_to_all(row_indices_recv, row_indices_send, group=self.group)
     # self.timings["a2a2"] = time.time() - start
@@ -108,14 +107,18 @@ def broad_func_one5d(self, graph, ampbyp, inputs):
 
     z_loc = torch.cuda.FloatTensor(ampbyp[0].size(0), inputs.size(1), device=self.device).fill_(0)
 
-    inputs_recv = torch.cuda.FloatTensor(n_per_proc, inputs.size(1), device=self.device).fill_(0)
-
+#    inputs_recv = torch.cuda.FloatTensor(n_per_proc, inputs.size(1), device=self.device).fill_(0)
+    rank = self.rank
     rank_c = self.rank // self.replication
     rank_col = self.rank % self.replication
+    
+    col_procs = list(range(rank_col, self.size, self.replication))
 
     stages = self.size // (self.replication ** 2)
     if rank_col == self.replication - 1:
         stages = (self.size // self.replication) - (self.replication - 1) * stages
+
+    col_group_length = self.size // self.replication
 
     for i in range(stages):
         q = (rank_col * (self.size // (self.replication ** 2)) + i) * self.replication + rank_col
@@ -124,15 +127,67 @@ def broad_func_one5d(self, graph, ampbyp, inputs):
 
         am_partid = rank_col * (self.size // self.replication ** 2) + i
 
-        if q == self.rank:
-            inputs_recv = inputs.clone()
-        elif q_c == self.size // self.replication - 1:
+        # all other processors in the col_group tell q how many nonzeros they have
+        unique_cols = []
+        counts_recv = []
+
+
+        if rank!= q:
+            unique_cols = ampbyp[am_partid]._indices()[1].unique()
+            count = torch.cuda.LongTensor([unique_cols.size()], device=self.device).resize_(1, 1)
+            dist.send(count, dst=q, group=self.col_groups[rank_col])
+
+        if rank == q:
+            counts_recv = [torch.cuda.LongTensor(1, 1, device=self.device).fill_(0) for x in range(col_group_length)]
+            counter = 0
+            for j in col_procs:
+                if rank != j:
+                    dist.recv(counts_recv[counter], src=j, group=self.col_groups[rank_col])
+                counter += 1
+
+        # all other processors sends the nonzero col_ids to q
+        if rank != q:
+            dist.send(unique_cols, dst=q, group=self.col_groups[rank_col])
+
+        if rank == q:
+            row_indices_recv = [torch.cuda.LongTensor(device=self.device).resize_(counts_recv[i].int().item(),).fill_(0) for i in range(len(counts_recv))]
+            counter = 0
+            for j in col_procs:
+                if rank != j:
+                    dist.recv(row_indices_recv[counter], src=j, group=self.col_groups[rank_col])
+                counter += 1
+
+        # q sends back the correct rows
+            counter = 0
+            for j in col_procs:
+                if rank != j:
+                    rows_send = inputs[row_indices_recv[counter].long(), :]
+                    dist.send(rows_send, dst=j, group=self.col_groups[rank_col])
+                counter += 1
+
+        # all other ranks receive the inputs
+
+        inputs_recv = []
+
+        if rank!= q:
+            rows_recv = torch.cuda.FloatTensor(device=self.device).resize_((unique_cols.size(0), inputs.size(1))).fill_(0)
+            dist.recv(rows_recv, src=q, group=self.col_groups[rank_col])
             inputs_recv = torch.cuda.FloatTensor(ampbyp[am_partid].size(1), \
                                                     inputs.size(1), \
                                                     device=self.device).fill_(0)
+            inputs_recv[unique_cols] = rows_recv
+        else:
+            inputs_recv = inputs.clone()
+
+#        if q == self.rank:
+#            inputs_recv = inputs.clone()
+#        elif q_c == self.size // self.replication - 1:
+#            inputs_recv = torch.cuda.FloatTensor(ampbyp[am_partid].size(1), \
+#                                                    inputs.size(1), \
+#                                                    device=self.device).fill_(0)
 
         inputs_recv = inputs_recv.contiguous()
-        dist.broadcast(inputs_recv, src=q, group=self.col_groups[rank_col])
+#        dist.broadcast(inputs_recv, src=q, group=self.col_groups[rank_col])
 
         spmm_gpu(ampbyp[am_partid].indices()[0].int(), ampbyp[am_partid].indices()[1].int(), 
                         ampbyp[am_partid].values(), ampbyp[am_partid].size(0), 
