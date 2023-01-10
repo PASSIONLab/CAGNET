@@ -84,7 +84,7 @@ def dist_spgemm15D(mata, matb, replication, rank, size, row_groups, col_groups, 
 
         start_time(start_timer)
         matc_chunk_indices, matc_chunk_values = torch_sparse.spspmm(mata_chunk_indices, \
-                                                    mata_chunk_values, matb_recv_indices, \
+                                                    mata_chunk_values.double(), matb_recv_indices, \
                                                     matb_recv_values, mata.size(0), \
                                                     chunk_col_size, matb.size(1), coalesced=True)
 
@@ -279,13 +279,17 @@ def dist_saspgemm15D(mata, matb, replication, rank, size, row_groups, col_groups
         start_time(start_timer)
         nnz_count = 0
         if rank == q:
+            nnz_cols_count_list = torch.cat(nnz_cols_count_list, dim=0)
+            rowselect_coo_gpu(nnz_col_ids, matb._indices()[0,:], nnz_row_masks, nnz_cols_count_list, \
+                                    matb._indices().size(1), size // replication)
             for j in range(size // replication):
                 # start_time(start_inner_timer)
                 recv_rank = rank_col + j * replication
                 nnz_row_mask = nnz_row_masks[(j * matb._indices().size(1)):((j + 1) * matb._indices().size(1))]
                 
-                rowselect_coo_gpu(nnz_col_ids[j], matb._indices()[0,:], nnz_row_mask, \
-                                        nnz_col_ids[j].size(0), matb._indices().size(1))
+                # rowselect_coo_gpu(nnz_col_ids[j], matb._indices()[0,:], nnz_row_mask, \
+                #                         nnz_col_ids[j].size(0), matb._indices().size(1))
+
                 # stop_time_add(start_inner_timer, stop_inner_timer, timing_dict, f"spgemm-rowselect-{name}")
 
                 # matb_send_indices = torch.cuda.LongTensor(2, nnz_row_mask.nonzero().size(1))
@@ -544,7 +548,6 @@ def sample(p, frontier_size, mb_count, node_count_total, n_darts, replication,
 
     start_time(start_timer)
     torch.cuda.nvtx.range_push("nvtx-pre-loop")
-    # frontier_nnz_sizes = torch.histc(next_frontier._indices()[0,:], bins=p.size(0)).int()
 
     frontier_nnz_sizes = torch.cuda.IntTensor(p.size(0)).fill_(0)
     ones = torch.cuda.IntTensor(next_frontier._indices()[0,:].size(0)).fill_(1)

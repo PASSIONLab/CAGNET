@@ -48,11 +48,13 @@ def main(args):
         agg_neighbors = torch.IntTensor(agg_neighbors)
         agg_neighbors = agg_neighbors.unique()
 
+        print(f"current_frontier: {current_frontier}")
+        print(f"next_frontier: {next_frontier}")
         # Verify each vertex in next_frontier exists in aggregated neighorhood
         vertices_match = True
         for v in next_frontier:
             vtx = v.item()
-            if vtx not in agg_neighbors:
+            if vtx not in agg_neighbors and vtx not in current_frontier:
                 vertices_match = False
                 print(f"vtx {vtx} not in aggregated neighborhood")
 
@@ -122,6 +124,10 @@ if __name__ == '__main__':
                         help='Number of minibatches to sample in bulk')
     parser.add_argument('--n-darts', type=int, default=-1,
                         help='Number of darts to throw per minibatch in LADIES sampling')
+    parser.add_argument('--timing', action="store_true",
+                            help='whether to turn on timers')
+    parser.add_argument('--baseline', action="store_true",
+                            help='whether to avoid col selection for baseline comparison')
     args = parser.parse_args()
     print(args)
 

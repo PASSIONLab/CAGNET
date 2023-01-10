@@ -835,9 +835,9 @@ __global__ void ThrowDarts1D(double *dart_values, double *ps_p_values, int *h_va
 
     for (int i = id; i < dart_count; i += stride) {
         int vtx = binary_searchf(ps_p_values, dart_values[i], 0, nnz - 1);
-        if (vtx < 0 || vtx >= nnz) {
-            printf("error i: %d vtx: %d nnz: %d\n", i, vtx, nnz);
-        } 
+        // if (vtx < 0 || vtx >= nnz) {
+        //     printf("error i: %d vtx: %d nnz: %d\n", i, vtx, nnz);
+        // } 
         atomicAdd(&h_values[vtx], 1);
     }
 }
@@ -1021,35 +1021,87 @@ void scatteri_add_gpu(const at::Tensor& src, const at::Tensor& indices, const at
     CHECK_ERROR("scatter add ints error")
 }
 
-__global__ void RowSelectCoo(long *nnz_cols, long *row_ids, bool *mask, int nnz_col_count, int row_count) { 
+// // Per-process rowselect coo
+// __global__ void RowSelectCoo(long *nnz_cols, long *row_ids, bool *mask, int nnz_col_count, int row_count) { 
+//     int     id = blockIdx.x * blockDim.x + threadIdx.x;
+//     int stride = blockDim.x * gridDim.x;
+// 
+//     for (int i = id; i < row_count; i += stride) {
+//         long idx = binary_search_rowselect(nnz_cols, row_ids[i], 0L, nnz_col_count);
+//         if (nnz_cols[idx] == row_ids[i]) {
+//             mask[i] = true;
+//         }
+//     } 
+// }
+// 
+// void rowselect_coo_gpu(const at::Tensor& nnz_cols, const at::Tensor& rows, const at::Tensor& mask, 
+//                             int nnz_col_count, int row_count) {
+// 
+// 
+//     int BLOCK_SIZE = 256;
+//     int BLOCK_COUNT = std::ceil(row_count / ((float) BLOCK_SIZE));
+//     BLOCK_COUNT = std::min(BLOCK_COUNT, 65535);
+// 
+//     if (nnz_col_count == 0 || row_count == 0) {
+//         return;
+//     }
+// 
+//     RowSelectCoo<<<BLOCK_COUNT, BLOCK_SIZE>>>(nnz_cols.data<long>(), 
+//                                                 rows.data<long>(), 
+//                                                 mask.data<bool>(), 
+//                                                 nnz_col_count,
+//                                                 row_count);
+//     CHECK_ERROR("rowselect coo error")
+// }
+
+// Bulk rowselect coo
+__global__ void RowSelectCoo(long **nnz_cols, long *row_ids, bool *mask, int *nnz_cols_counts, int row_count,
+                                int proc_count) { 
     int     id = blockIdx.x * blockDim.x + threadIdx.x;
     int stride = blockDim.x * gridDim.x;
 
-    for (int i = id; i < row_count; i += stride) {
-        long idx = binary_search_rowselect(nnz_cols, row_ids[i], 0L, nnz_col_count);
-        if (nnz_cols[idx] == row_ids[i]) {
-            mask[i] = true;
+    int mask_len = row_count * proc_count;
+    for (int i = id; i < mask_len; i += stride) {
+        long proc = ((long) i) / row_count;
+        long col = ((long) i) % row_count;
+        if (nnz_cols_counts[proc] > 0) {
+            long idx = binary_search_rowselect(nnz_cols[proc], row_ids[col], 0L, (long) nnz_cols_counts[proc]);
+            if (nnz_cols[proc][idx] == row_ids[col]) {
+                mask[i] = true;
+            }
         }
     } 
 }
 
-void rowselect_coo_gpu(const at::Tensor& nnz_cols, const at::Tensor& rows, const at::Tensor& mask, 
-                            int nnz_col_count, int row_count) {
+void rowselect_coo_gpu(std::vector<at::Tensor> nnz_cols, const at::Tensor& rows, 
+                            const at::Tensor& mask, const at::Tensor& nnz_cols_counts, 
+                            int row_count, int proc_count) {
 
 
+    int mask_len = row_count * proc_count;
     int BLOCK_SIZE = 256;
-    int BLOCK_COUNT = std::ceil(row_count / ((float) BLOCK_SIZE));
+    int BLOCK_COUNT = std::ceil(mask_len / ((float) BLOCK_SIZE));
     BLOCK_COUNT = std::min(BLOCK_COUNT, 65535);
 
-    if (nnz_col_count == 0 || row_count == 0) {
+    if (mask_len == 0) {
         return;
     }
 
-    RowSelectCoo<<<BLOCK_COUNT, BLOCK_SIZE>>>(nnz_cols.data<long>(), 
+    std::vector<long*> nnz_cols_hptr(nnz_cols.size());
+    for (int i = 0; i < nnz_cols.size(); i++) {
+        nnz_cols_hptr[i] = nnz_cols[i].data<long>();
+    }
+
+    long **nnz_cols_dptr;
+    cudaMalloc(&nnz_cols_dptr, nnz_cols.size() * sizeof(long*));
+    cudaMemcpy(nnz_cols_dptr, nnz_cols_hptr.data(), nnz_cols.size() * sizeof(long*), cudaMemcpyHostToDevice);
+
+    RowSelectCoo<<<BLOCK_COUNT, BLOCK_SIZE>>>(nnz_cols_dptr, 
                                                 rows.data<long>(), 
                                                 mask.data<bool>(), 
-                                                nnz_col_count,
-                                                row_count);
+                                                nnz_cols_counts.data<int>(),
+                                                row_count,
+                                                proc_count);
     CHECK_ERROR("rowselect coo error")
 }
 

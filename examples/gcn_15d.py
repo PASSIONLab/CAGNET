@@ -492,7 +492,6 @@ def main(args, batches=None):
         # adj_matrices[i][j] --  mb i layer j
         rank_n_bulkmb = int(args.n_bulkmb / (size / args.replication))
         adj_matrices = [[None] * args.n_layers for x in range(rank_n_bulkmb)] 
-        print(f"before reindexing", flush=True)
         for i in range(args.n_layers):
             for j in range(rank_n_bulkmb):
                 row_select_min = j * args.batch_size
@@ -517,7 +516,6 @@ def main(args, batches=None):
                                                     (args.batch_size, args.batch_size + args.samp_num * args.batch_size))
                 adj_matrices[j][i] = adj_matrix_sample
 
-        print(f"after reindexing", flush=True)
         # print(f"sample: {adj_matrices}")
         # adj_matrix = None # Uncomment bottom for testing
         adj_matrix = adj_matrix.cuda()
@@ -529,12 +527,8 @@ def main(args, batches=None):
         adj_matrix = torch.pow(adj_matrix, 2)
         # return here while testing sampling code
 
-        print(f"current_frontier: {current_frontier}")
-        
-        print(f"next_frontier[20]: {next_frontier[(next_frontier[:,-1] == 20).nonzero().squeeze(), :]}")
-        print(f"next_frontier: {next_frontier}")
-        print(f"adj_matrices: {adj_matrices}")
-        return current_frontier, next_frontier, adj_matrices, adj_matrix, col_groups
+        return current_frontier, next_frontier, adj_matrices, adj_matrix
+        # return current_frontier, next_frontier, adj_matrices, adj_matrix, col_groups
     return
 
     # create GCN model
