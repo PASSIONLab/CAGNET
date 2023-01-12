@@ -282,6 +282,9 @@ def dist_saspgemm15D(mata, matb, replication, rank, size, row_groups, col_groups
             nnz_cols_count_list = torch.cat(nnz_cols_count_list, dim=0)
             rowselect_coo_gpu(nnz_col_ids, matb._indices()[0,:], nnz_row_masks, nnz_cols_count_list, \
                                     matb._indices().size(1), size // replication)
+
+            send_ops = [None] * 3 * ((size // replication) - 1)
+            send_idx = 0
             for j in range(size // replication):
                 # start_time(start_inner_timer)
                 recv_rank = rank_col + j * replication
@@ -313,18 +316,26 @@ def dist_saspgemm15D(mata, matb, replication, rank, size, row_groups, col_groups
                     # selected_rows_count = torch.cuda.IntTensor(1).fill_(matb_send.size(1))
                     selected_rows_count = torch.cuda.IntTensor(1).fill_(matb_send_indices.size(1))
                     nnz_count += 3 * matb_send_indices.size(1)
-                    rows_count_obj = dist.isend(selected_rows_count, tag=0, dst=recv_rank)
-                    # dist.isend(matb_send, tag=1, dst=recv_rank)
-                    matb_indices_obj = dist.isend(matb_send_indices, tag=1, dst=recv_rank)
-                    matb_values_obj = dist.isend(matb_send_values, tag=2, dst=recv_rank)
+                    # dist.isend(selected_rows_count, tag=0, dst=recv_rank)
+                    # # dist.isend(matb_send, tag=1, dst=recv_rank)
+                    # dist.isend(matb_send_indices, tag=1, dst=recv_rank)
+                    # dist.isend(matb_send_values, tag=2, dst=recv_rank)
 
-                    rows_count_obj.wait()
-                    matb_indices_obj.wait()
-                    matb_values_obj.wait()
+                    # send_ops.extend([dist.P2POp(dist.isend, selected_rows_count, recv_rank, tag=0), \
+                    #                     dist.P2POp(dist.isend, matb_send_indices, recv_rank, tag=1), \
+                    #                     dist.P2POp(dist.isend, matb_send_values, recv_rank, tag=2)])
+                    send_ops[send_idx] = dist.P2POp(dist.isend, selected_rows_count.clone(), recv_rank, tag=0)
+                    send_ops[send_idx + 1] = dist.P2POp(dist.isend, matb_send_indices.clone(), recv_rank, tag=1)
+                    send_ops[send_idx + 2] = dist.P2POp(dist.isend, matb_send_values.clone(), recv_rank, tag=2)
+                    send_idx += 3
                 else:
                     # matb_select_recv = matb_send.clone()
                     matb_recv_indices = matb_send_indices.clone()
                     matb_recv_values = matb_send_values.clone()
+
+            reqs = dist.batch_isend_irecv(send_ops)
+            for req in reqs:
+                req.wait()
         else:
             # if f"spgemm-rowselect-{name}" not in timing_dict:
             #     timing_dict[f"spgemm-rowselect-{name}"] = []
@@ -335,35 +346,46 @@ def dist_saspgemm15D(mata, matb, replication, rank, size, row_groups, col_groups
             # if f"spgemm-rowval-{name}" not in timing_dict:
             #     timing_dict[f"spgemm-rowval-{name}"] = []
 
+            # if f"spgemm-rowmisc-{name}" not in timing_dict:
+            #     timing_dict[f"spgemm-rowmisc-{name}"] = []
+
             selected_rows_count_recv = torch.cuda.IntTensor(1)
-            dist.irecv(selected_rows_count_recv, tag=0, src=q).wait()
+            dist.recv(selected_rows_count_recv, tag=0, src=q)
 
             # matb_indices_recv = matb_recv_buff[:(3 * selected_rows_count_recv.item())].view(3, -1)
             matb_recv_indices = torch.cuda.LongTensor(2, selected_rows_count_recv.item())
-            ind_obj = dist.irecv(matb_recv_indices, tag=1, src=q)
+            # dist.irecv(matb_recv_indices, tag=1, src=q)
 
             matb_recv_values = torch.cuda.DoubleTensor(selected_rows_count_recv.item())
-            val_obj = dist.irecv(matb_recv_values, tag=2, src=q)
+            # dist.irecv(matb_recv_values, tag=2, src=q)
 
-            ind_obj.wait()
-            val_obj.wait()
+            recv_ops = [dist.P2POp(dist.irecv, matb_recv_indices, q, tag=1), \
+                            dist.P2POp(dist.irecv, matb_recv_values, q, tag=2)]
 
-            nnz_count += 3 * matb_recv_indices.size(1)
+            reqs = dist.batch_isend_irecv(recv_ops)
+            for req in reqs:
+                req.wait()
+            # nnz_count += 3 * matb_recv_indices.size(1)
 
         stop_time_add(start_timer, stop_timer, timing_dict, f"spgemm-send-rowdata-{name}", barrier=True)
         torch.cuda.nvtx.range_pop() # send-rowcounts
-        # timing_dict[f"spgemm-send-rownnz-{name}"].append(nnz_count)
 
-        torch.cuda.nvtx.range_push("nvtx-spgemm-castrecv")
-        start_time(start_timer)
-        # print(f"matb_select_recv.dtype: {matb_select_recv.dtype}")
-        # matb_recv_indices = matb_select_recv[:2, :].long()
+        timing_dict[f"spgemm-send-rownnz-{name}"].append(nnz_count)
+        if i == stages - 1 and rank == q:
+            print(f"rowdata-time: {timing_dict['spgemm-send-rowdata-prob']}")
+            print(f"rowdata-nnz: {timing_dict['spgemm-send-rownnz-prob']}")
+
+        # torch.cuda.nvtx.range_push("nvtx-spgemm-castrecv")
+        # start_time(start_timer)
+        # # print(f"matb_select_recv.dtype: {matb_select_recv.dtype}")
+        # # matb_recv_indices = matb_select_recv[:2, :].long()
+        # # # matb_recv_values = matb_select_recv[2, :].double()
+        # # matb_recv_values = matb_select_recv[2, :]
+
+        # # matb_recv_indices = matb_select_recv[:2, :].long()
         # # matb_recv_values = matb_select_recv[2, :].double()
-        # matb_recv_values = matb_select_recv[2, :]
-
-        # matb_recv_indices = matb_select_recv[:2, :].long()
-        # matb_recv_values = matb_select_recv[2, :].double()
-        stop_time_add(start_timer, stop_timer, timing_dict, f"spgemm-castrecv-{name}", barrier=True)
+        # stop_time_add(start_timer, stop_timer, timing_dict, f"spgemm-castrecv-{name}", barrier=True)
+        # torch.cuda.nvtx.range_pop() # spgemm-castrecv
 
         torch.cuda.nvtx.range_push("nvtx-local-spgemm")
         start_time(start_timer)

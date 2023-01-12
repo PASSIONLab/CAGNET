@@ -465,6 +465,7 @@ def main(args, batches=None):
                                                                     col_groups, args.timing)
     elif args.sample_method == "sage":
         torch.manual_seed(rank_col)
+        print("first (warmup) run")
         current_frontier, next_frontier, adj_matrices = \
                                         sage_sampler(g_loc, batches_loc, args.batch_size, \
                                                                     args.samp_num, args.n_bulkmb, \
@@ -473,7 +474,7 @@ def main(args, batches=None):
                                                                     sa_recv_buff, rank, size, row_groups, 
                                                                     col_groups, args.timing, args.baseline)
 
-        print()
+        print("second run")
         torch.cuda.profiler.cudart().cudaProfilerStart()
         torch.cuda.nvtx.range_push("nvtx-sampler")
         # torch.manual_seed(rank_col)
