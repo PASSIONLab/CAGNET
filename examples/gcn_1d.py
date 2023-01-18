@@ -231,7 +231,36 @@ def main(args):
         data = data.to(device)
         inputs.requires_grad = True
         data.y = data.y.to(device)
-
+    elif args.dataset == "Amazon_Small_16":
+        print(f"Loading coo...", flush=True)
+        edge_index = torch.load("../../data/Amazon_Small_16/processed/amazon_large_randomized.pt")
+        print(f"Done loading coo", flush=True)
+        n = 14249639
+        num_features = 300
+        num_classes = 24
+        inputs = torch.rand(n, num_features)
+        data = Data()
+        data.y = torch.rand(n).uniform_(0, num_classes - 1).long()
+        data.train_mask = torch.ones(n).long()
+        adj_matrix = edge_index.t_()
+        data = data.to(device)
+        inputs.requires_grad = True
+        data.y = data.y.to(device)
+    elif args.dataset == "Amazon_Small_64":
+        print(f"Loading coo...", flush=True)
+        edge_index = torch.load("../../data/Amazon_Small_64/processed/amazon_large_randomized.pt")
+        print(f"Done loading coo", flush=True)
+        n = 14249639
+        num_features = 300
+        num_classes = 24
+        inputs = torch.rand(n, num_features)
+        data = Data()
+        data.y = torch.rand(n).uniform_(0, num_classes - 1).long()
+        data.train_mask = torch.ones(n).long()
+        adj_matrix = edge_index.t_()
+        data = data.to(device)
+        inputs.requires_grad = True
+        data.y = data.y.to(device)
     # Initialize distributed environment with SLURM
     if "SLURM_PROCID" in os.environ.keys():
         os.environ["RANK"] = os.environ["SLURM_PROCID"]
