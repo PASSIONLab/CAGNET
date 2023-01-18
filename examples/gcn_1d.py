@@ -306,6 +306,25 @@ def main(args):
                       device,
                       group)
 
+    counts_send = []
+    row_indices_send = []
+    row_data_send = []
+
+    for i in range(size):
+        unique_cols = ampbyp[i]._indices()[1].unique()
+        counts_send.append(torch.cuda.LongTensor([unique_cols.size()], device=self.device).resize_(1, 1))
+        row_indices_send.append(unique_cols)
+  
+    dist.all_to_all(counts_recv, counts_send, group=self.group)
+ 
+    row_indices_recv = [torch.cuda.LongTensor(device=self.device).resize_(counts_recv[i].int().item(),).fill_(0) for i in range(len(counts_recv))]
+
+    # row_data_recv = [torch.cuda.FloatTensor(device=self.device).resize_(counts_send[i].int().item(), inputs.size(1)).fill_(0) for i in range(len(counts_send))]
+    # start = time.time()
+    dist.all_to_all(row_indices_recv, row_indices_send, group=self.group)
+
+    model.row_indices_recv = row_indices_recv
+
     # use optimizer
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
 
