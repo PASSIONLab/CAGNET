@@ -21,29 +21,30 @@ def broad_func_oned(self, graph, ampbyp, inputs):
     
 #    inputs_recv = torch.cuda.FloatTensor(n_per_proc, inputs.size(1), device=self.device).fill_(0)
     
-    counts_recv = [torch.cuda.LongTensor(1, 1, device=self.device).fill_(0) for i in range(self.size)]
+    # counts_recv = [torch.cuda.LongTensor(1, 1, device=self.device).fill_(0) for i in range(self.size)]
 
-    counts_send = []
-    row_indices_send = []
-    row_data_send = []
+    # counts_send = []
+    # row_indices_send = []
+    # row_data_send = []
 
-    start = time.time()
-    for i in range(self.size):
-        unique_cols = ampbyp[i]._indices()[1].unique()
-        counts_send.append(torch.cuda.LongTensor([unique_cols.size()], device=self.device).resize_(1, 1))
-        row_indices_send.append(unique_cols)
+    # start = time.time()
+    # for i in range(self.size):
+    #     unique_cols = ampbyp[i]._indices()[1].unique()
+    #     counts_send.append(torch.cuda.LongTensor([unique_cols.size()], device=self.device).resize_(1, 1))
+    #     row_indices_send.append(unique_cols)
 
-    # self.timings["find_unique"] = time.time() - start
-    stop_time(self, "find_unique", start)
-    start = time.time()
-    dist.all_to_all(counts_recv, counts_send, group=self.group)
-    # self.timings["a2a1"] = time.time() - start
-    stop_time(self, "a2a1", start)
+    # # self.timings["find_unique"] = time.time() - start
+    # stop_time(self, "find_unique", start)
+    # start = time.time()
+    # dist.all_to_all(counts_recv, counts_send, group=self.group)
+    # # self.timings["a2a1"] = time.time() - start
+    # stop_time(self, "a2a1", start)
 
     
-    row_indices_recv = [torch.cuda.LongTensor(device=self.device).resize_(counts_recv[i].int().item(),).fill_(0) for i in range(len(counts_recv))]
+    # row_indices_recv = [torch.cuda.LongTensor(device=self.device).resize_(counts_recv[i].int().item(),).fill_(0) for i in range(len(counts_recv))]
+    row_indices_recv = self.row_indices_recv
 
-    row_data_recv = [torch.cuda.FloatTensor(device=self.device).resize_(counts_send[i].int().item(), inputs.size(1)).fill_(0) for i in range(len(counts_send))]
+    row_data_recv = [torch.cuda.FloatTensor(device=self.device).resize_(row_indices_recv[i].size(0), inputs.size(1)).fill_(0) for i in range(len(counts_send))]
     start = time.time()
     dist.all_to_all(row_indices_recv, row_indices_send, group=self.group)
     # self.timings["a2a2"] = time.time() - start
