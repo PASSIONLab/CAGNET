@@ -44,7 +44,7 @@ def broad_func_oned(self, graph, ampbyp, inputs):
     # row_indices_recv = [torch.cuda.LongTensor(device=self.device).resize_(counts_recv[i].int().item(),).fill_(0) for i in range(len(counts_recv))]
     row_indices_recv = self.row_indices_recv
 
-    row_data_recv = [torch.cuda.FloatTensor(device=self.device).resize_(row_indices_recv[i].size(0), inputs.size(1)).fill_(0) for i in range(len(counts_send))]
+    row_data_recv = [torch.cuda.FloatTensor(device=self.device).resize_(row_indices_recv[i].size(0), inputs.size(1)).fill_(0) for i in range(self.size)]
     start = time.time()
     dist.all_to_all(row_indices_recv, row_indices_send, group=self.group)
     # self.timings["a2a2"] = time.time() - start
