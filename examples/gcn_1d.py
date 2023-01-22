@@ -315,16 +315,21 @@ def main(args):
         unique_cols = ampbyp[i]._indices()[1].unique()
         counts_send.append(torch.cuda.LongTensor([unique_cols.size()], device=device).resize_(1, 1))
         row_indices_send.append(unique_cols)
-  
-    dist.all_to_all(counts_recv, counts_send, group=group)
+    
+    model.row_indices_send = row_indices_send
+
+    print("all to all counts")  
+    dist.all_to_all(counts_recv, counts_send)
  
     row_indices_recv = [torch.cuda.LongTensor(device=device).resize_(counts_recv[i].int().item(),).fill_(0) for i in range(len(counts_recv))]
 
     # row_data_recv = [torch.cuda.FloatTensor(device=self.device).resize_(counts_send[i].int().item(), inputs.size(1)).fill_(0) for i in range(len(counts_send))]
     # start = time.time()
+    print("all to all indices")
     dist.all_to_all(row_indices_recv, row_indices_send, group=group)
 
     model.row_indices_recv = row_indices_recv
+    print("all to all done")
 
     # use optimizer
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
@@ -340,7 +345,7 @@ def main(args):
     torch.manual_seed(0)
     total_start = time.time()
     for epoch in range(args.n_epochs):
-        #print(f"Epoch: {epoch}", flush=True)
+        print(f"Epoch: {epoch}", flush=True)
         if epoch == 1:
             total_start = time.time()
         model.train()
