@@ -283,7 +283,8 @@ def dist_saspgemm15D(mata, matb, replication, rank, size, row_groups, col_groups
             rowselect_coo_gpu(nnz_col_ids, matb._indices()[0,:], nnz_row_masks, nnz_cols_count_list, \
                                     matb._indices().size(1), size // replication)
 
-            send_ops = [None] * 3 * ((size // replication) - 1)
+            recv_proc_count = ((size // replication) - 1)
+            send_ops = [None] * 3 * recv_proc_count
             send_idx = 0
             for j in range(size // replication):
                 # start_time(start_inner_timer)
@@ -316,26 +317,24 @@ def dist_saspgemm15D(mata, matb, replication, rank, size, row_groups, col_groups
                     # selected_rows_count = torch.cuda.IntTensor(1).fill_(matb_send.size(1))
                     selected_rows_count = torch.cuda.IntTensor(1).fill_(matb_send_indices.size(1))
                     nnz_count += 3 * matb_send_indices.size(1)
-                    # dist.isend(selected_rows_count, tag=0, dst=recv_rank)
-                    # # dist.isend(matb_send, tag=1, dst=recv_rank)
-                    # dist.isend(matb_send_indices, tag=1, dst=recv_rank)
-                    # dist.isend(matb_send_values, tag=2, dst=recv_rank)
+                    dist.send(selected_rows_count, tag=0, dst=recv_rank)
+                    # dist.isend(matb_send, tag=1, dst=recv_rank)
+                    dist.send(matb_send_indices, tag=1, dst=recv_rank)
+                    dist.send(matb_send_values, tag=2, dst=recv_rank)
 
-                    # send_ops.extend([dist.P2POp(dist.isend, selected_rows_count, recv_rank, tag=0), \
-                    #                     dist.P2POp(dist.isend, matb_send_indices, recv_rank, tag=1), \
-                    #                     dist.P2POp(dist.isend, matb_send_values, recv_rank, tag=2)])
-                    send_ops[send_idx] = dist.P2POp(dist.isend, selected_rows_count.clone(), recv_rank, tag=0)
-                    send_ops[send_idx + 1] = dist.P2POp(dist.isend, matb_send_indices.clone(), recv_rank, tag=1)
-                    send_ops[send_idx + 2] = dist.P2POp(dist.isend, matb_send_values.clone(), recv_rank, tag=2)
-                    send_idx += 3
+                    # send_ops[send_idx] = dist.P2POp(dist.isend, selected_rows_count, recv_rank, tag=0)
+                    # send_ops[send_idx + 1] = dist.P2POp(dist.isend, matb_send_indices, recv_rank, tag=1)
+                    # send_ops[send_idx + 2] = dist.P2POp(dist.isend, matb_send_values, recv_rank, tag=2)
+                    # send_idx += 3
                 else:
                     # matb_select_recv = matb_send.clone()
                     matb_recv_indices = matb_send_indices.clone()
                     matb_recv_values = matb_send_values.clone()
 
-            reqs = dist.batch_isend_irecv(send_ops)
-            for req in reqs:
-                req.wait()
+            # if len(send_ops) > 0:
+            #     reqs = dist.batch_isend_irecv(send_ops)
+            #     for req in reqs:
+            #         req.wait()
         else:
             # if f"spgemm-rowselect-{name}" not in timing_dict:
             #     timing_dict[f"spgemm-rowselect-{name}"] = []
@@ -354,26 +353,24 @@ def dist_saspgemm15D(mata, matb, replication, rank, size, row_groups, col_groups
 
             # matb_indices_recv = matb_recv_buff[:(3 * selected_rows_count_recv.item())].view(3, -1)
             matb_recv_indices = torch.cuda.LongTensor(2, selected_rows_count_recv.item())
-            # dist.irecv(matb_recv_indices, tag=1, src=q)
+            dist.recv(matb_recv_indices, tag=1, src=q)
 
             matb_recv_values = torch.cuda.DoubleTensor(selected_rows_count_recv.item())
-            # dist.irecv(matb_recv_values, tag=2, src=q)
+            dist.recv(matb_recv_values, tag=2, src=q)
 
-            recv_ops = [dist.P2POp(dist.irecv, matb_recv_indices, q, tag=1), \
-                            dist.P2POp(dist.irecv, matb_recv_values, q, tag=2)]
+            # recv_ops = [dist.P2POp(dist.irecv, matb_recv_indices, q, tag=1), \
+            #                 dist.P2POp(dist.irecv, matb_recv_values, q, tag=2)]
 
-            reqs = dist.batch_isend_irecv(recv_ops)
-            for req in reqs:
-                req.wait()
-            # nnz_count += 3 * matb_recv_indices.size(1)
+            # reqs = dist.batch_isend_irecv(recv_ops)
+            # for req in reqs:
+            #     req.wait()
+            nnz_count += 3 * matb_recv_indices.size(1)
 
+        torch.cuda.synchronize()
         stop_time_add(start_timer, stop_timer, timing_dict, f"spgemm-send-rowdata-{name}", barrier=True)
         torch.cuda.nvtx.range_pop() # send-rowcounts
 
         timing_dict[f"spgemm-send-rownnz-{name}"].append(nnz_count)
-        if i == stages - 1 and rank == q:
-            print(f"rowdata-time: {timing_dict['spgemm-send-rowdata-prob']}")
-            print(f"rowdata-nnz: {timing_dict['spgemm-send-rownnz-prob']}")
 
         # torch.cuda.nvtx.range_push("nvtx-spgemm-castrecv")
         # start_time(start_timer)
@@ -512,14 +509,19 @@ def gen_prob_dist(numerator, adj_matrix, mb_count, node_count_total, replication
     stop_timer = torch.cuda.Event(enable_timing=True)
 
     # TODO: assume n_layers=1 for now
-    start_time(start_timer)
+    # start_time(start_timer)
+    start_timer.record()
     torch.cuda.nvtx.range_push("nvtx-probability-spgemm")
     p_num_indices, p_num_values = dist_saspgemm15D(
                                         numerator, adj_matrix, replication, rank, size, 
                                         row_groups, col_groups, "prob", sa_masks, 
                                         sa_recv_buff, timing_dict)
     torch.cuda.nvtx.range_pop()
-    timing_dict["probability-spgemm"].append(stop_time(start_timer, stop_timer))
+    stop_timer.record()
+    torch.cuda.synchronize()
+    time_taken = start_timer.elapsed_time(stop_timer)
+    # timing_dict["probability-spgemm"].append(stop_time(start_timer, stop_timer))
+    timing_dict["probability-spgemm"].append(time_taken)
 
     start_time(start_timer)
     torch.cuda.nvtx.range_push("nvtx-compute-p")
