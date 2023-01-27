@@ -279,46 +279,31 @@ def dist_saspgemm15D(mata, matb, replication, rank, size, row_groups, col_groups
         start_time(start_timer)
         nnz_count = 0
         if rank == q:
+            start_time(start_inner_timer)
             nnz_cols_count_list = torch.cat(nnz_cols_count_list, dim=0)
             rowselect_coo_gpu(nnz_col_ids, matb._indices()[0,:], nnz_row_masks, nnz_cols_count_list, \
                                     matb._indices().size(1), size // replication)
 
-            recv_proc_count = ((size // replication) - 1)
-            send_ops = [None] * 3 * recv_proc_count
-            send_idx = 0
+            # recv_proc_count = ((size // replication) - 1)
+            # send_ops = [None] * 3 * recv_proc_count
+            # send_idx = 0
+            stop_time_add(start_inner_timer, stop_inner_timer, timing_dict, f"spgemm-send-rowsel-{name}")
+
+            start_time(start_inner_timer)
             for j in range(size // replication):
-                # start_time(start_inner_timer)
                 recv_rank = rank_col + j * replication
                 nnz_row_mask = nnz_row_masks[(j * matb._indices().size(1)):((j + 1) * matb._indices().size(1))]
                 
                 # rowselect_coo_gpu(nnz_col_ids[j], matb._indices()[0,:], nnz_row_mask, \
                 #                         nnz_col_ids[j].size(0), matb._indices().size(1))
 
-                # stop_time_add(start_inner_timer, stop_inner_timer, timing_dict, f"spgemm-rowselect-{name}")
-
-                # matb_send_indices = torch.cuda.LongTensor(2, nnz_row_mask.nonzero().size(1))
-                # torch.cuda.synchronize()
-
-                # start_time(start_inner_timer)
                 matb_send_indices = matb._indices()[:, nnz_row_mask]
-                # stop_time_add(start_inner_timer, stop_inner_timer, timing_dict, f"spgemm-rowind-{name}")
-
-                # start_time(start_inner_timer)
                 matb_send_values = matb._values()[nnz_row_mask]
-                # stop_time_add(start_inner_timer, stop_inner_timer, timing_dict, f"spgemm-rowval-{name}")
 
-                # start_time(start_inner_timer)
-                # # matb_send_values = matb_send_values.unsqueeze(dim=0)
-                # # matb_send_indices = matb_send_indices.float()
-                # # matb_send = torch.cat((matb_send_indices, matb_send_values), dim=0)
-                # stop_time_add(start_inner_timer, stop_inner_timer, timing_dict, f"spgemm-rowmisc-{name}")
-                
                 if recv_rank != q:
-                    # selected_rows_count = torch.cuda.IntTensor(1).fill_(matb_send.size(1))
                     selected_rows_count = torch.cuda.IntTensor(1).fill_(matb_send_indices.size(1))
                     nnz_count += 3 * matb_send_indices.size(1)
                     dist.send(selected_rows_count, tag=0, dst=recv_rank)
-                    # dist.isend(matb_send, tag=1, dst=recv_rank)
                     dist.send(matb_send_indices, tag=1, dst=recv_rank)
                     dist.send(matb_send_values, tag=2, dst=recv_rank)
 
@@ -330,24 +315,20 @@ def dist_saspgemm15D(mata, matb, replication, rank, size, row_groups, col_groups
                     # matb_select_recv = matb_send.clone()
                     matb_recv_indices = matb_send_indices.clone()
                     matb_recv_values = matb_send_values.clone()
+            stop_time_add(start_inner_timer, stop_inner_timer, timing_dict, f"spgemm-send-calls-{name}")
 
             # if len(send_ops) > 0:
             #     reqs = dist.batch_isend_irecv(send_ops)
             #     for req in reqs:
             #         req.wait()
         else:
-            # if f"spgemm-rowselect-{name}" not in timing_dict:
-            #     timing_dict[f"spgemm-rowselect-{name}"] = []
+            if f"spgemm-send-rowsel-{name}" not in timing_dict:
+                timing_dict[f"spgemm-send-rowsel-{name}"] = []
+            
+            if f"spgemm-send-calls-{name}" not in timing_dict:
+                timing_dict[f"spgemm-send-calls-{name}"] = []
 
-            # if f"spgemm-rowind-{name}" not in timing_dict:
-            #     timing_dict[f"spgemm-rowind-{name}"] = []
-
-            # if f"spgemm-rowval-{name}" not in timing_dict:
-            #     timing_dict[f"spgemm-rowval-{name}"] = []
-
-            # if f"spgemm-rowmisc-{name}" not in timing_dict:
-            #     timing_dict[f"spgemm-rowmisc-{name}"] = []
-
+            start_time(start_inner_timer)
             selected_rows_count_recv = torch.cuda.IntTensor(1)
             dist.recv(selected_rows_count_recv, tag=0, src=q)
 
@@ -365,10 +346,14 @@ def dist_saspgemm15D(mata, matb, replication, rank, size, row_groups, col_groups
             # for req in reqs:
             #     req.wait()
             nnz_count += 3 * matb_recv_indices.size(1)
+            stop_time_add(start_inner_timer, stop_inner_timer, timing_dict, f"spgemm-recv-calls-{name}")
 
         torch.cuda.synchronize()
         stop_time_add(start_timer, stop_timer, timing_dict, f"spgemm-send-rowdata-{name}", barrier=True)
         torch.cuda.nvtx.range_pop() # send-rowcounts
+
+        if f"spgemm-recv-calls-{name}" not in timing_dict:
+            timing_dict[f"spgemm-recv-calls-{name}"] = []
 
         timing_dict[f"spgemm-send-rownnz-{name}"].append(nnz_count)
 

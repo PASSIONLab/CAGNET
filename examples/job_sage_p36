@@ -1,0 +1,49 @@
+#!/bin/bash
+#SBATCH --qos=regular
+#SBATCH --time=01:00:00
+#SBATCH --nodes=9
+#SBATCH --gpus=36
+#SBATCH --ntasks-per-node=4
+#SBATCH --constraint=gpu
+#SBATCH --account=m1982_g
+
+hostname=$(scontrol show hostnames | head -n 1)
+echo $hostname
+# Protein
+srun -l -n 36 --ntasks-per-node 4 --gpus-per-task=1 --gpu-bind=map_gpu:0,1,2,3 python gcn_15d.py --dataset Protein --batch-size 512 --samp-num 10 --n-bulkmb 256 --replication 1 --sample-method sage --timing --baseline --hostname $hostname &> tmp_protein_sage_bs512sn10_mb256_p36c1_rowsel_bsend.out
+
+srun -l -n 36 --ntasks-per-node 4 --gpus-per-task=1 --gpu-bind=map_gpu:0,1,2,3 python gcn_15d.py --dataset Protein --batch-size 512 --samp-num 10 --n-bulkmb 256 --replication 2 --sample-method sage --timing --baseline --hostname $hostname &> tmp_protein_sage_bs512sn10_mb256_p36c2_rowsel_bsend.out
+
+srun -l -n 36 --ntasks-per-node 4 --gpus-per-task=1 --gpu-bind=map_gpu:0,1,2,3 python gcn_15d.py --dataset Protein --batch-size 512 --samp-num 10 --n-bulkmb 256 --replication 6 --sample-method sage --timing --baseline --hostname $hostname &> tmp_protein_sage_bs512sn10_mb256_p36c6_rowsel_bsend.out
+
+srun -l -n 36 --ntasks-per-node 4 --gpus-per-task=1 --gpu-bind=map_gpu:0,1,2,3 python gcn_15d.py --dataset Protein --batch-size 512 --samp-num 10 --n-bulkmb 256 --replication 1 --sample-method sage --baseline --hostname $hostname &> tmp_protein_sage_bs512sn10_mb256_p36c1_rowsel_bsend_nobarrier.out
+
+srun -l -n 36 --ntasks-per-node 4 --gpus-per-task=1 --gpu-bind=map_gpu:0,1,2,3 python gcn_15d.py --dataset Protein --batch-size 512 --samp-num 10 --n-bulkmb 256 --replication 2 --sample-method sage --baseline --hostname $hostname &> tmp_protein_sage_bs512sn10_mb256_p36c2_rowsel_bsend_nobarrier.out
+
+srun -l -n 36 --ntasks-per-node 4 --gpus-per-task=1 --gpu-bind=map_gpu:0,1,2,3 python gcn_15d.py --dataset Protein --batch-size 512 --samp-num 10 --n-bulkmb 256 --replication 6 --sample-method sage --baseline --hostname $hostname &> tmp_protein_sage_bs512sn10_mb256_p36c6_rowsel_bsend_nobarrier.out
+
+# Amazon
+srun -l -n 36 --ntasks-per-node 4 --gpus-per-task=1 --gpu-bind=map_gpu:0,1,2,3 python gcn_15d.py --dataset Amazon --batch-size 512 --samp-num 10 --n-bulkmb 256 --replication 1 --sample-method sage --timing --baseline --hostname $hostname &> tmp_amazon_sage_bs512sn10_mb256_p36c1_rowsel_bsend.out
+
+srun -l -n 36 --ntasks-per-node 4 --gpus-per-task=1 --gpu-bind=map_gpu:0,1,2,3 python gcn_15d.py --dataset Amazon --batch-size 512 --samp-num 10 --n-bulkmb 256 --replication 2 --sample-method sage --timing --baseline --hostname $hostname &> tmp_amazon_sage_bs512sn10_mb256_p36c2_rowsel_bsend.out
+
+srun -l -n 36 --ntasks-per-node 4 --gpus-per-task=1 --gpu-bind=map_gpu:0,1,2,3 python gcn_15d.py --dataset Amazon --batch-size 512 --samp-num 10 --n-bulkmb 256 --replication 6 --sample-method sage --timing --baseline --hostname $hostname &> tmp_amazon_sage_bs512sn10_mb256_p36c6_rowsel_bsend.out
+
+srun -l -n 36 --ntasks-per-node 4 --gpus-per-task=1 --gpu-bind=map_gpu:0,1,2,3 python gcn_15d.py --dataset Amazon --batch-size 512 --samp-num 10 --n-bulkmb 256 --replication 1 --sample-method sage --baseline --hostname $hostname &> tmp_amazon_sage_bs512sn10_mb256_p36c1_rowsel_bsend_nobarrier.out
+
+srun -l -n 36 --ntasks-per-node 4 --gpus-per-task=1 --gpu-bind=map_gpu:0,1,2,3 python gcn_15d.py --dataset Amazon --batch-size 512 --samp-num 10 --n-bulkmb 256 --replication 2 --sample-method sage --baseline --hostname $hostname &> tmp_amazon_sage_bs512sn10_mb256_p36c2_rowsel_bsend_nobarrier.out
+
+srun -l -n 36 --ntasks-per-node 4 --gpus-per-task=1 --gpu-bind=map_gpu:0,1,2,3 python gcn_15d.py --dataset Amazon --batch-size 512 --samp-num 10 --n-bulkmb 256 --replication 6 --sample-method sage --baseline --hostname $hostname &> tmp_amazon_sage_bs512sn10_mb256_p36c6_rowsel_bsend_nobarrier.out
+
+# Reddit
+srun -l -n 36 --ntasks-per-node 4 --gpus-per-task=1 --gpu-bind=map_gpu:0,1,2,3 python gcn_15d.py --dataset reddit --batch-size 512 --samp-num 10 --n-bulkmb 256 --replication 1 --sample-method sage --timing --baseline --hostname $hostname &> tmp_reddit_sage_bs512sn10_mb256_p36c1_rowsel_bsend.out
+
+srun -l -n 36 --ntasks-per-node 4 --gpus-per-task=1 --gpu-bind=map_gpu:0,1,2,3 python gcn_15d.py --dataset reddit --batch-size 512 --samp-num 10 --n-bulkmb 256 --replication 2 --sample-method sage --timing --baseline --hostname $hostname &> tmp_reddit_sage_bs512sn10_mb256_p36c2_rowsel_bsend.out
+
+srun -l -n 36 --ntasks-per-node 4 --gpus-per-task=1 --gpu-bind=map_gpu:0,1,2,3 python gcn_15d.py --dataset reddit --batch-size 512 --samp-num 10 --n-bulkmb 256 --replication 6 --sample-method sage --timing --baseline --hostname $hostname &> tmp_reddit_sage_bs512sn10_mb256_p36c6_rowsel_bsend.out
+
+srun -l -n 36 --ntasks-per-node 4 --gpus-per-task=1 --gpu-bind=map_gpu:0,1,2,3 python gcn_15d.py --dataset reddit --batch-size 512 --samp-num 10 --n-bulkmb 256 --replication 1 --sample-method sage --baseline --hostname $hostname &> tmp_reddit_sage_bs512sn10_mb256_p36c1_rowsel_bsend_nobarrier.out
+
+srun -l -n 36 --ntasks-per-node 4 --gpus-per-task=1 --gpu-bind=map_gpu:0,1,2,3 python gcn_15d.py --dataset reddit --batch-size 512 --samp-num 10 --n-bulkmb 256 --replication 2 --sample-method sage --baseline --hostname $hostname &> tmp_reddit_sage_bs512sn10_mb256_p36c2_rowsel_bsend_nobarrier.out
+
+srun -l -n 36 --ntasks-per-node 4 --gpus-per-task=1 --gpu-bind=map_gpu:0,1,2,3 python gcn_15d.py --dataset reddit --batch-size 512 --samp-num 10 --n-bulkmb 256 --replication 6 --sample-method sage --baseline --hostname $hostname &> tmp_reddit_sage_bs512sn10_mb256_p36c6_rowsel_bsend_nobarrier.out
