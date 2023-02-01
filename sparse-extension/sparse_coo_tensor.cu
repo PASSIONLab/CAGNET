@@ -1105,6 +1105,39 @@ void rowselect_coo_gpu(std::vector<at::Tensor> nnz_cols, const at::Tensor& rows,
     CHECK_ERROR("rowselect coo error")
 }
 
+// Per-process rowselect csr
+__global__ void RowSelectCsr(long *nnz_cols, long *row_offsets, bool *mask, int nnz_col_count) { 
+    int     id = blockIdx.x * blockDim.x + threadIdx.x;
+    int stride = blockDim.x * gridDim.x;
+
+    for (int i = id; i < nnz_col_count; i += stride) {
+        long vtx = nnz_cols[i];
+        long degree = nnz_cols[vtx + 1] - nnz_cols[vtx];
+        for (int j = 0; j < degree; j++) {
+            mask[row_offsets[vtx] + j] = true;
+        }
+    } 
+}
+
+void rowselect_coo_gpu(const at::Tensor& nnz_cols, const at::Tensor& row_offsets, const at::Tensor& mask, 
+                            int nnz_col_count, int nnz_count) {
+
+
+    int BLOCK_SIZE = 256;
+    int BLOCK_COUNT = std::ceil(nnz_col_count / ((float) BLOCK_SIZE));
+    BLOCK_COUNT = std::min(BLOCK_COUNT, 65535);
+
+    if (nnz_col_count == 0 || nnz_count == 0) {
+        return;
+    }
+
+    RowSelectCsr<<<BLOCK_COUNT, BLOCK_SIZE>>>(nnz_cols.data<long>(), 
+                                                row_offsets.data<long>(), 
+                                                mask.data<bool>(), 
+                                                nnz_col_count);
+    CHECK_ERROR("rowselect csr error")
+}
+
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
     m.def("sparse_coo_tensor_gpu", &sparse_coo_tensor_gpu, "Sparse Tensor GPU-only constructor");
     m.def("spmm_gpu", &spmm_gpu, "SpMM wrapper for cusparse");
