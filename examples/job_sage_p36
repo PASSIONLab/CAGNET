@@ -12,9 +12,9 @@ echo $hostname
 # Protein
 # srun -l -n 36 --ntasks-per-node 4 --gpus-per-task=1 --gpu-bind=map_gpu:0,1,2,3 python gcn_15d.py --dataset Protein --batch-size 512 --samp-num 10 --n-bulkmb 256 --replication 1 --sample-method sage --timing --baseline --hostname $hostname &> tmp_protein_sage_bs512sn10_mb256_p36c1_rowsel_bsend.out
 
-srun -l -n 36 --ntasks-per-node 4 --gpus-per-task=1 --gpu-bind=map_gpu:0,1,2,3 python gcn_15d.py --dataset Protein --batch-size 512 --samp-num 10 --n-bulkmb 256 --replication 2 --sample-method sage --timing --baseline --hostname $hostname &> tmp_protein_sage_bs512sn10_mb256_p36c2_csr_nosegred.out
+srun -l -n 36 --ntasks-per-node 4 --gpus-per-task=1 --gpu-bind=map_gpu:0,1,2,3 python gcn_15d.py --dataset Protein --batch-size 512 --samp-num 10 --n-bulkmb 256 --replication 2 --sample-method sage --timing --baseline --hostname $hostname &> tmp_protein_sage_bs512sn10_mb256_p36c2_coo_sendlens.out
 
-srun -l -n 36 --ntasks-per-node 4 --gpus-per-task=1 --gpu-bind=map_gpu:0,1,2,3 python gcn_15d.py --dataset Protein --batch-size 512 --samp-num 10 --n-bulkmb 256 --replication 6 --sample-method sage --timing --baseline --hostname $hostname &> tmp_protein_sage_bs512sn10_mb256_p36c6_csr_nosegred.out
+srun -l -n 36 --ntasks-per-node 4 --gpus-per-task=1 --gpu-bind=map_gpu:0,1,2,3 python gcn_15d.py --dataset Protein --batch-size 512 --samp-num 10 --n-bulkmb 256 --replication 6 --sample-method sage --timing --baseline --hostname $hostname &> tmp_protein_sage_bs512sn10_mb256_p36c6_coo_sendlens.out
 
 # srun -l -n 36 --ntasks-per-node 4 --gpus-per-task=1 --gpu-bind=map_gpu:0,1,2,3 python gcn_15d.py --dataset Protein --batch-size 512 --samp-num 10 --n-bulkmb 256 --replication 1 --sample-method sage --baseline --hostname $hostname &> tmp_protein_sage_bs512sn10_mb256_p36c1_rowsel_bsend_nobarrier.out
 # 

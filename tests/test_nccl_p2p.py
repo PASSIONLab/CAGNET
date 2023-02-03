@@ -217,6 +217,7 @@ def test_nccl(args):
     # print(f"z: {z}")
 
     # batch isend vs blocking send test
+    dist.barrier()
     buffer_size = 1 * 2**30
     run_count = 2
     torch.cuda.profiler.cudart().cudaProfilerStart()
@@ -248,65 +249,70 @@ def test_nccl(args):
     dist.barrier()
     torch.cuda.nvtx.range_pop()
 
-    # print(f"batch send")
-    # torch.cuda.nvtx.range_push(f"nvtx-batchsend-rank{rank}")
-    # for r in range(run_count):
-    #     tensors = []
-    #     for i in range(size - 1):
-    #         tensors.append(torch.cuda.FloatTensor(buffer_size).fill_(i + 1))
-
-    #     send_ops = []
-    #     for i in range(size - 1):
-    #         send_ops.append(dist.P2POp(dist.isend, tensors[i], i + 1))
-
-    #     if rank == 0:
-    #         if r == run_count - 1:
-    #             start_time(start_timer)
-
-    #         reqs = dist.batch_isend_irecv(send_ops)
-    #         for req in reqs:
-    #             req.wait()
-    #         recv_tensor = torch.cuda.FloatTensor(buffer_size).fill_(0)
-    #         torch.cuda.synchronize()
-
-    #         if r == run_count - 1:
-    #             seconds = stop_time(start_timer, stop_timer) / 1000
-    #             gb_count = (buffer_size * 4) / 2**30
-    #             bw = gb_count / seconds
-    #             print(f"gb: {gb_count} GB time: {seconds}s bw: {bw}GB/s")
-    #             print(f"time(ms): {seconds * 1000}")
-    #     else:
-    #         recv_tensor = torch.cuda.FloatTensor(buffer_size)
-    #         dist.recv(recv_tensor, src=0)
-    # dist.barrier()
-    # torch.cuda.nvtx.range_pop()
-
-    print(f"scatter")
-    torch.cuda.nvtx.range_push(f"nvtx-scatter-rank{rank}")
+    print(f"batch send")
+    torch.cuda.nvtx.range_push(f"nvtx-batchsend-rank{rank}")
     for r in range(run_count):
+        tensors = []
+        for i in range(size - 1):
+            tensors.append(torch.cuda.FloatTensor(buffer_size).fill_(i + 1))
+
+        send_ops = []
+        for i in range(size - 1):
+            send_ops.append(dist.P2POp(dist.isend, tensors[i], i + 1))
+
         if rank == 0:
-            tensors = []
-            for i in range(size):
-                tensors.append(torch.cuda.FloatTensor(buffer_size).fill_(i))
+            if r == run_count - 1:
+                start_time(start_timer)
+
+            reqs = dist.batch_isend_irecv(send_ops)
+            for req in reqs:
+                req.wait()
+            recv_tensor = torch.cuda.FloatTensor(buffer_size).fill_(0)
+            torch.cuda.synchronize()
+
+            if r == run_count - 1:
+                seconds = stop_time(start_timer, stop_timer) / 1000
+                gb_count = (buffer_size * 4) / 2**30
+                bw = gb_count / seconds
+                print(f"gb: {gb_count} GB time: {seconds}s bw: {bw}GB/s")
+                print(f"time(ms): {seconds * 1000}")
         else:
-            tensors = None
-
-        recv_tensor = torch.cuda.FloatTensor(buffer_size)
-
-        if rank == 0 and r == run_count - 1:
-            start_time(start_timer)
-
-        dist.scatter(recv_tensor, tensors, src=0)
-        torch.cuda.synchronize()
-
-        if rank == 0 and r == run_count - 1:
-            seconds = stop_time(start_timer, stop_timer) / 1000
-            gb_count = (buffer_size * 4) / 2**30
-            bw = gb_count / seconds
-            print(f"gb: {gb_count} GB time: {seconds}s bw: {bw}GB/s")
-            print(f"time(ms): {seconds * 1000}")
+            recv_tensor = torch.cuda.FloatTensor(buffer_size)
+            recv_ops = []
+            recv_ops.append(dist.P2POp(dist.irecv, tensors[i], 0))
+            reqs = dist.batch_isend_irecv(recv_ops)
+            for req in reqs:
+                req.wait()
+            # dist.recv(recv_tensor, src=0)
     dist.barrier()
     torch.cuda.nvtx.range_pop()
+
+    # print(f"scatter")
+    # torch.cuda.nvtx.range_push(f"nvtx-scatter-rank{rank}")
+    # for r in range(run_count):
+    #     if rank == 0:
+    #         tensors = []
+    #         for i in range(size):
+    #             tensors.append(torch.cuda.FloatTensor(buffer_size).fill_(i))
+    #     else:
+    #         tensors = None
+
+    #     recv_tensor = torch.cuda.FloatTensor(buffer_size)
+
+    #     if rank == 0 and r == run_count - 1:
+    #         start_time(start_timer)
+
+    #     dist.scatter(recv_tensor, tensors, src=0)
+    #     torch.cuda.synchronize()
+
+    #     if rank == 0 and r == run_count - 1:
+    #         seconds = stop_time(start_timer, stop_timer) / 1000
+    #         gb_count = (buffer_size * 4) / 2**30
+    #         bw = gb_count / seconds
+    #         print(f"gb: {gb_count} GB time: {seconds}s bw: {bw}GB/s")
+    #         print(f"time(ms): {seconds * 1000}")
+    # dist.barrier()
+    # torch.cuda.nvtx.range_pop()
 
     # print(f"nonblocking isends")
     # torch.cuda.nvtx.range_push(f"nvtx-nonblockisend-rank{rank}")

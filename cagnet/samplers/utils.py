@@ -332,26 +332,20 @@ def dist_saspgemm15D(mata, matb, replication, rank, size, row_groups, col_groups
                                             nnz_col_ids[j].size(0), matb._nnz())
                     stop_time_add(start_inner_timer, stop_inner_timer, timing_dict, f"spgemm-send-rowsel-{name}")
 
-                    matb_rows_sum = torch.cuda.LongTensor(matb.crow_indices().size(0) - 1).fill_(0)
-                    lengths = matb.crow_indices()[1:] - matb.crow_indices()[:-1]
-                    if nnz_row_mask.any():
-                        matb_rows_sum[nnz_col_ids[j]] = lengths[nnz_col_ids[j]]
-
-                    # # torch 1.13 supports offsets-based reduction
-                    start_time(start_inner_timer)
+                    # matb_rows_sum = torch.cuda.LongTensor(matb.crow_indices().size(0) - 1).fill_(0)
+                    # lengths = matb.crow_indices()[1:] - matb.crow_indices()[:-1]
                     # if nnz_row_mask.any():
-                    #     lengths = matb.crow_indices()[1:] - matb.crow_indices()[:-1]
-                    #     matb_rows_sum = torch.segment_reduce(nnz_row_mask.float(), 
-                    #                                                 "sum", 
-                    #                                                 lengths=lengths)
-                    #     # matb_rows_sum = torch.segment_reduce(nnz_row_mask.float(), 
-                    #     #                                             "sum", 
-                    #     #                                             offsets=matb.crow_indices())
-                    stop_time_add(start_inner_timer, stop_inner_timer, timing_dict, f"spgemm-send-segred-{name}")
+                    #     matb_rows_sum[nnz_col_ids[j]] = lengths[nnz_col_ids[j]]
+                    row_lengths = matb.crow_indices()[1:] - matb.crow_indices()[:-1]
+                    if nnz_col_ids[j].size(0) > 0:
+                        matb_send_lengths = row_lengths[nnz_col_ids[j]]
+                    else:
+                        matb_send_lengths = torch.cuda.LongTensor(0)
+
                     start_time(start_inner_timer)
-                    matb_send_crows = torch.cuda.LongTensor(matb.crow_indices().size(0))
-                    matb_send_crows[1:] = torch.cumsum(matb_rows_sum, dim=0)
-                    matb_send_crows[0] = 0
+                    # matb_send_crows = torch.cuda.LongTensor(matb.crow_indices().size(0))
+                    # matb_send_crows[1:] = torch.cumsum(matb_rows_sum, dim=0)
+                    # matb_send_crows[0] = 0
                     matb_send_cols = matb.col_indices()[nnz_row_mask]
                     matb_send_values = matb.values()[nnz_row_mask]
                     stop_time_add(start_inner_timer, stop_inner_timer, timing_dict, f"spgemm-send-misc-{name}")
@@ -359,13 +353,20 @@ def dist_saspgemm15D(mata, matb, replication, rank, size, row_groups, col_groups
                     start_time(start_inner_timer)
                     if recv_rank != q:
                         selected_rows_count = torch.cuda.IntTensor(1).fill_(matb_send_cols.size(0))
-                        nnz_count += 2 * matb_send_cols.size(0) + matb_send_crows.size(0)
+                        nnz_count += 2 * matb_send_cols.size(0) + nnz_col_ids[j].size(0)
                         dist.send(selected_rows_count, tag=0, dst=recv_rank)
-                        dist.send(matb_send_crows, tag=1, dst=recv_rank)
+                        # dist.send(matb_send_crows, tag=1, dst=recv_rank)
+                        dist.send(matb_send_lengths, tag=1, dst=recv_rank)
                         dist.send(matb_send_cols, tag=2, dst=recv_rank)
                         dist.send(matb_send_values, tag=3, dst=recv_rank)
                     else:
-                        matb_recv_crows = matb_send_crows.clone()
+                        # matb_recv_crows = matb_send_crows.clone()
+                        matb_rows_sum = torch.cuda.LongTensor(matb.crow_indices().size(0) - 1).fill_(0)
+                        if nnz_row_mask.any():
+                            matb_rows_sum[nnz_col_ids[j]] = row_lengths[nnz_col_ids[j]]
+                        matb_recv_crows = torch.cuda.LongTensor(matb.crow_indices().size(0))
+                        matb_recv_crows[1:] = torch.cumsum(matb_rows_sum, dim=0)
+                        matb_recv_crows[0] = 0
                         matb_recv_cols = matb_send_cols.clone()
                         matb_recv_values = matb_send_values.clone()
                     stop_time_add(start_inner_timer, stop_inner_timer, timing_dict, f"spgemm-send-calls-{name}")
@@ -410,17 +411,16 @@ def dist_saspgemm15D(mata, matb, replication, rank, size, row_groups, col_groups
             if f"spgemm-send-calls-{name}" not in timing_dict:
                 timing_dict[f"spgemm-send-calls-{name}"] = []
 
-            if matb.layout == torch.sparse_csr:
-                if f"spgemm-send-segred-{name}" not in timing_dict:
-                    timing_dict[f"spgemm-send-segred-{name}"] = []
-
             start_time(start_inner_timer)
             selected_rows_count_recv = torch.cuda.IntTensor(1)
             dist.recv(selected_rows_count_recv, tag=0, src=q)
 
             if matb.layout == torch.sparse_csr:
-                matb_recv_crows = torch.cuda.LongTensor(chunk_col_size + 1)
-                dist.recv(matb_recv_crows, tag=1, src=q)
+                # matb_recv_crows = torch.cuda.LongTensor(chunk_col_size + 1)
+                # dist.recv(matb_recv_crows, tag=1, src=q)
+
+                matb_recv_lengths = torch.cuda.LongTensor(nnz_cols.size(0))
+                dist.recv(matb_recv_lengths, tag=1, src=q)
 
                 matb_recv_cols = torch.cuda.LongTensor(selected_rows_count_recv.item())
                 dist.recv(matb_recv_cols, tag=2, src=q)
@@ -428,7 +428,13 @@ def dist_saspgemm15D(mata, matb, replication, rank, size, row_groups, col_groups
                 matb_recv_values = torch.cuda.DoubleTensor(selected_rows_count_recv.item())
                 dist.recv(matb_recv_values, tag=3, src=q)
 
-                print(f"nnz: {matb_recv_cols.size(0)} rows: {matb_recv_crows.size(0)}")
+                matb_rows_sum = torch.cuda.LongTensor(chunk_col_size).fill_(0)
+                if matb_recv_lengths.size(0) > 0:
+                    matb_rows_sum[nnz_cols] = matb_recv_lengths
+                matb_recv_crows = torch.cuda.LongTensor(chunk_col_size + 1)
+                matb_recv_crows[1:] = torch.cumsum(matb_rows_sum, dim=0)
+                matb_recv_crows[0] = 0
+
                 nnz_count += 2 * matb_recv_cols.size(0) + matb_recv_crows.size(0)
 
             elif matb.layout == torch.sparse_coo:
