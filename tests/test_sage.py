@@ -48,8 +48,6 @@ def main(args):
         agg_neighbors = torch.IntTensor(agg_neighbors)
         agg_neighbors = agg_neighbors.unique()
 
-        print(f"current_frontier: {current_frontier}")
-        print(f"next_frontier: {next_frontier}")
         # Verify each vertex in next_frontier exists in aggregated neighorhood
         vertices_match = True
         for v in next_frontier:

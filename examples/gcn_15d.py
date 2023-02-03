@@ -474,7 +474,7 @@ def main(args, batches=None):
                                                                     sa_recv_buff, rank, size, row_groups, 
                                                                     col_groups, args.timing, args.baseline)
 
-        print("second run")
+        print("second run", flush=True)
         torch.cuda.profiler.cudart().cudaProfilerStart()
         torch.cuda.nvtx.range_push("nvtx-sampler")
         # torch.manual_seed(rank_col)

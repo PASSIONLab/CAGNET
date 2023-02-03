@@ -1112,14 +1112,15 @@ __global__ void RowSelectCsr(long *nnz_cols, long *row_offsets, bool *mask, int 
 
     for (int i = id; i < nnz_col_count; i += stride) {
         long vtx = nnz_cols[i];
-        long degree = nnz_cols[vtx + 1] - nnz_cols[vtx];
+        long degree = row_offsets[vtx + 1] - row_offsets[vtx];
+        // might be able to use memset here
         for (int j = 0; j < degree; j++) {
             mask[row_offsets[vtx] + j] = true;
         }
     } 
 }
 
-void rowselect_coo_gpu(const at::Tensor& nnz_cols, const at::Tensor& row_offsets, const at::Tensor& mask, 
+void rowselect_csr_gpu(const at::Tensor& nnz_cols, const at::Tensor& row_offsets, const at::Tensor& mask, 
                             int nnz_col_count, int nnz_count) {
 
 
@@ -1154,6 +1155,7 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
     m.def("shift_colselect_gpu", &shift_colselect_gpu, "Shift col selection matrix row values");
     m.def("scatterd_add_gpu", &scatterd_add_gpu, "Implementation of scatter_add_ for doubles");
     m.def("scatteri_add_gpu", &scatteri_add_gpu, "Implementation of scatter_add_ for ints");
-    m.def("rowselect_coo_gpu", &rowselect_coo_gpu, "Row selection for sparsity-aware spgemm");
+    m.def("rowselect_coo_gpu", &rowselect_coo_gpu, "COO row selection for sparsity-aware spgemm");
     m.def("coogeam_gpu", &coogeam_gpu, "csrgeam2 wrapper for cusparse");
+    m.def("rowselect_csr_gpu", &rowselect_csr_gpu, "CSR row selection for sparsity-aware spgemm");
 }
