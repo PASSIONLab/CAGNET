@@ -11,8 +11,6 @@
 
 #include <pybind11/pybind11.h>
 
-#include <THC/THCGeneral.hpp>
-
 #include <torch/extension.h>
 
 namespace py = pybind11;
@@ -122,7 +120,6 @@ void spmm_gpu(const at::Tensor& A_rowindices,
 
     // cusparseHandle_t handle;
     // CHECK_CUSPARSE(cusparseCreate(&handle));
-    auto state = at::globalContext().lazyInitCUDA();
     // auto handle = THCState_getCurrentSparseHandle(state);
     auto handle = at::cuda::getCurrentCUDASparseHandle();
 
@@ -203,7 +200,7 @@ void spmm_gpu(const at::Tensor& A_rowindices,
 
 
     void* d_buffer = NULL;
-    CHECK_ERROR(cudaMalloc(&d_buffer, bufferSize));
+    cudaMalloc(&d_buffer, bufferSize);
 
     CHECK_CUSPARSE(cusparseSpMM(handle, // handle,
                                     CUSPARSE_OPERATION_NON_TRANSPOSE,   // opA
@@ -224,6 +221,8 @@ void spmm_gpu(const at::Tensor& A_rowindices,
     // Column-major to row-major
     C.set_data(C.view({c_col, c_row}));
     C.t_();
+
+    CHECK_ERROR("spmm_gpu error")
 }
 
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {

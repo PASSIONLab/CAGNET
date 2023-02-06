@@ -26,3 +26,8 @@ tests/examples
 tests/LADIES/
 tests/*.out
 *.qdrep
+tests/
+examples/cagnet_outputs/
+examples/*.out
+examples/*ncu-rep
+examples/*nsys-rep
