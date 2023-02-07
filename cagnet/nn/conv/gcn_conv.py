@@ -50,7 +50,7 @@ def broad_func_one5d(self, graph, ampbyp, inputs):
     stages = self.size // (self.replication ** 2)
     if rank_col == self.replication - 1:
         stages = (self.size // self.replication) - (self.replication - 1) * stages
-
+    
     for i in range(stages):
         q = (rank_col * (self.size // (self.replication ** 2)) + i) * self.replication + rank_col
 
@@ -66,16 +66,18 @@ def broad_func_one5d(self, graph, ampbyp, inputs):
                                                     device=self.device).fill_(0)
 
         inputs_recv = inputs_recv.contiguous()
+        start = time.time()
         dist.broadcast(inputs_recv, src=q, group=self.col_groups[rank_col])
-
+        stop_time(self, "broadcast", start)
+        start = time.time()
         spmm_gpu(ampbyp[am_partid].indices()[0].int(), ampbyp[am_partid].indices()[1].int(), 
                         ampbyp[am_partid].values(), ampbyp[am_partid].size(0), 
                         ampbyp[am_partid].size(1), inputs_recv, z_loc)
-
+        stop_time(self, "spmm_gpu", start)
     z_loc = z_loc.contiguous()
-
+    start = time.time()
     dist.all_reduce(z_loc, op=dist.reduce_op.SUM, group=self.row_groups[rank_c])
-
+    stop_time(self, "reduce", start)    
     return z_loc
 
 def summa_sparse(self, adj_matrix, inputs, height, middim, width):
