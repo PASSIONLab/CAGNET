@@ -22,7 +22,7 @@ from cagnet.samplers import ladies_sampler, sage_sampler
 import cagnet.nn.functional as CAGF
 
 import ogb
-from ogb.nodeproppred import PygNodePropPredDataset
+# from ogb.nodeproppred import PygNodePropPredDataset
 
 import socket
 

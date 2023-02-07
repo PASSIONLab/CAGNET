@@ -486,20 +486,42 @@ def dist_saspgemm15D(mata, matb, replication, rank, size, row_groups, col_groups
                                                         size=(chunk_col_size, matb.size(1)))
 
 
-                # matc += torch.mm(mata_recv, matb_recv)
+                matc += torch.mm(mata_recv, matb_recv)
+                # matc_chunk_crow, matc_chunk_cols, matc_chunk_values = spgemm_gpu(mata_chunk_crows.int(), \
+                #                                                                     mata_chunk_cols.int(), \
+                #                                                                     mata_chunk_values.float(), \
+                #                                                                     matb_recv_crows.int(), \
+                #                                                                     matb_recv_cols.int(), \
+                #                                                                     matb_recv_values.float(), \
+                #                                                                     matc.crow_indices().int(), \
+                #                                                                     matc.col_indices().int(), \
+                #                                                                     matc.values().float(), \
+                #                                                                     mata.size(0), \
+                #                                                                     chunk_col_size, \
+                #                                                                     matb.size(1))
 
-                mata_recv = mata_recv.to_sparse_coo().coalesce()
-                matb_recv = matb_recv.to_sparse_coo().coalesce()
-                matc_chunk_indices, matc_chunk_values = torch_sparse.spspmm(mata_recv.indices(), \
-                                                            mata_recv.values(), matb_recv.indices(), \
-                                                            matb_recv.values(), mata.size(0), \
-                                                            chunk_col_size, matb.size(1), coalesced=True)
-                matc_chunk = sparse_coo_tensor_gpu(matc_chunk_indices, matc_chunk_values, 
-                                                        torch.Size([matc.size(0), matc.size(1)]))
-                matc_chunk = matc_chunk.coalesce()
+                # matc_chunk = torch.sparse_csr_tensor(matc_chunk_crow.long(), \
+                #                                         matc_chunk_cols.long(), \
+                #                                         matc_chunk_values,
+                #                                     size=(mata.size(0), matb.size(1)))
 
-                matc = matc.to_sparse_coo()
-                matc += matc_chunk
+                # matc += matc_chunk
+                # matc = torch.sparse_csr_tensor(matc.crow_indices().long(), matc.col_indices().long(),
+                #                                     matc.values(), matc.size())
+                                                                                    
+
+                # mata_recv = mata_recv.to_sparse_coo().coalesce()
+                # matb_recv = matb_recv.to_sparse_coo().coalesce()
+                # matc_chunk_indices, matc_chunk_values = torch_sparse.spspmm(mata_recv.indices(), \
+                #                                             mata_recv.values(), matb_recv.indices(), \
+                #                                             matb_recv.values(), mata.size(0), \
+                #                                             chunk_col_size, matb.size(1), coalesced=True)
+                # matc_chunk = sparse_coo_tensor_gpu(matc_chunk_indices, matc_chunk_values, 
+                #                                         torch.Size([matc.size(0), matc.size(1)]))
+                # matc_chunk = matc_chunk.coalesce()
+
+                # matc = matc.to_sparse_coo()
+                # matc += matc_chunk
             elif mata.layout == torch.sparse_coo:
                 matc_chunk_indices, matc_chunk_values = torch_sparse.spspmm(mata_chunk_indices, \
                                                             mata_chunk_values, matb_recv_indices, \

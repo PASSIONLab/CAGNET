@@ -453,12 +453,15 @@ std::vector<at::Tensor> coogeam_gpu(
 }
 
 std::vector<at::Tensor> spgemm_gpu(
-        const at::Tensor& A_rowindices, 
-        const at::Tensor& A_colindices,
+        const at::Tensor& A_crow_indices, 
+        const at::Tensor& A_col_indices,
         const at::Tensor& A_values, 
-        const at::Tensor& B_rowindices, 
-        const at::Tensor& B_colindices,
+        const at::Tensor& B_crow_indices, 
+        const at::Tensor& B_col_indices,
         const at::Tensor& B_values,
+        const at::Tensor& C_crow_indices, 
+        const at::Tensor& C_col_indices,
+        const at::Tensor& C_values,
         int32_t n,
         int32_t k,
         int32_t m) {
@@ -467,32 +470,12 @@ std::vector<at::Tensor> spgemm_gpu(
     // SpGEMM between A (n x k)  and B (k x m)
     auto handle = at::cuda::getCurrentCUDASparseHandle();
 
-    int32_t *d_a_csrrows = NULL;
-    int32_t *d_b_csrrows = NULL;
-
     int32_t A_nnz = A_values.size(0);
     int32_t B_nnz = B_values.size(0);
+    int32_t C_nnz = C_values.size(0);
 
-
-    // Construct CSR offsets array for A and B
-    cudaMalloc(&d_a_csrrows, (n + 1) * sizeof(int32_t));
-    CHECK_CUSPARSE(cusparseXcoo2csr(handle, 
-                                        A_rowindices.data<int>(), 
-                                        A_nnz, 
-                                        n, 
-                                        d_a_csrrows, 
-                                        CUSPARSE_INDEX_BASE_ZERO));
-    cudaMalloc(&d_b_csrrows, (k + 1) * sizeof(int32_t));
-    
-    CHECK_CUSPARSE(cusparseXcoo2csr(handle, 
-                                        B_rowindices.data<int>(), 
-                                        B_nnz, 
-                                        k, 
-                                        d_b_csrrows, 
-                                        CUSPARSE_INDEX_BASE_ZERO));
-    
     float alpha = 1;
-    float beta = 0;
+    float beta = 1;
 
     // Construct CSR matrix structs for A, B, and C (empty CSR)
     cusparseSpMatDescr_t matA;
@@ -500,8 +483,8 @@ std::vector<at::Tensor> spgemm_gpu(
 					  n, 		// rows
 					  k, 	        // cols
 					  A_nnz, 	// nnz
-					  d_a_csrrows, 	// csrRowOffsets
-					  A_colindices.data<int>(), // csrColInd
+					  A_crow_indices.data<int>(), // csrRowOffsets
+					  A_col_indices.data<int>(), // csrColInd
 					  A_values.data<float>(),  // csrValues
 					  CUSPARSE_INDEX_32I, 	    // csrRowOffsetsType
 					  CUSPARSE_INDEX_32I, 	    // csrColIndType
@@ -513,8 +496,8 @@ std::vector<at::Tensor> spgemm_gpu(
 					  k, 		// rows
 					  m, 	        // cols
 					  B_nnz, 	// nnz
-					  d_b_csrrows, 	// csrRowOffsets
-					  B_colindices.data<int>(), // csrColInd
+					  B_crow_indices.data<int>(), 	// csrRowOffsets
+					  B_col_indices.data<int>(), // csrColInd
 					  B_values.data<float>(),  // csrValues
 					  CUSPARSE_INDEX_32I, 	    // csrRowOffsetsType
 					  CUSPARSE_INDEX_32I, 	    // csrColIndType
@@ -525,10 +508,10 @@ std::vector<at::Tensor> spgemm_gpu(
     CHECK_CUSPARSE(cusparseCreateCsr(&matC,
 					  n, 		// rows
 					  m, 	        // cols
-					  0, 	        // nnz
-					  NULL, 	// csrRowOffsets
-					  NULL,         // csrColInd
-					  NULL,         // csrValues
+					  C_nnz, 	// nnz
+					  C_crow_indices.data<int>(), 	// csrRowOffsets
+					  C_col_indices.data<int>(),    // csrColInd
+					  C_values.data<float>(),       // csrValues
 					  CUSPARSE_INDEX_32I, 	    // csrRowOffsetsType
 					  CUSPARSE_INDEX_32I, 	    // csrColIndType
 					  CUSPARSE_INDEX_BASE_ZERO, // idxBase,

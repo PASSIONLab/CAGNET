@@ -89,15 +89,15 @@ def sage_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_total,
                                 batches._values(), 
                                 size=(mb_count * nnz, node_count_total))
 
-        # batches_expand = batches_expand.to_sparse_csr()
-        # adj_matrix = adj_matrix.to_sparse_csr()
+        batches_expand = batches_expand.to_sparse_csr()
+        adj_matrix = adj_matrix.to_sparse_csr()
         p = gen_prob_dist(batches_expand, adj_matrix, mb_count, node_count_total,
                                 replication, rank, size, row_groups, col_groups,
                                 sa_masks, sa_recv_buff, timing_dict, "sage",
                                 timing_arg)
-        # adj_matrix = adj_matrix.to_sparse_coo()
-        # if p.layout == torch.sparse_csr:
-        #     p = p.to_sparse_coo()
+        adj_matrix = adj_matrix.to_sparse_coo()
+        if p.layout == torch.sparse_csr:
+            p = p.to_sparse_coo()
 
         next_frontier = sample(p, frontier_size, mb_count, node_count_total, n_darts,
                                     replication, rank, size, row_groups, col_groups,
