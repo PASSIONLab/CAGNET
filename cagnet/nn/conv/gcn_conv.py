@@ -132,7 +132,7 @@ def broad_func_one5d(self, graph, ampbyp, inputs):
         unique_cols = []
         counts_recv = []
 
-
+        start = time.time()
         if rank!= q:
             unique_cols = ampbyp[am_partid]._indices()[1].unique()
             count = torch.cuda.LongTensor([unique_cols.size()], device=self.device).resize_(1, 1)
@@ -147,6 +147,7 @@ def broad_func_one5d(self, graph, ampbyp, inputs):
                 counter += 1
 
         # all other processors sends the nonzero col_ids to q
+
         if rank != q:
             dist.send(unique_cols, dst=q, group=self.col_groups[rank_col])
 
@@ -157,7 +158,6 @@ def broad_func_one5d(self, graph, ampbyp, inputs):
                 if rank != j:
                     dist.recv(row_indices_recv[counter], src=j, group=self.col_groups[rank_col])
                 counter += 1
-
         # q sends back the correct rows
             counter = 0
             for j in col_procs:
@@ -179,7 +179,9 @@ def broad_func_one5d(self, graph, ampbyp, inputs):
             inputs_recv[unique_cols] = rows_recv
         else:
             inputs_recv = inputs.clone()
-
+        
+        stop_time(self, "communication", start)
+        start = time.time()
 #        if q == self.rank:
 #            inputs_recv = inputs.clone()
 #        elif q_c == self.size // self.replication - 1:
@@ -193,10 +195,12 @@ def broad_func_one5d(self, graph, ampbyp, inputs):
         spmm_gpu(ampbyp[am_partid].indices()[0].int(), ampbyp[am_partid].indices()[1].int(), 
                         ampbyp[am_partid].values(), ampbyp[am_partid].size(0), 
                         ampbyp[am_partid].size(1), inputs_recv, z_loc)
-
+        
+        stop_time(self, "spmm_gpu", start)
     z_loc = z_loc.contiguous()
-
+    start = time.time()
     dist.all_reduce(z_loc, op=dist.reduce_op.SUM, group=self.row_groups[rank_c])
+    stop_time(self, "reduce", start)
 
     return z_loc
 
