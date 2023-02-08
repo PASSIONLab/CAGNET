@@ -186,7 +186,7 @@ def dist_spgemm15D(mata, matb, replication, rank, size, row_groups, col_groups, 
     return matc_nnz_indices, matc_nnz_values
 
 def dist_saspgemm15D(mata, matb, replication, rank, size, row_groups, col_groups, \
-                            name, nnz_row_masks, matb_recv_buff, timing_dict=None):
+                            name, nnz_row_masks, matb_recv_buff, timing_dict=None, alg=None):
 
     start_timer = torch.cuda.Event(enable_timing=True)
     stop_timer = torch.cuda.Event(enable_timing=True)
@@ -428,12 +428,13 @@ def dist_saspgemm15D(mata, matb, replication, rank, size, row_groups, col_groups
                 matb_recv_values = torch.cuda.DoubleTensor(selected_rows_count_recv.item())
                 dist.recv(matb_recv_values, tag=3, src=q)
 
-                matb_rows_sum = torch.cuda.LongTensor(chunk_col_size).fill_(0)
-                if matb_recv_lengths.size(0) > 0:
-                    matb_rows_sum[nnz_cols] = matb_recv_lengths
-                matb_recv_crows = torch.cuda.LongTensor(chunk_col_size + 1)
-                matb_recv_crows[1:] = torch.cumsum(matb_rows_sum, dim=0)
-                matb_recv_crows[0] = 0
+                if not (name == "prob" and alg == "sage"):
+                    matb_rows_sum = torch.cuda.LongTensor(chunk_col_size).fill_(0)
+                    if matb_recv_lengths.size(0) > 0:
+                        matb_rows_sum[nnz_cols] = matb_recv_lengths
+                    matb_recv_crows = torch.cuda.LongTensor(chunk_col_size + 1)
+                    matb_recv_crows[1:] = torch.cumsum(matb_rows_sum, dim=0)
+                    matb_recv_crows[0] = 0
 
                 nnz_count += 2 * matb_recv_cols.size(0) + matb_recv_crows.size(0)
 
@@ -479,7 +480,12 @@ def dist_saspgemm15D(mata, matb, replication, rank, size, row_groups, col_groups
         torch.cuda.nvtx.range_push("nvtx-local-spgemm")
         start_time(start_timer)
         if mata_chunk_values.size(0) > 0 and matb_recv_values.size(0) > 0:
-            if mata.layout == torch.sparse_csr:
+            # Can skip local spgemm for row-selection for any alg and for SAGE's probability spgemm
+            if name == "prob" and alg == "sage":
+                matc_chunk = torch.sparse_csr_tensor(matb_recv_crows, matb_recv_cols, matb_recv_values.float(),
+                                                        size=(chunk_col_size, matb.size(1)))
+                matc += matc_chunk
+            elif mata.layout == torch.sparse_csr:
                 mata_recv = torch.sparse_csr_tensor(mata_chunk_crows, mata_chunk_cols, mata_chunk_values.float(),
                                                         size=(mata.size(0), chunk_col_size))
                 matb_recv = torch.sparse_csr_tensor(matb_recv_crows, matb_recv_cols, matb_recv_values.float(),
@@ -487,41 +493,6 @@ def dist_saspgemm15D(mata, matb, replication, rank, size, row_groups, col_groups
 
 
                 matc += torch.mm(mata_recv, matb_recv)
-                # matc_chunk_crow, matc_chunk_cols, matc_chunk_values = spgemm_gpu(mata_chunk_crows.int(), \
-                #                                                                     mata_chunk_cols.int(), \
-                #                                                                     mata_chunk_values.float(), \
-                #                                                                     matb_recv_crows.int(), \
-                #                                                                     matb_recv_cols.int(), \
-                #                                                                     matb_recv_values.float(), \
-                #                                                                     matc.crow_indices().int(), \
-                #                                                                     matc.col_indices().int(), \
-                #                                                                     matc.values().float(), \
-                #                                                                     mata.size(0), \
-                #                                                                     chunk_col_size, \
-                #                                                                     matb.size(1))
-
-                # matc_chunk = torch.sparse_csr_tensor(matc_chunk_crow.long(), \
-                #                                         matc_chunk_cols.long(), \
-                #                                         matc_chunk_values,
-                #                                     size=(mata.size(0), matb.size(1)))
-
-                # matc += matc_chunk
-                # matc = torch.sparse_csr_tensor(matc.crow_indices().long(), matc.col_indices().long(),
-                #                                     matc.values(), matc.size())
-                                                                                    
-
-                # mata_recv = mata_recv.to_sparse_coo().coalesce()
-                # matb_recv = matb_recv.to_sparse_coo().coalesce()
-                # matc_chunk_indices, matc_chunk_values = torch_sparse.spspmm(mata_recv.indices(), \
-                #                                             mata_recv.values(), matb_recv.indices(), \
-                #                                             matb_recv.values(), mata.size(0), \
-                #                                             chunk_col_size, matb.size(1), coalesced=True)
-                # matc_chunk = sparse_coo_tensor_gpu(matc_chunk_indices, matc_chunk_values, 
-                #                                         torch.Size([matc.size(0), matc.size(1)]))
-                # matc_chunk = matc_chunk.coalesce()
-
-                # matc = matc.to_sparse_coo()
-                # matc += matc_chunk
             elif mata.layout == torch.sparse_coo:
                 matc_chunk_indices, matc_chunk_values = torch_sparse.spspmm(mata_chunk_indices, \
                                                             mata_chunk_values, matb_recv_indices, \
@@ -653,7 +624,7 @@ def gen_prob_dist(numerator, adj_matrix, mb_count, node_count_total, replication
     p_num_indices, p_num_values = dist_saspgemm15D(
                                         numerator, adj_matrix, replication, rank, size, 
                                         row_groups, col_groups, "prob", sa_masks, 
-                                        sa_recv_buff, timing_dict)
+                                        sa_recv_buff, timing_dict, name)
     torch.cuda.nvtx.range_pop()
     stop_timer.record()
     torch.cuda.synchronize()
