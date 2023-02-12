@@ -212,7 +212,6 @@ def broad_func(node_count, am_partitions, inputs, rank, size, row_groups, col_gr
         elif q_c == size // replication - 1:
             inputs_recv = torch.cuda.FloatTensor(am_partitions[am_partid].size(1), inputs.size(1), device=device).fill_(0)
             # inputs_recv = torch.zeros(list(am_partitions[i].t().size())[1], inputs.size(1))
-
         tstart_comm = start_time(col_groups[rank_col], rank)
 
         inputs_recv = inputs_recv.contiguous()
@@ -752,7 +751,8 @@ def main():
         devcount = torch.cuda.device_count()
 
     if graphname == "Cora":
-        path = osp.join(osp.dirname(osp.realpath(__file__)), '..', 'data', graphname)
+        # path = osp.join(osp.dirname(osp.realpath(__file__)), '..', 'data', graphname)
+        path = osp.join(osp.dirname(osp.realpath(__file__)), '..', 'data')
         dataset = Planetoid(path, graphname, transform=T.NormalizeFeatures())
         data = dataset[0]
         data = data.to(device)
@@ -778,6 +778,7 @@ def main():
     elif graphname == 'Amazon':
         print(f"Loading coo...", flush=True)
         edge_index = torch.load("../data/Amazon/processed/data.pt")
+        edge_index = edge_index.t_()
         print(f"Done loading coo", flush=True)
         # edge_index = edge_index.t_()
         # n = 9430088
@@ -799,7 +800,9 @@ def main():
         data.y = data.y.to(device)
     elif graphname == 'subgraph3':
         print(f"Loading coo...", flush=True)
-        edge_index = torch.load("../data/subgraph3/processed/data.pt")
+        # edge_index = torch.load("../data/subgraph3/processed/data.pt")
+        edge_index = torch.load("../data/protein/processed/protein.pt")
+        edge_index = edge_index.t_()
         print(f"Done loading coo", flush=True)
         n = 8745542
         num_features = 128

@@ -120,8 +120,6 @@ void spmm_gpu(const at::Tensor& A_rowindices,
 
     // cusparseHandle_t handle;
     // CHECK_CUSPARSE(cusparseCreate(&handle));
-    auto state = at::globalContext().lazyInitCUDA();
-    // auto handle = THCState_getCurrentSparseHandle(state);
     auto handle = at::cuda::getCurrentCUDASparseHandle();
 
     // Impl1 -- coo2csr + csrmm2
@@ -212,7 +210,7 @@ void spmm_gpu(const at::Tensor& A_rowindices,
 
 
     void* d_buffer = NULL;
-    CHECK_ERROR(cudaMalloc(&d_buffer, bufferSize));
+    cudaMalloc(&d_buffer, bufferSize);
 
     CHECK_CUSPARSE(cusparseSpMM(handle, // handle,
                                     CUSPARSE_OPERATION_NON_TRANSPOSE,   // opA
@@ -228,8 +226,9 @@ void spmm_gpu(const at::Tensor& A_rowindices,
                                     d_buffer));                         // buffer
 
 
-    CHECK_ERROR(cudaFree(d_a_csrrows));
-    CHECK_ERROR(cudaFree(d_buffer));
+    cudaFree(d_a_csrrows);
+    cudaFree(d_buffer);
+    CHECK_ERROR("spmm_gpu error")
 
     // Column-major to row-major
     C.set_data(C.view({c_col, c_row}));

@@ -15,3 +15,7 @@ sparse_coo_tensor_cpp.egg-info/
 tests/
 job*
 slurm_outputs/
+examples/cagnet_outputs/
+*.out
+examples/*.nsys-rep
+examples/*.ncu-rep
