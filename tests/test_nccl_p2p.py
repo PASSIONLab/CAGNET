@@ -246,6 +246,7 @@ def test_nccl(args):
         else:
             recv_tensor = torch.cuda.FloatTensor(buffer_size)
             dist.recv(recv_tensor, src=0)
+        dist.barrier()
     dist.barrier()
     torch.cuda.nvtx.range_pop()
 
@@ -284,35 +285,37 @@ def test_nccl(args):
             for req in reqs:
                 req.wait()
             # dist.recv(recv_tensor, src=0)
+        dist.barrier()
     dist.barrier()
     torch.cuda.nvtx.range_pop()
 
-    # print(f"scatter")
-    # torch.cuda.nvtx.range_push(f"nvtx-scatter-rank{rank}")
-    # for r in range(run_count):
-    #     if rank == 0:
-    #         tensors = []
-    #         for i in range(size):
-    #             tensors.append(torch.cuda.FloatTensor(buffer_size).fill_(i))
-    #     else:
-    #         tensors = None
+    print(f"scatter")
+    torch.cuda.nvtx.range_push(f"nvtx-scatter-rank{rank}")
+    for r in range(run_count):
+        if rank == 0:
+            tensors = []
+            for i in range(size):
+                tensors.append(torch.cuda.FloatTensor(buffer_size).fill_(i))
+        else:
+            tensors = None
 
-    #     recv_tensor = torch.cuda.FloatTensor(buffer_size)
+        recv_tensor = torch.cuda.FloatTensor(buffer_size)
 
-    #     if rank == 0 and r == run_count - 1:
-    #         start_time(start_timer)
+        if rank == 0 and r == run_count - 1:
+            start_time(start_timer)
 
-    #     dist.scatter(recv_tensor, tensors, src=0)
-    #     torch.cuda.synchronize()
+        dist.scatter(recv_tensor, tensors, src=0)
+        torch.cuda.synchronize()
 
-    #     if rank == 0 and r == run_count - 1:
-    #         seconds = stop_time(start_timer, stop_timer) / 1000
-    #         gb_count = (buffer_size * 4) / 2**30
-    #         bw = gb_count / seconds
-    #         print(f"gb: {gb_count} GB time: {seconds}s bw: {bw}GB/s")
-    #         print(f"time(ms): {seconds * 1000}")
-    # dist.barrier()
-    # torch.cuda.nvtx.range_pop()
+        if rank == 0 and r == run_count - 1:
+            seconds = stop_time(start_timer, stop_timer) / 1000
+            gb_count = (buffer_size * 4) / 2**30
+            bw = gb_count / seconds
+            print(f"gb: {gb_count} GB time: {seconds}s bw: {bw}GB/s")
+            print(f"time(ms): {seconds * 1000}")
+        dist.barrier()
+    dist.barrier()
+    torch.cuda.nvtx.range_pop()
 
     # print(f"nonblocking isends")
     # torch.cuda.nvtx.range_push(f"nvtx-nonblockisend-rank{rank}")

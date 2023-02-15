@@ -18,6 +18,7 @@ sparse_coo_tensor_cpp.egg-info/
 *.pt
 slurm_outputs/
 job-*
+job_*
 gcn_distr.py
 gcn_distr_15d.py
 gcn_distr_2d.py

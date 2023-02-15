@@ -123,6 +123,15 @@ at::Tensor sparse_coo_tensor_gpu(const at::Tensor& indices,
         sparse_dim, dense_dim, size, indices, values, values.options().layout(at::kSparse));
 }
 
+at::Tensor sparse_csr_tensor_gpu(const at::Tensor& crows, 
+                                    const at::Tensor& cols, 
+                                    const at::Tensor& values, 
+                                    at::ArrayRef<int64_t> size) {
+
+    // return at::sparse_compressed_tensor(crows, cols, values, size, c10::Layout::SparseCsr); // torch 1.13
+    return at::sparse_csr_tensor(crows, cols, values, size, values.options().layout(at::kSparseCsr)); // 1.11
+}
+
 template<typename T>
 void printCusparseDnMat(int64_t rows, int64_t cols, int64_t ld, T *values_dev) {
   T* values_host = new T[rows*cols];
@@ -1123,7 +1132,8 @@ void rowselect_csr_gpu(const at::Tensor& nnz_cols, const at::Tensor& row_offsets
 }
 
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
-    m.def("sparse_coo_tensor_gpu", &sparse_coo_tensor_gpu, "Sparse Tensor GPU-only constructor");
+    m.def("sparse_coo_tensor_gpu", &sparse_coo_tensor_gpu, "Sparse COO Tensor GPU-only constructor");
+    m.def("sparse_csr_tensor_gpu", &sparse_csr_tensor_gpu, "Sparse CSR Tensor GPU-only constructor");
     m.def("spmm_gpu", &spmm_gpu, "SpMM wrapper for cusparse");
     m.def("spgemm_gpu", &spgemm_gpu, "SpGEMM wrapper for cusparse");
     m.def("downsample_gpu", &downsample_gpu, "Downsampling for LADIES sampling algorithm");
