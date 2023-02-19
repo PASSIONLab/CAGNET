@@ -346,6 +346,7 @@ def main(args, batches=None):
     rank = dist.get_rank()
     size = dist.get_world_size()
     print(f"hostname: {socket.gethostname()} rank: {rank} size: {size}", flush=True)
+    torch.cuda.set_device(rank % args.gpu)
 
     # adj_matrix, _ = add_remaining_self_loops(adj_matrix, num_nodes=inputs.size(0))
     edge_count = adj_matrix.size(1)
@@ -613,8 +614,8 @@ if __name__ == '__main__':
                         help="sampling algorithm for training")
     parser.add_argument("--dropout", type=float, default=0.5,
                         help="dropout probability")
-    parser.add_argument("--gpu", type=int, default=-1,
-                        help="gpu")
+    parser.add_argument("--gpu", type=int, default=4,
+                        help="gpus per node")
     parser.add_argument("--lr", type=float, default=1e-2,
                         help="learning rate")
     parser.add_argument("--n-epochs", type=int, default=200,

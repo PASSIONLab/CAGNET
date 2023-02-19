@@ -27,6 +27,8 @@ def test_nccl(args):
     size = dist.get_world_size()
     print(f"hostname: {socket.gethostname()} rank: {rank} size: {size}")
     print(f"backend: {dist.get_backend()}")
+    print(f"rank: {rank} visible_devices: {os.environ['CUDA_VISIBLE_DEVICES']}")
+    torch.cuda.set_device(rank)
 
     start_timer = torch.cuda.Event(enable_timing=True)
     stop_timer = torch.cuda.Event(enable_timing=True)

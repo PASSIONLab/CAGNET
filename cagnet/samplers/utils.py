@@ -318,9 +318,9 @@ def dist_saspgemm15D(mata, matb, replication, rank, size, row_groups, col_groups
                 rowselect_coo_gpu(nnz_col_ids, matb._indices()[0,:], nnz_row_masks, nnz_cols_count_list, \
                                         matb._indices().size(1), size // replication)
                 stop_time_add(start_inner_timer, stop_inner_timer, timing_dict, f"spgemm-send-rowsel-{name}")
-            # recv_proc_count = ((size // replication) - 1)
-            # send_ops = [None] * 3 * recv_proc_count
-            # send_idx = 0
+            recv_proc_count = ((size // replication) - 1)
+            send_ops = [None] * 4 * recv_proc_count
+            send_idx = 0
 
             # start_time(start_inner_timer)
             for j in range(size // replication):
@@ -348,11 +348,21 @@ def dist_saspgemm15D(mata, matb, replication, rank, size, row_groups, col_groups
                     if recv_rank != q:
                         selected_rows_count = torch.cuda.IntTensor(1).fill_(matb_send_cols.size(0))
                         nnz_count += 2 * matb_send_cols.size(0) + nnz_col_ids[j].size(0)
-                        dist.send(selected_rows_count, tag=0, dst=recv_rank)
-                        # dist.send(matb_send_crows, tag=1, dst=recv_rank)
-                        dist.send(matb_send_lengths, tag=1, dst=recv_rank)
-                        dist.send(matb_send_cols, tag=2, dst=recv_rank)
-                        dist.send(matb_send_values, tag=3, dst=recv_rank)
+                        # dist.send(selected_rows_count, tag=0, dst=recv_rank)
+                        # # dist.send(matb_send_crows, tag=1, dst=recv_rank)
+                        # dist.send(matb_send_lengths, tag=1, dst=recv_rank)
+                        # dist.send(matb_send_cols, tag=2, dst=recv_rank)
+                        # dist.send(matb_send_values, tag=3, dst=recv_rank)
+
+                        send_ops[send_idx] = \
+                                    dist.P2POp(dist.isend, selected_rows_count, recv_rank, tag=0)
+                        send_ops[send_idx + 1] = \
+                                    dist.P2POp(dist.isend, matb_send_lengths, recv_rank, tag=1)
+                        send_ops[send_idx + 2] = \
+                                    dist.P2POp(dist.isend, matb_send_cols, recv_rank, tag=2)
+                        send_ops[send_idx + 3] = \
+                                    dist.P2POp(dist.isend, matb_send_values, recv_rank, tag=3)
+                        send_idx += 4
                     else:
                         # matb_recv_crows = matb_send_crows.clone()
                         matb_recv_cols = matb_send_cols.clone()
@@ -395,10 +405,10 @@ def dist_saspgemm15D(mata, matb, replication, rank, size, row_groups, col_groups
                         matb_recv_values = matb_send_values.clone()
                     stop_time_add(start_inner_timer, stop_inner_timer, timing_dict, f"spgemm-send-calls-{name}")
 
-            # if len(send_ops) > 0:
-            #     reqs = dist.batch_isend_irecv(send_ops)
-            #     for req in reqs:
-            #         req.wait()
+            if len(send_ops) > 0:
+                reqs = dist.batch_isend_irecv(send_ops)
+                for req in reqs:
+                    req.wait()
         else:
             if f"spgemm-send-rowsel-{name}" not in timing_dict:
                 timing_dict[f"spgemm-send-rowsel-{name}"] = []
@@ -512,6 +522,7 @@ def dist_saspgemm15D(mata, matb, replication, rank, size, row_groups, col_groups
                 # matc_chunk = matc_chunk.coalesce()
                 matc += matc_chunk
                 stop_time_add(start_inner_timer, stop_inner_timer, timing_dict, f"spgemm-loc-spspmm-{name}")
+                matc = matc.to_sparse_csr()
             elif mata.layout == torch.sparse_coo:
                 matc_chunk_indices, matc_chunk_values = torch_sparse.spspmm(mata_chunk_indices, \
                                                             mata_chunk_values, matb_recv_indices, \
@@ -594,6 +605,7 @@ def dist_saspgemm15D(mata, matb, replication, rank, size, row_groups, col_groups
     # matc_recv = torch.stack(matc_recv)
     # matc = torch.sparse.sum(matc_recv, dim=0)
 
+    gpu = torch.device(f"cuda:{torch.cuda.current_device()}")
     for i in range(replication):
         recv_rank = rank_c * replication + i
         if recv_rank != rank:
@@ -610,8 +622,8 @@ def dist_saspgemm15D(mata, matb, replication, rank, size, row_groups, col_groups
             matc_chunk_values = matc_outputs[2].double()
             matc_chunk_counts = torch.diff(matc_chunk_rows)
             matc_chunk_rows = torch.repeat_interleave(
-                                                    torch.arange(0, matc.size(0), device=torch.device("cuda:0")),
-                                                    matc_chunk_counts)
+                                        torch.arange(0, matc.size(0), device=gpu),
+                                        matc_chunk_counts)
             matc_chunk_indices = torch.stack((matc_chunk_rows, matc_chunk_cols))
             matc = sparse_coo_tensor_gpu(matc_chunk_indices, matc_chunk_values, matc.size())
     stop_time_add(start_timer, stop_timer, timing_dict, f"spgemm-reduce-{name}", barrier=True)

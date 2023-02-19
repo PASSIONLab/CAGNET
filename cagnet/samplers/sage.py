@@ -67,6 +67,8 @@ def sage_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_total,
     # adj_matrices[i][j] --  mb i layer j
     adj_matrices = [None] * n_layers # adj_matrices[i] --  bulk mb mtx for layer j
 
+    gpu = torch.device(f"cuda:{torch.cuda.current_device()}")
+
     if not baseline_compare:
         # start_time(total_start_timer)
         total_start_timer.record()
@@ -79,11 +81,8 @@ def sage_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_total,
         # Expand batches matrix
         if baseline_compare:
             total_start_timer.record()
-        batches_expand_rows = torch.arange(mb_count * nnz, \
-                                                device=torch.device("cuda:0"))
-        batches_expand_idxs = torch.stack(
-                                (batches_expand_rows, batches._indices()[1, :])
-                                )
+        batches_expand_rows = torch.arange(mb_count * nnz, device=gpu)
+        batches_expand_idxs = torch.stack((batches_expand_rows, batches._indices()[1, :]))
         batches_expand = torch.sparse_coo_tensor(
                                 batches_expand_idxs,
                                 batches._values(), 
@@ -120,9 +119,9 @@ def sage_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_total,
 
         frontier_nnz_sizes = torch.clamp(frontier_nnz_sizes, max=frontier_size)
         next_frontier_rows = torch.repeat_interleave(
-                                torch.arange(batch_size * mb_count, device=torch.device("cuda:0")),
+                                torch.arange(batch_size * mb_count, device=gpu),
                                 frontier_size)
-        nextf_cols_idxs = torch.arange(next_frontier_nnz.size(0), device=torch.device("cuda:0"))
+        nextf_cols_idxs = torch.arange(next_frontier_nnz.size(0), device=gpu)
         frontier_remainder = frontier_size - frontier_nnz_sizes
         ps_f_remain = torch.cumsum(frontier_remainder, dim=0).roll(1)
         ps_f_remain[0] = 0

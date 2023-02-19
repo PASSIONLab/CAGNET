@@ -131,11 +131,11 @@ int main(int argc, char* argv[])
         cudaEventRecord(start);
       }
 
-      ncclGroupStart();
+      // ncclGroupStart();
       for (int j = 0; j < nRanks - 1; j++) {
         NCCLCHECK(ncclSend((const void*)sendbuffs[j], size, ncclFloat, j + 1, comm, s));
       }
-      ncclGroupEnd();
+      // ncclGroupEnd();
       //communicating using NCCL
       // NCCLCHECK(ncclAllReduce((const void*)sendbuff, (void*)recvbuff, size, ncclFloat, ncclSum,
       //       comm, s));
