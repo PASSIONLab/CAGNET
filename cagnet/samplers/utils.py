@@ -47,46 +47,29 @@ def csr_allreduce(mat, left, right, rank, name=None, timing_dict=None):
         ops = [None, None]
         nnz_send = torch.cuda.IntTensor(1).fill_(mat._nnz())
         nnz_recv = torch.cuda.IntTensor(1)
-        if rank <= mid_rank:
-            ops[0] = dist.P2POp(dist.isend, nnz_send, recv_rank)
-            ops[1] = dist.P2POp(dist.irecv, nnz_recv, recv_rank)
-            reqs = dist.batch_isend_irecv(ops)
-            for req in reqs:
-                req.wait() 
-        else:
-            ops[0] = dist.P2POp(dist.isend, nnz_send, recv_rank)
-            ops[1] = dist.P2POp(dist.irecv, nnz_recv, recv_rank)
-            reqs = dist.batch_isend_irecv(ops)
-            for req in reqs:
-                req.wait() 
+        
+        ops[0] = dist.P2POp(dist.isend, nnz_send, recv_rank)
+        ops[1] = dist.P2POp(dist.irecv, nnz_recv, recv_rank)
+        reqs = dist.batch_isend_irecv(ops)
+        for req in reqs:
+            req.wait() 
 
         torch.cuda.synchronize()
-        rows_recv = torch.cuda.LongTensor(mat.size(0) + 1)
-        cols_recv = torch.cuda.LongTensor(nnz_recv.item())
+        rows_recv = torch.cuda.IntTensor(mat.size(0) + 1)
+        cols_recv = torch.cuda.IntTensor(nnz_recv.item())
         vals_recv = torch.cuda.FloatTensor(nnz_recv.item())
 
         ops = [None] * 6
-        if rank <= mid_rank:
-            ops[0] = dist.P2POp(dist.isend, mat.crow_indices().long(), recv_rank, tag=0)
-            ops[1] = dist.P2POp(dist.isend, mat.col_indices().long(), recv_rank, tag=1)
-            ops[2] = dist.P2POp(dist.isend, mat.values(), recv_rank, tag=2)
-            ops[3] = dist.P2POp(dist.irecv, rows_recv, recv_rank, tag=0)
-            ops[4] = dist.P2POp(dist.irecv, cols_recv, recv_rank, tag=1)
-            ops[5] = dist.P2POp(dist.irecv, vals_recv, recv_rank, tag=2)
-            reqs = dist.batch_isend_irecv(ops)
-            for req in reqs:
-                req.wait() 
-        else:
-            ops[0] = dist.P2POp(dist.isend, mat.crow_indices().long(), recv_rank, tag=0)
-            ops[1] = dist.P2POp(dist.isend, mat.col_indices().long(), recv_rank, tag=1)
-            ops[2] = dist.P2POp(dist.isend, mat.values(), recv_rank, tag=2)
-            ops[3] = dist.P2POp(dist.irecv, rows_recv, recv_rank, tag=0)
-            ops[4] = dist.P2POp(dist.irecv, cols_recv, recv_rank, tag=1)
-            ops[5] = dist.P2POp(dist.irecv, vals_recv, recv_rank, tag=2)
-            reqs = dist.batch_isend_irecv(ops)
-            for req in reqs:
-                req.wait() 
-        
+        ops[0] = dist.P2POp(dist.isend, mat.crow_indices().int(), recv_rank, tag=0)
+        ops[1] = dist.P2POp(dist.isend, mat.col_indices().int(), recv_rank, tag=1)
+        ops[2] = dist.P2POp(dist.isend, mat.values(), recv_rank, tag=2)
+        ops[3] = dist.P2POp(dist.irecv, rows_recv, recv_rank, tag=0)
+        ops[4] = dist.P2POp(dist.irecv, cols_recv, recv_rank, tag=1)
+        ops[5] = dist.P2POp(dist.irecv, vals_recv, recv_rank, tag=2)
+        reqs = dist.batch_isend_irecv(ops)
+        for req in reqs:
+            req.wait() 
+
         torch.cuda.synchronize()
         mat_recv = torch.sparse_csr_tensor(rows_recv, cols_recv, vals_recv, size=mat.size())
         mat = mat + mat_recv
@@ -420,9 +403,9 @@ def dist_saspgemm15D(mata, matb, replication, rank, size, row_groups, col_groups
                         send_ops[send_idx] = \
                                     dist.P2POp(dist.isend, selected_rows_count, recv_rank, tag=0)
                         send_ops[send_idx + 1] = \
-                                    dist.P2POp(dist.isend, matb_send_lengths, recv_rank, tag=1)
+                                    dist.P2POp(dist.isend, matb_send_lengths.int(), recv_rank, tag=1)
                         send_ops[send_idx + 2] = \
-                                    dist.P2POp(dist.isend, matb_send_cols, recv_rank, tag=2)
+                                    dist.P2POp(dist.isend, matb_send_cols.int(), recv_rank, tag=2)
                         send_ops[send_idx + 3] = \
                                     dist.P2POp(dist.isend, matb_send_values, recv_rank, tag=3)
                         send_idx += 4
@@ -491,11 +474,15 @@ def dist_saspgemm15D(mata, matb, replication, rank, size, row_groups, col_groups
                 # matb_recv_crows = torch.cuda.LongTensor(chunk_col_size + 1)
                 # dist.recv(matb_recv_crows, tag=1, src=q)
 
-                matb_recv_lengths = torch.cuda.LongTensor(nnz_cols.size(0))
+                # matb_recv_lengths = torch.cuda.LongTensor(nnz_cols.size(0))
+                matb_recv_lengths = torch.cuda.IntTensor(nnz_cols.size(0))
                 dist.recv(matb_recv_lengths, tag=1, src=q)
+                matb_recv_lengths = matb_recv_lengths.long()
 
-                matb_recv_cols = torch.cuda.LongTensor(selected_rows_count_recv.item())
+                # matb_recv_cols = torch.cuda.LongTensor(selected_rows_count_recv.item())
+                matb_recv_cols = torch.cuda.IntTensor(selected_rows_count_recv.item())
                 dist.recv(matb_recv_cols, tag=2, src=q)
+                matb_recv_cols = matb_recv_cols.long()
 
                 matb_recv_values = torch.cuda.DoubleTensor(selected_rows_count_recv.item())
                 dist.recv(matb_recv_values, tag=3, src=q)
@@ -629,9 +616,9 @@ def dist_saspgemm15D(mata, matb, replication, rank, size, row_groups, col_groups
     stop_time_add(start_timer, stop_timer, timing_dict, f"spgemm-reduce-coo2csr{name}", barrier=True)
 
     start_time(start_timer)
-    print(f"before csr_allred start: {rank_row_start} {rank_row_stop}", flush=True)
+    print(f"before csr_allred start: {rank_row_start} stop: {rank_row_stop}", flush=True)
     matc = csr_allreduce(matc, rank_row_start, rank_row_stop, rank)
-    print(f"after csr_allred", flush=True)
+    print(f"after csr_allred start: {rank_row_start} stop: {rank_row_stop}", flush=True)
     stop_time_add(start_timer, stop_timer, timing_dict, f"spgemm-reduce-{name}", barrier=True)
 
     start_time(start_timer)
