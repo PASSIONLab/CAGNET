@@ -97,6 +97,7 @@ def sage_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_total,
         adj_matrix = adj_matrix.to_sparse_coo()
         if p.layout == torch.sparse_csr:
             p = p.to_sparse_coo()
+        batches = batches.to_sparse_coo()
 
         next_frontier = sample(p, frontier_size, mb_count, node_count_total, n_darts,
                                     replication, rank, size, row_groups, col_groups,

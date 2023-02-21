@@ -96,6 +96,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='test LADIES sampling code')
     parser.add_argument("--dataset", type=str, default="Cora",
                         help="dataset to train")
+    parser.add_argument("--gpu", type=int, default=4,
+                        help="gpus per node")
     parser.add_argument("--n-layers", type=int, default=1,
                         help="number of hidden gcn layers")
     parser.add_argument("--batch-size", type=int, default=512,
