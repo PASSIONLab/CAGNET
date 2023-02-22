@@ -311,6 +311,41 @@ def main(args):
                       row_groups=row_groups,
                       col_groups=col_groups)
 
+    # communicate the indices before:
+    # row_procs = []
+    # for i in range(0, size, replication):
+    #     row_procs.append(list(range(i, i + replication)))
+
+    # col_procs = []
+    # for i in range(replication):
+    #     col_procs.append(list(range(i, size, replication)))
+
+    counts_send = []
+    row_indices_send = []
+
+    counts_recv = [torch.cuda.LongTensor(1, 1, device=device).fill_(0) for i in range(size)]
+
+    for i in range(len(vtx_indices) - 1):
+        unique_cols = ampbyp[i]._indices()[1].unique()
+        counts_send.append(torch.cuda.LongTensor([unique_cols.size()], device=device).resize_(1, 1))
+        for j in range(args.replication):
+            row_indices_send.append(unique_cols)
+    
+    model.row_indices_send = row_indices_send
+
+    print("all to all counts")  
+    dist.all_to_all(counts_recv, counts_send)
+ 
+    row_indices_recv = [torch.cuda.LongTensor(device=device).resize_(counts_recv[i].int().item(),).fill_(0) for i in range(len(counts_recv))]
+
+    # row_data_recv = [torch.cuda.FloatTensor(device=self.device).resize_(counts_send[i].int().item(), inputs.size(1)).fill_(0) for i in range(len(counts_send))]
+    # start = time.time()
+    print("all to all indices")
+    dist.all_to_all(row_indices_recv, row_indices_send, group=group)
+
+    model.row_indices_recv = row_indices_recv
+    print("all to all done")
+
     # use optimizer
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
 
