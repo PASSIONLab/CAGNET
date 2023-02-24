@@ -94,9 +94,12 @@ def scale_elements(adj_matrix, adj_part, node_count, row_vtx, col_vtx, normaliza
 
 # Split a COO into partitions of size n_per_proc
 # Basically torch.split but for Sparse Tensors since pytorch doesn't support that.
-def split_coo(adj_matrix, node_count, n_per_proc, dim):
-    vtx_indices = list(range(0, node_count, n_per_proc))
-    vtx_indices.append(node_count)
+def split_coo(adj_matrix, partitions, dim):
+
+    # vtx_indices = list(range(0, node_count, n_per_proc))
+    # vtx_indices.append(node_count)
+
+    vtx_indices = [0] + np.cumsum(partitions)
 
     am_partitions = []
     for i in range(len(vtx_indices) - 1):
@@ -107,9 +110,13 @@ def split_coo(adj_matrix, node_count, n_per_proc, dim):
 
     return am_partitions, vtx_indices
 
-def oned_partition(rank, size, inputs, adj_matrix, data, features, classes, device, normalize):
+def oned_partition(rank, size, inputs, adj_matrix, data, features, classes, device, normalize, partitions=[]):
     node_count = inputs.size(0)
-    n_per_proc = math.ceil(float(node_count) / size)
+
+    if !partitions:
+        n_per_proc = math.ceil(float(node_count) / size)
+        partitions = [math.ceil(float(node_count) / size)]*size
+    
 
     am_partitions = None
     am_pbyp = None
@@ -121,10 +128,10 @@ def oned_partition(rank, size, inputs, adj_matrix, data, features, classes, devi
     # TODO: Maybe I do want grad here. Unsure.
     with torch.no_grad():
         # Column partitions
-        am_partitions, vtx_indices = split_coo(adj_matrix, node_count, n_per_proc, 1)
+        am_partitions, vtx_indices = split_coo(adj_matrix, partitions, 1)
 
         proc_node_count = vtx_indices[rank + 1] - vtx_indices[rank]
-        am_pbyp, _ = split_coo(am_partitions[rank], node_count, n_per_proc, 0)
+        am_pbyp, _ = split_coo(am_partitions[rank], partitions, 0)
         for i in range(len(am_pbyp)):
             if i == size - 1:
                 last_node_count = vtx_indices[i + 1] - vtx_indices[i]
@@ -150,7 +157,7 @@ def oned_partition(rank, size, inputs, adj_matrix, data, features, classes, devi
                                                     requires_grad=False)
             am_partitions[i] = scale_elements(adj_matrix, am_partitions[i], node_count,  0, vtx_indices[i], normalize)
 
-        input_partitions = torch.split(inputs, math.ceil(float(inputs.size(0)) / size), dim=0)
+        input_partitions = torch.split(inputs, partitions, dim=0)
 
         adj_matrix_loc = am_partitions[rank]
         inputs_loc = input_partitions[rank]
