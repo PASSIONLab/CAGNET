@@ -13,7 +13,7 @@ def stop_time(self, range_name, start):
         self.timings[range_name] += time.time() - start
     else:
         return 0.0
-    # dist.barrier()
+    dist.barrier()
 
 def broad_func_oned(self, graph, ampbyp, inputs):
 #    n_per_proc = math.ceil(float(graph.size(0) / self.size))
@@ -25,7 +25,7 @@ def broad_func_oned(self, graph, ampbyp, inputs):
 
     # counts_send = []
     row_indices_send = self.row_indices_send
-    row_data_send = []
+    row_data_send = [torch.cuda.FloatTensor(device=self.device)]*self.size
 
     # start = time.time()
     #for i in range(self.size):
@@ -53,7 +53,7 @@ def broad_func_oned(self, graph, ampbyp, inputs):
 
     start = time.time()
     for i in range(self.size):
-        row_data_send.append(inputs[row_indices_recv[i].long(), :])
+        row_data_send[i] = inputs[row_indices_recv[i].long(), :]
     # self.timings["gather_row_data"] = time.time() - start
     stop_time(self, "gather_row_data", start)
 
