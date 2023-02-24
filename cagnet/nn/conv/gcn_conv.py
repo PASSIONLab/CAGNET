@@ -137,7 +137,7 @@ def broad_func_one5d(self, graph, ampbyp, inputs):
         # unique_cols = []
         # counts_recv = []
 
-        start = time.time()
+        
         # if rank!= q:
         #     unique_cols = ampbyp[am_partid]._indices()[1].unique()
         #     count = torch.cuda.LongTensor([unique_cols.size()], device=self.device).resize_(1, 1)
@@ -167,17 +167,24 @@ def broad_func_one5d(self, graph, ampbyp, inputs):
             # counter = 0
             for j in col_procs:
                 if rank != j:
+                    start = time.time()
                     rows_send = inputs[row_indices_recv[j].long(), :]
+                    stop_time(self, "gather_row_data", start)
+                    start = time.time()
                     dist.send(rows_send, dst=j, group=self.col_groups[rank_col])
-                # counter += 1
+                    stop_time(self, "communication", start)
 
         # all other ranks receive the inputs
 
         inputs_recv = []
 
         if rank!= q:
-            rows_recv = torch.cuda.FloatTensor(device=self.device).resize_((.size(0), inputs.size(1))).fill_(0)
+            rows_recv = torch.cuda.FloatTensor(device=self.device).resize_((unique_cols.size(0), inputs.size(1))).fill_(0)
+            start = time.time()
+            
             dist.recv(rows_recv, src=q, group=self.col_groups[rank_col])
+            
+            stop_time(self, "communication", start)
             inputs_recv = torch.cuda.FloatTensor(ampbyp[am_partid].size(1), \
                                                     inputs.size(1), \
                                                     device=self.device).fill_(0)
@@ -185,7 +192,6 @@ def broad_func_one5d(self, graph, ampbyp, inputs):
         else:
             inputs_recv = inputs.clone()
         
-        stop_time(self, "communication", start)
         start = time.time()
 #        if q == self.rank:
 #            inputs_recv = inputs.clone()

@@ -289,13 +289,14 @@ def main(args):
     features_loc, g_loc, ampbyp = one5d_partition(rank, size, inputs, adj_matrix, data, \
                                                       inputs, num_classes, args.replication, args.normalize, \
                                                       args.normalize)
-
+    print("why segfault?", flush=True)
     features_loc = features_loc.to(device)
     g_loc = g_loc.to(device)
+    print("reached here", flush=True)
     for i in range(len(ampbyp)):
         ampbyp[i] = ampbyp[i].t().coalesce().to(device)
 
-
+    print("create GCN model")
     # create GCN model
     torch.manual_seed(0)
     model = GCN(num_features,
@@ -312,24 +313,27 @@ def main(args):
                       col_groups=col_groups)
 
     # communicate the indices before:
-    # row_procs = []
-    # for i in range(0, size, replication):
-    #     row_procs.append(list(range(i, i + replication)))
+    row_procs = []
+    for i in range(0, size, args.replication):
+        row_procs.append(list(range(i, i + args.replication)))
 
-    # col_procs = []
-    # for i in range(replication):
-    #     col_procs.append(list(range(i, size, replication)))
+    col_procs = []
+    for i in range(args.replication):
+        col_procs.append(list(range(i, size, args.replication)))
 
     counts_send = []
     row_indices_send = []
 
+    print("pre send indices")
     counts_recv = [torch.cuda.LongTensor(1, 1, device=device).fill_(0) for i in range(size)]
 
-    for i in range(len(vtx_indices) - 1):
+    for i in range(len(ampbyp)):
+        print(f"rank: {rank} i: {i}")
+
         unique_cols = ampbyp[i]._indices()[1].unique()
-        counts_send.append(torch.cuda.LongTensor([unique_cols.size()], device=device).resize_(1, 1))
         for j in range(args.replication):
             row_indices_send.append(unique_cols)
+            counts_send.append(torch.cuda.LongTensor([unique_cols.size()], device=device).resize_(1, 1))
     
     model.row_indices_send = row_indices_send
 
@@ -341,7 +345,7 @@ def main(args):
     # row_data_recv = [torch.cuda.FloatTensor(device=self.device).resize_(counts_send[i].int().item(), inputs.size(1)).fill_(0) for i in range(len(counts_send))]
     # start = time.time()
     print("all to all indices")
-    dist.all_to_all(row_indices_recv, row_indices_send, group=group)
+    dist.all_to_all(row_indices_recv, row_indices_send)
 
     model.row_indices_recv = row_indices_recv
     print("all to all done")
