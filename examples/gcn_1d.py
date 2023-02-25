@@ -202,8 +202,24 @@ def evaluate(model, graph, features, labels, nid, nid_count, ampbyp, group):
         # return correct.item() * 1.0 / len(labels)
 
 def main(args):
+    # Initialize distributed environment with SLURM
+    if "SLURM_PROCID" in os.environ.keys():
+        os.environ["RANK"] = os.environ["SLURM_PROCID"]
+
+    if "SLURM_NTASKS" in os.environ.keys():
+        os.environ["WORLD_SIZE"] = os.environ["SLURM_NTASKS"]
+
+    os.environ["MASTER_ADDR"] = args.hostname 
+    os.environ["MASTER_PORT"] = "1234"
+    
+    dist.init_process_group(backend=args.dist_backend)
+    rank = dist.get_rank()
+    size = dist.get_world_size()
+    print(f"hostname: {socket.gethostname()} rank: {rank} size: {size}", flush=True)
+    torch.cuda.set_device(rank % args.gpu)
+
     # load and preprocess dataset
-    device = torch.device('cuda')
+    device = torch.device(f'cuda:{rank % args.gpu}')
 
     path = osp.join(osp.dirname(osp.realpath(__file__)), '../..', 'data', args.dataset)
 
@@ -283,21 +299,6 @@ def main(args):
         data = data.to(device)
         inputs.requires_grad = True
         data.y = data.y.to(device)
-
-# Initialize distributed environment with SLURM
-    if "SLURM_PROCID" in os.environ.keys():
-        os.environ["RANK"] = os.environ["SLURM_PROCID"]
-
-    if "SLURM_NTASKS" in os.environ.keys():
-        os.environ["WORLD_SIZE"] = os.environ["SLURM_NTASKS"]
-
-    os.environ["MASTER_ADDR"] = args.hostname 
-    os.environ["MASTER_PORT"] = "1234"
-    
-    dist.init_process_group(backend=args.dist_backend)
-    rank = dist.get_rank()
-    size = dist.get_world_size()
-    print(f"hostname: {socket.gethostname()} rank: {rank} size: {size}", flush=True)
 
     if args.normalize:
         adj_matrix, _ = add_remaining_self_loops(adj_matrix, num_nodes=inputs.size(0))
@@ -427,7 +428,7 @@ if __name__ == '__main__':
                         help="dataset to train")
     parser.add_argument("--dropout", type=float, default=0.5,
                         help="dropout probability")
-    parser.add_argument("--gpu", type=int, default=-1,
+    parser.add_argument("--gpu", type=int, default=4,
                         help="gpu")
     parser.add_argument("--lr", type=float, default=1e-2,
                         help="learning rate")
