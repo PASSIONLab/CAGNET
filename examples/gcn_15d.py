@@ -174,24 +174,25 @@ def one5d_partition(rank, size, inputs, adj_matrix, data, features, classes, rep
         # Column partitions
         am_partitions, vtx_indices = split_coo(adj_matrix, node_count, n_per_proc, 1)
 
-        proc_node_count = vtx_indices[rank_c + 1] - vtx_indices[rank_c]
-        am_pbyp, _ = split_coo(am_partitions[rank_c], node_count, n_per_proc, 0)
-        for i in range(len(am_pbyp)):
-            if i == size // replication - 1:
-                last_node_count = vtx_indices[i + 1] - vtx_indices[i]
-                am_pbyp[i] = torch.sparse_coo_tensor(am_pbyp[i], torch.ones(am_pbyp[i].size(1)), 
-                                                        size=(last_node_count, proc_node_count),
-                                                        requires_grad=False)
+        # proc_node_count = vtx_indices[rank_c + 1] - vtx_indices[rank_c]
+        # am_pbyp, _ = split_coo(am_partitions[rank_c], node_count, n_per_proc, 0)
+        # print(f"before", flush=True)
+        # for i in range(len(am_pbyp)):
+        #     if i == size // replication - 1:
+        #         last_node_count = vtx_indices[i + 1] - vtx_indices[i]
+        #         am_pbyp[i] = torch.sparse_coo_tensor(am_pbyp[i], torch.ones(am_pbyp[i].size(1)), 
+        #                                                 size=(last_node_count, proc_node_count),
+        #                                                 requires_grad=False)
 
-                am_pbyp[i] = scale_elements(adj_matrix, am_pbyp[i], node_count, vtx_indices[i], 
-                                                vtx_indices[rank_c], normalize)
-            else:
-                am_pbyp[i] = torch.sparse_coo_tensor(am_pbyp[i], torch.ones(am_pbyp[i].size(1)), 
-                                                        size=(n_per_proc, proc_node_count),
-                                                        requires_grad=False)
+        #         am_pbyp[i] = scale_elements(adj_matrix, am_pbyp[i], node_count, vtx_indices[i], 
+        #                                         vtx_indices[rank_c], normalize)
+        #     else:
+        #         am_pbyp[i] = torch.sparse_coo_tensor(am_pbyp[i], torch.ones(am_pbyp[i].size(1)), 
+        #                                                 size=(n_per_proc, proc_node_count),
+        #                                                 requires_grad=False)
 
-                am_pbyp[i] = scale_elements(adj_matrix, am_pbyp[i], node_count, vtx_indices[i], 
-                                                vtx_indices[rank_c], normalize)
+        #         am_pbyp[i] = scale_elements(adj_matrix, am_pbyp[i], node_count, vtx_indices[i], 
+        #                                         vtx_indices[rank_c], normalize)
 
         for i in range(len(am_partitions)):
             proc_node_count = vtx_indices[i + 1] - vtx_indices[i]
@@ -368,13 +369,13 @@ def main(args, batches=None):
     print("end partitioning", flush=True)
 
     # features_loc = features_loc.to(device)
-    g_loc = g_loc.to(device)
-    for i in range(len(ampbyp)):
-        ampbyp[i] = ampbyp[i].t().coalesce().to(device)
+    # for i in range(len(ampbyp)):
+    #     ampbyp[i] = ampbyp[i].t().coalesce().to(device)
 
     print("coalescing", flush=True)
-    g_loc = g_loc.coalesce().t()
+    g_loc = g_loc.coalesce().t_()
     print("normalizing", flush=True)
+    g_loc = g_loc.to(device)
     g_loc = row_normalize(g_loc)
     print("done normalizing", flush=True)
     torch.set_printoptions(precision=10)
@@ -436,7 +437,7 @@ def main(args, batches=None):
     print(f"rank: {rank} g_loc: {g_loc}")
     print(f"rank: {rank} batches_loc: {batches_loc}", flush=True)
     # do it once before timing
-    torch.manual_seed(0)
+    # torch.manual_seed(0)
     nnz_row_masks = torch.cuda.BoolTensor((size // args.replication) * g_loc._indices().size(1)) # for sa-spgemm
     nnz_row_masks.fill_(0)
     
@@ -465,7 +466,7 @@ def main(args, batches=None):
                                                                     sa_recv_buff, rank, size, row_groups, 
                                                                     col_groups, args.timing)
     elif args.sample_method == "sage":
-        torch.manual_seed(rank_col)
+        # torch.manual_seed(rank_col)
         print("first (warmup) run")
         current_frontier, next_frontier, adj_matrices = \
                                         sage_sampler(g_loc, batches_loc, args.batch_size, \
@@ -475,7 +476,7 @@ def main(args, batches=None):
                                                                     sa_recv_buff, rank, size, row_groups, 
                                                                     col_groups, args.timing, args.baseline)
 
-        print("second run", flush=True)
+        print("second runs", flush=True)
         nnz_row_masks.fill_(False)
         torch.cuda.profiler.cudart().cudaProfilerStart()
         torch.cuda.nvtx.range_push("nvtx-sampler")
@@ -530,8 +531,8 @@ def main(args, batches=None):
         adj_matrix = torch.pow(adj_matrix, 2)
         # return here while testing sampling code
 
-        return current_frontier, next_frontier, adj_matrices, adj_matrix
-        # return current_frontier, next_frontier, adj_matrices, adj_matrix, col_groups
+        # return current_frontier, next_frontier, adj_matrices, adj_matrix
+        return current_frontier, next_frontier, adj_matrices, adj_matrix, col_groups
     return
 
     # create GCN model

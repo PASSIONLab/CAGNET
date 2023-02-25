@@ -90,7 +90,6 @@ def sage_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_total,
 
         batches_expand = batches_expand.to_sparse_csr()
         adj_matrix = adj_matrix.to_sparse_csr()
-        print(f"adj_matrix.dtype: {adj_matrix.crow_indices().dtype}", flush=True)
         p = gen_prob_dist(batches_expand, adj_matrix, mb_count, node_count_total,
                                 replication, rank, size, row_groups, col_groups,
                                 sa_masks, sa_recv_buff, timing_dict, "sage",

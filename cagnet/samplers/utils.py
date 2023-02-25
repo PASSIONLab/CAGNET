@@ -616,9 +616,7 @@ def dist_saspgemm15D(mata, matb, replication, rank, size, row_groups, col_groups
     stop_time_add(start_timer, stop_timer, timing_dict, f"spgemm-reduce-coo2csr{name}", barrier=True)
 
     start_time(start_timer)
-    print(f"before csr_allred start: {rank_row_start} stop: {rank_row_stop}", flush=True)
     matc = csr_allreduce(matc, rank_row_start, rank_row_stop, rank)
-    print(f"after csr_allred start: {rank_row_start} stop: {rank_row_stop}", flush=True)
     stop_time_add(start_timer, stop_timer, timing_dict, f"spgemm-reduce-{name}", barrier=True)
 
     start_time(start_timer)
