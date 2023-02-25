@@ -1,5 +1,6 @@
 import argparse
 from collections import defaultdict
+from itertools import accumulate
 import math
 import os
 import os.path as osp
@@ -99,7 +100,8 @@ def split_coo(adj_matrix, partitions, dim):
     # vtx_indices = list(range(0, node_count, n_per_proc))
     # vtx_indices.append(node_count)
 
-    vtx_indices = [0] + np.cumsum(partitions)
+    vtx_indices = [0]
+    vtx_indices.extend(list(accumulate(partitions)))
 
     am_partitions = []
     for i in range(len(vtx_indices) - 1):
@@ -113,10 +115,10 @@ def split_coo(adj_matrix, partitions, dim):
 def oned_partition(rank, size, inputs, adj_matrix, data, features, classes, device, normalize, partitions=[]):
     node_count = inputs.size(0)
 
-    if !partitions:
+    if not partitions:
         n_per_proc = math.ceil(float(node_count) / size)
         partitions = [math.ceil(float(node_count) / size)]*size
-    
+        partitions[size-1] = inputs.size(0) - math.ceil(float(node_count) / size)*(size - 1)    
 
     am_partitions = None
     am_pbyp = None
@@ -143,7 +145,7 @@ def oned_partition(rank, size, inputs, adj_matrix, data, features, classes, devi
                                                 vtx_indices[rank], normalize)
             else:
                 am_pbyp[i] = torch.sparse_coo_tensor(am_pbyp[i], torch.ones(am_pbyp[i].size(1)), 
-                                                        size=(n_per_proc, proc_node_count),
+                                                        size=(vtx_indices[i + 1] - vtx_indices[i], proc_node_count),
                                                         requires_grad=False)
 
                 am_pbyp[i] = scale_elements(adj_matrix, am_pbyp[i], node_count, vtx_indices[i], 
@@ -216,6 +218,7 @@ def main(args):
     rank = dist.get_rank()
     size = dist.get_world_size()
     print(f"hostname: {socket.gethostname()} rank: {rank} size: {size}", flush=True)
+    print(rank % args.gpu)
     torch.cuda.set_device(rank % args.gpu)
 
     # load and preprocess dataset
@@ -288,7 +291,7 @@ def main(args):
         print(f"Loading coo...", flush=True)
         edge_index = torch.load("../../data/Amazon_Small_16_graph-vb/processed/amazon_large_randomized.pt")
         print(f"Done loading coo", flush=True)
-        n = 14249639
+        n = 9430088
         num_features = 300
         num_classes = 24
         inputs = torch.rand(n, num_features)
@@ -304,11 +307,18 @@ def main(args):
         adj_matrix, _ = add_remaining_self_loops(adj_matrix, num_nodes=inputs.size(0))
 
     partitioning = Partitioning.ONED
+    partitions = []
+
+    if args.partitions:
+        partitions_file = open(args.partitions, "r")
+        partitions_data = partitions_file.read().strip()
+        print(partitions_data)
+        partitions = [int(x) for x in partitions_data.split("\n")]
 
     print(f"partitioning...", flush=True)
     group = dist.new_group(list(range(size)))
     features_loc, g_loc, ampbyp = oned_partition(rank, size, inputs, adj_matrix, data, \
-                                                      inputs, num_classes, device, args.normalize)
+                                                      inputs, num_classes, device, args.normalize, partitions)
     print(f"done partitioning", flush=True)
 
     features_loc = features_loc.to(device)
@@ -458,6 +468,8 @@ if __name__ == '__main__':
                             help='partitioning strategy to use')
     parser.add_argument('--timers', action="store_true",
                             help='turn on timers')
+    parser.add_argument('--partitions', default='', type=str,
+                            help='text file for unequal partitions')
     args = parser.parse_args()
     print(args)
 

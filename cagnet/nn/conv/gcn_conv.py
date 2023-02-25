@@ -13,7 +13,6 @@ def stop_time(self, range_name, start):
         self.timings[range_name] += time.time() - start
     else:
         return 0.0
-    dist.barrier()
 
 def broad_func_oned(self, graph, ampbyp, inputs):
 #    n_per_proc = math.ceil(float(graph.size(0) / self.size))
@@ -65,22 +64,29 @@ def broad_func_oned(self, graph, ampbyp, inputs):
     start = time.time()
     ## how to set the call to spmm_gpu
     for i in range(self.size):
-#        if (ampbyp[i].size(1) != inputs.size(0)):
-#            print(ampbyp[i].size(1), inputs.size(0))
+        
+
         if i == self.size - 1:
             n_per_proc = ampbyp[i].size(1)
         else:
             n_per_proc = math.ceil(float(graph.size(0) / self.size))
 
-        inputs_mul = torch.cuda.FloatTensor( device = self.device).resize_(n_per_proc, inputs.size(1)).fill_(0)
+        inputs_mul = torch.cuda.FloatTensor( device = self.device).resize_(ampbyp[i].size(1), inputs.size(1)).fill_(0)
 #        print(row_data_recv[i].size())
 #        print(row_indices_send[i].size())
 #        print("rank: ", self.rank, "before: ", inputs_mul, flush=True)
         inputs_mul[row_indices_send[i]] =  row_data_recv[i]
+        
+#        if ampbyp[i].size(1) != inputs_mul.size(0):
+#            print(f"ampbyp size: {ampbyp[i].size(0)} {ampbyp[i].size(1)}")
+#            print(f"inputs size: {inputs_mul.size(0)} {inputs_mul.size(1)}")
+#            print(f"row_indices_send[i]: {row_indices_send[i]}")
 #        print("rank: ", self.rank, "after: ", inputs_mul, flush=True)
 #        for j in range(row_indices_recv[i].size(0)):
 #            inputs_mul[row_indices_recv[i][j].long().item()] = row_data_recv[i][j] 
 #print(ampbyp[i].size(), inputs_mul.size())
+        """commenting out spmm call
+           """ 
         spmm_gpu(ampbyp[i].indices()[0].int(), ampbyp[i].indices()[1].int(),
                         ampbyp[i].values(), ampbyp[i].size(0),
                         ampbyp[i].size(1), inputs_mul, z_loc
