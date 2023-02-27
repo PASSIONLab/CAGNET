@@ -752,7 +752,7 @@ def gen_prob_dist(numerator, adj_matrix, mb_count, node_count_total, replication
     torch.cuda.nvtx.range_push("nvtx-compute-p")
     p_den = torch.cuda.DoubleTensor(numerator.size(0)).fill_(0)
     if name == "ladies":
-        p_num_values = torch.square(p_num_values)
+        p_num_values = torch.square(p_num_values).double()
     elif name == "sage":
         p_num_values = torch.cuda.DoubleTensor(p_num_values.size(0)).fill_(1.0)
     scatterd_add_gpu(p_den, p_num_indices[0, :], p_num_values, p_num_values.size(0))
