@@ -244,7 +244,7 @@ def dist_saspgemm15D(mata, matb, replication, rank, size, row_groups, col_groups
     torch.cuda.nvtx.range_push("nvtx-matc-inst")
     start_time(start_timer)
     chunk_size = math.ceil(float(mata.size(1) / (size / replication)))
-    if True or mata.layout == torch.sparse_coo:
+    if mata.layout == torch.sparse_coo or (name == "prob" and alg == "sage"):
         matc = torch.sparse_coo_tensor(size=(mata.size(0), matb.size(1))).cuda()
     elif mata.layout == torch.sparse_csr:
         matc_crow_indices = torch.cuda.LongTensor(mata.size(0) + 1).fill_(0)
@@ -487,6 +487,7 @@ def dist_saspgemm15D(mata, matb, replication, rank, size, row_groups, col_groups
                 matb_recv_values = torch.cuda.DoubleTensor(selected_rows_count_recv.item())
                 dist.recv(matb_recv_values, tag=3, src=q)
 
+                # the spgemm is better with COO for SAGE prob
                 if not (name == "prob" and alg == "sage"):
                     matb_rows_sum = torch.cuda.LongTensor(chunk_col_size).fill_(0)
                     if matb_recv_lengths.size(0) > 0:
@@ -548,7 +549,7 @@ def dist_saspgemm15D(mata, matb, replication, rank, size, row_groups, col_groups
             #     matc_chunk = torch.sparse_csr_tensor(matb_recv_crows, matb_recv_cols, matb_recv_values.float(),
             #                                             size=(chunk_col_size, matb.size(1)))
             #     matc += matc_chunk
-            if mata.layout == torch.sparse_csr:
+            if mata.layout == torch.sparse_csr and name == "prob" and alg == "sage":
                 start_time(start_inner_timer)
                 mata_recv = torch.sparse_csr_tensor(mata_chunk_crows, mata_chunk_cols, mata_chunk_values,
                                                         size=(mata.size(0), chunk_col_size))
@@ -572,6 +573,34 @@ def dist_saspgemm15D(mata, matb, replication, rank, size, row_groups, col_groups
                                                         torch.Size([matc.size(0), matc.size(1)]))
                 # matc_chunk = matc_chunk.coalesce()
                 matc += matc_chunk
+                stop_time_add(start_inner_timer, stop_inner_timer, timing_dict, f"spgemm-loc-spspmm-{name}")
+                # matc = matc.to_sparse_csr()
+            elif mata.layout == torch.sparse_csr:
+                start_time(start_inner_timer)
+                mata_recv = torch.sparse_csr_tensor(mata_chunk_crows, mata_chunk_cols, mata_chunk_values.float(),
+                                                        size=(mata.size(0), chunk_col_size))
+                matb_recv = torch.sparse_csr_tensor(matb_recv_crows, matb_recv_cols, matb_recv_values.float(),
+                                                        size=(chunk_col_size, matb.size(1)))
+                stop_time_add(start_inner_timer, stop_inner_timer, timing_dict, f"spgemm-loc-csrinst-{name}")
+
+
+                start_time(start_inner_timer)
+                # mata_recv = mata_recv.to_sparse_coo()
+                # matb_recv = matb_recv.to_sparse_coo()
+                stop_time_add(start_inner_timer, stop_inner_timer, timing_dict, f"spgemm-loc-csr2coo-{name}")
+
+                # matc += torch.mm(mata_recv, matb_recv)
+                start_time(start_inner_timer)
+                # matc_chunk_indices, matc_chunk_values = torch_sparse.spspmm(mata_recv._indices(), \
+                #                                             mata_recv._values(), matb_recv_indices, \
+                #                                             matb_recv_values, mata.size(0), \
+                #                                             chunk_col_size, matb.size(1), coalesced=True)
+                # matc_chunk = sparse_coo_tensor_gpu(matc_chunk_indices, matc_chunk_values, 
+                #                                         torch.Size([matc.size(0), matc.size(1)]))
+                # matc_chunk = matc_chunk.coalesce()
+                # matc += matc_chunk
+                print(f"matc.size: {matc.size()} mata_recv.size: {mata_recv.size()} matb_recv.size: {matb_recv.size()}", flush=True)
+                matc += torch.mm(mata_recv, matb_recv)
                 stop_time_add(start_inner_timer, stop_inner_timer, timing_dict, f"spgemm-loc-spspmm-{name}")
                 # matc = matc.to_sparse_csr()
             elif mata.layout == torch.sparse_coo:

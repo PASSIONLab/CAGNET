@@ -115,6 +115,10 @@ if __name__ == '__main__':
                         help='Number of minibatches to sample in bulk')
     parser.add_argument('--n-darts', type=int, default=-1,
                         help='Number of darts to throw per minibatch in LADIES sampling')
+    parser.add_argument('--timing', action="store_true",
+                            help='whether to turn on timers')
+    parser.add_argument("--gpu", type=int, default=4,
+                        help="gpus per node")
     args = parser.parse_args()
     print(args)
 

@@ -148,11 +148,12 @@ def row_normalize(mx):
                                      r_inv_values,
                                      size=(r_inv.size(0), r_inv.size(0)))
     # mx = r_mat_inv.mm(mx.float())
-    mx_indices, mx_values = torch_sparse.spspmm(r_mat_inv._indices(), r_mat_inv._values().double(), 
-                                                    mx._indices(), mx._values().double(),
+    print(f"r_mat_inv.size: {r_mat_inv.size()} mx.size: {mx.size()}", flush=True)
+    mx_indices, mx_values = torch_sparse.spspmm(r_mat_inv._indices(), r_mat_inv._values(), 
+                                                    mx._indices(), mx._values(),
                                                     r_mat_inv.size(0), r_mat_inv.size(1), mx.size(1),
                                                     coalesced=True)
-    mx = torch.sparse_coo_tensor(indices=mx_indices, values=mx_values, size=(r_mat_inv.size(0), mx.size(1)))
+    mx = torch.sparse_coo_tensor(indices=mx_indices, values=mx_values.double(), size=(r_mat_inv.size(0), mx.size(1)))
     return mx
 
 def one5d_partition(rank, size, inputs, adj_matrix, data, features, classes, replication, \
@@ -349,7 +350,8 @@ def main(args, batches=None):
     print(f"hostname: {socket.gethostname()} rank: {rank} size: {size}", flush=True)
     torch.cuda.set_device(rank % args.gpu)
 
-    # adj_matrix, _ = add_remaining_self_loops(adj_matrix, num_nodes=inputs.size(0))
+    if args.sample_method == "ladies":
+        adj_matrix, _ = add_remaining_self_loops(adj_matrix, num_nodes=inputs.size(0))
     edge_count = adj_matrix.size(1)
 
     partitioning = Partitioning.ONE5D
@@ -376,6 +378,7 @@ def main(args, batches=None):
     g_loc = g_loc.coalesce().t_()
     print("normalizing", flush=True)
     g_loc = g_loc.to(device)
+    print(f"g_loc: {g_loc}", flush=True)
     g_loc = row_normalize(g_loc)
     print("done normalizing", flush=True)
     torch.set_printoptions(precision=10)
@@ -531,8 +534,8 @@ def main(args, batches=None):
         adj_matrix = torch.pow(adj_matrix, 2)
         # return here while testing sampling code
 
-        # return current_frontier, next_frontier, adj_matrices, adj_matrix
-        return current_frontier, next_frontier, adj_matrices, adj_matrix, col_groups
+        return current_frontier, next_frontier, adj_matrices, adj_matrix
+        # return current_frontier, next_frontier, adj_matrices, adj_matrix, col_groups
     return
 
     # create GCN model
