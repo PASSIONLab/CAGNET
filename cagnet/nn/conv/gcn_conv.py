@@ -16,7 +16,7 @@ def stop_time(self, range_name, start):
 
 def broad_func_oned(self, graph, ampbyp, inputs):
 #    n_per_proc = math.ceil(float(graph.size(0) / self.size))
-    z_loc = torch.cuda.FloatTensor(ampbyp[0].size(0), inputs.size(1), device=self.device).fill_(0)
+    z_loc = torch.cuda.FloatTensor(ampbyp[0].size(0), inputs.size(1), device=self.device).fill_(1)
     
 #    inputs_recv = torch.cuda.FloatTensor(n_per_proc, inputs.size(1), device=self.device).fill_(0)
     
@@ -44,10 +44,10 @@ def broad_func_oned(self, graph, ampbyp, inputs):
     row_indices_recv = self.row_indices_recv
 
     row_data_recv = [torch.cuda.FloatTensor(device=self.device).resize_(row_indices_send[i].size(0), inputs.size(1)).fill_(0) for i in range(self.size)]
-    #start = time.time()
-    #dist.all_to_all(row_indices_recv, row_indices_send, group=self.group)
-    # self.timings["a2a2"] = time.time() - start
-    #stop_time(self, "a2a2", start)
+    start = time.time()
+    dist.all_to_all(row_indices_recv, row_indices_send, group=self.group)
+    self.timings["a2a2"] = time.time() - start
+    stop_time(self, "a2a2", start)
 
 
     start = time.time()
@@ -75,6 +75,10 @@ def broad_func_oned(self, graph, ampbyp, inputs):
 #        print(row_data_recv[i].size())
 #        print(row_indices_send[i].size())
 #        print("rank: ", self.rank, "before: ", inputs_mul, flush=True)
+     #   print(inputs_mul.size())
+    #    print(row_indices_send[i].size())
+   #     print(max(row_indices_send[i]))
+  #      print(row_data_recv[i].size())
         inputs_mul[row_indices_send[i]] =  row_data_recv[i]
         
 #        if ampbyp[i].size(1) != inputs_mul.size(0):
@@ -86,11 +90,16 @@ def broad_func_oned(self, graph, ampbyp, inputs):
 #            inputs_mul[row_indices_recv[i][j].long().item()] = row_data_recv[i][j] 
 #print(ampbyp[i].size(), inputs_mul.size())
         """commenting out spmm call
-           """ 
+        """
+ #       print(ampbyp[i].size())
+ #       print(inputs_mul.size())
+ #       print(z_loc.size())
         spmm_gpu(ampbyp[i].indices()[0].int(), ampbyp[i].indices()[1].int(),
                         ampbyp[i].values(), ampbyp[i].size(0),
                         ampbyp[i].size(1), inputs_mul, z_loc
-        )            
+        )
+        
+        
     # self.timings["spmm_gpu"] = time.time() - start
     stop_time(self, "spmm_gpu", start)
 

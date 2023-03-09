@@ -246,7 +246,7 @@ def main(args):
         print(f"Loading coo...", flush=True)
         edge_index = torch.load("../../data/Amazon/processed/data.pt")
         print(f"Done loading coo", flush=True)
-        n = 14249639
+        n = 9430088
         num_features = 300
         num_classes = 24
         inputs = torch.rand(n, num_features)
@@ -348,6 +348,8 @@ def main(args):
     for i in range(size):
         unique_cols = ampbyp[i]._indices()[1].unique()
         counts_send.append(torch.cuda.LongTensor([unique_cols.size()], device=device).resize_(1, 1))
+        print(max(unique_cols))
+        print(ampbyp[i].size())
         row_indices_send.append(unique_cols)
     
     model.row_indices_send = row_indices_send
@@ -370,8 +372,8 @@ def main(args):
 
     n_per_proc = math.ceil(float(inputs.size(0)) / size)
 
-    rank_train_mask = torch.split(data.train_mask, n_per_proc, dim=0)[rank]
-    labels_rank = torch.split(data.y, n_per_proc, dim=0)[rank]
+    rank_train_mask = torch.split(data.train_mask, partitions, dim=0)[rank]
+    labels_rank = torch.split(data.y, partitions, dim=0)[rank]
     rank_train_nids = rank_train_mask.nonzero().squeeze()
 
     train_nid = data.train_mask.nonzero().squeeze()
