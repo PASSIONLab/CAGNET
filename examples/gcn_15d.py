@@ -148,7 +148,6 @@ def row_normalize(mx):
                                      r_inv_values,
                                      size=(r_inv.size(0), r_inv.size(0)))
     # mx = r_mat_inv.mm(mx.float())
-    print(f"r_mat_inv.size: {r_mat_inv.size()} mx.size: {mx.size()}", flush=True)
     mx_indices, mx_values = torch_sparse.spspmm(r_mat_inv._indices(), r_mat_inv._values(), 
                                                     mx._indices(), mx._values(),
                                                     r_mat_inv.size(0), r_mat_inv.size(1), mx.size(1),
@@ -378,6 +377,7 @@ def main(args, batches=None):
     g_loc = g_loc.coalesce().t_()
     print("normalizing", flush=True)
     g_loc = g_loc.to(device)
+    g_loc = g_loc.double()
     print(f"g_loc: {g_loc}", flush=True)
     g_loc = row_normalize(g_loc)
     print("done normalizing", flush=True)
@@ -448,7 +448,8 @@ def main(args, batches=None):
     sa_recv_buff = torch.cuda.DoubleTensor(3 * nnz_recv_upperbound).fill_(0)
 
     if args.sample_method == "ladies":
-        # torch.manual_seed(rank_col)
+        torch.manual_seed(rank_col)
+        print("first (warmup) run")
         current_frontier, next_frontier, adj_matrices = \
                                         ladies_sampler(g_loc, batches_loc, args.batch_size, \
                                                                     args.samp_num, args.n_bulkmb, \
@@ -457,10 +458,11 @@ def main(args, batches=None):
                                                                     sa_recv_buff, rank, size, row_groups, 
                                                                     col_groups, args.timing)
 
-        print()
+        print("second runs", flush=True)
+        nnz_row_masks.fill_(False)
         torch.cuda.profiler.cudart().cudaProfilerStart()
         torch.cuda.nvtx.range_push("nvtx-sampler")
-        # torch.manual_seed(rank_col)
+        torch.manual_seed(rank_col)
         current_frontier, next_frontier, adj_matrices_bulk = \
                                         ladies_sampler(g_loc, batches_loc, args.batch_size, \
                                                                     args.samp_num, args.n_bulkmb, \
@@ -529,7 +531,9 @@ def main(args, batches=None):
         adj_matrix = torch.sparse_coo_tensor(adj_matrix, 
                                             torch.cuda.FloatTensor(adj_matrix.size(1)).fill_(1.0), 
                                             size=(node_count, node_count))
-        adj_matrix = adj_matrix.coalesce().cuda()
+        adj_matrix = adj_matrix.coalesce().cuda().double()
+
+        # Note: Uncomment when testing correctness
         adj_matrix = row_normalize(adj_matrix)
         adj_matrix = torch.pow(adj_matrix, 2)
         # return here while testing sampling code

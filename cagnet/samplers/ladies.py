@@ -78,7 +78,7 @@ def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_tota
 
     print(f"total_time: {stop_time(total_start_timer, total_stop_timer)}", flush=True)
     for k, v in sorted(timing_dict.items()):
-        if (k.startswith("spgemm") and k != "spgemm-misc") or k == "probability-spgemm" or k == "row-select-spgemm" or k == "col-select-spgemm":
+        if (k.startswith("spgemm") and k != "spgemm-misc") or k == "probability-spgemm" or k == "row-select-spgemm" or k == "col-select-spgemm" or k == "sampling-iters":
             # print(f"{k} times: {v}")
             v_tens = torch.cuda.FloatTensor(1).fill_(sum(v))
             v_tens_recv = []

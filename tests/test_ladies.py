@@ -58,6 +58,7 @@ def main(args):
         adj_matrix = adj_matrices[0] # assume only one layer for now
         nnz_count = 0
         edges_match = True
+        print(f"i: {i} adj_matrix: {adj_matrix}", flush=True)
         for u in current_frontier:
             for v in next_frontier:
                 u_vtx = u.item()
