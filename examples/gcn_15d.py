@@ -1,5 +1,6 @@
 import argparse
 from collections import defaultdict
+from itertools import accumulate
 import math
 import os
 import os.path as osp
@@ -270,7 +271,7 @@ def main(args):
         print(f"Loading coo...", flush=True)
         edge_index = torch.load("../../data/Amazon/processed/data.pt")
         print(f"Done loading coo", flush=True)
-        n = 14249639
+        n = 9430088
         num_features = 300
         num_classes = 24
         inputs = torch.rand(n, num_features)
