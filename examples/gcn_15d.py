@@ -566,7 +566,7 @@ def main(args):
               "ETputs(KTEPS) {:.2f}".format(rank, epoch, np.mean(dur), loss.item(),
                                             acc, n_edges / np.mean(dur) / 1000), flush=True)
         """
-    dist.barrier()
+    # dist.barrier()
     total_stop = time.time()
     print(f"total_time: {total_stop - total_start}")
     print(f"rank: {rank} timings: {model.timings}")

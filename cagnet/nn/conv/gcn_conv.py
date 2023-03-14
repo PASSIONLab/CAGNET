@@ -104,20 +104,24 @@ def broad_func_one5d(self, graph, ampbyp, inputs):
             for j in col_procs:
                 if rank != j:
                     start = time.time()
-                    rows_send = inputs[row_indices_recv[j].long(), :]
+                    rows_send = inputs[row_indices_recv[j].long(), :].clone()
                     stop_time(self, "gather_row_data", start)
 
                     start = time.time()
                     # dist.send(rows_send, dst=j, group=self.col_groups[rank_col])
                     send_ops.append(dist.P2POp(dist.isend, rows_send, j, group=self.col_groups[rank_col]))
                     stop_time(self, "send_ops", start)
+                    print(f"rows_send dim {rows_send.size()}", flush=True)
+            print(f"pls print {send_ops}", flush=True)
 
-            if len(send_ops) > 0:
+            if True:
                 start = time.time()
+                print("sendinggg!", flush=True)
                 reqs = dist.batch_isend_irecv(send_ops)
+                print("batch sent", flush=True)
                 stop_time(self, "batch_isend", start)
-                # for req in reqs:
-                #     req.wait()
+                for req in reqs:
+                    req.wait()
 
         # all other ranks receive the inputs
         inputs_recv = []
@@ -126,6 +130,7 @@ def broad_func_one5d(self, graph, ampbyp, inputs):
             rows_recv = torch.cuda.FloatTensor(device=self.device).resize_((unique_cols.size(0), inputs.size(1))).fill_(0)
 
             start = time.time()
+            print(f"rows_recv dim {rows_recv.size()}", flush=True)
             dist.recv(rows_recv, src=q, group=self.col_groups[rank_col])
             stop_time(self, "recv", start)
 
