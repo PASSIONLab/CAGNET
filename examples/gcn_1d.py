@@ -302,7 +302,141 @@ def main(args):
         data = data.to(device)
         inputs.requires_grad = True
         data.y = data.y.to(device)
-
+    elif args.dataset == "Reddit_4_graph_vb":
+        print(f"Loading coo...", flush=True)
+        edge_index = torch.load("/pscratch/sd/j/jinimukh/Reddit_4_graph_vb/processed/amazon_large_randomized.pt")
+        print(f"Done loading coo", flush=True)
+        n = 232965
+        num_features = 602
+        num_classes = 41
+        inputs = torch.rand(n, num_features)
+        data = Data()
+        data.y = torch.rand(n).uniform_(0, num_classes - 1).long()
+        data.train_mask = torch.ones(n).long()
+        adj_matrix = edge_index.t_()
+        data = data.to(device)
+        inputs.requires_grad = True
+        data.y = data.y.to(device)
+    elif args.dataset == "Reddit_16_graph_vb":
+        print(f"Loading coo...", flush=True)
+        edge_index = torch.load("/pscratch/sd/j/jinimukh/Reddit_16_graph_vb/processed/amazon_large_randomized.pt")
+        print(f"Done loading coo", flush=True)
+        n = 232965
+        num_features = 602
+        num_classes = 41
+        inputs = torch.rand(n, num_features)
+        data = Data()
+        data.y = torch.rand(n).uniform_(0, num_classes - 1).long()
+        data.train_mask = torch.ones(n).long()
+        adj_matrix = edge_index.t_()
+        data = data.to(device)
+        inputs.requires_grad = True
+        data.y = data.y.to(device)
+    elif args.dataset == "Reddit_32_graph_vb":
+        print(f"Loading coo...", flush=True)
+        edge_index = torch.load("/pscratch/sd/j/jinimukh/Reddit_32_graph_vb/processed/amazon_large_randomized.pt")
+        print(f"Done loading coo", flush=True)
+        n = 232965
+        num_features = 602
+        num_classes = 41
+        inputs = torch.rand(n, num_features)
+        data = Data()
+        data.y = torch.rand(n).uniform_(0, num_classes - 1).long()
+        data.train_mask = torch.ones(n).long()
+        adj_matrix = edge_index.t_()
+        data = data.to(device)
+        inputs.requires_grad = True
+        data.y = data.y.to(device)
+    elif args.dataset == "Reddit_64_graph_vb":
+        print(f"Loading coo...", flush=True)
+        edge_index = torch.load("/pscratch/sd/j/jinimukh/Reddit_64_graph_vb/processed/amazon_large_randomized.pt")
+        print(f"Done loading coo", flush=True)
+        n = 232965
+        num_features = 602
+        num_classes = 41
+        inputs = torch.rand(n, num_features)
+        data = Data()
+        data.y = torch.rand(n).uniform_(0, num_classes - 1).long()
+        data.train_mask = torch.ones(n).long()
+        adj_matrix = edge_index.t_()
+        data = data.to(device)
+        inputs.requires_grad = True
+        data.y = data.y.to(device)
+    elif args.dataset == "Amazon_Large_4_graph_vb":
+        print(f"Loading coo...", flush=True)
+        edge_index = torch.load("/pscratch/sd/j/jinimukh/Amazon_Large_4/processed/amazon_large_randomized.pt")
+        print(f"Done loading coo", flush=True)
+        n = 14249639
+        num_features = 300
+        num_classes = 24
+        inputs = torch.rand(n, num_features)
+        data = Data()
+        data.y = torch.rand(n).uniform_(0, num_classes - 1).long()
+        data.train_mask = torch.ones(n).long()
+        adj_matrix = edge_index.t_()
+        data = data.to(device)
+        inputs.requires_grad = True
+        data.y = data.y.to(device)
+    elif args.dataset == "Amazon_Large":
+        print(f"Loading coo...", flush=True)
+        edge_index = torch.load("/pscratch/sd/j/jinimukh/Amazon_Large/processed/amazon_large_randomized.pt")
+        print(f"Done loading coo", flush=True)
+        n = 14249639
+        num_features = 300
+        num_classes = 24
+        inputs = torch.rand(n, num_features)
+        data = Data()
+        data.y = torch.rand(n).uniform_(0, num_classes - 1).long()
+        data.train_mask = torch.ones(n).long()
+        adj_matrix = edge_index.t_()
+        data = data.to(device)
+        inputs.requires_grad = True
+        data.y = data.y.to(device)
+    elif args.dataset == "Amazon_Large_16_graph_vb":
+        print(f"Loading coo...", flush=True)
+        edge_index = torch.load("/pscratch/sd/j/jinimukh/Amazon_Large_16/processed/amazon_large_randomized.pt")
+        print(f"Done loading coo", flush=True)
+        n = 14249639
+        num_features = 300
+        num_classes = 24
+        inputs = torch.rand(n, num_features)
+        data = Data()
+        data.y = torch.rand(n).uniform_(0, num_classes - 1).long()
+        data.train_mask = torch.ones(n).long()
+        adj_matrix = edge_index.t_()
+        data = data.to(device)
+        inputs.requires_grad = True
+        data.y = data.y.to(device)
+    elif args.dataset == "Amazon_Large_32_graph_vb":
+        print(f"Loading coo...", flush=True)
+        edge_index = torch.load("/pscratch/sd/j/jinimukh/Amazon_Large_32/processed/amazon_large_randomized.pt")
+        print(f"Done loading coo", flush=True)
+        n = 14249639
+        num_features = 300
+        num_classes = 24
+        inputs = torch.rand(n, num_features)
+        data = Data()
+        data.y = torch.rand(n).uniform_(0, num_classes - 1).long()
+        data.train_mask = torch.ones(n).long()
+        adj_matrix = edge_index.t_()
+        data = data.to(device)
+        inputs.requires_grad = True
+        data.y = data.y.to(device)
+    elif args.dataset == "Amazon_Large_64_graph_vb":
+        print(f"Loading coo...", flush=True)
+        edge_index = torch.load("/pscratch/sd/j/jinimukh/Amazon_Large_64/processed/amazon_large_randomized.pt")
+        print(f"Done loading coo", flush=True)
+        n = 14249639
+        num_features = 300
+        num_classes = 24
+        inputs = torch.rand(n, num_features)
+        data = Data()
+        data.y = torch.rand(n).uniform_(0, num_classes - 1).long()
+        data.train_mask = torch.ones(n).long()
+        adj_matrix = edge_index.t_()
+        data = data.to(device)
+        inputs.requires_grad = True
+        data.y = data.y.to(device)
     if args.normalize:
         adj_matrix, _ = add_remaining_self_loops(adj_matrix, num_nodes=inputs.size(0))
 
@@ -354,26 +488,34 @@ def main(args):
     
     model.row_indices_send = row_indices_send
 
-    print("all to all counts")  
+#    print("all to all counts")  
     dist.all_to_all(counts_recv, counts_send)
  
     row_indices_recv = [torch.cuda.LongTensor(device=device).resize_(counts_recv[i].int().item(),).fill_(0) for i in range(len(counts_recv))]
 
     # row_data_recv = [torch.cuda.FloatTensor(device=self.device).resize_(counts_send[i].int().item(), inputs.size(1)).fill_(0) for i in range(len(counts_send))]
     # start = time.time()
-    print("all to all indices")
+#    print("all to all indices")
     dist.all_to_all(row_indices_recv, row_indices_send, group=group)
 
     model.row_indices_recv = row_indices_recv
-    print("all to all done")
+#    print("all to all done")
 
     # use optimizer
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
 
     n_per_proc = math.ceil(float(inputs.size(0)) / size)
 
-    rank_train_mask = torch.split(data.train_mask, partitions, dim=0)[rank]
-    labels_rank = torch.split(data.y, partitions, dim=0)[rank]
+    rank_train_mask = []
+    labels_rank = []
+
+    if partitions:
+        rank_train_mask = torch.split(data.train_mask, partitions, dim=0)[rank]
+        labels_rank = torch.split(data.y, partitions, dim=0)[rank]
+    else:
+        rank_train_mask = torch.split(data.train_mask, n_per_proc, dim=0)[rank]
+        labels_rank = torch.split(data.y, n_per_proc, dim=0)[rank]
+
     rank_train_nids = rank_train_mask.nonzero().squeeze()
 
     train_nid = data.train_mask.nonzero().squeeze()
@@ -407,8 +549,8 @@ def main(args):
         """
     dist.barrier()
     total_stop = time.time()
-    print(f"rank: {rank} total_time: {total_stop - total_start}")
-    print(f"rank: {rank} timings: {model.timings}")
+    print(f"rank: {rank} total_time: {total_stop - total_start}", flush=True)
+    print(f"rank: {rank} timings: {model.timings}", flush=True)
     """
     # print(prof.key_averages().table(sort_by='self_cpu_time_total', row_limit=10))
     barrier_start = time.time()
@@ -431,7 +573,7 @@ def main(args):
     # print(f"{rank}, {model.timings['total']}, {model.timings['scomp']}, {model.timings['dcomp']}, {model.timings['bcast']}, {model.timings['reduce']}, {model.timings['op']}, {model.timings['barrier']}")
     print(f"rank: {rank} timings: {model.timings}")
     """
-    print(f"rank: {rank} {logits}")
+#    print(f"rank: {rank} {logits}")
 
 
 if __name__ == '__main__':

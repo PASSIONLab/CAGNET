@@ -13,108 +13,60 @@ def stop_time(self, range_name, start):
         self.timings[range_name] += time.time() - start
     else:
         return 0.0
+#    dist.barrier()
 
 def broad_func_oned(self, graph, ampbyp, inputs):
-#    n_per_proc = math.ceil(float(graph.size(0) / self.size))
+    """ # this is the old function
+    n_per_proc = math.ceil(float(graph.size(0) / self.size))
+
+    z_loc = torch.cuda.FloatTensor(ampbyp[0].size(0), inputs.size(1), device=self.device).fill_(0)
+    
+    inputs_recv = torch.cuda.FloatTensor(n_per_proc, inputs.size(1), device=self.device).fill_(0)
+
+    for i in range(self.size):
+        if i == self.rank:
+            inputs_recv = inputs.clone()
+        elif i == self.size - 1:
+            inputs_recv = torch.cuda.FloatTensor(ampbyp[i].size(1), \
+                                                        inputs.size(1), \
+                                                        device=self.device).fill_(0)
+        start = time.time()
+        dist.broadcast(inputs_recv, src=i, group=self.group)
+        stop_time(self, "bcast", start)
+        start = time.time()
+        spmm_gpu(ampbyp[i].indices()[0].int(), ampbyp[i].indices()[1].int(), 
+                        ampbyp[i].values(), ampbyp[i].size(0), 
+                        ampbyp[i].size(1), inputs_recv, z_loc)
+        stop_time(self, "spmm_gpu", start)
+    return z_loc
+    """
+
+
     z_loc = torch.cuda.FloatTensor(ampbyp[0].size(0), inputs.size(1), device=self.device).fill_(1)
     
-#    inputs_recv = torch.cuda.FloatTensor(n_per_proc, inputs.size(1), device=self.device).fill_(0)
-    
-    # counts_recv = [torch.cuda.LongTensor(1, 1, device=self.device).fill_(0) for i in range(self.size)]
-
-    # counts_send = []
     row_indices_send = self.row_indices_send
     row_data_send = [torch.cuda.FloatTensor(device=self.device)]*self.size
-
-    # start = time.time()
-    #for i in range(self.size):
-     #   unique_cols = ampbyp[i]._indices()[1].unique()
-       # counts_send.append(torch.cuda.LongTensor([unique_cols.size()], device=self.device).resize_(1, 1))
-      #  row_indices_send.append(unique_cols)
-
-    # # self.timings["find_unique"] = time.time() - start
-    # stop_time(self, "find_unique", start)
-    # start = time.time()
-    # dist.all_to_all(counts_recv, counts_send, group=self.group)
-    # # self.timings["a2a1"] = time.time() - start
-    # stop_time(self, "a2a1", start)
-
-    
-    # row_indices_recv = [torch.cuda.LongTensor(device=self.device).resize_(counts_recv[i].int().item(),).fill_(0) for i in range(len(counts_recv))]
     row_indices_recv = self.row_indices_recv
-
     row_data_recv = [torch.cuda.FloatTensor(device=self.device).resize_(row_indices_send[i].size(0), inputs.size(1)).fill_(0) for i in range(self.size)]
-    start = time.time()
-    dist.all_to_all(row_indices_recv, row_indices_send, group=self.group)
-    self.timings["a2a2"] = time.time() - start
-    stop_time(self, "a2a2", start)
-
-
+    
+    
     start = time.time()
     for i in range(self.size):
         row_data_send[i] = inputs[row_indices_recv[i].long(), :]
-    # self.timings["gather_row_data"] = time.time() - start
     stop_time(self, "gather_row_data", start)
 
     start = time.time()
     dist.all_to_all(row_data_recv, row_data_send, group=self.group)
-    # self.timings["a2a3"] = time.time() - start
     stop_time(self, "a2a3", start)
 
     start = time.time()
-    ## how to set the call to spmm_gpu
     for i in range(self.size):
-        
-
-        if i == self.size - 1:
-            n_per_proc = ampbyp[i].size(1)
-        else:
-            n_per_proc = math.ceil(float(graph.size(0) / self.size))
-
-        inputs_mul = torch.cuda.FloatTensor( device = self.device).resize_(ampbyp[i].size(1), inputs.size(1)).fill_(0)
-#        print(row_data_recv[i].size())
-#        print(row_indices_send[i].size())
-#        print("rank: ", self.rank, "before: ", inputs_mul, flush=True)
-     #   print(inputs_mul.size())
-    #    print(row_indices_send[i].size())
-   #     print(max(row_indices_send[i]))
-  #      print(row_data_recv[i].size())
-        inputs_mul[row_indices_send[i]] =  row_data_recv[i]
-        
-#        if ampbyp[i].size(1) != inputs_mul.size(0):
-#            print(f"ampbyp size: {ampbyp[i].size(0)} {ampbyp[i].size(1)}")
-#            print(f"inputs size: {inputs_mul.size(0)} {inputs_mul.size(1)}")
-#            print(f"row_indices_send[i]: {row_indices_send[i]}")
-#        print("rank: ", self.rank, "after: ", inputs_mul, flush=True)
-#        for j in range(row_indices_recv[i].size(0)):
-#            inputs_mul[row_indices_recv[i][j].long().item()] = row_data_recv[i][j] 
-#print(ampbyp[i].size(), inputs_mul.size())
-        """commenting out spmm call
-        """
- #       print(ampbyp[i].size())
- #       print(inputs_mul.size())
- #       print(z_loc.size())
-        spmm_gpu(ampbyp[i].indices()[0].int(), ampbyp[i].indices()[1].int(),
+       inputs_mul = torch.cuda.FloatTensor( device = self.device).resize_(ampbyp[i].size(1), inputs.size(1)).fill_(0)
+       inputs_mul[row_indices_send[i]] =  row_data_recv[i]
+       spmm_gpu(ampbyp[i].indices()[0].int(), ampbyp[i].indices()[1].int(),
                         ampbyp[i].values(), ampbyp[i].size(0),
-                        ampbyp[i].size(1), inputs_mul, z_loc
-        )
-        
-        
-    # self.timings["spmm_gpu"] = time.time() - start
+                        ampbyp[i].size(1), inputs_mul, z_loc)
     stop_time(self, "spmm_gpu", start)
-
-#    for i in range(self.size):
-#        if i == self.rank:
-#            inputs_recv = inputs.clone()
-#        elif i == self.size - 1:
-#            inputs_recv = torch.cuda.FloatTensor(ampbyp[i].size(1), \
-#                                                        inputs.size(1), \
-#                                                        device=self.device).fill_(0)
-#    
-#        dist.broadcast(inputs_recv, src=i, group=self.group)
-#        spmm_gpu(ampbyp[i].indices()[0].int(), ampbyp[i].indices()[1].int(), 
-#                        ampbyp[i].values(), ampbyp[i].size(0), 
-#                        ampbyp[i].size(1), inputs_recv, z_loc)
 
     return z_loc
 
