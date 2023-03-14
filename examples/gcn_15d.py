@@ -459,6 +459,8 @@ if __name__ == '__main__':
                             help='partitioning strategy to use')
     parser.add_argument('--timers', action="store_true",
                             help='turn on timers')
+    parser.add_argument('--partitions', default='', type=str,
+                            help='text file for unequal partitions')
     args = parser.parse_args()
     print(args)
 
