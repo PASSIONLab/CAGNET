@@ -75,7 +75,6 @@ def broad_func_one5d(self, graph, ampbyp, inputs):
 
     z_loc = torch.cuda.FloatTensor(ampbyp[0].size(0), inputs.size(1), device=self.device).fill_(0)
 
-#    inputs_recv = torch.cuda.FloatTensor(n_per_proc, inputs.size(1), device=self.device).fill_(0)
     rank = self.rank
     rank_c = self.rank // self.replication
     rank_col = self.rank % self.replication
@@ -100,80 +99,49 @@ def broad_func_one5d(self, graph, ampbyp, inputs):
         am_partid = rank_col * (self.size // self.replication ** 2) + i
         unique_cols = self.row_indices_send[q]
 
-        # all other processors in the col_group tell q how many nonzeros they have
-        # unique_cols = []
-        # counts_recv = []
-
-        
-        # if rank!= q:
-        #     unique_cols = ampbyp[am_partid]._indices()[1].unique()
-        #     count = torch.cuda.LongTensor([unique_cols.size()], device=self.device).resize_(1, 1)
-        #     dist.send(count, dst=q, group=self.col_groups[rank_col])
-
-        # if rank == q:
-        #     counts_recv = [torch.cuda.LongTensor(1, 1, device=self.device).fill_(0) for x in range(col_group_length)]
-        #     counter = 0
-        #     for j in col_procs:
-        #         if rank != j:
-        #             dist.recv(counts_recv[counter], src=j, group=self.col_groups[rank_col])
-        #         counter += 1
-
-        # # all other processors sends the nonzero col_ids to q
-
-        # if rank != q:
-        #     dist.send(unique_cols, dst=q, group=self.col_groups[rank_col])
-
         if rank == q:
-            # row_indices_recv = [torch.cuda.LongTensor(device=self.device).resize_(counts_recv[i].int().item(),).fill_(0) for i in range(len(counts_recv))]
-            # counter = 0
-            # for j in col_procs:
-            #     if rank != j:
-            #         dist.recv(row_indices_recv[counter], src=j, group=self.col_groups[rank_col])
-            #     counter += 1
-        # q sends back the correct rows
-            # counter = 0
+            send_ops = []
             for j in col_procs:
                 if rank != j:
                     start = time.time()
                     rows_send = inputs[row_indices_recv[j].long(), :]
                     stop_time(self, "gather_row_data", start)
+
                     start = time.time()
-                    dist.send(rows_send, dst=j, group=self.col_groups[rank_col])
-                    stop_time(self, "communication", start)
+                    # dist.send(rows_send, dst=j, group=self.col_groups[rank_col])
+                    send_ops.append(dist.P2POp(dist.isend, rows_send, j, group=self.col_groups[rank_col]))
+                    stop_time(self, "send_ops", start)
+
+            if len(send_ops) > 0:
+                start = time.time()
+                reqs = dist.batch_isend_irecv(send_ops)
+                stop_time(self, "batch_isend", start)
+                # for req in reqs:
+                #     req.wait()
 
         # all other ranks receive the inputs
-
         inputs_recv = []
 
         if rank!= q:
             rows_recv = torch.cuda.FloatTensor(device=self.device).resize_((unique_cols.size(0), inputs.size(1))).fill_(0)
+
             start = time.time()
-            
             dist.recv(rows_recv, src=q, group=self.col_groups[rank_col])
-            
-            stop_time(self, "communication", start)
+            stop_time(self, "recv", start)
+
             inputs_recv = torch.cuda.FloatTensor(ampbyp[am_partid].size(1), \
                                                     inputs.size(1), \
                                                     device=self.device).fill_(0)
             inputs_recv[unique_cols] = rows_recv
         else:
             inputs_recv = inputs.clone()
-        
-        start = time.time()
-#        if q == self.rank:
-#            inputs_recv = inputs.clone()
-#        elif q_c == self.size // self.replication - 1:
-#            inputs_recv = torch.cuda.FloatTensor(ampbyp[am_partid].size(1), \
-#                                                    inputs.size(1), \
-#                                                    device=self.device).fill_(0)
 
         inputs_recv = inputs_recv.contiguous()
-#        dist.broadcast(inputs_recv, src=q, group=self.col_groups[rank_col])
-
+        
+        start = time.time()
         spmm_gpu(ampbyp[am_partid].indices()[0].int(), ampbyp[am_partid].indices()[1].int(), 
                         ampbyp[am_partid].values(), ampbyp[am_partid].size(0), 
                         ampbyp[am_partid].size(1), inputs_recv, z_loc)
-        
         stop_time(self, "spmm_gpu", start)
         
     z_loc = z_loc.contiguous()
