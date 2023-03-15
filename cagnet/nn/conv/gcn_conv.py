@@ -7,14 +7,17 @@ import time
 from cagnet.partitionings import Partitioning
 from sparse_coo_tensor_cpp import sparse_coo_tensor_gpu, spmm_gpu
 
-def stop_time(self, range_name, start):
+def stop_time(self, range_name, start, barrier=True):
     if self.timers and self.epoch > 0:
         torch.cuda.synchronize()
         self.timings[range_name] += time.time() - start
     else:
         return 0.0
-#    dist.barrier()
-
+    if barrier:
+        start = time.time()
+        dist.barrier()
+        self.timings["barrier"] += time.time() - start
+        
 def broad_func_oned(self, graph, ampbyp, inputs):
     """ # this is the old function
     n_per_proc = math.ceil(float(graph.size(0) / self.size))
@@ -41,19 +44,19 @@ def broad_func_oned(self, graph, ampbyp, inputs):
     return z_loc
     """
 
-
+    start = time.time()
     z_loc = torch.cuda.FloatTensor(ampbyp[0].size(0), inputs.size(1), device=self.device).fill_(1)
     
     row_indices_send = self.row_indices_send
     row_data_send = [torch.cuda.FloatTensor(device=self.device)]*self.size
     row_indices_recv = self.row_indices_recv
     row_data_recv = [torch.cuda.FloatTensor(device=self.device).resize_(row_indices_send[i].size(0), inputs.size(1)).fill_(0) for i in range(self.size)]
-    
+    stop_time(self, "allocate tensors", start, barrier=False)
     
     start = time.time()
     for i in range(self.size):
         row_data_send[i] = inputs[row_indices_recv[i].long(), :]
-    stop_time(self, "gather_row_data", start)
+    stop_time(self, "gather_row_data", start, barrier=False)
 
     start = time.time()
     dist.all_to_all(row_data_recv, row_data_send, group=self.group)
@@ -66,13 +69,14 @@ def broad_func_oned(self, graph, ampbyp, inputs):
        spmm_gpu(ampbyp[i].indices()[0].int(), ampbyp[i].indices()[1].int(),
                         ampbyp[i].values(), ampbyp[i].size(0),
                         ampbyp[i].size(1), inputs_mul, z_loc)
-    stop_time(self, "spmm_gpu", start)
+    stop_time(self, "spmm_gpu", start, barrier=False)
 
     return z_loc
 
 def broad_func_one5d(self, graph, ampbyp, inputs):
-    n_per_proc = math.ceil(float(graph.size(0)) / (self.size / self.replication))
-
+    # n_per_proc = math.ceil(float(graph.size(0)) / (self.size / self.replication))
+    
+    start = time.time()
     z_loc = torch.cuda.FloatTensor(ampbyp[0].size(0), inputs.size(1), device=self.device).fill_(0)
 
     rank = self.rank
@@ -91,6 +95,9 @@ def broad_func_one5d(self, graph, ampbyp, inputs):
 
     row_indices_recv = self.row_indices_recv
 
+
+    stop_time(self, "allocate/math", start)
+
     for i in range(stages):
         q = (rank_col * (self.size // (self.replication ** 2)) + i) * self.replication + rank_col
 
@@ -105,23 +112,24 @@ def broad_func_one5d(self, graph, ampbyp, inputs):
                 if rank != j:
                     start = time.time()
                     rows_send = inputs[row_indices_recv[j].long(), :].clone()
-                    stop_time(self, "gather_row_data", start)
+                    stop_time(self, "gather_row_data", start, barrier=False)
 
                     start = time.time()
                     # dist.send(rows_send, dst=j, group=self.col_groups[rank_col])
                     send_ops.append(dist.P2POp(dist.isend, rows_send, j, group=self.col_groups[rank_col]))
-                    stop_time(self, "send_ops", start)
-                    print(f"rows_send dim {rows_send.size()}", flush=True)
-            print(f"pls print {send_ops}", flush=True)
+                    stop_time(self, "send_ops", start, barrier=False)
+    #                print(f"rows_send dim {rows_send.size()}", flush=True)
+    #        print(f"pls print {send_ops}", flush=True)
 
-            if True:
+            if len(send_ops) > 0:
                 start = time.time()
-                print("sendinggg!", flush=True)
+                #print("sendinggg!", flush=True)
                 reqs = dist.batch_isend_irecv(send_ops)
-                print("batch sent", flush=True)
-                stop_time(self, "batch_isend", start)
+                #print("batch sent", flush=True)
+                #stop_time(self, "communication", start)
                 for req in reqs:
                     req.wait()
+                stop_time(self, "communication", start, barrier=False)
 
         # all other ranks receive the inputs
         inputs_recv = []
@@ -132,22 +140,23 @@ def broad_func_one5d(self, graph, ampbyp, inputs):
             start = time.time()
             print(f"rows_recv dim {rows_recv.size()}", flush=True)
             dist.recv(rows_recv, src=q, group=self.col_groups[rank_col])
-            stop_time(self, "recv", start)
+            stop_time(self, "communication", start, barrier=False)
 
+            start = time.time()
             inputs_recv = torch.cuda.FloatTensor(ampbyp[am_partid].size(1), \
                                                     inputs.size(1), \
                                                     device=self.device).fill_(0)
             inputs_recv[unique_cols] = rows_recv
         else:
+            start = time.time()
             inputs_recv = inputs.clone()
 
         inputs_recv = inputs_recv.contiguous()
-        
-        start = time.time()
+    
         spmm_gpu(ampbyp[am_partid].indices()[0].int(), ampbyp[am_partid].indices()[1].int(), 
                         ampbyp[am_partid].values(), ampbyp[am_partid].size(0), 
                         ampbyp[am_partid].size(1), inputs_recv, z_loc)
-        stop_time(self, "spmm_gpu", start)
+        stop_time(self, "spmm_gpu", start, barrier=False)
         
     z_loc = z_loc.contiguous()
     start = time.time()
