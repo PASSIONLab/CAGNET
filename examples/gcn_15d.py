@@ -430,7 +430,7 @@ def main(args, batches=None):
     if args.n_darts == -1:
         avg_degree = int(edge_count / node_count)
         if args.sample_method == "ladies":
-            args.n_darts = avg_degree * args.batch_size
+            args.n_darts = avg_degree * args.batch_size * (args.replication ** 4)
         elif args.sample_method == "sage":
             args.n_darts = avg_degree
         print(f"n_darts: {args.n_darts}")

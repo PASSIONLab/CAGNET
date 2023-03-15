@@ -175,6 +175,7 @@ def col_select15D(sample_mtx, next_frontier_select, mb_count, batch_size, replic
 
     rank_row_start = rank_c * replication
     rank_row_stop = (rank_c + 1) * replication - 1
+    sample_mtx = sample_mtx.to_sparse_csr()
     sample_mtx = csr_allreduce(sample_mtx, rank_row_start, rank_row_stop, rank)
     sample_mtx = sample_mtx.to_sparse_coo()
     stop_time_add(start_timer, stop_timer, timing_dict, f"spgemm-extract-reduce-{name}", barrier=True)
@@ -885,9 +886,9 @@ def sample(p, frontier_size, mb_count, node_count_total, n_darts, replication,
     rank_c = rank // replication
     rank_col = rank % replication
 
-    n_darts_col = n_darts // replication
-    if rank_col == replication - 1:
-        n_darts_col = n_darts - (replication - 1) * n_darts_col
+    # n_darts_col = n_darts // replication
+    # if rank_col == replication - 1:
+    #     n_darts_col = n_darts - (replication - 1) * n_darts_col
     n_darts_col = n_darts
 
     next_frontier = torch.sparse_coo_tensor(indices=p._indices(),
@@ -1276,8 +1277,10 @@ def select(next_frontier, adj_matrix, batches, sa_masks, sa_recv_buff, nnz, \
     elif name == "sage":
         # sample_mtx = torch.sparse_coo_tensor(sampled_indices, sampled_values, 
         #                                         size=(nnz * mb_count, node_count_total * mb_count_total * nnz))
+        # sample_mtx = sparse_coo_tensor_gpu(sampled_indices, sampled_values, 
+        #                                 torch.Size([nnz * mb_count, node_count_total * mb_count_total * nnz]))
         sample_mtx = sparse_coo_tensor_gpu(sampled_indices, sampled_values, 
-                                        torch.Size([nnz * mb_count, node_count_total * mb_count_total * nnz]))
+                                        torch.Size([nnz * mb_count, node_count_total]))
     if name == "ladies":
         # col_select_mtx = torch.sparse_coo_tensor(col_select_mtx_indices, col_select_mtx_values,
         #                                         size=(node_count_total * mb_count, next_frontier.size(1)))
