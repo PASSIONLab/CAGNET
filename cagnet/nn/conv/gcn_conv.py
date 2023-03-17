@@ -60,7 +60,7 @@ def broad_func_oned(self, graph, ampbyp, inputs):
 
     start = time.time()
     dist.all_to_all(row_data_recv, row_data_send, group=self.group)
-    stop_time(self, "a2a3", start)
+    stop_time(self, "a2a3", start, barrier=False)
 
     start = time.time()
     for i in range(self.size):
@@ -138,7 +138,7 @@ def broad_func_one5d(self, graph, ampbyp, inputs):
             rows_recv = torch.cuda.FloatTensor(device=self.device).resize_((unique_cols.size(0), inputs.size(1))).fill_(0)
 
             start = time.time()
-            print(f"rows_recv dim {rows_recv.size()}", flush=True)
+#            print(f"rows_recv dim {rows_recv.size()}", flush=True)
             dist.recv(rows_recv, src=q, group=self.col_groups[rank_col])
             stop_time(self, "communication", start, barrier=False)
 
@@ -161,7 +161,7 @@ def broad_func_one5d(self, graph, ampbyp, inputs):
     z_loc = z_loc.contiguous()
     start = time.time()
     dist.all_reduce(z_loc, op=dist.reduce_op.SUM, group=self.row_groups[rank_c])
-    stop_time(self, "reduce", start)
+    stop_time(self, "reduce", start, barrier=False)
 
     return z_loc
 

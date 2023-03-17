@@ -362,7 +362,7 @@ def main(args):
         data = data.to(device)
         inputs.requires_grad = True
         data.y = data.y.to(device)
-    elif args.dataset == "Amazon_Large_4_graph_vb":
+    elif args.dataset == "Amazon_Large_4":
         print(f"Loading coo...", flush=True)
         edge_index = torch.load("/pscratch/sd/j/jinimukh/Amazon_Large_4/processed/amazon_large_randomized.pt")
         print(f"Done loading coo", flush=True)
@@ -392,7 +392,7 @@ def main(args):
         data = data.to(device)
         inputs.requires_grad = True
         data.y = data.y.to(device)
-    elif args.dataset == "Amazon_Large_16_graph_vb":
+    elif args.dataset == "Amazon_Large_16":
         print(f"Loading coo...", flush=True)
         edge_index = torch.load("/pscratch/sd/j/jinimukh/Amazon_Large_16/processed/amazon_large_randomized.pt")
         print(f"Done loading coo", flush=True)
@@ -407,7 +407,7 @@ def main(args):
         data = data.to(device)
         inputs.requires_grad = True
         data.y = data.y.to(device)
-    elif args.dataset == "Amazon_Large_32_graph_vb":
+    elif args.dataset == "Amazon_Large_32":
         print(f"Loading coo...", flush=True)
         edge_index = torch.load("/pscratch/sd/j/jinimukh/Amazon_Large_32/processed/amazon_large_randomized.pt")
         print(f"Done loading coo", flush=True)
@@ -422,7 +422,7 @@ def main(args):
         data = data.to(device)
         inputs.requires_grad = True
         data.y = data.y.to(device)
-    elif args.dataset == "Amazon_Large_64_graph_vb":
+    elif args.dataset == "Amazon_Large_64":
         print(f"Loading coo...", flush=True)
         edge_index = torch.load("/pscratch/sd/j/jinimukh/Amazon_Large_64/processed/amazon_large_randomized.pt")
         print(f"Done loading coo", flush=True)

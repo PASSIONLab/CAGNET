@@ -139,9 +139,9 @@ def one5d_partition(rank, size, inputs, adj_matrix, data, features, classes, rep
     node_count = inputs.size(0)
     
     if not partitions:
-        n_per_proc = math.ceil(float(node_count) / (size / replication))
-        partitions = [n_per_proc]*(size / replication)
-        partitions[size-1] = inputs.size(0) - math.ceil(float(node_count) / (size/replication))*((size/replication) - 1)  
+        n_per_proc = math.ceil(float(node_count) / (size // replication))
+        partitions = [n_per_proc]*(size // replication)
+        partitions[size//replication -1] = inputs.size(0) - math.ceil(float(node_count) / (size//replication))*((size//replication) - 1)  
 
     am_partitions = None
     am_pbyp = None
@@ -379,7 +379,43 @@ def main(args):
         inputs.requires_grad = True
         data.y = data.y.to(device)
 
-    elif args.dataset == "Amazon_Large_16_graph_vb":
+    elif args.dataset == "Amazon_Large_4":
+        print(f"Loading coo...", flush=True)
+        edge_index = torch.load("/pscratch/sd/j/jinimukh/Amazon_Large_4/processed/amazon_large_randomized.pt")
+        print(f"Done loading coo", flush=True)
+        n = 14249639
+        num_features = 300
+        num_classes = 24
+        inputs = torch.rand(n, num_features)
+        data = Data()
+        data.y = torch.rand(n).uniform_(0, num_classes - 1).long()
+        data.train_mask = torch.ones(n).long()
+        adj_matrix = edge_index.t_()
+        data = data.to(device)
+        inputs.requires_grad = True
+        data.y = data.y.to(device)
+
+ 
+
+    elif args.dataset == "Amazon_Large_8":
+        print(f"Loading coo...", flush=True)
+        edge_index = torch.load("/pscratch/sd/j/jinimukh/Amazon_Large_8/processed/amazon_large_randomized.pt")
+        print(f"Done loading coo", flush=True)
+        n = 14249639
+        num_features = 300
+        num_classes = 24
+        inputs = torch.rand(n, num_features)
+        data = Data()
+        data.y = torch.rand(n).uniform_(0, num_classes - 1).long()
+        data.train_mask = torch.ones(n).long()
+        adj_matrix = edge_index.t_()
+        data = data.to(device)
+        inputs.requires_grad = True
+        data.y = data.y.to(device)
+
+
+
+    elif args.dataset == "Amazon_Large_16":
         print(f"Loading coo...", flush=True)
         edge_index = torch.load("/pscratch/sd/j/jinimukh/Amazon_Large_16/processed/amazon_large_randomized.pt")
         print(f"Done loading coo", flush=True)
@@ -395,7 +431,7 @@ def main(args):
         inputs.requires_grad = True
         data.y = data.y.to(device)
 
-    elif args.dataset == "Amazon_Large_32_graph_vb":
+    elif args.dataset == "Amazon_Large_32":
         print(f"Loading coo...", flush=True)
         edge_index = torch.load("/pscratch/sd/j/jinimukh/Amazon_Large_32/processed/amazon_large_randomized.pt")
         print(f"Done loading coo", flush=True)
@@ -411,7 +447,7 @@ def main(args):
         inputs.requires_grad = True
         data.y = data.y.to(device)
 
-    elif args.dataset == "Amazon_Large_64_graph_vb":
+    elif args.dataset == "Amazon_Large_64":
         print(f"Loading coo...", flush=True)
         edge_index = torch.load("/pscratch/sd/j/jinimukh/Amazon_Large_64/processed/amazon_large_randomized.pt")
         print(f"Done loading coo", flush=True)
@@ -523,11 +559,12 @@ def main(args):
     labels_rank = []
 
     if partitions:
-        rank_train_mask = torch.split(data.train_mask, partitions, dim=0)[rank]
-        labels_rank = torch.split(data.y, partitions, dim=0)[rank]
+        rank_train_mask = torch.split(data.train_mask, partitions, dim=0)[rank_c]
+        labels_rank = torch.split(data.y, partitions, dim=0)[rank_c]
     else:
-        rank_train_mask = torch.split(data.train_mask, n_per_proc, dim=0)[rank]
-        labels_rank = torch.split(data.y, n_per_proc, dim=0)[rank]
+        print(data.train_mask.size())
+        rank_train_mask = torch.split(data.train_mask, n_per_proc, dim=0)[rank_c]
+        labels_rank = torch.split(data.y, n_per_proc, dim=0)[rank_c]
 
     # rank_train_mask = torch.split(data.train_mask, n_per_proc, dim=0)[rank_c]
     # rank_test_mask = torch.split(data.test_mask, n_per_proc, dim=0)[rank_c]
