@@ -56,8 +56,9 @@ def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_tota
             nnz = current_frontier[0, :].size(0)
 
         batches = batches.to_sparse_csr()
-        adj_matrix = adj_matrix.to_sparse_csr()
-        p = gen_prob_dist(batches, adj_matrix, mb_count, node_count_total, replication, rank, size, \
+        print(f"prob_adj_matrix: {adj_matrix}", flush=True)
+        adj_matrix_sq = adj_matrix.square().to_sparse_csr()
+        p = gen_prob_dist(batches, adj_matrix_sq, mb_count, node_count_total, replication, rank, size, \
                             row_groups, col_groups, sa_masks, sa_recv_buff, timing_dict, "ladies", timing)
 
         next_frontier = sample(p, frontier_size, mb_count, node_count_total, n_darts, replication, rank, size, \
@@ -77,27 +78,28 @@ def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_tota
 
 
     print(f"total_time: {stop_time(total_start_timer, total_stop_timer)}", flush=True)
-    for k, v in sorted(timing_dict.items()):
-        if (k.startswith("spgemm") and k != "spgemm-misc") or k == "probability-spgemm" or k == "row-select-spgemm" or k == "col-select-spgemm" or k == "sampling-iters":
-            # print(f"{k} times: {v}")
-            v_tens = torch.cuda.FloatTensor(1).fill_(sum(v))
-            v_tens_recv = []
-            for i in range(size):
-                v_tens_recv.append(torch.cuda.FloatTensor(1).fill_(0))
-            dist.all_gather(v_tens_recv, v_tens)
+    if timing:
+        for k, v in sorted(timing_dict.items()):
+            if (k.startswith("spgemm") and k != "spgemm-misc") or k == "probability-spgemm" or k == "row-select-spgemm" or k == "col-select-spgemm" or k == "sampling-iters":
+                # print(f"{k} times: {v}")
+                v_tens = torch.cuda.FloatTensor(1).fill_(sum(v))
+                v_tens_recv = []
+                for i in range(size):
+                    v_tens_recv.append(torch.cuda.FloatTensor(1).fill_(0))
+                dist.all_gather(v_tens_recv, v_tens)
 
-            if rank == 0:
-                min_time = min(v_tens_recv).item()
-                max_time = max(v_tens_recv).item()
-                avg_time = sum(v_tens_recv).item() / size
-                med_time = sorted(v_tens_recv)[size // 2].item()
+                if rank == 0:
+                    min_time = min(v_tens_recv).item()
+                    max_time = max(v_tens_recv).item()
+                    avg_time = sum(v_tens_recv).item() / size
+                    med_time = sorted(v_tens_recv)[size // 2].item()
 
-                print(f"{k} min: {min_time} max: {max_time} avg: {avg_time} med: {med_time}")
-        dist.barrier()
-    for k, v in timing_dict.items():
-        if len(v) > 0:
-            avg_time = sum(v) / len(v)
-        else:
-            avg_time = -1.0
-        print(f"{k} total_time: {sum(v)} avg_time {avg_time} len: {len(v)}")
+                    print(f"{k} min: {min_time} max: {max_time} avg: {avg_time} med: {med_time}")
+            dist.barrier()
+        for k, v in timing_dict.items():
+            if len(v) > 0:
+                avg_time = sum(v) / len(v)
+            else:
+                avg_time = -1.0
+            print(f"{k} total_time: {sum(v)} avg_time {avg_time} len: {len(v)}")
     return batches_select, next_frontier_select, adj_matrices

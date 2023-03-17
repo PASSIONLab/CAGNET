@@ -854,7 +854,8 @@ def gen_prob_dist(numerator, adj_matrix, mb_count, node_count_total, replication
     torch.cuda.nvtx.range_push("nvtx-compute-p")
     p_den = torch.cuda.DoubleTensor(numerator.size(0)).fill_(0)
     if name == "ladies":
-        p_num_values = torch.square(p_num_values).double()
+        # p_num_values = torch.square(p_num_values).double()
+        p_num_values = p_num_values.double()
     elif name == "sage":
         p_num_values = torch.cuda.DoubleTensor(p_num_values.size(0)).fill_(1.0)
     scatterd_add_gpu(p_den, p_num_indices[0, :], p_num_values, p_num_values.size(0))
@@ -862,6 +863,7 @@ def gen_prob_dist(numerator, adj_matrix, mb_count, node_count_total, replication
     #                                 values=p_num_values, 
     #                                 size=(numerator.size(0), node_count_total))
     p = sparse_coo_tensor_gpu(p_num_indices, p_num_values, torch.Size([numerator.size(0), node_count_total]))
+    print(f"p._indices(): {p._indices()[1,:]} p._values: {p._values()}", flush=True)
     # print(f"p: {p}")
     print(f"p.nnz: {p._nnz()}", flush=True)
     normalize_gpu(p._values(), p_den, p._indices()[0, :], p._nnz())

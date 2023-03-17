@@ -378,8 +378,7 @@ def main(args, batches=None):
     print("normalizing", flush=True)
     g_loc = g_loc.to(device)
     g_loc = g_loc.double()
-    print(f"g_loc: {g_loc}", flush=True)
-    g_loc = row_normalize(g_loc)
+    # g_loc = row_normalize(g_loc)
     print("done normalizing", flush=True)
     torch.set_printoptions(precision=10)
 
@@ -421,7 +420,7 @@ def main(args, batches=None):
     batches_indices = torch.stack((batches_indices_rows, batches_indices_cols))
     batches_values = torch.cuda.DoubleTensor(batches_loc.size(1) * batches_loc.size(0)).fill_(1.0)
     batches_loc = torch.sparse_coo_tensor(batches_indices, batches_values, (batches_loc.size(0), g_loc.size(1)))
-    g_loc = torch.pow(g_loc, 2)
+    # g_loc = torch.pow(g_loc, 2)
     torch.cuda.nvtx.range_pop()
     print(f"g_loc: {g_loc}")
 
@@ -448,7 +447,7 @@ def main(args, batches=None):
     sa_recv_buff = torch.cuda.DoubleTensor(3 * nnz_recv_upperbound).fill_(0)
 
     if args.sample_method == "ladies":
-        torch.manual_seed(rank_col)
+        # torch.manual_seed(rank_col)
         print("first (warmup) run")
         current_frontier, next_frontier, adj_matrices = \
                                         ladies_sampler(g_loc, batches_loc, args.batch_size, \
@@ -462,7 +461,7 @@ def main(args, batches=None):
         nnz_row_masks.fill_(False)
         torch.cuda.profiler.cudart().cudaProfilerStart()
         torch.cuda.nvtx.range_push("nvtx-sampler")
-        torch.manual_seed(rank_col)
+        # torch.manual_seed(rank_col)
         current_frontier, next_frontier, adj_matrices_bulk = \
                                         ladies_sampler(g_loc, batches_loc, args.batch_size, \
                                                                     args.samp_num, args.n_bulkmb, \
