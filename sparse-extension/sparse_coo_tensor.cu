@@ -910,7 +910,7 @@ void normalize_gpu(const at::Tensor& output, const at::Tensor& input, const at::
 
 __global__ void ShiftRowSelect(long *row_shift, long *row_select_rows, int rank, int size,
                                     int replication, int nnz, int batch_size, int node_count, int mb_count,
-                                    int shift_size) { 
+                                    int shift_size, int semibulk_size) { 
 
     long     id = blockIdx.x * blockDim.x + threadIdx.x;
     long stride = blockDim.x * gridDim.x;
@@ -920,13 +920,14 @@ __global__ void ShiftRowSelect(long *row_shift, long *row_select_rows, int rank,
     
     for (int i = id; i < nnz; i += stride) {
         long mb_row = (row_select_rows[i] + proc_row_chunk) / shift_size;
-        row_shift[i] += mb_row * node_count;
+        // row_shift[i] += mb_row * node_count;
+        row_shift[i] += (mb_row % semibulk_size) * node_count;
     }
 }
 
 void shift_rowselect_gpu(const at::Tensor& row_shift, const at::Tensor& row_select_rows,
                             int nnz, int rank, int size, int replication, int batch_size, int node_count, 
-                            int mb_count, int shift_size) {
+                            int mb_count, int shift_size, int semibulk_size) {
 
 
     int BLOCK_SIZE = 256;
@@ -942,7 +943,8 @@ void shift_rowselect_gpu(const at::Tensor& row_shift, const at::Tensor& row_sele
                                                     batch_size,
                                                     node_count,
                                                     mb_count,
-                                                    shift_size);
+                                                    shift_size,
+                                                    semibulk_size);
     CHECK_ERROR("shift row select error")
 }
 

@@ -166,6 +166,7 @@ def one5d_partition(rank, size, inputs, adj_matrix, data, features, classes, rep
 
     inputs = inputs.to(torch.device("cpu"))
     adj_matrix = adj_matrix.to(torch.device("cpu"))
+    torch.cuda.synchronize()
 
     rank_c = rank // replication
     # Compute the adj_matrix and inputs partitions for this process
@@ -173,7 +174,7 @@ def one5d_partition(rank, size, inputs, adj_matrix, data, features, classes, rep
     with torch.no_grad():
         # Column partitions
         am_partitions, vtx_indices = split_coo(adj_matrix, node_count, n_per_proc, 1)
-
+        torch.cuda.synchronize()
         # proc_node_count = vtx_indices[rank_c + 1] - vtx_indices[rank_c]
         # am_pbyp, _ = split_coo(am_partitions[rank_c], node_count, n_per_proc, 0)
         # print(f"before", flush=True)
@@ -349,9 +350,13 @@ def main(args, batches=None):
     print(f"hostname: {socket.gethostname()} rank: {rank} size: {size}", flush=True)
     torch.cuda.set_device(rank % args.gpu)
 
-    if args.sample_method == "ladies":
-        adj_matrix, _ = add_remaining_self_loops(adj_matrix, num_nodes=inputs.size(0))
+    # if args.sample_method == "ladies":
+    #     print(f"before adj_matrix.size: {adj_matrix.size()}", flush=True)
+    #     adj_matrix, _ = add_remaining_self_loops(adj_matrix, num_nodes=inputs.size(0))
+    #     print(f"after adj_matrix.size: {adj_matrix.size()}", flush=True)
     edge_count = adj_matrix.size(1)
+    torch.cuda.synchronize()
+    print(f"reached here", flush=True)
 
     partitioning = Partitioning.ONE5D
 
@@ -378,6 +383,9 @@ def main(args, batches=None):
     print("normalizing", flush=True)
     g_loc = g_loc.to(device)
     g_loc = g_loc.double()
+    g_loc_indices, _ = add_remaining_self_loops(g_loc._indices(), num_nodes=g_loc.size(0))
+    g_loc_values = torch.cuda.DoubleTensor(g_loc_indices.size(1)).fill_(1)
+    g_loc = torch.sparse_coo_tensor(g_loc_indices, g_loc_values, g_loc.size())
     # g_loc = row_normalize(g_loc)
     print("done normalizing", flush=True)
     torch.set_printoptions(precision=10)
@@ -429,7 +437,7 @@ def main(args, batches=None):
     if args.n_darts == -1:
         avg_degree = int(edge_count / node_count)
         if args.sample_method == "ladies":
-            args.n_darts = avg_degree * args.batch_size * (args.replication ** 4)
+            args.n_darts = avg_degree * args.batch_size * (args.replication ** 2)
         elif args.sample_method == "sage":
             args.n_darts = avg_degree
         print(f"n_darts: {args.n_darts}")
@@ -471,14 +479,14 @@ def main(args, batches=None):
                                                                     col_groups, args.timing)
     elif args.sample_method == "sage":
         # torch.manual_seed(rank_col)
-        print("first (warmup) run")
-        current_frontier, next_frontier, adj_matrices = \
-                                        sage_sampler(g_loc, batches_loc, args.batch_size, \
-                                                                    args.samp_num, args.n_bulkmb, \
-                                                                    args.n_layers, args.n_darts, \
-                                                                    args.replication, nnz_row_masks, 
-                                                                    sa_recv_buff, rank, size, row_groups, 
-                                                                    col_groups, args.timing, args.baseline)
+        # print("first (warmup) run")
+        # current_frontier, next_frontier, adj_matrices = \
+        #                                 sage_sampler(g_loc, batches_loc, args.batch_size, \
+        #                                                             args.samp_num, args.n_bulkmb, \
+        #                                                             args.n_layers, args.n_darts, \
+        #                                                             args.replication, nnz_row_masks, 
+        #                                                             sa_recv_buff, rank, size, row_groups, 
+        #                                                             col_groups, args.timing, args.baseline)
 
         print("second runs", flush=True)
         nnz_row_masks.fill_(False)
@@ -537,8 +545,8 @@ def main(args, batches=None):
         adj_matrix = torch.pow(adj_matrix, 2)
         # return here while testing sampling code
 
-        return current_frontier, next_frontier, adj_matrices, adj_matrix
-        # return current_frontier, next_frontier, adj_matrices, adj_matrix, col_groups
+        # return current_frontier, next_frontier, adj_matrices, adj_matrix
+        return current_frontier, next_frontier, adj_matrices, adj_matrix, col_groups
     return
 
     # create GCN model

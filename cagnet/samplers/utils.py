@@ -57,7 +57,10 @@ def csr_allreduce(mat, left, right, rank, name=None, timing_dict=None):
         torch.cuda.synchronize()
         rows_recv = torch.cuda.IntTensor(mat.size(0) + 1)
         cols_recv = torch.cuda.IntTensor(nnz_recv.item())
-        vals_recv = torch.cuda.FloatTensor(nnz_recv.item())
+        if mat.dtype == torch.float32:
+            vals_recv = torch.cuda.FloatTensor(nnz_recv.item())
+        elif mat.dtype == torch.float64:
+            vals_recv = torch.cuda.DoubleTensor(nnz_recv.item())
 
         ops = [None] * 6
         ops[0] = dist.P2POp(dist.isend, mat.crow_indices().int(), recv_rank, tag=0)
@@ -80,12 +83,13 @@ def csr_allreduce(mat, left, right, rank, name=None, timing_dict=None):
             left = mid_rank + 1
     return mat
 
-def col_select15D(sample_mtx, next_frontier_select, mb_count, batch_size, replication, rank, size, \
-                        row_groups, col_groups, name, timing_dict=None):
+def col_select15D(sample_mtx, col_select_mtx, bulk_items, node_count_total, bulk_size, semibulk_size, 
+                        replication, rank, size, row_groups, col_groups, name, alg, timing_dict=None):
 
     rank_c = rank // replication
     rank_col = rank % replication
-    stages = mb_count // replication
+    stages = (bulk_items // semibulk_size) // replication
+    print(f"stages: {stages} bulk_items: {bulk_items} semibulk_size: {semibulk_size}", flush=True)
    
     sample_mtxs = [None] * stages
 
@@ -95,92 +99,188 @@ def col_select15D(sample_mtx, next_frontier_select, mb_count, batch_size, replic
     start_inner_timer = torch.cuda.Event(enable_timing=True)
     stop_inner_timer = torch.cuda.Event(enable_timing=True)
 
-    mask = torch.cuda.BoolTensor(sample_mtx.size(1)).fill_(0)
-    col_indices_mask = torch.cuda.LongTensor(sample_mtx.size(1)).fill_(0)
-    idx_range = torch.arange(sample_mtx.size(1)).long().cuda()
+    if alg == "sage":
+        mask = torch.cuda.BoolTensor(sample_mtx.size(1)).fill_(0)
+        col_indices_mask = torch.cuda.LongTensor(sample_mtx.size(1)).fill_(0)
+        idx_range = torch.arange(sample_mtx.size(1)).cuda()
     start_time(start_timer)
     for i in range(stages): 
         q = stages * rank_col + i 
 
+        # Extract semibulk_size batches from sample_mtx
         start_time(start_inner_timer)
-        next_frontier_unique = next_frontier_select[q].unique()
-        batch_crow_indices = sample_mtx.crow_indices()[(q * batch_size):((q + 1) * batch_size + 1)].clone()
+        batch_start = q * bulk_size * semibulk_size
+        batch_stop = (q + 1) * bulk_size * semibulk_size
+        batch_crow_indices = sample_mtx.crow_indices()[batch_start:(batch_stop + 1)].clone()
         batch_crow_indices -= batch_crow_indices[0].item()
-        start_nnz = sample_mtx.crow_indices()[q * batch_size]
-        stop_nnz = sample_mtx.crow_indices()[(q + 1) * batch_size]
+        start_nnz = sample_mtx.crow_indices()[batch_start]
+        stop_nnz = sample_mtx.crow_indices()[batch_stop]
 
         batch_cols = sample_mtx.col_indices()[start_nnz:stop_nnz]
         batch_vals = sample_mtx.values()[start_nnz:stop_nnz]
 
         batch_mtx = torch.sparse_csr_tensor(batch_crow_indices, batch_cols, batch_vals, \
-                                                    torch.Size([batch_size, sample_mtx.size(1)]))
+                                                torch.Size([bulk_size * semibulk_size, sample_mtx.size(1)]))
+
+        batch_mtx = batch_mtx.to_sparse_coo()
         stop_time_add(start_inner_timer, stop_inner_timer, timing_dict, f"spgemm-extract-batch-{name}", barrier=True)
 
         start_time(start_inner_timer)
-        mask.fill_(0)
-        batch_mtx = batch_mtx.to_sparse_coo()
-        mask[next_frontier_unique] = True
-        col_mask = torch.gather(mask, 0, batch_mtx._indices()[1,:])
-        stop_time_add(start_inner_timer, stop_inner_timer, timing_dict, f"spgemm-extract-gather-{name}", barrier=True)
+        # Extract semibulk_size column extraction matrices
+        chunk_row_start = q * semibulk_size * node_count_total
+        chunk_row_stop = (q + 1) * semibulk_size * node_count_total
+        chunk_row_mask = (col_select_mtx._indices()[0, :] >= chunk_row_start) & \
+                         (col_select_mtx._indices()[0, :] < chunk_row_stop)
+        col_chunk_indices = col_select_mtx._indices()[:, chunk_row_mask]
+        col_chunk_indices[0,:] -= chunk_row_start
+        col_chunk_values = col_select_mtx._values()[chunk_row_mask]
+        stop_time_add(start_inner_timer, stop_inner_timer, timing_dict, f"spgemm-extract-colsel-{name}", barrier=True)
 
         start_time(start_inner_timer)
-        sample_rows = batch_mtx._indices()[0, col_mask]
-        sample_cols = batch_mtx._indices()[1, col_mask] 
-        col_indices_mask.fill_(0)
-        col_indices_mask[next_frontier_unique] = idx_range[:next_frontier_unique.size(0)]
-        sample_cols_scaled = torch.gather(col_indices_mask, 0, sample_cols)
-        sample_vals = batch_mtx._values()[col_mask]
-        sample_indices = torch.stack((sample_rows, sample_cols_scaled))
-        sample_mtxs[i] = torch.sparse_coo_tensor(sample_indices, sample_vals,
-                                                    size=torch.Size([batch_size, next_frontier_select.size(1)]))
-        stop_time_add(start_inner_timer, stop_inner_timer, timing_dict, f"spgemm-extract-cols-{name}", barrier=True)
+        if alg == "ladies":
+            sample_chunk_indices, sample_chunk_values = torch_sparse.spspmm(batch_mtx._indices(), \
+                                                                batch_mtx._values().double(), col_chunk_indices, \
+                                                                col_chunk_values, batch_mtx.size(0), \
+                                                                semibulk_size * node_count_total, \
+                                                                col_select_mtx.size(1), coalesced=True)
+        elif alg == "sage":
+            mask.fill_(0)
+            batch_mtx = batch_mtx.to_sparse_coo()
+            mask[col_chunk_indices[0,:]] = True
+            col_mask = torch.gather(mask, 0, batch_mtx._indices()[1,:])
 
-        # start_time(start_inner_timer)
-        # batch_mtx = batch_mtx.t()
-        # stop_time_add(start_inner_timer, stop_inner_timer, timing_dict, f"spgemm-extract-transpbatch-{name}", barrier=True)
-
-        # start_time(start_inner_timer)
-        # col_mask = torch.cuda.BoolTensor(batch_mtx._nnz()).fill_(0)
-        # rowselect_csr_gpu(next_frontier_unique, batch_mtx.crow_indices(), col_mask, \
-        #                         next_frontier_unique.size(0), batch_mtx._nnz())
-
-        # sample_row_lengths = batch_mtx.crow_indices()[1:] - batch_mtx.crow_indices()[:-1]
-        # sample_row_lengths = sample_row_lengths[next_frontier_unique]
-        # sample_crow_indices = torch.cuda.LongTensor(next_frontier_unique.size(0) + 1)
-        # sample_crow_indices[0] = 0
-        # sample_crow_indices[1:] = torch.cumsum(sample_row_lengths, dim=0)
-        # stop_time_add(start_inner_timer, stop_inner_timer, timing_dict, f"spgemm-extract-cols-{name}", barrier=True)
-        # 
-        # start_time(start_inner_timer)
-        # sample_cols = batch_mtx.col_indices()[col_mask] 
-        # sample_vals = batch_mtx.values()[col_mask] 
-
-        # sample_mtxs[i] = torch.sparse_csr_tensor(sample_crow_indices, sample_cols, sample_vals, \
-        #                                     size=torch.Size([next_frontier_unique.size(0), batch_size]))
-        # sample_mtxs[i] = sample_mtxs[i].t().to_sparse_coo()
-        # sample_mtxs[i] = torch.sparse_coo_tensor(sample_mtxs[i]._indices(), sample_mtxs[i]._values(),
-        #                                             size=torch.Size([batch_size, next_frontier_select.size(1)]))
-        # stop_time_add(start_inner_timer, stop_inner_timer, timing_dict, f"spgemm-extract-sample-{name}", barrier=True)
+            sample_rows = batch_mtx._indices()[0, col_mask]
+            sample_cols = batch_mtx._indices()[0, col_mask]
+            col_indices_mask.fill_(0)
+            col_indices_mask[col_chunk_indices[0,:]] = idx_range[:col_chunk_indices.size(1)].long()
+            sample_cols_scaled = torch.gather(col_indices_mask, 0, sample_cols)
+            sample_chunk_values = batch_mtx._values()[col_mask]
+            sample_chunk_indices = torch.stack((sample_rows, sample_cols_scaled))
+        stop_time_add(start_inner_timer, stop_inner_timer, timing_dict, f"spgemm-extract-spgemm-{name}", barrier=True)
+        sample_mtxs[i] = torch.sparse_coo_tensor(sample_chunk_indices, sample_chunk_values,
+                                                size=torch.Size([batch_mtx.size(0), col_select_mtx.size(1)]))
 
     stop_time_add(start_timer, stop_timer, timing_dict, f"spgemm-extract-iters-{name}", barrier=True)
 
     start_time(start_timer)
-    sample_mtx = torch.cat(sample_mtxs, dim=0)
-    row_start = (mb_count // replication) * batch_size * rank_col
-    sample_mtx_rows = sample_mtx._indices()[0,:] + row_start
-    sample_mtx_indices = torch.stack((sample_mtx_rows, sample_mtx._indices()[1,:]))
-    sample_mtx = torch.sparse_coo_tensor(sample_mtx_indices, sample_mtx._values(), \
-                        size=torch.Size([mb_count * batch_size, next_frontier_select.size(1)])).to_sparse_csr()
+    sample_mtx_int = torch.cat(sample_mtxs, dim=0)
+    row_start = (bulk_items // replication) * bulk_size * rank_col
+    sample_mtx_rows = sample_mtx_int._indices()[0,:] + row_start
+    sample_mtx_indices = torch.stack((sample_mtx_rows, sample_mtx_int._indices()[1,:]))
+    sample_mtx_int = torch.sparse_coo_tensor(sample_mtx_indices, sample_mtx_int._values(), \
+                        size=torch.Size([bulk_items * bulk_size, col_select_mtx.size(1)])).to_sparse_csr()
 
 
     rank_row_start = rank_c * replication
     rank_row_stop = (rank_c + 1) * replication - 1
-    sample_mtx = sample_mtx.to_sparse_csr()
-    sample_mtx = csr_allreduce(sample_mtx, rank_row_start, rank_row_stop, rank)
-    sample_mtx = sample_mtx.to_sparse_coo()
+    sample_mtx_int = sample_mtx_int.to_sparse_csr()
+    sample_mtx_red = csr_allreduce(sample_mtx_int, rank_row_start, rank_row_stop, rank)
+    sample_mtx_red = sample_mtx_red.to_sparse_coo()
     stop_time_add(start_timer, stop_timer, timing_dict, f"spgemm-extract-reduce-{name}", barrier=True)
 
-    return sample_mtx._indices(), sample_mtx._values()
+    return sample_mtx_red._indices(), sample_mtx_red._values()
+
+# def col_select15D(sample_mtx, next_frontier_select, mb_count, batch_size, replication, rank, size, \
+#                         row_groups, col_groups, name, timing_dict=None):
+# 
+#     rank_c = rank // replication
+#     rank_col = rank % replication
+#     stages = mb_count // replication
+#    
+#     sample_mtxs = [None] * stages
+# 
+#     start_timer = torch.cuda.Event(enable_timing=True)
+#     stop_timer = torch.cuda.Event(enable_timing=True)
+# 
+#     start_inner_timer = torch.cuda.Event(enable_timing=True)
+#     stop_inner_timer = torch.cuda.Event(enable_timing=True)
+# 
+#     mask = torch.cuda.BoolTensor(sample_mtx.size(1)).fill_(0)
+#     col_indices_mask = torch.cuda.LongTensor(sample_mtx.size(1)).fill_(0)
+#     idx_range = torch.arange(sample_mtx.size(1)).long().cuda()
+#     start_time(start_timer)
+#     for i in range(stages): 
+#         q = stages * rank_col + i 
+# 
+#         start_time(start_inner_timer)
+#         next_frontier_unique = next_frontier_select[q].unique()
+#         batch_crow_indices = sample_mtx.crow_indices()[(q * batch_size):((q + 1) * batch_size + 1)].clone()
+#         batch_crow_indices -= batch_crow_indices[0].item()
+#         start_nnz = sample_mtx.crow_indices()[q * batch_size]
+#         stop_nnz = sample_mtx.crow_indices()[(q + 1) * batch_size]
+# 
+#         batch_cols = sample_mtx.col_indices()[start_nnz:stop_nnz]
+#         batch_vals = sample_mtx.values()[start_nnz:stop_nnz]
+# 
+#         batch_mtx = torch.sparse_csr_tensor(batch_crow_indices, batch_cols, batch_vals, \
+#                                                     torch.Size([batch_size, sample_mtx.size(1)]))
+#         stop_time_add(start_inner_timer, stop_inner_timer, timing_dict, f"spgemm-extract-batch-{name}", barrier=True)
+# 
+#         start_time(start_inner_timer)
+#         mask.fill_(0)
+#         batch_mtx = batch_mtx.to_sparse_coo()
+#         mask[next_frontier_unique] = True
+#         col_mask = torch.gather(mask, 0, batch_mtx._indices()[1,:])
+#         stop_time_add(start_inner_timer, stop_inner_timer, timing_dict, f"spgemm-extract-gather-{name}", barrier=True)
+# 
+#         start_time(start_inner_timer)
+#         sample_rows = batch_mtx._indices()[0, col_mask]
+#         sample_cols = batch_mtx._indices()[1, col_mask] 
+#         col_indices_mask.fill_(0)
+#         col_indices_mask[next_frontier_unique] = idx_range[:next_frontier_unique.size(0)]
+#         sample_cols_scaled = torch.gather(col_indices_mask, 0, sample_cols)
+#         sample_vals = batch_mtx._values()[col_mask]
+#         sample_indices = torch.stack((sample_rows, sample_cols_scaled))
+#         sample_mtxs[i] = torch.sparse_coo_tensor(sample_indices, sample_vals,
+#                                                     size=torch.Size([batch_size, next_frontier_select.size(1)]))
+#         stop_time_add(start_inner_timer, stop_inner_timer, timing_dict, f"spgemm-extract-cols-{name}", barrier=True)
+# 
+#         # start_time(start_inner_timer)
+#         # batch_mtx = batch_mtx.t()
+#         # stop_time_add(start_inner_timer, stop_inner_timer, timing_dict, f"spgemm-extract-transpbatch-{name}", barrier=True)
+# 
+#         # start_time(start_inner_timer)
+#         # col_mask = torch.cuda.BoolTensor(batch_mtx._nnz()).fill_(0)
+#         # rowselect_csr_gpu(next_frontier_unique, batch_mtx.crow_indices(), col_mask, \
+#         #                         next_frontier_unique.size(0), batch_mtx._nnz())
+# 
+#         # sample_row_lengths = batch_mtx.crow_indices()[1:] - batch_mtx.crow_indices()[:-1]
+#         # sample_row_lengths = sample_row_lengths[next_frontier_unique]
+#         # sample_crow_indices = torch.cuda.LongTensor(next_frontier_unique.size(0) + 1)
+#         # sample_crow_indices[0] = 0
+#         # sample_crow_indices[1:] = torch.cumsum(sample_row_lengths, dim=0)
+#         # stop_time_add(start_inner_timer, stop_inner_timer, timing_dict, f"spgemm-extract-cols-{name}", barrier=True)
+#         # 
+#         # start_time(start_inner_timer)
+#         # sample_cols = batch_mtx.col_indices()[col_mask] 
+#         # sample_vals = batch_mtx.values()[col_mask] 
+# 
+#         # sample_mtxs[i] = torch.sparse_csr_tensor(sample_crow_indices, sample_cols, sample_vals, \
+#         #                                     size=torch.Size([next_frontier_unique.size(0), batch_size]))
+#         # sample_mtxs[i] = sample_mtxs[i].t().to_sparse_coo()
+#         # sample_mtxs[i] = torch.sparse_coo_tensor(sample_mtxs[i]._indices(), sample_mtxs[i]._values(),
+#         #                                             size=torch.Size([batch_size, next_frontier_select.size(1)]))
+#         # stop_time_add(start_inner_timer, stop_inner_timer, timing_dict, f"spgemm-extract-sample-{name}", barrier=True)
+# 
+#     stop_time_add(start_timer, stop_timer, timing_dict, f"spgemm-extract-iters-{name}", barrier=True)
+# 
+#     start_time(start_timer)
+#     sample_mtx = torch.cat(sample_mtxs, dim=0)
+#     row_start = (mb_count // replication) * batch_size * rank_col
+#     sample_mtx_rows = sample_mtx._indices()[0,:] + row_start
+#     sample_mtx_indices = torch.stack((sample_mtx_rows, sample_mtx._indices()[1,:]))
+#     sample_mtx = torch.sparse_coo_tensor(sample_mtx_indices, sample_mtx._values(), \
+#                         size=torch.Size([mb_count * batch_size, next_frontier_select.size(1)])).to_sparse_csr()
+# 
+# 
+#     rank_row_start = rank_c * replication
+#     rank_row_stop = (rank_c + 1) * replication - 1
+#     sample_mtx = sample_mtx.to_sparse_csr()
+#     sample_mtx = csr_allreduce(sample_mtx, rank_row_start, rank_row_stop, rank)
+#     sample_mtx = sample_mtx.to_sparse_coo()
+#     stop_time_add(start_timer, stop_timer, timing_dict, f"spgemm-extract-reduce-{name}", barrier=True)
+# 
+#     return sample_mtx._indices(), sample_mtx._values()
 
 def dist_spgemm15D(mata, matb, replication, rank, size, row_groups, col_groups, name, timing_dict=None):
 
@@ -863,7 +963,6 @@ def gen_prob_dist(numerator, adj_matrix, mb_count, node_count_total, replication
     #                                 values=p_num_values, 
     #                                 size=(numerator.size(0), node_count_total))
     p = sparse_coo_tensor_gpu(p_num_indices, p_num_values, torch.Size([numerator.size(0), node_count_total]))
-    print(f"p._indices(): {p._indices()[1,:]} p._values: {p._values()}", flush=True)
     # print(f"p: {p}")
     print(f"p.nnz: {p._nnz()}", flush=True)
     normalize_gpu(p._values(), p_den, p._indices()[0, :], p._nnz())
@@ -1251,20 +1350,24 @@ def select(next_frontier, adj_matrix, batches, sa_masks, sa_recv_buff, nnz, \
     torch.cuda.nvtx.range_pop()
     timing_dict["row-select-spgemm"].append(stop_time(start_timer, stop_timer, barrier=True))
 
-    # # 3. Expand sampled rows
-    # start_time(start_timer)
-    # torch.cuda.nvtx.range_push("nvtx-row-select-expand")
-    # row_shift = torch.cuda.LongTensor(sampled_values.size(0)).fill_(0)
-    # if name == "ladies":
-    #     shift_rowselect_gpu(row_shift, sampled_indices[0,:], sampled_values.size(0), 
-    #                             rank, size, replication, batch_size, node_count_total, mb_count_total, 
-    #                             batch_size)
-    # elif name == "sage":
-    #     shift_rowselect_gpu(row_shift, sampled_indices[0,:], sampled_values.size(0), 
-    #                             rank, size, replication, batch_size, node_count_total, mb_count_total, 1)
-    # sampled_indices[1,:] += row_shift
-    # torch.cuda.nvtx.range_pop()
-    # timing_dict["row-select-expand"].append(stop_time(start_timer, stop_timer, barrier=True))
+    # 3. Expand sampled rows
+    start_time(start_timer)
+    torch.cuda.nvtx.range_push("nvtx-row-select-expand")
+    row_shift = torch.cuda.LongTensor(sampled_values.size(0)).fill_(0)
+    if name == "ladies":
+        semibulk_size = mb_count // (16 * replication) # number of batches to column extract from in bulk
+        shift_rowselect_gpu(row_shift, sampled_indices[0,:], sampled_values.size(0), 
+                                rank, size, replication, batch_size, node_count_total, mb_count_total, 
+                                batch_size, semibulk_size)
+    elif name == "sage":
+        semibulk_size = mb_count * nnz # vtxs to column extract from in bulk
+        print(f"nnz: {nnz} semibulk_size: {semibulk_size}", flush=True)
+        shift_rowselect_gpu(row_shift, sampled_indices[0,:], sampled_values.size(0), 
+                                rank, size, replication, batch_size, node_count_total, mb_count_total, 1,
+                                semibulk_size)
+    sampled_indices[1,:] += row_shift
+    torch.cuda.nvtx.range_pop()
+    timing_dict["row-select-expand"].append(stop_time(start_timer, stop_timer, barrier=True))
 
     # 4. Multiply sampled rows with col_select matrix
     start_time(start_timer)
@@ -1272,17 +1375,17 @@ def select(next_frontier, adj_matrix, batches, sa_masks, sa_recv_buff, nnz, \
     if name == "ladies":
         # sample_mtx = torch.sparse_coo_tensor(sampled_indices, sampled_values, 
         #                                         size=(nnz * mb_count, node_count_total * mb_count_total))
-        # sample_mtx = sparse_coo_tensor_gpu(sampled_indices, sampled_values, 
-        #                                     torch.Size([nnz * mb_count, node_count_total * mb_count_total]))
         sample_mtx = sparse_coo_tensor_gpu(sampled_indices, sampled_values, 
-                                            torch.Size([nnz * mb_count, node_count_total]))
+                            torch.Size([nnz * mb_count, node_count_total * semibulk_size]))
+        # sample_mtx = sparse_coo_tensor_gpu(sampled_indices, sampled_values, 
+        #                                     torch.Size([nnz * mb_count, node_count_total]))
     elif name == "sage":
-        # sample_mtx = torch.sparse_coo_tensor(sampled_indices, sampled_values, 
-        #                                         size=(nnz * mb_count, node_count_total * mb_count_total * nnz))
+        sample_mtx = torch.sparse_coo_tensor(sampled_indices, sampled_values, 
+                                                size=(nnz * mb_count, node_count_total * mb_count_total * nnz))
         # sample_mtx = sparse_coo_tensor_gpu(sampled_indices, sampled_values, 
-        #                                 torch.Size([nnz * mb_count, node_count_total * mb_count_total * nnz]))
-        sample_mtx = sparse_coo_tensor_gpu(sampled_indices, sampled_values, 
-                                        torch.Size([nnz * mb_count, node_count_total]))
+        #                                 torch.Size([nnz * mb_count, node_count_total * semibulk_size]))
+        # sample_mtx = sparse_coo_tensor_gpu(sampled_indices, sampled_values, 
+        #                                 torch.Size([nnz * mb_count, node_count_total]))
     if name == "ladies":
         # col_select_mtx = torch.sparse_coo_tensor(col_select_mtx_indices, col_select_mtx_values,
         #                                         size=(node_count_total * mb_count, next_frontier.size(1)))
@@ -1296,13 +1399,22 @@ def select(next_frontier, adj_matrix, batches, sa_masks, sa_recv_buff, nnz, \
         col_select_mtx = torch.sparse_coo_tensor(col_select_mtx_indices, col_select_mtx_values,
                 torch.Size([node_count_total * mb_count * batch_size, next_frontier_select.size(1) * batch_size]))
 
-    # sampled_indices, sampled_values = dist_spgemm15D(sample_mtx, col_select_mtx, replication, rank, size, \
-    #                                                     row_groups, col_groups, "colsel", timing_dict)
+    sampled_indices, sampled_values = dist_spgemm15D(sample_mtx, col_select_mtx, replication, rank, size, \
+                                                        row_groups, col_groups, "colsel", timing_dict)
 
-    sample_mtx = sample_mtx.to_sparse_csr()
-    sampled_indices, sampled_values = col_select15D(sample_mtx, next_frontier_select, mb_count, batch_size,
-                                                replication, rank, size, row_groups, col_groups, "colsel", 
-                                                timing_dict)
+    # sample_mtx = sample_mtx.to_sparse_csr()
+    # sampled_indices, sampled_values = col_select15D(sample_mtx, next_frontier_select, mb_count, batch_size,
+    #                                             replication, rank, size, row_groups, col_groups, "colsel", 
+    #                                             timing_dict)
+    # if name == "ladies":
+    #     bulk_items = mb_count
+    #     bulk_size = batch_size
+    # elif name == "sage":
+    #     bulk_items = mb_count * nnz
+    #     bulk_size = 1
+    # sampled_indices, sampled_values = col_select15D(sample_mtx, col_select_mtx, bulk_items, node_count_total, 
+    #                                             bulk_size, semibulk_size, replication, rank, size, row_groups,
+    #                                             col_groups, "colsel", name, timing_dict)
 
     torch.cuda.nvtx.range_pop()
     timing_dict["col-select-spgemm"].append(stop_time(start_timer, stop_timer, barrier=True))
