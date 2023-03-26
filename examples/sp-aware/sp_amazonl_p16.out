@@ -1,0 +1,109 @@
+srun: Warning: can't honor --ntasks-per-node set to 4 which doesn't match the requested tasks 16 with the number of requested nodes 16. Ignoring --ntasks-per-node.
+ 1: Traceback (most recent call last):
+ 1:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 20, in <module>
+ 1:     from cagnet.nn.conv import GCNConv
+ 1:   File "/global/homes/j/jinimukh/CAGNET/cagnet/nn/conv/__init__.py", line 1, in <module>
+ 1:     from .gcn_conv import GCNConv
+ 1:   File "/global/homes/j/jinimukh/CAGNET/cagnet/nn/conv/gcn_conv.py", line 118
+ 1:     """commenting out spmm call
+ 1:        ^
+ 1: SyntaxError: invalid syntax
+ 0: Traceback (most recent call last):
+ 0:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 20, in <module>
+ 0:     from cagnet.nn.conv import GCNConv
+ 0:   File "/global/homes/j/jinimukh/CAGNET/cagnet/nn/conv/__init__.py", line 1, in <module>
+ 0:     from .gcn_conv import GCNConv
+ 0:   File "/global/homes/j/jinimukh/CAGNET/cagnet/nn/conv/gcn_conv.py", line 118
+ 0:     """commenting out spmm call
+ 0:        ^
+ 0: SyntaxError: invalid syntax
+ 3: Traceback (most recent call last):
+ 3:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 20, in <module>
+ 3:     from cagnet.nn.conv import GCNConv
+ 3:   File "/global/homes/j/jinimukh/CAGNET/cagnet/nn/conv/__init__.py", line 1, in <module>
+ 3:     from .gcn_conv import GCNConv
+ 3:   File "/global/homes/j/jinimukh/CAGNET/cagnet/nn/conv/gcn_conv.py", line 118
+ 3:     """commenting out spmm call
+ 3:        ^
+ 3: SyntaxError: invalid syntax
+ 2: Traceback (most recent call last):
+ 2:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 20, in <module>
+ 2:     from cagnet.nn.conv import GCNConv
+ 2:   File "/global/homes/j/jinimukh/CAGNET/cagnet/nn/conv/__init__.py", line 1, in <module>
+ 2:     from .gcn_conv import GCNConv
+ 2:   File "/global/homes/j/jinimukh/CAGNET/cagnet/nn/conv/gcn_conv.py", line 118
+ 2:     """commenting out spmm call
+ 2:        ^
+ 2: SyntaxError: invalid syntax
+ 7: Traceback (most recent call last):
+ 7:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 20, in <module>
+ 7:     from cagnet.nn.conv import GCNConv
+ 7:   File "/global/homes/j/jinimukh/CAGNET/cagnet/nn/conv/__init__.py", line 1, in <module>
+ 7:     from .gcn_conv import GCNConv
+ 7:   File "/global/homes/j/jinimukh/CAGNET/cagnet/nn/conv/gcn_conv.py", line 118
+ 7:     """commenting out spmm call
+ 7:        ^
+ 7: SyntaxError: invalid syntax
+ 9: Traceback (most recent call last):
+ 9:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 20, in <module>
+ 9:     from cagnet.nn.conv import GCNConv
+ 9:   File "/global/homes/j/jinimukh/CAGNET/cagnet/nn/conv/__init__.py", line 1, in <module>
+ 9:     from .gcn_conv import GCNConv
+ 9:   File "/global/homes/j/jinimukh/CAGNET/cagnet/nn/conv/gcn_conv.py", line 118
+ 9:     """commenting out spmm call
+ 9:        ^
+ 9: SyntaxError: invalid syntax
+ 5: Traceback (most recent call last):
+ 5:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 20, in <module>
+ 5:     from cagnet.nn.conv import GCNConv
+ 5:   File "/global/homes/j/jinimukh/CAGNET/cagnet/nn/conv/__init__.py", line 1, in <module>
+ 5:     from .gcn_conv import GCNConv
+ 5:   File "/global/homes/j/jinimukh/CAGNET/cagnet/nn/conv/gcn_conv.py", line 118
+ 5:     """commenting out spmm call
+ 5:        ^
+ 5: SyntaxError: invalid syntax
+ 4: Traceback (most recent call last):
+ 4:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 20, in <module>
+ 4:     from cagnet.nn.conv import GCNConv
+ 4:   File "/global/homes/j/jinimukh/CAGNET/cagnet/nn/conv/__init__.py", line 1, in <module>
+ 4:     from .gcn_conv import GCNConv
+ 4:   File "/global/homes/j/jinimukh/CAGNET/cagnet/nn/conv/gcn_conv.py", line 118
+ 4:     """commenting out spmm call
+ 4:        ^
+ 4: SyntaxError: invalid syntax
+ 8: Traceback (most recent call last):
+ 8:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 20, in <module>
+ 8:     from cagnet.nn.conv import GCNConv
+ 8:   File "/global/homes/j/jinimukh/CAGNET/cagnet/nn/conv/__init__.py", line 1, in <module>
+ 8:     from .gcn_conv import GCNConv
+ 8:   File "/global/homes/j/jinimukh/CAGNET/cagnet/nn/conv/gcn_conv.py", line 118
+ 8:     """commenting out spmm call
+ 8:        ^
+ 8: SyntaxError: invalid syntax
+ 6: Traceback (most recent call last):
+ 6:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 20, in <module>
+ 6:     from cagnet.nn.conv import GCNConv
+ 6:   File "/global/homes/j/jinimukh/CAGNET/cagnet/nn/conv/__init__.py", line 1, in <module>
+ 6:     from .gcn_conv import GCNConv
+ 6:   File "/global/homes/j/jinimukh/CAGNET/cagnet/nn/conv/gcn_conv.py", line 118
+ 6:     """commenting out spmm call
+ 6:        ^
+ 6: SyntaxError: invalid syntax
+srun: error: nid008473: task 1: Exited with exit code 1
+srun: launch/slurm: _step_signal: Terminating StepId=6053236.1
+srun: error: nid008472: task 0: Exited with exit code 1
+srun: error: nid008501: task 15: Terminated
+srun: error: nid008496: task 12: Terminated
+srun: error: nid008492: task 10: Terminated
+srun: error: nid008497: task 13: Terminated
+srun: error: nid008500: task 14: Terminated
+srun: error: nid008493: task 11: Terminated
+srun: error: nid008477: task 3: Exited with exit code 1
+srun: error: nid008476: task 2: Exited with exit code 1
+srun: error: nid008485: task 7: Exited with exit code 1
+srun: error: nid008489: task 9: Exited with exit code 1
+srun: error: nid008488: task 8: Exited with exit code 1
+srun: error: nid008481: task 5: Exited with exit code 1
+srun: error: nid008480: task 4: Exited with exit code 1
+srun: error: nid008484: task 6: Exited with exit code 1
+srun: Force Terminated StepId=6053236.1

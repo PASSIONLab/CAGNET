@@ -1,0 +1,7872 @@
+ 0: Namespace(dataset='Amazon_Large_16', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001109', normalize=False, partitioning='ONE5D', replication=2, timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_16/processed/partitions.txt')
+ 0: hostname: nid001109 rank: 0 size: 32
+ 6: Namespace(dataset='Amazon_Large_16', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001109', normalize=False, partitioning='ONE5D', replication=2, timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_16/processed/partitions.txt')
+ 6: hostname: nid001932 rank: 6 size: 32
+ 5: Namespace(dataset='Amazon_Large_16', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001109', normalize=False, partitioning='ONE5D', replication=2, timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_16/processed/partitions.txt')
+ 5: hostname: nid001932 rank: 5 size: 32
+29: Namespace(dataset='Amazon_Large_16', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001109', normalize=False, partitioning='ONE5D', replication=2, timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_16/processed/partitions.txt')
+29: hostname: nid003853 rank: 29 size: 32
+ 7: Namespace(dataset='Amazon_Large_16', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001109', normalize=False, partitioning='ONE5D', replication=2, timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_16/processed/partitions.txt')
+ 7: hostname: nid001932 rank: 7 size: 32
+ 8: Namespace(dataset='Amazon_Large_16', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001109', normalize=False, partitioning='ONE5D', replication=2, timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_16/processed/partitions.txt')
+ 8: hostname: nid001960 rank: 8 size: 32
+ 0: Loading coo...
+28: Namespace(dataset='Amazon_Large_16', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001109', normalize=False, partitioning='ONE5D', replication=2, timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_16/processed/partitions.txt')
+28: hostname: nid003853 rank: 28 size: 32
+ 6: Loading coo...
+ 9: Namespace(dataset='Amazon_Large_16', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001109', normalize=False, partitioning='ONE5D', replication=2, timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_16/processed/partitions.txt')
+ 9: hostname: nid001960 rank: 9 size: 32
+31: Namespace(dataset='Amazon_Large_16', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001109', normalize=False, partitioning='ONE5D', replication=2, timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_16/processed/partitions.txt')
+31: hostname: nid003853 rank: 31 size: 32
+11: Namespace(dataset='Amazon_Large_16', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001109', normalize=False, partitioning='ONE5D', replication=2, timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_16/processed/partitions.txt')
+11: hostname: nid001960 rank: 11 size: 32
+17: Namespace(dataset='Amazon_Large_16', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001109', normalize=False, partitioning='ONE5D', replication=2, timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_16/processed/partitions.txt')
+17: hostname: nid002757 rank: 17 size: 32
+10: Namespace(dataset='Amazon_Large_16', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001109', normalize=False, partitioning='ONE5D', replication=2, timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_16/processed/partitions.txt')
+10: hostname: nid001960 rank: 10 size: 32
+19: Namespace(dataset='Amazon_Large_16', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001109', normalize=False, partitioning='ONE5D', replication=2, timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_16/processed/partitions.txt')
+19: hostname: nid002757 rank: 19 size: 32
+16: Namespace(dataset='Amazon_Large_16', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001109', normalize=False, partitioning='ONE5D', replication=2, timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_16/processed/partitions.txt')
+16: hostname: nid002757 rank: 16 size: 32
+12: Namespace(dataset='Amazon_Large_16', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001109', normalize=False, partitioning='ONE5D', replication=2, timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_16/processed/partitions.txt')
+12: hostname: nid001965 rank: 12 size: 32
+13: Namespace(dataset='Amazon_Large_16', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001109', normalize=False, partitioning='ONE5D', replication=2, timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_16/processed/partitions.txt')
+13: hostname: nid001965 rank: 13 size: 32
+ 2: Namespace(dataset='Amazon_Large_16', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001109', normalize=False, partitioning='ONE5D', replication=2, timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_16/processed/partitions.txt')
+ 2: hostname: nid001109 rank: 2 size: 32
+15: Namespace(dataset='Amazon_Large_16', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001109', normalize=False, partitioning='ONE5D', replication=2, timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_16/processed/partitions.txt')
+15: hostname: nid001965 rank: 15 size: 32
+ 3: Namespace(dataset='Amazon_Large_16', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001109', normalize=False, partitioning='ONE5D', replication=2, timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_16/processed/partitions.txt')
+ 3: hostname: nid001109 rank: 3 size: 32
+ 1: Namespace(dataset='Amazon_Large_16', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001109', normalize=False, partitioning='ONE5D', replication=2, timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_16/processed/partitions.txt')
+ 1: hostname: nid001109 rank: 1 size: 32
+30: Namespace(dataset='Amazon_Large_16', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001109', normalize=False, partitioning='ONE5D', replication=2, timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_16/processed/partitions.txt')
+30: hostname: nid003853 rank: 30 size: 32
+22: Namespace(dataset='Amazon_Large_16', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001109', normalize=False, partitioning='ONE5D', replication=2, timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_16/processed/partitions.txt')
+22: hostname: nid003589 rank: 22 size: 32
+14: Namespace(dataset='Amazon_Large_16', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001109', normalize=False, partitioning='ONE5D', replication=2, timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_16/processed/partitions.txt')
+14: hostname: nid001965 rank: 14 size: 32
+24: Namespace(dataset='Amazon_Large_16', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001109', normalize=False, partitioning='ONE5D', replication=2, timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_16/processed/partitions.txt')
+24: hostname: nid003628 rank: 24 size: 32
+25: Namespace(dataset='Amazon_Large_16', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001109', normalize=False, partitioning='ONE5D', replication=2, timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_16/processed/partitions.txt')
+25: hostname: nid003628 rank: 25 size: 32
+26: Namespace(dataset='Amazon_Large_16', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001109', normalize=False, partitioning='ONE5D', replication=2, timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_16/processed/partitions.txt')
+26: hostname: nid003628 rank: 26 size: 32
+27: Namespace(dataset='Amazon_Large_16', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001109', normalize=False, partitioning='ONE5D', replication=2, timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_16/processed/partitions.txt')
+27: hostname: nid003628 rank: 27 size: 32
+ 4: Namespace(dataset='Amazon_Large_16', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001109', normalize=False, partitioning='ONE5D', replication=2, timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_16/processed/partitions.txt')
+ 4: hostname: nid001932 rank: 4 size: 32
+20: Namespace(dataset='Amazon_Large_16', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001109', normalize=False, partitioning='ONE5D', replication=2, timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_16/processed/partitions.txt')
+20: hostname: nid003589 rank: 20 size: 32
+21: Namespace(dataset='Amazon_Large_16', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001109', normalize=False, partitioning='ONE5D', replication=2, timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_16/processed/partitions.txt')
+21: hostname: nid003589 rank: 21 size: 32
+23: Namespace(dataset='Amazon_Large_16', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001109', normalize=False, partitioning='ONE5D', replication=2, timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_16/processed/partitions.txt')
+23: hostname: nid003589 rank: 23 size: 32
+18: Namespace(dataset='Amazon_Large_16', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001109', normalize=False, partitioning='ONE5D', replication=2, timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_16/processed/partitions.txt')
+18: hostname: nid002757 rank: 18 size: 32
+29: Loading coo...
+ 5: Loading coo...
+ 7: Loading coo...
+ 8: Loading coo...
+28: Loading coo...
+ 4: Loading coo...
+31: Loading coo...
+30: Loading coo...
+11: Loading coo...
+17: Loading coo...
+ 3: Loading coo...
+ 9: Loading coo...
+10: Loading coo...
+19: Loading coo...
+ 1: Loading coo...
+ 2: Loading coo...
+16: Loading coo...
+18: Loading coo...
+12: Loading coo...
+24: Loading coo...
+13: Loading coo...
+26: Loading coo...
+15: Loading coo...
+22: Loading coo...
+25: Loading coo...
+14: Loading coo...
+27: Loading coo...
+20: Loading coo...
+21: Loading coo...
+23: Loading coo...
+ 0: Done loading coo
+ 1: Done loading coo
+ 2: Done loading coo
+ 3: Done loading coo
+ 8: Done loading coo
+ 9: Done loading coo
+10: Done loading coo
+11: Done loading coo
+28: Done loading coo
+29: Done loading coo
+30: Done loading coo
+31: Done loading coo
+ 4: Done loading coo
+ 5: Done loading coo
+ 6: Done loading coo
+ 7: Done loading coo
+20: Done loading coo
+22: Done loading coo
+23: Done loading coo
+21: Done loading coo
+16: Done loading coo
+18: Done loading coo
+19: Done loading coo
+17: Done loading coo
+25: Done loading coo
+26: Done loading coo
+27: Done loading coo
+24: Done loading coo
+12: Done loading coo
+14: Done loading coo
+15: Done loading coo
+13: Done loading coo
+10: 210007
+10: 211514
+10: 213688
+10: 214096
+10: 212232
+10: 219044
+10: 219171
+10: 226163
+10: 212382
+10: 219209
+10: 219238
+10: 226364
+10: 221495
+10: 226236
+10: 223541
+10: 230839
+10: 225829
+10: 232859
+10: 222117
+10: 229071
+10: 223827
+10: 226363
+10: 216285
+10: 223345
+10: 227073
+10: 221551
+10: 228552
+10: 232971
+10: 231188
+10: 223927
+10: 223687
+10: 230955
+10: 207162
+10: 212424
+10: 213122
+10: 220076
+10: 211831
+10: 218619
+10: 218665
+10: 225691
+10: 216229
+10: 223286
+10: 219801
+10: 226654
+10: 217280
+10: 224338
+10: 227656
+10: 228345
+10: 233193
+10: 226572
+10: 232342
+10: 231679
+10: 222051
+10: 229208
+10: 222214
+10: 228794
+10: 215558
+10: 222535
+10: 226868
+10: 225118
+10: 222888
+10: 224078
+10: 221690
+10: 228853
+10: [0, 210007, 421521, 635209, 849305, 1061537, 1280581, 1499752, 1725915, 1938297, 2157506, 2376744, 2603108, 2824603, 3050839, 3274380, 3505219, 3731048, 3963907, 4186024, 4415095, 4638922, 4865285, 5081570, 5304915, 5531988, 5753539, 5982091, 6215062, 6446250, 6670177, 6893864, 7124819, 7331981, 7544405, 7757527, 7977603, 8189434, 8408053, 8626718, 8852409, 9068638, 9291924, 9511725, 9738379, 9955659, 10179997, 10407653, 10635998, 10869191, 11095763, 11328105, 11559784, 11781835, 12011043, 12233257, 12462051, 12677609, 12900144, 13127012, 13352130, 13575018, 13799096, 14020786, 14249639]
+10: 5
+10: rank: 10 adj_matrix_loc.size: torch.Size([14249639, 219044])
+10: rank: 10 inputs_loc.size: torch.Size([219044, 300])
+ 3: 210007
+ 3: 211514
+ 3: 213688
+ 3: 214096
+ 3: 212232
+ 3: 219044
+ 3: 219171
+ 3: 226163
+ 3: 212382
+ 3: 219209
+ 3: 219238
+ 3: 226364
+ 3: 221495
+ 3: 226236
+ 3: 223541
+ 3: 230839
+ 3: 225829
+ 3: 232859
+ 3: 222117
+ 3: 229071
+ 3: 223827
+ 3: 226363
+ 3: 216285
+ 3: 223345
+ 3: 227073
+ 3: 221551
+ 3: 228552
+ 3: 232971
+ 3: 231188
+ 3: 223927
+ 3: 223687
+ 3: 230955
+ 3: 207162
+ 3: 212424
+ 3: 213122
+ 3: 220076
+ 3: 211831
+ 3: 218619
+ 3: 218665
+ 3: 225691
+ 3: 216229
+ 3: 223286
+ 3: 219801
+ 3: 226654
+ 3: 217280
+ 3: 224338
+ 3: 227656
+ 3: 228345
+ 3: 233193
+ 3: 226572
+ 3: 232342
+ 3: 231679
+ 3: 222051
+ 3: 229208
+ 3: 222214
+ 3: 228794
+ 3: 215558
+ 3: 222535
+ 3: 226868
+ 3: 225118
+ 3: 222888
+ 3: 224078
+ 3: 221690
+ 3: 228853
+ 3: [0, 210007, 421521, 635209, 849305, 1061537, 1280581, 1499752, 1725915, 1938297, 2157506, 2376744, 2603108, 2824603, 3050839, 3274380, 3505219, 3731048, 3963907, 4186024, 4415095, 4638922, 4865285, 5081570, 5304915, 5531988, 5753539, 5982091, 6215062, 6446250, 6670177, 6893864, 7124819, 7331981, 7544405, 7757527, 7977603, 8189434, 8408053, 8626718, 8852409, 9068638, 9291924, 9511725, 9738379, 9955659, 10179997, 10407653, 10635998, 10869191, 11095763, 11328105, 11559784, 11781835, 12011043, 12233257, 12462051, 12677609, 12900144, 13127012, 13352130, 13575018, 13799096, 14020786, 14249639]
+ 3: 1
+ 3: rank: 3 adj_matrix_loc.size: torch.Size([14249639, 211514])
+ 3: rank: 3 inputs_loc.size: torch.Size([211514, 300])
+10: why segfault?
+ 3: why segfault?
+ 3: reached here
+ 6: 210007
+ 6: 211514
+ 6: 213688
+ 6: 214096
+ 6: 212232
+ 6: 219044
+ 6: 219171
+ 6: 226163
+ 6: 212382
+ 6: 219209
+ 6: 219238
+ 6: 226364
+ 6: 221495
+ 6: 226236
+ 6: 223541
+ 6: 230839
+ 6: 225829
+ 6: 232859
+ 6: 222117
+ 6: 229071
+ 6: 223827
+ 6: 226363
+ 6: 216285
+ 6: 223345
+ 6: 227073
+ 6: 221551
+ 6: 228552
+ 6: 232971
+ 6: 231188
+ 6: 223927
+ 6: 223687
+ 6: 230955
+ 6: 207162
+ 6: 212424
+ 6: 213122
+ 6: 220076
+ 6: 211831
+ 6: 218619
+ 6: 218665
+ 6: 225691
+ 6: 216229
+ 6: 223286
+ 6: 219801
+ 6: 226654
+ 6: 217280
+ 6: 224338
+ 6: 227656
+ 6: 228345
+ 6: 233193
+ 6: 226572
+ 6: 232342
+ 6: 231679
+ 6: 222051
+ 6: 229208
+ 6: 222214
+ 6: 228794
+ 6: 215558
+ 6: 222535
+ 6: 226868
+ 6: 225118
+ 6: 222888
+ 6: 224078
+ 6: 221690
+ 6: 228853
+ 6: [0, 210007, 421521, 635209, 849305, 1061537, 1280581, 1499752, 1725915, 1938297, 2157506, 2376744, 2603108, 2824603, 3050839, 3274380, 3505219, 3731048, 3963907, 4186024, 4415095, 4638922, 4865285, 5081570, 5304915, 5531988, 5753539, 5982091, 6215062, 6446250, 6670177, 6893864, 7124819, 7331981, 7544405, 7757527, 7977603, 8189434, 8408053, 8626718, 8852409, 9068638, 9291924, 9511725, 9738379, 9955659, 10179997, 10407653, 10635998, 10869191, 11095763, 11328105, 11559784, 11781835, 12011043, 12233257, 12462051, 12677609, 12900144, 13127012, 13352130, 13575018, 13799096, 14020786, 14249639]
+ 6: 3
+ 6: rank: 6 adj_matrix_loc.size: torch.Size([14249639, 214096])
+ 6: rank: 6 inputs_loc.size: torch.Size([214096, 300])
+10: reached here
+ 9: 210007
+ 9: 211514
+ 9: 213688
+ 9: 214096
+ 9: 212232
+ 9: 219044
+ 9: 219171
+ 9: 226163
+ 9: 212382
+ 9: 219209
+ 9: 219238
+ 9: 226364
+ 9: 221495
+ 9: 226236
+ 9: 223541
+ 9: 230839
+ 9: 225829
+ 9: 232859
+ 9: 222117
+ 9: 229071
+ 9: 223827
+ 9: 226363
+ 9: 216285
+ 9: 223345
+ 9: 227073
+ 9: 221551
+ 9: 228552
+ 9: 232971
+ 9: 231188
+ 9: 223927
+ 9: 223687
+ 9: 230955
+ 9: 207162
+ 9: 212424
+ 9: 213122
+ 9: 220076
+ 9: 211831
+ 9: 218619
+ 9: 218665
+ 9: 225691
+ 9: 216229
+ 9: 223286
+ 9: 219801
+ 9: 226654
+ 9: 217280
+ 9: 224338
+ 9: 227656
+ 9: 228345
+ 9: 233193
+ 9: 226572
+ 9: 232342
+ 9: 231679
+ 9: 222051
+ 9: 229208
+ 9: 222214
+ 9: 228794
+ 9: 215558
+ 9: 222535
+ 9: 226868
+ 9: 225118
+ 9: 222888
+ 9: 224078
+ 9: 221690
+ 9: 228853
+ 9: [0, 210007, 421521, 635209, 849305, 1061537, 1280581, 1499752, 1725915, 1938297, 2157506, 2376744, 2603108, 2824603, 3050839, 3274380, 3505219, 3731048, 3963907, 4186024, 4415095, 4638922, 4865285, 5081570, 5304915, 5531988, 5753539, 5982091, 6215062, 6446250, 6670177, 6893864, 7124819, 7331981, 7544405, 7757527, 7977603, 8189434, 8408053, 8626718, 8852409, 9068638, 9291924, 9511725, 9738379, 9955659, 10179997, 10407653, 10635998, 10869191, 11095763, 11328105, 11559784, 11781835, 12011043, 12233257, 12462051, 12677609, 12900144, 13127012, 13352130, 13575018, 13799096, 14020786, 14249639]
+ 9: 4
+ 9: rank: 9 adj_matrix_loc.size: torch.Size([14249639, 212232])
+ 9: rank: 9 inputs_loc.size: torch.Size([212232, 300])
+ 6: why segfault?
+ 9: why segfault?
+ 6: reached here
+ 9: reached here
+26: 210007
+26: 211514
+26: 213688
+26: 214096
+26: 212232
+26: 219044
+26: 219171
+26: 226163
+26: 212382
+26: 219209
+26: 219238
+26: 226364
+26: 221495
+26: 226236
+26: 223541
+26: 230839
+26: 225829
+26: 232859
+26: 222117
+26: 229071
+26: 223827
+26: 226363
+26: 216285
+26: 223345
+26: 227073
+26: 221551
+26: 228552
+26: 232971
+26: 231188
+26: 223927
+26: 223687
+26: 230955
+26: 207162
+26: 212424
+26: 213122
+26: 220076
+26: 211831
+26: 218619
+26: 218665
+26: 225691
+26: 216229
+26: 223286
+26: 219801
+26: 226654
+26: 217280
+26: 224338
+26: 227656
+26: 228345
+26: 233193
+26: 226572
+26: 232342
+26: 231679
+26: 222051
+26: 229208
+26: 222214
+26: 228794
+26: 215558
+26: 222535
+26: 226868
+26: 225118
+26: 222888
+26: 224078
+26: 221690
+26: 228853
+26: [0, 210007, 421521, 635209, 849305, 1061537, 1280581, 1499752, 1725915, 1938297, 2157506, 2376744, 2603108, 2824603, 3050839, 3274380, 3505219, 3731048, 3963907, 4186024, 4415095, 4638922, 4865285, 5081570, 5304915, 5531988, 5753539, 5982091, 6215062, 6446250, 6670177, 6893864, 7124819, 7331981, 7544405, 7757527, 7977603, 8189434, 8408053, 8626718, 8852409, 9068638, 9291924, 9511725, 9738379, 9955659, 10179997, 10407653, 10635998, 10869191, 11095763, 11328105, 11559784, 11781835, 12011043, 12233257, 12462051, 12677609, 12900144, 13127012, 13352130, 13575018, 13799096, 14020786, 14249639]
+26: 13
+26: rank: 26 adj_matrix_loc.size: torch.Size([14249639, 226236])
+26: rank: 26 inputs_loc.size: torch.Size([226236, 300])
+ 0: 210007
+ 0: 211514
+ 0: 213688
+ 0: 214096
+ 0: 212232
+ 0: 219044
+ 0: 219171
+ 0: 226163
+ 0: 212382
+ 0: 219209
+ 0: 219238
+ 0: 226364
+ 0: 221495
+ 0: 226236
+ 0: 223541
+ 0: 230839
+ 0: 225829
+ 0: 232859
+ 0: 222117
+ 0: 229071
+ 0: 223827
+ 0: 226363
+ 0: 216285
+ 0: 223345
+ 0: 227073
+ 0: 221551
+ 0: 228552
+ 0: 232971
+ 0: 231188
+ 0: 223927
+ 0: 223687
+ 0: 230955
+ 0: 207162
+ 0: 212424
+ 0: 213122
+ 0: 220076
+ 0: 211831
+ 0: 218619
+ 0: 218665
+ 0: 225691
+ 0: 216229
+ 0: 223286
+ 0: 219801
+ 0: 226654
+ 0: 217280
+ 0: 224338
+ 0: 227656
+ 0: 228345
+ 0: 233193
+ 0: 226572
+ 0: 232342
+ 0: 231679
+ 0: 222051
+ 0: 229208
+ 0: 222214
+ 0: 228794
+ 0: 215558
+ 0: 222535
+ 0: 226868
+ 0: 225118
+ 0: 222888
+ 0: 224078
+ 0: 221690
+ 0: 228853
+ 0: [0, 210007, 421521, 635209, 849305, 1061537, 1280581, 1499752, 1725915, 1938297, 2157506, 2376744, 2603108, 2824603, 3050839, 3274380, 3505219, 3731048, 3963907, 4186024, 4415095, 4638922, 4865285, 5081570, 5304915, 5531988, 5753539, 5982091, 6215062, 6446250, 6670177, 6893864, 7124819, 7331981, 7544405, 7757527, 7977603, 8189434, 8408053, 8626718, 8852409, 9068638, 9291924, 9511725, 9738379, 9955659, 10179997, 10407653, 10635998, 10869191, 11095763, 11328105, 11559784, 11781835, 12011043, 12233257, 12462051, 12677609, 12900144, 13127012, 13352130, 13575018, 13799096, 14020786, 14249639]
+ 0: 0
+ 0: rank: 0 adj_matrix_loc.size: torch.Size([14249639, 210007])
+26: why segfault?
+ 0: rank: 0 inputs_loc.size: torch.Size([210007, 300])
+ 0: why segfault?
+ 4: 210007
+ 4: 211514
+ 4: 213688
+ 4: 214096
+ 4: 212232
+ 4: 219044
+ 4: 219171
+ 4: 226163
+ 4: 212382
+ 4: 219209
+ 4: 219238
+ 4: 226364
+ 4: 221495
+ 4: 226236
+ 4: 223541
+ 4: 230839
+ 4: 225829
+ 4: 232859
+ 4: 222117
+ 4: 229071
+ 4: 223827
+ 4: 226363
+ 4: 216285
+ 4: 223345
+ 4: 227073
+ 4: 221551
+ 4: 228552
+ 4: 232971
+ 4: 231188
+ 4: 223927
+ 4: 223687
+ 4: 230955
+ 4: 207162
+ 4: 212424
+ 4: 213122
+ 4: 220076
+ 4: 211831
+ 4: 218619
+ 4: 218665
+ 4: 225691
+ 4: 216229
+ 4: 223286
+ 4: 219801
+ 4: 226654
+ 4: 217280
+ 4: 224338
+ 4: 227656
+ 4: 228345
+ 4: 233193
+ 4: 226572
+ 4: 232342
+ 4: 231679
+ 4: 222051
+ 4: 229208
+ 4: 222214
+ 4: 228794
+ 4: 215558
+ 4: 222535
+ 4: 226868
+ 4: 225118
+ 4: 222888
+ 4: 224078
+ 4: 221690
+ 4: 228853
+ 4: [0, 210007, 421521, 635209, 849305, 1061537, 1280581, 1499752, 1725915, 1938297, 2157506, 2376744, 2603108, 2824603, 3050839, 3274380, 3505219, 3731048, 3963907, 4186024, 4415095, 4638922, 4865285, 5081570, 5304915, 5531988, 5753539, 5982091, 6215062, 6446250, 6670177, 6893864, 7124819, 7331981, 7544405, 7757527, 7977603, 8189434, 8408053, 8626718, 8852409, 9068638, 9291924, 9511725, 9738379, 9955659, 10179997, 10407653, 10635998, 10869191, 11095763, 11328105, 11559784, 11781835, 12011043, 12233257, 12462051, 12677609, 12900144, 13127012, 13352130, 13575018, 13799096, 14020786, 14249639]
+ 4: 2
+ 4: rank: 4 adj_matrix_loc.size: torch.Size([14249639, 213688])
+ 4: rank: 4 inputs_loc.size: torch.Size([213688, 300])
+ 4: why segfault?
+26: reached here
+24: 210007
+24: 211514
+24: 213688
+24: 214096
+24: 212232
+24: 219044
+24: 219171
+24: 226163
+24: 212382
+24: 219209
+24: 219238
+24: 226364
+24: 221495
+24: 226236
+24: 223541
+24: 230839
+24: 225829
+24: 232859
+24: 222117
+24: 229071
+24: 223827
+24: 226363
+24: 216285
+24: 223345
+24: 227073
+24: 221551
+24: 228552
+24: 232971
+24: 231188
+24: 223927
+24: 223687
+24: 230955
+24: 207162
+24: 212424
+24: 213122
+24: 220076
+24: 211831
+24: 218619
+24: 218665
+24: 225691
+24: 216229
+24: 223286
+24: 219801
+24: 226654
+24: 217280
+24: 224338
+24: 227656
+24: 228345
+24: 233193
+24: 226572
+24: 232342
+24: 231679
+24: 222051
+24: 229208
+24: 222214
+24: 228794
+24: 215558
+24: 222535
+24: 226868
+24: 225118
+24: 222888
+24: 224078
+24: 221690
+24: 228853
+24: [0, 210007, 421521, 635209, 849305, 1061537, 1280581, 1499752, 1725915, 1938297, 2157506, 2376744, 2603108, 2824603, 3050839, 3274380, 3505219, 3731048, 3963907, 4186024, 4415095, 4638922, 4865285, 5081570, 5304915, 5531988, 5753539, 5982091, 6215062, 6446250, 6670177, 6893864, 7124819, 7331981, 7544405, 7757527, 7977603, 8189434, 8408053, 8626718, 8852409, 9068638, 9291924, 9511725, 9738379, 9955659, 10179997, 10407653, 10635998, 10869191, 11095763, 11328105, 11559784, 11781835, 12011043, 12233257, 12462051, 12677609, 12900144, 13127012, 13352130, 13575018, 13799096, 14020786, 14249639]
+24: 12
+24: rank: 24 adj_matrix_loc.size: torch.Size([14249639, 221495])
+24: rank: 24 inputs_loc.size: torch.Size([221495, 300])
+ 0: reached here
+ 5: 210007
+ 5: 211514
+ 5: 213688
+ 5: 214096
+ 5: 212232
+ 5: 219044
+ 5: 219171
+ 5: 226163
+ 5: 212382
+ 5: 219209
+ 5: 219238
+ 5: 226364
+ 5: 221495
+ 5: 226236
+ 5: 223541
+ 5: 230839
+ 5: 225829
+ 5: 232859
+ 5: 222117
+ 5: 229071
+ 5: 223827
+ 5: 226363
+ 5: 216285
+ 5: 223345
+ 5: 227073
+ 5: 221551
+ 5: 228552
+ 5: 232971
+ 5: 231188
+ 5: 223927
+ 5: 223687
+ 5: 230955
+ 5: 207162
+ 5: 212424
+ 5: 213122
+ 5: 220076
+ 5: 211831
+ 5: 218619
+ 5: 218665
+ 5: 225691
+ 5: 216229
+ 5: 223286
+ 5: 219801
+ 5: 226654
+ 5: 217280
+ 5: 224338
+ 5: 227656
+ 5: 228345
+ 5: 233193
+ 5: 226572
+ 5: 232342
+ 5: 231679
+ 5: 222051
+ 5: 229208
+ 5: 222214
+ 5: 228794
+ 5: 215558
+ 5: 222535
+ 5: 226868
+ 5: 225118
+ 5: 222888
+ 5: 224078
+ 5: 221690
+ 5: 228853
+ 5: [0, 210007, 421521, 635209, 849305, 1061537, 1280581, 1499752, 1725915, 1938297, 2157506, 2376744, 2603108, 2824603, 3050839, 3274380, 3505219, 3731048, 3963907, 4186024, 4415095, 4638922, 4865285, 5081570, 5304915, 5531988, 5753539, 5982091, 6215062, 6446250, 6670177, 6893864, 7124819, 7331981, 7544405, 7757527, 7977603, 8189434, 8408053, 8626718, 8852409, 9068638, 9291924, 9511725, 9738379, 9955659, 10179997, 10407653, 10635998, 10869191, 11095763, 11328105, 11559784, 11781835, 12011043, 12233257, 12462051, 12677609, 12900144, 13127012, 13352130, 13575018, 13799096, 14020786, 14249639]
+ 5: 2
+ 5: rank: 5 adj_matrix_loc.size: torch.Size([14249639, 213688])
+ 5: rank: 5 inputs_loc.size: torch.Size([213688, 300])
+24: why segfault?
+ 5: why segfault?
+ 4: reached here
+24: reached here
+27: 210007
+27: 211514
+27: 213688
+27: 214096
+27: 212232
+27: 219044
+27: 219171
+27: 226163
+27: 212382
+27: 219209
+27: 219238
+27: 226364
+27: 221495
+27: 226236
+27: 223541
+27: 230839
+27: 225829
+27: 232859
+27: 222117
+27: 229071
+27: 223827
+27: 226363
+27: 216285
+27: 223345
+27: 227073
+27: 221551
+27: 228552
+27: 232971
+27: 231188
+27: 223927
+27: 223687
+27: 230955
+27: 207162
+27: 212424
+27: 213122
+27: 220076
+27: 211831
+27: 218619
+27: 218665
+27: 225691
+27: 216229
+27: 223286
+27: 219801
+27: 226654
+27: 217280
+27: 224338
+27: 227656
+27: 228345
+27: 233193
+27: 226572
+27: 232342
+27: 231679
+27: 222051
+27: 229208
+27: 222214
+27: 228794
+27: 215558
+27: 222535
+27: 226868
+27: 225118
+27: 222888
+27: 224078
+27: 221690
+27: 228853
+27: [0, 210007, 421521, 635209, 849305, 1061537, 1280581, 1499752, 1725915, 1938297, 2157506, 2376744, 2603108, 2824603, 3050839, 3274380, 3505219, 3731048, 3963907, 4186024, 4415095, 4638922, 4865285, 5081570, 5304915, 5531988, 5753539, 5982091, 6215062, 6446250, 6670177, 6893864, 7124819, 7331981, 7544405, 7757527, 7977603, 8189434, 8408053, 8626718, 8852409, 9068638, 9291924, 9511725, 9738379, 9955659, 10179997, 10407653, 10635998, 10869191, 11095763, 11328105, 11559784, 11781835, 12011043, 12233257, 12462051, 12677609, 12900144, 13127012, 13352130, 13575018, 13799096, 14020786, 14249639]
+27: 13
+27: rank: 27 adj_matrix_loc.size: torch.Size([14249639, 226236])
+27: rank: 27 inputs_loc.size: torch.Size([226236, 300])
+ 5: reached here
+27: why segfault?
+ 8: 210007
+ 8: 211514
+ 8: 213688
+ 8: 214096
+ 8: 212232
+ 8: 219044
+ 8: 219171
+ 8: 226163
+ 8: 212382
+ 8: 219209
+ 8: 219238
+ 8: 226364
+ 8: 221495
+ 8: 226236
+ 8: 223541
+ 8: 230839
+ 8: 225829
+ 8: 232859
+ 8: 222117
+ 8: 229071
+ 8: 223827
+ 8: 226363
+ 8: 216285
+ 8: 223345
+ 8: 227073
+ 8: 221551
+ 8: 228552
+ 8: 232971
+ 8: 231188
+ 8: 223927
+ 8: 223687
+ 8: 230955
+ 8: 207162
+ 8: 212424
+ 8: 213122
+ 8: 220076
+ 8: 211831
+ 8: 218619
+ 8: 218665
+ 8: 225691
+ 8: 216229
+ 8: 223286
+ 8: 219801
+ 8: 226654
+ 8: 217280
+ 8: 224338
+ 8: 227656
+ 8: 228345
+ 8: 233193
+ 8: 226572
+ 8: 232342
+ 8: 231679
+ 8: 222051
+ 8: 229208
+ 8: 222214
+ 8: 228794
+ 8: 215558
+ 8: 222535
+ 8: 226868
+ 8: 225118
+ 8: 222888
+ 8: 224078
+ 8: 221690
+ 8: 228853
+ 8: [0, 210007, 421521, 635209, 849305, 1061537, 1280581, 1499752, 1725915, 1938297, 2157506, 2376744, 2603108, 2824603, 3050839, 3274380, 3505219, 3731048, 3963907, 4186024, 4415095, 4638922, 4865285, 5081570, 5304915, 5531988, 5753539, 5982091, 6215062, 6446250, 6670177, 6893864, 7124819, 7331981, 7544405, 7757527, 7977603, 8189434, 8408053, 8626718, 8852409, 9068638, 9291924, 9511725, 9738379, 9955659, 10179997, 10407653, 10635998, 10869191, 11095763, 11328105, 11559784, 11781835, 12011043, 12233257, 12462051, 12677609, 12900144, 13127012, 13352130, 13575018, 13799096, 14020786, 14249639]
+ 8: 4
+ 8: rank: 8 adj_matrix_loc.size: torch.Size([14249639, 212232])
+ 8: rank: 8 inputs_loc.size: torch.Size([212232, 300])
+ 8: why segfault?
+18: 210007
+18: 211514
+18: 213688
+18: 214096
+18: 212232
+18: 219044
+18: 219171
+18: 226163
+18: 212382
+18: 219209
+18: 219238
+18: 226364
+18: 221495
+18: 226236
+18: 223541
+18: 230839
+18: 225829
+18: 232859
+18: 222117
+18: 229071
+18: 223827
+18: 226363
+18: 216285
+18: 223345
+18: 227073
+18: 221551
+18: 228552
+18: 232971
+18: 231188
+18: 223927
+18: 223687
+18: 230955
+18: 207162
+18: 212424
+18: 213122
+18: 220076
+18: 211831
+18: 218619
+18: 218665
+18: 225691
+18: 216229
+18: 223286
+18: 219801
+18: 226654
+18: 217280
+18: 224338
+18: 227656
+18: 228345
+18: 233193
+18: 226572
+18: 232342
+18: 231679
+18: 222051
+18: 229208
+18: 222214
+18: 228794
+18: 215558
+18: 222535
+18: 226868
+18: 225118
+18: 222888
+18: 224078
+18: 221690
+18: 228853
+18: [0, 210007, 421521, 635209, 849305, 1061537, 1280581, 1499752, 1725915, 1938297, 2157506, 2376744, 2603108, 2824603, 3050839, 3274380, 3505219, 3731048, 3963907, 4186024, 4415095, 4638922, 4865285, 5081570, 5304915, 5531988, 5753539, 5982091, 6215062, 6446250, 6670177, 6893864, 7124819, 7331981, 7544405, 7757527, 7977603, 8189434, 8408053, 8626718, 8852409, 9068638, 9291924, 9511725, 9738379, 9955659, 10179997, 10407653, 10635998, 10869191, 11095763, 11328105, 11559784, 11781835, 12011043, 12233257, 12462051, 12677609, 12900144, 13127012, 13352130, 13575018, 13799096, 14020786, 14249639]
+18: 9
+18: rank: 18 adj_matrix_loc.size: torch.Size([14249639, 219209])
+18: rank: 18 inputs_loc.size: torch.Size([219209, 300])
+20: 210007
+20: 211514
+20: 213688
+20: 214096
+20: 212232
+20: 219044
+20: 219171
+20: 226163
+20: 212382
+20: 219209
+20: 219238
+20: 226364
+20: 221495
+20: 226236
+20: 223541
+20: 230839
+20: 225829
+20: 232859
+20: 222117
+20: 229071
+20: 223827
+20: 226363
+20: 216285
+20: 223345
+20: 227073
+20: 221551
+20: 228552
+20: 232971
+20: 231188
+20: 223927
+20: 223687
+20: 230955
+20: 207162
+20: 212424
+20: 213122
+20: 220076
+20: 211831
+20: 218619
+20: 218665
+20: 225691
+20: 216229
+20: 223286
+20: 219801
+20: 226654
+20: 217280
+20: 224338
+20: 227656
+20: 228345
+20: 233193
+20: 226572
+20: 232342
+20: 231679
+20: 222051
+20: 229208
+20: 222214
+20: 228794
+20: 215558
+20: 222535
+20: 226868
+20: 225118
+20: 222888
+20: 224078
+20: 221690
+20: 228853
+20: [0, 210007, 421521, 635209, 849305, 1061537, 1280581, 1499752, 1725915, 1938297, 2157506, 2376744, 2603108, 2824603, 3050839, 3274380, 3505219, 3731048, 3963907, 4186024, 4415095, 4638922, 4865285, 5081570, 5304915, 5531988, 5753539, 5982091, 6215062, 6446250, 6670177, 6893864, 7124819, 7331981, 7544405, 7757527, 7977603, 8189434, 8408053, 8626718, 8852409, 9068638, 9291924, 9511725, 9738379, 9955659, 10179997, 10407653, 10635998, 10869191, 11095763, 11328105, 11559784, 11781835, 12011043, 12233257, 12462051, 12677609, 12900144, 13127012, 13352130, 13575018, 13799096, 14020786, 14249639]
+20: 10
+20: rank: 20 adj_matrix_loc.size: torch.Size([14249639, 219238])
+20: rank: 20 inputs_loc.size: torch.Size([219238, 300])
+27: reached here
+18: why segfault?
+20: why segfault?
+19: 210007
+19: 211514
+19: 213688
+19: 214096
+19: 212232
+19: 219044
+19: 219171
+19: 226163
+19: 212382
+19: 219209
+19: 219238
+19: 226364
+19: 221495
+19: 226236
+19: 223541
+19: 230839
+19: 225829
+19: 232859
+19: 222117
+19: 229071
+19: 223827
+19: 226363
+19: 216285
+19: 223345
+19: 227073
+19: 221551
+19: 228552
+19: 232971
+19: 231188
+19: 223927
+19: 223687
+19: 230955
+19: 207162
+19: 212424
+19: 213122
+19: 220076
+19: 211831
+19: 218619
+19: 218665
+19: 225691
+19: 216229
+19: 223286
+19: 219801
+19: 226654
+19: 217280
+19: 224338
+19: 227656
+19: 228345
+19: 233193
+19: 226572
+19: 232342
+19: 231679
+19: 222051
+19: 229208
+19: 222214
+19: 228794
+19: 215558
+19: 222535
+19: 226868
+19: 225118
+19: 222888
+19: 224078
+19: 221690
+19: 228853
+19: [0, 210007, 421521, 635209, 849305, 1061537, 1280581, 1499752, 1725915, 1938297, 2157506, 2376744, 2603108, 2824603, 3050839, 3274380, 3505219, 3731048, 3963907, 4186024, 4415095, 4638922, 4865285, 5081570, 5304915, 5531988, 5753539, 5982091, 6215062, 6446250, 6670177, 6893864, 7124819, 7331981, 7544405, 7757527, 7977603, 8189434, 8408053, 8626718, 8852409, 9068638, 9291924, 9511725, 9738379, 9955659, 10179997, 10407653, 10635998, 10869191, 11095763, 11328105, 11559784, 11781835, 12011043, 12233257, 12462051, 12677609, 12900144, 13127012, 13352130, 13575018, 13799096, 14020786, 14249639]
+19: 9
+19: rank: 19 adj_matrix_loc.size: torch.Size([14249639, 219209])
+19: rank: 19 inputs_loc.size: torch.Size([219209, 300])
+ 8: reached here
+19: why segfault?
+20: reached here
+18: reached here
+ 2: 210007
+ 2: 211514
+ 2: 213688
+ 2: 214096
+ 2: 212232
+ 2: 219044
+ 2: 219171
+ 2: 226163
+ 2: 212382
+ 2: 219209
+ 2: 219238
+ 2: 226364
+ 2: 221495
+ 2: 226236
+ 2: 223541
+ 2: 230839
+ 2: 225829
+ 2: 232859
+ 2: 222117
+ 2: 229071
+ 2: 223827
+ 2: 226363
+ 2: 216285
+ 2: 223345
+ 2: 227073
+ 2: 221551
+ 2: 228552
+ 2: 232971
+ 2: 231188
+ 2: 223927
+ 2: 223687
+ 2: 230955
+ 2: 207162
+ 2: 212424
+ 2: 213122
+ 2: 220076
+ 2: 211831
+ 2: 218619
+ 2: 218665
+ 2: 225691
+ 2: 216229
+ 2: 223286
+ 2: 219801
+ 2: 226654
+ 2: 217280
+ 2: 224338
+ 2: 227656
+ 2: 228345
+ 2: 233193
+ 2: 226572
+ 2: 232342
+ 2: 231679
+ 2: 222051
+ 2: 229208
+ 2: 222214
+ 2: 228794
+ 2: 215558
+ 2: 222535
+ 2: 226868
+ 2: 225118
+ 2: 222888
+ 2: 224078
+ 2: 221690
+ 2: 228853
+ 2: [0, 210007, 421521, 635209, 849305, 1061537, 1280581, 1499752, 1725915, 1938297, 2157506, 2376744, 2603108, 2824603, 3050839, 3274380, 3505219, 3731048, 3963907, 4186024, 4415095, 4638922, 4865285, 5081570, 5304915, 5531988, 5753539, 5982091, 6215062, 6446250, 6670177, 6893864, 7124819, 7331981, 7544405, 7757527, 7977603, 8189434, 8408053, 8626718, 8852409, 9068638, 9291924, 9511725, 9738379, 9955659, 10179997, 10407653, 10635998, 10869191, 11095763, 11328105, 11559784, 11781835, 12011043, 12233257, 12462051, 12677609, 12900144, 13127012, 13352130, 13575018, 13799096, 14020786, 14249639]
+ 2: 1
+ 2: rank: 2 adj_matrix_loc.size: torch.Size([14249639, 211514])
+ 2: rank: 2 inputs_loc.size: torch.Size([211514, 300])
+12: 210007
+12: 211514
+12: 213688
+12: 214096
+12: 212232
+12: 219044
+12: 219171
+12: 226163
+12: 212382
+12: 219209
+12: 219238
+12: 226364
+12: 221495
+12: 226236
+12: 223541
+12: 230839
+12: 225829
+12: 232859
+12: 222117
+12: 229071
+12: 223827
+12: 226363
+12: 216285
+12: 223345
+12: 227073
+12: 221551
+12: 228552
+12: 232971
+12: 231188
+12: 223927
+12: 223687
+12: 230955
+12: 207162
+12: 212424
+12: 213122
+12: 220076
+12: 211831
+12: 218619
+12: 218665
+12: 225691
+12: 216229
+12: 223286
+12: 219801
+12: 226654
+12: 217280
+12: 224338
+12: 227656
+12: 228345
+12: 233193
+12: 226572
+12: 232342
+12: 231679
+12: 222051
+12: 229208
+12: 222214
+12: 228794
+12: 215558
+12: 222535
+12: 226868
+12: 225118
+12: 222888
+12: 224078
+12: 221690
+12: 228853
+12: [0, 210007, 421521, 635209, 849305, 1061537, 1280581, 1499752, 1725915, 1938297, 2157506, 2376744, 2603108, 2824603, 3050839, 3274380, 3505219, 3731048, 3963907, 4186024, 4415095, 4638922, 4865285, 5081570, 5304915, 5531988, 5753539, 5982091, 6215062, 6446250, 6670177, 6893864, 7124819, 7331981, 7544405, 7757527, 7977603, 8189434, 8408053, 8626718, 8852409, 9068638, 9291924, 9511725, 9738379, 9955659, 10179997, 10407653, 10635998, 10869191, 11095763, 11328105, 11559784, 11781835, 12011043, 12233257, 12462051, 12677609, 12900144, 13127012, 13352130, 13575018, 13799096, 14020786, 14249639]
+12: 6
+12: rank: 12 adj_matrix_loc.size: torch.Size([14249639, 219171])
+12: rank: 12 inputs_loc.size: torch.Size([219171, 300])
+19: reached here
+ 2: why segfault?
+12: why segfault?
+30: 210007
+30: 211514
+30: 213688
+30: 214096
+30: 212232
+30: 219044
+30: 219171
+30: 226163
+30: 212382
+30: 219209
+30: 219238
+30: 226364
+30: 221495
+30: 226236
+30: 223541
+30: 230839
+30: 225829
+30: 232859
+30: 222117
+30: 229071
+30: 223827
+30: 226363
+30: 216285
+30: 223345
+30: 227073
+30: 221551
+30: 228552
+30: 232971
+30: 231188
+30: 223927
+30: 223687
+30: 230955
+30: 207162
+30: 212424
+30: 213122
+30: 220076
+30: 211831
+30: 218619
+30: 218665
+30: 225691
+30: 216229
+30: 223286
+30: 219801
+30: 226654
+30: 217280
+30: 224338
+30: 227656
+30: 228345
+30: 233193
+30: 226572
+30: 232342
+30: 231679
+30: 222051
+30: 229208
+30: 222214
+30: 228794
+30: 215558
+30: 222535
+30: 226868
+30: 225118
+30: 222888
+30: 224078
+30: 221690
+30: 228853
+30: [0, 210007, 421521, 635209, 849305, 1061537, 1280581, 1499752, 1725915, 1938297, 2157506, 2376744, 2603108, 2824603, 3050839, 3274380, 3505219, 3731048, 3963907, 4186024, 4415095, 4638922, 4865285, 5081570, 5304915, 5531988, 5753539, 5982091, 6215062, 6446250, 6670177, 6893864, 7124819, 7331981, 7544405, 7757527, 7977603, 8189434, 8408053, 8626718, 8852409, 9068638, 9291924, 9511725, 9738379, 9955659, 10179997, 10407653, 10635998, 10869191, 11095763, 11328105, 11559784, 11781835, 12011043, 12233257, 12462051, 12677609, 12900144, 13127012, 13352130, 13575018, 13799096, 14020786, 14249639]
+30: 15
+30: rank: 30 adj_matrix_loc.size: torch.Size([14249639, 230839])
+30: rank: 30 inputs_loc.size: torch.Size([230839, 300])
+25: 210007
+25: 211514
+25: 213688
+25: 214096
+25: 212232
+25: 219044
+25: 219171
+25: 226163
+25: 212382
+25: 219209
+25: 219238
+25: 226364
+25: 221495
+25: 226236
+25: 223541
+25: 230839
+25: 225829
+25: 232859
+25: 222117
+25: 229071
+25: 223827
+25: 226363
+25: 216285
+25: 223345
+25: 227073
+25: 221551
+25: 228552
+25: 232971
+25: 231188
+25: 223927
+25: 223687
+25: 230955
+25: 207162
+25: 212424
+25: 213122
+25: 220076
+25: 211831
+25: 218619
+25: 218665
+25: 225691
+25: 216229
+25: 223286
+25: 219801
+25: 226654
+25: 217280
+25: 224338
+25: 227656
+25: 228345
+25: 233193
+25: 226572
+25: 232342
+25: 231679
+25: 222051
+25: 229208
+25: 222214
+25: 228794
+25: 215558
+25: 222535
+25: 226868
+25: 225118
+25: 222888
+25: 224078
+25: 221690
+25: 228853
+25: [0, 210007, 421521, 635209, 849305, 1061537, 1280581, 1499752, 1725915, 1938297, 2157506, 2376744, 2603108, 2824603, 3050839, 3274380, 3505219, 3731048, 3963907, 4186024, 4415095, 4638922, 4865285, 5081570, 5304915, 5531988, 5753539, 5982091, 6215062, 6446250, 6670177, 6893864, 7124819, 7331981, 7544405, 7757527, 7977603, 8189434, 8408053, 8626718, 8852409, 9068638, 9291924, 9511725, 9738379, 9955659, 10179997, 10407653, 10635998, 10869191, 11095763, 11328105, 11559784, 11781835, 12011043, 12233257, 12462051, 12677609, 12900144, 13127012, 13352130, 13575018, 13799096, 14020786, 14249639]
+25: 12
+25: rank: 25 adj_matrix_loc.size: torch.Size([14249639, 221495])
+25: rank: 25 inputs_loc.size: torch.Size([221495, 300])
+ 2: reached here
+30: why segfault?
+25: why segfault?
+12: reached here
+ 1: 210007
+ 1: 211514
+ 1: 213688
+ 1: 214096
+ 1: 212232
+ 1: 219044
+ 1: 219171
+ 1: 226163
+ 1: 212382
+ 1: 219209
+ 1: 219238
+ 1: 226364
+ 1: 221495
+ 1: 226236
+ 1: 223541
+ 1: 230839
+ 1: 225829
+ 1: 232859
+ 1: 222117
+ 1: 229071
+ 1: 223827
+ 1: 226363
+ 1: 216285
+ 1: 223345
+ 1: 227073
+ 1: 221551
+ 1: 228552
+ 1: 232971
+ 1: 231188
+ 1: 223927
+ 1: 223687
+ 1: 230955
+ 1: 207162
+ 1: 212424
+ 1: 213122
+ 1: 220076
+ 1: 211831
+ 1: 218619
+ 1: 218665
+ 1: 225691
+ 1: 216229
+ 1: 223286
+ 1: 219801
+ 1: 226654
+ 1: 217280
+ 1: 224338
+ 1: 227656
+ 1: 228345
+ 1: 233193
+ 1: 226572
+ 1: 232342
+ 1: 231679
+ 1: 222051
+ 1: 229208
+ 1: 222214
+ 1: 228794
+ 1: 215558
+ 1: 222535
+ 1: 226868
+ 1: 225118
+ 1: 222888
+ 1: 224078
+ 1: 221690
+ 1: 228853
+ 1: [0, 210007, 421521, 635209, 849305, 1061537, 1280581, 1499752, 1725915, 1938297, 2157506, 2376744, 2603108, 2824603, 3050839, 3274380, 3505219, 3731048, 3963907, 4186024, 4415095, 4638922, 4865285, 5081570, 5304915, 5531988, 5753539, 5982091, 6215062, 6446250, 6670177, 6893864, 7124819, 7331981, 7544405, 7757527, 7977603, 8189434, 8408053, 8626718, 8852409, 9068638, 9291924, 9511725, 9738379, 9955659, 10179997, 10407653, 10635998, 10869191, 11095763, 11328105, 11559784, 11781835, 12011043, 12233257, 12462051, 12677609, 12900144, 13127012, 13352130, 13575018, 13799096, 14020786, 14249639]
+ 1: 0
+ 1: rank: 1 adj_matrix_loc.size: torch.Size([14249639, 210007])
+ 1: rank: 1 inputs_loc.size: torch.Size([210007, 300])
+ 1: why segfault?
+30: reached here
+25: reached here
+29: 210007
+29: 211514
+29: 213688
+29: 214096
+29: 212232
+29: 219044
+29: 219171
+29: 226163
+29: 212382
+29: 219209
+29: 219238
+29: 226364
+29: 221495
+29: 226236
+29: 223541
+29: 230839
+29: 225829
+29: 232859
+29: 222117
+29: 229071
+29: 223827
+29: 226363
+29: 216285
+29: 223345
+29: 227073
+29: 221551
+29: 228552
+29: 232971
+29: 231188
+29: 223927
+29: 223687
+29: 230955
+29: 207162
+29: 212424
+29: 213122
+29: 220076
+29: 211831
+29: 218619
+29: 218665
+29: 225691
+29: 216229
+29: 223286
+29: 219801
+29: 226654
+29: 217280
+29: 224338
+29: 227656
+29: 228345
+29: 233193
+29: 226572
+29: 232342
+29: 231679
+29: 222051
+29: 229208
+29: 222214
+29: 228794
+29: 215558
+29: 222535
+29: 226868
+29: 225118
+29: 222888
+29: 224078
+29: 221690
+29: 228853
+29: [0, 210007, 421521, 635209, 849305, 1061537, 1280581, 1499752, 1725915, 1938297, 2157506, 2376744, 2603108, 2824603, 3050839, 3274380, 3505219, 3731048, 3963907, 4186024, 4415095, 4638922, 4865285, 5081570, 5304915, 5531988, 5753539, 5982091, 6215062, 6446250, 6670177, 6893864, 7124819, 7331981, 7544405, 7757527, 7977603, 8189434, 8408053, 8626718, 8852409, 9068638, 9291924, 9511725, 9738379, 9955659, 10179997, 10407653, 10635998, 10869191, 11095763, 11328105, 11559784, 11781835, 12011043, 12233257, 12462051, 12677609, 12900144, 13127012, 13352130, 13575018, 13799096, 14020786, 14249639]
+29: 14
+29: rank: 29 adj_matrix_loc.size: torch.Size([14249639, 223541])
+29: rank: 29 inputs_loc.size: torch.Size([223541, 300])
+ 1: reached here
+29: why segfault?
+16: 210007
+16: 211514
+16: 213688
+16: 214096
+16: 212232
+16: 219044
+16: 219171
+16: 226163
+16: 212382
+16: 219209
+16: 219238
+16: 226364
+16: 221495
+16: 226236
+16: 223541
+16: 230839
+16: 225829
+16: 232859
+16: 222117
+16: 229071
+16: 223827
+16: 226363
+16: 216285
+16: 223345
+16: 227073
+16: 221551
+16: 228552
+16: 232971
+16: 231188
+16: 223927
+16: 223687
+16: 230955
+16: 207162
+16: 212424
+16: 213122
+16: 220076
+16: 211831
+16: 218619
+16: 218665
+16: 225691
+16: 216229
+16: 223286
+16: 219801
+16: 226654
+16: 217280
+16: 224338
+16: 227656
+16: 228345
+16: 233193
+16: 226572
+16: 232342
+16: 231679
+16: 222051
+16: 229208
+16: 222214
+16: 228794
+16: 215558
+16: 222535
+16: 226868
+16: 225118
+16: 222888
+16: 224078
+16: 221690
+16: 228853
+16: [0, 210007, 421521, 635209, 849305, 1061537, 1280581, 1499752, 1725915, 1938297, 2157506, 2376744, 2603108, 2824603, 3050839, 3274380, 3505219, 3731048, 3963907, 4186024, 4415095, 4638922, 4865285, 5081570, 5304915, 5531988, 5753539, 5982091, 6215062, 6446250, 6670177, 6893864, 7124819, 7331981, 7544405, 7757527, 7977603, 8189434, 8408053, 8626718, 8852409, 9068638, 9291924, 9511725, 9738379, 9955659, 10179997, 10407653, 10635998, 10869191, 11095763, 11328105, 11559784, 11781835, 12011043, 12233257, 12462051, 12677609, 12900144, 13127012, 13352130, 13575018, 13799096, 14020786, 14249639]
+16: 8
+16: rank: 16 adj_matrix_loc.size: torch.Size([14249639, 212382])
+16: rank: 16 inputs_loc.size: torch.Size([212382, 300])
+23: 210007
+23: 211514
+23: 213688
+23: 214096
+23: 212232
+23: 219044
+23: 219171
+23: 226163
+23: 212382
+23: 219209
+23: 219238
+23: 226364
+23: 221495
+23: 226236
+23: 223541
+23: 230839
+23: 225829
+23: 232859
+23: 222117
+23: 229071
+23: 223827
+23: 226363
+23: 216285
+23: 223345
+23: 227073
+23: 221551
+23: 228552
+23: 232971
+23: 231188
+23: 223927
+23: 223687
+23: 230955
+23: 207162
+23: 212424
+23: 213122
+23: 220076
+23: 211831
+23: 218619
+23: 218665
+23: 225691
+23: 216229
+23: 223286
+23: 219801
+23: 226654
+23: 217280
+23: 224338
+23: 227656
+23: 228345
+23: 233193
+23: 226572
+23: 232342
+23: 231679
+23: 222051
+23: 229208
+23: 222214
+23: 228794
+23: 215558
+23: 222535
+23: 226868
+23: 225118
+23: 222888
+23: 224078
+23: 221690
+23: 228853
+23: [0, 210007, 421521, 635209, 849305, 1061537, 1280581, 1499752, 1725915, 1938297, 2157506, 2376744, 2603108, 2824603, 3050839, 3274380, 3505219, 3731048, 3963907, 4186024, 4415095, 4638922, 4865285, 5081570, 5304915, 5531988, 5753539, 5982091, 6215062, 6446250, 6670177, 6893864, 7124819, 7331981, 7544405, 7757527, 7977603, 8189434, 8408053, 8626718, 8852409, 9068638, 9291924, 9511725, 9738379, 9955659, 10179997, 10407653, 10635998, 10869191, 11095763, 11328105, 11559784, 11781835, 12011043, 12233257, 12462051, 12677609, 12900144, 13127012, 13352130, 13575018, 13799096, 14020786, 14249639]
+23: 11
+23: rank: 23 adj_matrix_loc.size: torch.Size([14249639, 226364])
+23: rank: 23 inputs_loc.size: torch.Size([226364, 300])
+16: why segfault?
+21: 210007
+21: 211514
+21: 213688
+21: 214096
+21: 212232
+21: 219044
+21: 219171
+21: 226163
+21: 212382
+21: 219209
+21: 219238
+21: 226364
+21: 221495
+21: 226236
+21: 223541
+21: 230839
+21: 225829
+21: 232859
+21: 222117
+21: 229071
+21: 223827
+21: 226363
+21: 216285
+21: 223345
+21: 227073
+21: 221551
+21: 228552
+21: 232971
+21: 231188
+21: 223927
+21: 223687
+21: 230955
+21: 207162
+21: 212424
+21: 213122
+21: 220076
+21: 211831
+21: 218619
+21: 218665
+21: 225691
+21: 216229
+21: 223286
+21: 219801
+21: 226654
+21: 217280
+21: 224338
+21: 227656
+21: 228345
+21: 233193
+21: 226572
+21: 232342
+21: 231679
+21: 222051
+21: 229208
+21: 222214
+21: 228794
+21: 215558
+21: 222535
+21: 226868
+21: 225118
+21: 222888
+21: 224078
+21: 221690
+21: 228853
+21: [0, 210007, 421521, 635209, 849305, 1061537, 1280581, 1499752, 1725915, 1938297, 2157506, 2376744, 2603108, 2824603, 3050839, 3274380, 3505219, 3731048, 3963907, 4186024, 4415095, 4638922, 4865285, 5081570, 5304915, 5531988, 5753539, 5982091, 6215062, 6446250, 6670177, 6893864, 7124819, 7331981, 7544405, 7757527, 7977603, 8189434, 8408053, 8626718, 8852409, 9068638, 9291924, 9511725, 9738379, 9955659, 10179997, 10407653, 10635998, 10869191, 11095763, 11328105, 11559784, 11781835, 12011043, 12233257, 12462051, 12677609, 12900144, 13127012, 13352130, 13575018, 13799096, 14020786, 14249639]
+21: 10
+21: rank: 21 adj_matrix_loc.size: torch.Size([14249639, 219238])
+21: rank: 21 inputs_loc.size: torch.Size([219238, 300])
+29: reached here
+23: why segfault?
+21: why segfault?
+23: reached here
+21: reached here
+14: 210007
+14: 211514
+14: 213688
+14: 214096
+14: 212232
+14: 219044
+14: 219171
+14: 226163
+14: 212382
+14: 219209
+14: 219238
+14: 226364
+14: 221495
+14: 226236
+14: 223541
+14: 230839
+14: 225829
+14: 232859
+14: 222117
+14: 229071
+14: 223827
+14: 226363
+14: 216285
+14: 223345
+14: 227073
+14: 221551
+14: 228552
+14: 232971
+14: 231188
+14: 223927
+14: 223687
+14: 230955
+14: 207162
+14: 212424
+14: 213122
+14: 220076
+14: 211831
+14: 218619
+14: 218665
+14: 225691
+14: 216229
+14: 223286
+14: 219801
+14: 226654
+14: 217280
+14: 224338
+14: 227656
+14: 228345
+14: 233193
+14: 226572
+14: 232342
+14: 231679
+14: 222051
+14: 229208
+14: 222214
+14: 228794
+14: 215558
+14: 222535
+14: 226868
+14: 225118
+14: 222888
+14: 224078
+14: 221690
+14: 228853
+14: [0, 210007, 421521, 635209, 849305, 1061537, 1280581, 1499752, 1725915, 1938297, 2157506, 2376744, 2603108, 2824603, 3050839, 3274380, 3505219, 3731048, 3963907, 4186024, 4415095, 4638922, 4865285, 5081570, 5304915, 5531988, 5753539, 5982091, 6215062, 6446250, 6670177, 6893864, 7124819, 7331981, 7544405, 7757527, 7977603, 8189434, 8408053, 8626718, 8852409, 9068638, 9291924, 9511725, 9738379, 9955659, 10179997, 10407653, 10635998, 10869191, 11095763, 11328105, 11559784, 11781835, 12011043, 12233257, 12462051, 12677609, 12900144, 13127012, 13352130, 13575018, 13799096, 14020786, 14249639]
+14: 7
+14: rank: 14 adj_matrix_loc.size: torch.Size([14249639, 226163])
+14: rank: 14 inputs_loc.size: torch.Size([226163, 300])
+16: reached here
+14: why segfault?
+22: 210007
+22: 211514
+22: 213688
+22: 214096
+22: 212232
+22: 219044
+22: 219171
+22: 226163
+22: 212382
+22: 219209
+22: 219238
+22: 226364
+22: 221495
+22: 226236
+22: 223541
+22: 230839
+22: 225829
+22: 232859
+22: 222117
+22: 229071
+22: 223827
+22: 226363
+22: 216285
+22: 223345
+22: 227073
+22: 221551
+22: 228552
+22: 232971
+22: 231188
+22: 223927
+22: 223687
+22: 230955
+22: 207162
+22: 212424
+22: 213122
+22: 220076
+22: 211831
+22: 218619
+22: 218665
+22: 225691
+22: 216229
+22: 223286
+22: 219801
+22: 226654
+22: 217280
+22: 224338
+22: 227656
+22: 228345
+22: 233193
+22: 226572
+22: 232342
+22: 231679
+22: 222051
+22: 229208
+22: 222214
+22: 228794
+22: 215558
+22: 222535
+22: 226868
+22: 225118
+22: 222888
+22: 224078
+22: 221690
+22: 228853
+22: [0, 210007, 421521, 635209, 849305, 1061537, 1280581, 1499752, 1725915, 1938297, 2157506, 2376744, 2603108, 2824603, 3050839, 3274380, 3505219, 3731048, 3963907, 4186024, 4415095, 4638922, 4865285, 5081570, 5304915, 5531988, 5753539, 5982091, 6215062, 6446250, 6670177, 6893864, 7124819, 7331981, 7544405, 7757527, 7977603, 8189434, 8408053, 8626718, 8852409, 9068638, 9291924, 9511725, 9738379, 9955659, 10179997, 10407653, 10635998, 10869191, 11095763, 11328105, 11559784, 11781835, 12011043, 12233257, 12462051, 12677609, 12900144, 13127012, 13352130, 13575018, 13799096, 14020786, 14249639]
+22: 11
+22: rank: 22 adj_matrix_loc.size: torch.Size([14249639, 226364])
+22: rank: 22 inputs_loc.size: torch.Size([226364, 300])
+22: why segfault?
+14: reached here
+13: 210007
+13: 211514
+13: 213688
+13: 214096
+13: 212232
+13: 219044
+13: 219171
+13: 226163
+13: 212382
+13: 219209
+13: 219238
+13: 226364
+13: 221495
+13: 226236
+13: 223541
+13: 230839
+13: 225829
+13: 232859
+13: 222117
+13: 229071
+13: 223827
+13: 226363
+13: 216285
+13: 223345
+13: 227073
+13: 221551
+13: 228552
+13: 232971
+13: 231188
+13: 223927
+13: 223687
+13: 230955
+13: 207162
+13: 212424
+13: 213122
+13: 220076
+13: 211831
+13: 218619
+13: 218665
+13: 225691
+13: 216229
+13: 223286
+13: 219801
+13: 226654
+13: 217280
+13: 224338
+13: 227656
+13: 228345
+13: 233193
+13: 226572
+13: 232342
+13: 231679
+13: 222051
+13: 229208
+13: 222214
+13: 228794
+13: 215558
+13: 222535
+13: 226868
+13: 225118
+13: 222888
+13: 224078
+13: 221690
+13: 228853
+13: [0, 210007, 421521, 635209, 849305, 1061537, 1280581, 1499752, 1725915, 1938297, 2157506, 2376744, 2603108, 2824603, 3050839, 3274380, 3505219, 3731048, 3963907, 4186024, 4415095, 4638922, 4865285, 5081570, 5304915, 5531988, 5753539, 5982091, 6215062, 6446250, 6670177, 6893864, 7124819, 7331981, 7544405, 7757527, 7977603, 8189434, 8408053, 8626718, 8852409, 9068638, 9291924, 9511725, 9738379, 9955659, 10179997, 10407653, 10635998, 10869191, 11095763, 11328105, 11559784, 11781835, 12011043, 12233257, 12462051, 12677609, 12900144, 13127012, 13352130, 13575018, 13799096, 14020786, 14249639]
+13: 6
+13: rank: 13 adj_matrix_loc.size: torch.Size([14249639, 219171])
+13: rank: 13 inputs_loc.size: torch.Size([219171, 300])
+13: why segfault?
+22: reached here
+13: reached here
+15: 210007
+15: 211514
+15: 213688
+15: 214096
+15: 212232
+15: 219044
+15: 219171
+15: 226163
+15: 212382
+15: 219209
+15: 219238
+15: 226364
+15: 221495
+15: 226236
+15: 223541
+15: 230839
+15: 225829
+15: 232859
+15: 222117
+15: 229071
+15: 223827
+15: 226363
+15: 216285
+15: 223345
+15: 227073
+15: 221551
+15: 228552
+15: 232971
+15: 231188
+15: 223927
+15: 223687
+15: 230955
+15: 207162
+15: 212424
+15: 213122
+15: 220076
+15: 211831
+15: 218619
+15: 218665
+15: 225691
+15: 216229
+15: 223286
+15: 219801
+15: 226654
+15: 217280
+15: 224338
+15: 227656
+15: 228345
+15: 233193
+15: 226572
+15: 232342
+15: 231679
+15: 222051
+15: 229208
+15: 222214
+15: 228794
+15: 215558
+15: 222535
+15: 226868
+15: 225118
+15: 222888
+15: 224078
+15: 221690
+15: 228853
+15: [0, 210007, 421521, 635209, 849305, 1061537, 1280581, 1499752, 1725915, 1938297, 2157506, 2376744, 2603108, 2824603, 3050839, 3274380, 3505219, 3731048, 3963907, 4186024, 4415095, 4638922, 4865285, 5081570, 5304915, 5531988, 5753539, 5982091, 6215062, 6446250, 6670177, 6893864, 7124819, 7331981, 7544405, 7757527, 7977603, 8189434, 8408053, 8626718, 8852409, 9068638, 9291924, 9511725, 9738379, 9955659, 10179997, 10407653, 10635998, 10869191, 11095763, 11328105, 11559784, 11781835, 12011043, 12233257, 12462051, 12677609, 12900144, 13127012, 13352130, 13575018, 13799096, 14020786, 14249639]
+15: 7
+15: rank: 15 adj_matrix_loc.size: torch.Size([14249639, 226163])
+15: rank: 15 inputs_loc.size: torch.Size([226163, 300])
+15: why segfault?
+ 7: 210007
+ 7: 211514
+ 7: 213688
+ 7: 214096
+ 7: 212232
+ 7: 219044
+ 7: 219171
+ 7: 226163
+ 7: 212382
+ 7: 219209
+ 7: 219238
+ 7: 226364
+ 7: 221495
+ 7: 226236
+ 7: 223541
+ 7: 230839
+ 7: 225829
+ 7: 232859
+ 7: 222117
+ 7: 229071
+ 7: 223827
+ 7: 226363
+ 7: 216285
+ 7: 223345
+ 7: 227073
+ 7: 221551
+ 7: 228552
+ 7: 232971
+ 7: 231188
+ 7: 223927
+ 7: 223687
+ 7: 230955
+ 7: 207162
+ 7: 212424
+ 7: 213122
+ 7: 220076
+ 7: 211831
+ 7: 218619
+ 7: 218665
+ 7: 225691
+ 7: 216229
+ 7: 223286
+ 7: 219801
+ 7: 226654
+ 7: 217280
+ 7: 224338
+ 7: 227656
+ 7: 228345
+ 7: 233193
+ 7: 226572
+ 7: 232342
+ 7: 231679
+ 7: 222051
+ 7: 229208
+ 7: 222214
+ 7: 228794
+ 7: 215558
+ 7: 222535
+ 7: 226868
+ 7: 225118
+ 7: 222888
+ 7: 224078
+ 7: 221690
+ 7: 228853
+ 7: [0, 210007, 421521, 635209, 849305, 1061537, 1280581, 1499752, 1725915, 1938297, 2157506, 2376744, 2603108, 2824603, 3050839, 3274380, 3505219, 3731048, 3963907, 4186024, 4415095, 4638922, 4865285, 5081570, 5304915, 5531988, 5753539, 5982091, 6215062, 6446250, 6670177, 6893864, 7124819, 7331981, 7544405, 7757527, 7977603, 8189434, 8408053, 8626718, 8852409, 9068638, 9291924, 9511725, 9738379, 9955659, 10179997, 10407653, 10635998, 10869191, 11095763, 11328105, 11559784, 11781835, 12011043, 12233257, 12462051, 12677609, 12900144, 13127012, 13352130, 13575018, 13799096, 14020786, 14249639]
+ 7: 3
+ 7: rank: 7 adj_matrix_loc.size: torch.Size([14249639, 214096])
+ 7: rank: 7 inputs_loc.size: torch.Size([214096, 300])
+ 7: why segfault?
+15: reached here
+ 7: reached here
+31: 210007
+31: 211514
+31: 213688
+31: 214096
+31: 212232
+31: 219044
+31: 219171
+31: 226163
+31: 212382
+31: 219209
+31: 219238
+31: 226364
+31: 221495
+31: 226236
+31: 223541
+31: 230839
+31: 225829
+31: 232859
+31: 222117
+31: 229071
+31: 223827
+31: 226363
+31: 216285
+31: 223345
+31: 227073
+31: 221551
+31: 228552
+31: 232971
+31: 231188
+31: 223927
+31: 223687
+31: 230955
+31: 207162
+31: 212424
+31: 213122
+31: 220076
+31: 211831
+31: 218619
+31: 218665
+31: 225691
+31: 216229
+31: 223286
+31: 219801
+31: 226654
+31: 217280
+31: 224338
+31: 227656
+31: 228345
+31: 233193
+31: 226572
+31: 232342
+31: 231679
+31: 222051
+31: 229208
+31: 222214
+31: 228794
+31: 215558
+31: 222535
+31: 226868
+31: 225118
+31: 222888
+31: 224078
+31: 221690
+31: 228853
+31: [0, 210007, 421521, 635209, 849305, 1061537, 1280581, 1499752, 1725915, 1938297, 2157506, 2376744, 2603108, 2824603, 3050839, 3274380, 3505219, 3731048, 3963907, 4186024, 4415095, 4638922, 4865285, 5081570, 5304915, 5531988, 5753539, 5982091, 6215062, 6446250, 6670177, 6893864, 7124819, 7331981, 7544405, 7757527, 7977603, 8189434, 8408053, 8626718, 8852409, 9068638, 9291924, 9511725, 9738379, 9955659, 10179997, 10407653, 10635998, 10869191, 11095763, 11328105, 11559784, 11781835, 12011043, 12233257, 12462051, 12677609, 12900144, 13127012, 13352130, 13575018, 13799096, 14020786, 14249639]
+31: 15
+31: rank: 31 adj_matrix_loc.size: torch.Size([14249639, 230839])
+31: rank: 31 inputs_loc.size: torch.Size([230839, 300])
+31: why segfault?
+31: reached here
+17: 210007
+17: 211514
+17: 213688
+17: 214096
+17: 212232
+17: 219044
+17: 219171
+17: 226163
+17: 212382
+17: 219209
+17: 219238
+17: 226364
+17: 221495
+17: 226236
+17: 223541
+17: 230839
+17: 225829
+17: 232859
+17: 222117
+17: 229071
+17: 223827
+17: 226363
+17: 216285
+17: 223345
+17: 227073
+17: 221551
+17: 228552
+17: 232971
+17: 231188
+17: 223927
+17: 223687
+17: 230955
+17: 207162
+17: 212424
+17: 213122
+17: 220076
+17: 211831
+17: 218619
+17: 218665
+17: 225691
+17: 216229
+17: 223286
+17: 219801
+17: 226654
+17: 217280
+17: 224338
+17: 227656
+17: 228345
+17: 233193
+17: 226572
+17: 232342
+17: 231679
+17: 222051
+17: 229208
+17: 222214
+17: 228794
+17: 215558
+17: 222535
+17: 226868
+17: 225118
+17: 222888
+17: 224078
+17: 221690
+17: 228853
+17: [0, 210007, 421521, 635209, 849305, 1061537, 1280581, 1499752, 1725915, 1938297, 2157506, 2376744, 2603108, 2824603, 3050839, 3274380, 3505219, 3731048, 3963907, 4186024, 4415095, 4638922, 4865285, 5081570, 5304915, 5531988, 5753539, 5982091, 6215062, 6446250, 6670177, 6893864, 7124819, 7331981, 7544405, 7757527, 7977603, 8189434, 8408053, 8626718, 8852409, 9068638, 9291924, 9511725, 9738379, 9955659, 10179997, 10407653, 10635998, 10869191, 11095763, 11328105, 11559784, 11781835, 12011043, 12233257, 12462051, 12677609, 12900144, 13127012, 13352130, 13575018, 13799096, 14020786, 14249639]
+17: 8
+17: rank: 17 adj_matrix_loc.size: torch.Size([14249639, 212382])
+17: rank: 17 inputs_loc.size: torch.Size([212382, 300])
+17: why segfault?
+17: reached here
+11: 210007
+11: 211514
+11: 213688
+11: 214096
+11: 212232
+11: 219044
+11: 219171
+11: 226163
+11: 212382
+11: 219209
+11: 219238
+11: 226364
+11: 221495
+11: 226236
+11: 223541
+11: 230839
+11: 225829
+11: 232859
+11: 222117
+11: 229071
+11: 223827
+11: 226363
+11: 216285
+11: 223345
+11: 227073
+11: 221551
+11: 228552
+11: 232971
+11: 231188
+11: 223927
+11: 223687
+11: 230955
+11: 207162
+11: 212424
+11: 213122
+11: 220076
+11: 211831
+11: 218619
+11: 218665
+11: 225691
+11: 216229
+11: 223286
+11: 219801
+11: 226654
+11: 217280
+11: 224338
+11: 227656
+11: 228345
+11: 233193
+11: 226572
+11: 232342
+11: 231679
+11: 222051
+11: 229208
+11: 222214
+11: 228794
+11: 215558
+11: 222535
+11: 226868
+11: 225118
+11: 222888
+11: 224078
+11: 221690
+11: 228853
+11: [0, 210007, 421521, 635209, 849305, 1061537, 1280581, 1499752, 1725915, 1938297, 2157506, 2376744, 2603108, 2824603, 3050839, 3274380, 3505219, 3731048, 3963907, 4186024, 4415095, 4638922, 4865285, 5081570, 5304915, 5531988, 5753539, 5982091, 6215062, 6446250, 6670177, 6893864, 7124819, 7331981, 7544405, 7757527, 7977603, 8189434, 8408053, 8626718, 8852409, 9068638, 9291924, 9511725, 9738379, 9955659, 10179997, 10407653, 10635998, 10869191, 11095763, 11328105, 11559784, 11781835, 12011043, 12233257, 12462051, 12677609, 12900144, 13127012, 13352130, 13575018, 13799096, 14020786, 14249639]
+11: 5
+11: rank: 11 adj_matrix_loc.size: torch.Size([14249639, 219044])
+11: rank: 11 inputs_loc.size: torch.Size([219044, 300])
+11: why segfault?
+11: reached here
+28: 210007
+28: 211514
+28: 213688
+28: 214096
+28: 212232
+28: 219044
+28: 219171
+28: 226163
+28: 212382
+28: 219209
+28: 219238
+28: 226364
+28: 221495
+28: 226236
+28: 223541
+28: 230839
+28: 225829
+28: 232859
+28: 222117
+28: 229071
+28: 223827
+28: 226363
+28: 216285
+28: 223345
+28: 227073
+28: 221551
+28: 228552
+28: 232971
+28: 231188
+28: 223927
+28: 223687
+28: 230955
+28: 207162
+28: 212424
+28: 213122
+28: 220076
+28: 211831
+28: 218619
+28: 218665
+28: 225691
+28: 216229
+28: 223286
+28: 219801
+28: 226654
+28: 217280
+28: 224338
+28: 227656
+28: 228345
+28: 233193
+28: 226572
+28: 232342
+28: 231679
+28: 222051
+28: 229208
+28: 222214
+28: 228794
+28: 215558
+28: 222535
+28: 226868
+28: 225118
+28: 222888
+28: 224078
+28: 221690
+28: 228853
+28: [0, 210007, 421521, 635209, 849305, 1061537, 1280581, 1499752, 1725915, 1938297, 2157506, 2376744, 2603108, 2824603, 3050839, 3274380, 3505219, 3731048, 3963907, 4186024, 4415095, 4638922, 4865285, 5081570, 5304915, 5531988, 5753539, 5982091, 6215062, 6446250, 6670177, 6893864, 7124819, 7331981, 7544405, 7757527, 7977603, 8189434, 8408053, 8626718, 8852409, 9068638, 9291924, 9511725, 9738379, 9955659, 10179997, 10407653, 10635998, 10869191, 11095763, 11328105, 11559784, 11781835, 12011043, 12233257, 12462051, 12677609, 12900144, 13127012, 13352130, 13575018, 13799096, 14020786, 14249639]
+28: 14
+28: rank: 28 adj_matrix_loc.size: torch.Size([14249639, 223541])
+28: rank: 28 inputs_loc.size: torch.Size([223541, 300])
+28: why segfault?
+28: reached here
+20: create GCN model
+20: pre send indices
+20: rank: 20 i: 0
+20: rank: 20 i: 1
+20: rank: 20 i: 2
+20: rank: 20 i: 3
+20: rank: 20 i: 4
+20: rank: 20 i: 5
+20: rank: 20 i: 6
+20: rank: 20 i: 7
+20: rank: 20 i: 8
+20: rank: 20 i: 9
+20: rank: 20 i: 10
+20: rank: 20 i: 11
+20: rank: 20 i: 12
+20: rank: 20 i: 13
+20: rank: 20 i: 14
+20: rank: 20 i: 15
+20: rank: 20 i: 16
+20: rank: 20 i: 17
+20: rank: 20 i: 18
+20: rank: 20 i: 19
+20: rank: 20 i: 20
+20: rank: 20 i: 21
+20: rank: 20 i: 22
+20: rank: 20 i: 23
+20: rank: 20 i: 24
+20: rank: 20 i: 25
+20: rank: 20 i: 26
+20: rank: 20 i: 27
+20: rank: 20 i: 28
+20: rank: 20 i: 29
+20: rank: 20 i: 30
+20: rank: 20 i: 31
+20: rank: 20 i: 32
+20: rank: 20 i: 33
+20: rank: 20 i: 34
+20: rank: 20 i: 35
+20: rank: 20 i: 36
+20: rank: 20 i: 37
+20: rank: 20 i: 38
+20: rank: 20 i: 39
+20: rank: 20 i: 40
+20: rank: 20 i: 41
+20: rank: 20 i: 42
+20: rank: 20 i: 43
+20: rank: 20 i: 44
+20: rank: 20 i: 45
+20: rank: 20 i: 46
+20: rank: 20 i: 47
+20: rank: 20 i: 48
+20: rank: 20 i: 49
+20: rank: 20 i: 50
+20: rank: 20 i: 51
+20: rank: 20 i: 52
+20: rank: 20 i: 53
+20: rank: 20 i: 54
+20: rank: 20 i: 55
+20: rank: 20 i: 56
+20: rank: 20 i: 57
+20: rank: 20 i: 58
+20: rank: 20 i: 59
+20: rank: 20 i: 60
+20: rank: 20 i: 61
+20: rank: 20 i: 62
+20: rank: 20 i: 63
+20: all to all counts
+20: all to all indices
+ 4: create GCN model
+ 4: pre send indices
+ 4: rank: 4 i: 0
+ 4: rank: 4 i: 1
+ 4: rank: 4 i: 2
+ 4: rank: 4 i: 3
+ 4: rank: 4 i: 4
+ 4: rank: 4 i: 5
+ 4: rank: 4 i: 6
+ 4: rank: 4 i: 7
+ 4: rank: 4 i: 8
+ 4: rank: 4 i: 9
+ 4: rank: 4 i: 10
+ 4: rank: 4 i: 11
+ 4: rank: 4 i: 12
+ 4: rank: 4 i: 13
+ 4: rank: 4 i: 14
+ 4: rank: 4 i: 15
+ 4: rank: 4 i: 16
+ 4: rank: 4 i: 17
+ 4: rank: 4 i: 18
+ 4: rank: 4 i: 19
+ 4: rank: 4 i: 20
+ 4: rank: 4 i: 21
+ 4: rank: 4 i: 22
+ 4: rank: 4 i: 23
+ 4: rank: 4 i: 24
+ 4: rank: 4 i: 25
+ 4: rank: 4 i: 26
+ 4: rank: 4 i: 27
+ 4: rank: 4 i: 28
+ 4: rank: 4 i: 29
+ 4: rank: 4 i: 30
+ 4: rank: 4 i: 31
+ 4: rank: 4 i: 32
+ 4: rank: 4 i: 33
+ 4: rank: 4 i: 34
+ 4: rank: 4 i: 35
+ 4: rank: 4 i: 36
+ 4: rank: 4 i: 37
+ 4: rank: 4 i: 38
+ 4: rank: 4 i: 39
+ 4: rank: 4 i: 40
+ 4: rank: 4 i: 41
+ 4: rank: 4 i: 42
+ 4: rank: 4 i: 43
+ 4: rank: 4 i: 44
+ 4: rank: 4 i: 45
+ 4: rank: 4 i: 46
+ 4: rank: 4 i: 47
+ 4: rank: 4 i: 48
+ 4: rank: 4 i: 49
+ 4: rank: 4 i: 50
+ 4: rank: 4 i: 51
+ 4: rank: 4 i: 52
+ 4: rank: 4 i: 53
+ 4: rank: 4 i: 54
+ 4: rank: 4 i: 55
+ 4: rank: 4 i: 56
+ 4: rank: 4 i: 57
+ 4: rank: 4 i: 58
+ 4: rank: 4 i: 59
+ 4: rank: 4 i: 60
+ 4: rank: 4 i: 61
+ 4: rank: 4 i: 62
+ 4: rank: 4 i: 63
+ 4: all to all counts
+ 4: all to all indices
+ 4: all to all done
+ 4: Epoch: 0
+20: all to all done
+20: Epoch: 0
+10: create GCN model
+10: pre send indices
+10: rank: 10 i: 0
+10: rank: 10 i: 1
+10: rank: 10 i: 2
+10: rank: 10 i: 3
+10: rank: 10 i: 4
+10: rank: 10 i: 5
+10: rank: 10 i: 6
+10: rank: 10 i: 7
+10: rank: 10 i: 8
+10: rank: 10 i: 9
+10: rank: 10 i: 10
+10: rank: 10 i: 11
+10: rank: 10 i: 12
+10: rank: 10 i: 13
+10: rank: 10 i: 14
+10: rank: 10 i: 15
+10: rank: 10 i: 16
+10: rank: 10 i: 17
+10: rank: 10 i: 18
+10: rank: 10 i: 19
+10: rank: 10 i: 20
+10: rank: 10 i: 21
+10: rank: 10 i: 22
+10: rank: 10 i: 23
+10: rank: 10 i: 24
+10: rank: 10 i: 25
+10: rank: 10 i: 26
+10: rank: 10 i: 27
+10: rank: 10 i: 28
+10: rank: 10 i: 29
+10: rank: 10 i: 30
+10: rank: 10 i: 31
+10: rank: 10 i: 32
+10: rank: 10 i: 33
+10: rank: 10 i: 34
+10: rank: 10 i: 35
+10: rank: 10 i: 36
+10: rank: 10 i: 37
+10: rank: 10 i: 38
+10: rank: 10 i: 39
+10: rank: 10 i: 40
+10: rank: 10 i: 41
+10: rank: 10 i: 42
+10: rank: 10 i: 43
+10: rank: 10 i: 44
+10: rank: 10 i: 45
+10: rank: 10 i: 46
+10: rank: 10 i: 47
+10: rank: 10 i: 48
+10: rank: 10 i: 49
+10: rank: 10 i: 50
+10: rank: 10 i: 51
+10: rank: 10 i: 52
+10: rank: 10 i: 53
+10: rank: 10 i: 54
+10: rank: 10 i: 55
+10: rank: 10 i: 56
+10: rank: 10 i: 57
+10: rank: 10 i: 58
+10: rank: 10 i: 59
+10: rank: 10 i: 60
+10: rank: 10 i: 61
+10: rank: 10 i: 62
+10: rank: 10 i: 63
+10: all to all counts
+10: all to all indices
+ 5: create GCN model
+ 5: pre send indices
+ 5: rank: 5 i: 0
+ 5: rank: 5 i: 1
+ 5: rank: 5 i: 2
+ 5: rank: 5 i: 3
+ 5: rank: 5 i: 4
+ 5: rank: 5 i: 5
+ 5: rank: 5 i: 6
+ 5: rank: 5 i: 7
+ 5: rank: 5 i: 8
+ 5: rank: 5 i: 9
+ 5: rank: 5 i: 10
+ 5: rank: 5 i: 11
+ 5: rank: 5 i: 12
+ 5: rank: 5 i: 13
+ 5: rank: 5 i: 14
+ 5: rank: 5 i: 15
+ 5: rank: 5 i: 16
+ 5: rank: 5 i: 17
+ 5: rank: 5 i: 18
+ 5: rank: 5 i: 19
+ 5: rank: 5 i: 20
+ 5: rank: 5 i: 21
+ 5: rank: 5 i: 22
+ 5: rank: 5 i: 23
+ 5: rank: 5 i: 24
+ 5: rank: 5 i: 25
+ 5: rank: 5 i: 26
+ 5: rank: 5 i: 27
+ 5: rank: 5 i: 28
+ 5: rank: 5 i: 29
+ 5: rank: 5 i: 30
+ 5: rank: 5 i: 31
+ 5: rank: 5 i: 32
+ 5: rank: 5 i: 33
+ 5: rank: 5 i: 34
+ 5: rank: 5 i: 35
+ 5: rank: 5 i: 36
+ 5: rank: 5 i: 37
+ 5: rank: 5 i: 38
+ 5: rank: 5 i: 39
+ 5: rank: 5 i: 40
+ 5: rank: 5 i: 41
+ 5: rank: 5 i: 42
+ 5: rank: 5 i: 43
+ 5: rank: 5 i: 44
+ 5: rank: 5 i: 45
+ 5: rank: 5 i: 46
+ 5: rank: 5 i: 47
+ 5: rank: 5 i: 48
+ 5: rank: 5 i: 49
+ 5: rank: 5 i: 50
+ 5: rank: 5 i: 51
+ 5: rank: 5 i: 52
+ 5: rank: 5 i: 53
+ 5: rank: 5 i: 54
+ 5: rank: 5 i: 55
+ 5: rank: 5 i: 56
+ 5: rank: 5 i: 57
+ 5: rank: 5 i: 58
+ 5: rank: 5 i: 59
+ 5: rank: 5 i: 60
+ 5: rank: 5 i: 61
+ 5: rank: 5 i: 62
+ 5: rank: 5 i: 63
+ 5: all to all counts
+ 5: all to all indices
+ 5: all to all done
+ 5: Epoch: 0
+21: create GCN model
+21: pre send indices
+21: rank: 21 i: 0
+21: rank: 21 i: 1
+21: rank: 21 i: 2
+21: rank: 21 i: 3
+21: rank: 21 i: 4
+21: rank: 21 i: 5
+21: rank: 21 i: 6
+21: rank: 21 i: 7
+21: rank: 21 i: 8
+21: rank: 21 i: 9
+21: rank: 21 i: 10
+21: rank: 21 i: 11
+21: rank: 21 i: 12
+21: rank: 21 i: 13
+21: rank: 21 i: 14
+21: rank: 21 i: 15
+21: rank: 21 i: 16
+21: rank: 21 i: 17
+21: rank: 21 i: 18
+21: rank: 21 i: 19
+21: rank: 21 i: 20
+21: rank: 21 i: 21
+21: rank: 21 i: 22
+21: rank: 21 i: 23
+21: rank: 21 i: 24
+21: rank: 21 i: 25
+21: rank: 21 i: 26
+21: rank: 21 i: 27
+21: rank: 21 i: 28
+21: rank: 21 i: 29
+21: rank: 21 i: 30
+21: rank: 21 i: 31
+21: rank: 21 i: 32
+21: rank: 21 i: 33
+21: rank: 21 i: 34
+21: rank: 21 i: 35
+21: rank: 21 i: 36
+21: rank: 21 i: 37
+21: rank: 21 i: 38
+21: rank: 21 i: 39
+21: rank: 21 i: 40
+21: rank: 21 i: 41
+21: rank: 21 i: 42
+21: rank: 21 i: 43
+21: rank: 21 i: 44
+21: rank: 21 i: 45
+21: rank: 21 i: 46
+21: rank: 21 i: 47
+21: rank: 21 i: 48
+21: rank: 21 i: 49
+21: rank: 21 i: 50
+21: rank: 21 i: 51
+21: rank: 21 i: 52
+21: rank: 21 i: 53
+21: rank: 21 i: 54
+21: rank: 21 i: 55
+21: rank: 21 i: 56
+21: rank: 21 i: 57
+21: rank: 21 i: 58
+21: rank: 21 i: 59
+21: rank: 21 i: 60
+21: rank: 21 i: 61
+21: rank: 21 i: 62
+21: rank: 21 i: 63
+21: all to all counts
+21: all to all indices
+10: all to all done
+10: Epoch: 0
+12: create GCN model
+12: pre send indices
+12: rank: 12 i: 0
+12: rank: 12 i: 1
+12: rank: 12 i: 2
+12: rank: 12 i: 3
+12: rank: 12 i: 4
+12: rank: 12 i: 5
+12: rank: 12 i: 6
+12: rank: 12 i: 7
+12: rank: 12 i: 8
+12: rank: 12 i: 9
+12: rank: 12 i: 10
+12: rank: 12 i: 11
+12: rank: 12 i: 12
+12: rank: 12 i: 13
+12: rank: 12 i: 14
+12: rank: 12 i: 15
+12: rank: 12 i: 16
+12: rank: 12 i: 17
+12: rank: 12 i: 18
+12: rank: 12 i: 19
+12: rank: 12 i: 20
+12: rank: 12 i: 21
+12: rank: 12 i: 22
+12: rank: 12 i: 23
+12: rank: 12 i: 24
+12: rank: 12 i: 25
+12: rank: 12 i: 26
+12: rank: 12 i: 27
+12: rank: 12 i: 28
+12: rank: 12 i: 29
+12: rank: 12 i: 30
+12: rank: 12 i: 31
+12: rank: 12 i: 32
+12: rank: 12 i: 33
+12: rank: 12 i: 34
+12: rank: 12 i: 35
+12: rank: 12 i: 36
+12: rank: 12 i: 37
+12: rank: 12 i: 38
+12: rank: 12 i: 39
+12: rank: 12 i: 40
+12: rank: 12 i: 41
+12: rank: 12 i: 42
+12: rank: 12 i: 43
+12: rank: 12 i: 44
+12: rank: 12 i: 45
+12: rank: 12 i: 46
+12: rank: 12 i: 47
+12: rank: 12 i: 48
+12: rank: 12 i: 49
+12: rank: 12 i: 50
+12: rank: 12 i: 51
+12: rank: 12 i: 52
+12: rank: 12 i: 53
+12: rank: 12 i: 54
+12: rank: 12 i: 55
+12: rank: 12 i: 56
+12: rank: 12 i: 57
+12: rank: 12 i: 58
+12: rank: 12 i: 59
+12: rank: 12 i: 60
+12: rank: 12 i: 61
+12: rank: 12 i: 62
+12: rank: 12 i: 63
+12: all to all counts
+12: all to all indices
+21: all to all done
+21: Epoch: 0
+27: create GCN model
+27: pre send indices
+27: rank: 27 i: 0
+27: rank: 27 i: 1
+27: rank: 27 i: 2
+27: rank: 27 i: 3
+27: rank: 27 i: 4
+27: rank: 27 i: 5
+27: rank: 27 i: 6
+27: rank: 27 i: 7
+27: rank: 27 i: 8
+27: rank: 27 i: 9
+27: rank: 27 i: 10
+27: rank: 27 i: 11
+27: rank: 27 i: 12
+27: rank: 27 i: 13
+27: rank: 27 i: 14
+27: rank: 27 i: 15
+27: rank: 27 i: 16
+27: rank: 27 i: 17
+27: rank: 27 i: 18
+27: rank: 27 i: 19
+27: rank: 27 i: 20
+27: rank: 27 i: 21
+27: rank: 27 i: 22
+27: rank: 27 i: 23
+27: rank: 27 i: 24
+27: rank: 27 i: 25
+27: rank: 27 i: 26
+27: rank: 27 i: 27
+27: rank: 27 i: 28
+27: rank: 27 i: 29
+27: rank: 27 i: 30
+27: rank: 27 i: 31
+27: rank: 27 i: 32
+27: rank: 27 i: 33
+27: rank: 27 i: 34
+27: rank: 27 i: 35
+27: rank: 27 i: 36
+27: rank: 27 i: 37
+27: rank: 27 i: 38
+27: rank: 27 i: 39
+27: rank: 27 i: 40
+27: rank: 27 i: 41
+27: rank: 27 i: 42
+27: rank: 27 i: 43
+27: rank: 27 i: 44
+27: rank: 27 i: 45
+27: rank: 27 i: 46
+27: rank: 27 i: 47
+27: rank: 27 i: 48
+27: rank: 27 i: 49
+27: rank: 27 i: 50
+27: rank: 27 i: 51
+27: rank: 27 i: 52
+27: rank: 27 i: 53
+27: rank: 27 i: 54
+27: rank: 27 i: 55
+27: rank: 27 i: 56
+27: rank: 27 i: 57
+27: rank: 27 i: 58
+27: rank: 27 i: 59
+27: rank: 27 i: 60
+27: rank: 27 i: 61
+27: rank: 27 i: 62
+27: rank: 27 i: 63
+27: all to all counts
+27: all to all indices
+11: create GCN model
+11: pre send indices
+11: rank: 11 i: 0
+11: rank: 11 i: 1
+11: rank: 11 i: 2
+11: rank: 11 i: 3
+11: rank: 11 i: 4
+11: rank: 11 i: 5
+11: rank: 11 i: 6
+11: rank: 11 i: 7
+11: rank: 11 i: 8
+11: rank: 11 i: 9
+11: rank: 11 i: 10
+11: rank: 11 i: 11
+11: rank: 11 i: 12
+11: rank: 11 i: 13
+11: rank: 11 i: 14
+11: rank: 11 i: 15
+11: rank: 11 i: 16
+11: rank: 11 i: 17
+11: rank: 11 i: 18
+11: rank: 11 i: 19
+11: rank: 11 i: 20
+11: rank: 11 i: 21
+11: rank: 11 i: 22
+11: rank: 11 i: 23
+11: rank: 11 i: 24
+11: rank: 11 i: 25
+11: rank: 11 i: 26
+11: rank: 11 i: 27
+11: rank: 11 i: 28
+11: rank: 11 i: 29
+11: rank: 11 i: 30
+11: rank: 11 i: 31
+11: rank: 11 i: 32
+11: rank: 11 i: 33
+11: rank: 11 i: 34
+11: rank: 11 i: 35
+11: rank: 11 i: 36
+11: rank: 11 i: 37
+11: rank: 11 i: 38
+11: rank: 11 i: 39
+11: rank: 11 i: 40
+11: rank: 11 i: 41
+11: rank: 11 i: 42
+11: rank: 11 i: 43
+11: rank: 11 i: 44
+11: rank: 11 i: 45
+11: rank: 11 i: 46
+11: rank: 11 i: 47
+11: rank: 11 i: 48
+11: rank: 11 i: 49
+11: rank: 11 i: 50
+11: rank: 11 i: 51
+11: rank: 11 i: 52
+11: rank: 11 i: 53
+11: rank: 11 i: 54
+11: rank: 11 i: 55
+11: rank: 11 i: 56
+11: rank: 11 i: 57
+11: rank: 11 i: 58
+11: rank: 11 i: 59
+11: rank: 11 i: 60
+11: rank: 11 i: 61
+11: rank: 11 i: 62
+11: rank: 11 i: 63
+11: all to all counts
+11: all to all indices
+12: all to all done
+12: Epoch: 0
+27: all to all done
+27: Epoch: 0
+11: all to all done
+11: Epoch: 0
+13: create GCN model
+13: pre send indices
+13: rank: 13 i: 0
+13: rank: 13 i: 1
+13: rank: 13 i: 2
+13: rank: 13 i: 3
+13: rank: 13 i: 4
+13: rank: 13 i: 5
+13: rank: 13 i: 6
+13: rank: 13 i: 7
+13: rank: 13 i: 8
+13: rank: 13 i: 9
+13: rank: 13 i: 10
+13: rank: 13 i: 11
+13: rank: 13 i: 12
+13: rank: 13 i: 13
+13: rank: 13 i: 14
+13: rank: 13 i: 15
+13: rank: 13 i: 16
+13: rank: 13 i: 17
+13: rank: 13 i: 18
+13: rank: 13 i: 19
+13: rank: 13 i: 20
+13: rank: 13 i: 21
+13: rank: 13 i: 22
+13: rank: 13 i: 23
+13: rank: 13 i: 24
+13: rank: 13 i: 25
+13: rank: 13 i: 26
+13: rank: 13 i: 27
+13: rank: 13 i: 28
+13: rank: 13 i: 29
+13: rank: 13 i: 30
+13: rank: 13 i: 31
+13: rank: 13 i: 32
+13: rank: 13 i: 33
+13: rank: 13 i: 34
+13: rank: 13 i: 35
+13: rank: 13 i: 36
+13: rank: 13 i: 37
+13: rank: 13 i: 38
+13: rank: 13 i: 39
+13: rank: 13 i: 40
+13: rank: 13 i: 41
+13: rank: 13 i: 42
+13: rank: 13 i: 43
+13: rank: 13 i: 44
+13: rank: 13 i: 45
+13: rank: 13 i: 46
+13: rank: 13 i: 47
+13: rank: 13 i: 48
+13: rank: 13 i: 49
+13: rank: 13 i: 50
+13: rank: 13 i: 51
+13: rank: 13 i: 52
+13: rank: 13 i: 53
+13: rank: 13 i: 54
+13: rank: 13 i: 55
+13: rank: 13 i: 56
+13: rank: 13 i: 57
+13: rank: 13 i: 58
+13: rank: 13 i: 59
+13: rank: 13 i: 60
+13: rank: 13 i: 61
+13: rank: 13 i: 62
+13: rank: 13 i: 63
+13: all to all counts
+13: all to all indices
+26: create GCN model
+26: pre send indices
+26: rank: 26 i: 0
+26: rank: 26 i: 1
+26: rank: 26 i: 2
+26: rank: 26 i: 3
+26: rank: 26 i: 4
+26: rank: 26 i: 5
+26: rank: 26 i: 6
+26: rank: 26 i: 7
+26: rank: 26 i: 8
+26: rank: 26 i: 9
+26: rank: 26 i: 10
+26: rank: 26 i: 11
+26: rank: 26 i: 12
+26: rank: 26 i: 13
+26: rank: 26 i: 14
+26: rank: 26 i: 15
+26: rank: 26 i: 16
+26: rank: 26 i: 17
+26: rank: 26 i: 18
+26: rank: 26 i: 19
+26: rank: 26 i: 20
+26: rank: 26 i: 21
+26: rank: 26 i: 22
+26: rank: 26 i: 23
+26: rank: 26 i: 24
+26: rank: 26 i: 25
+26: rank: 26 i: 26
+26: rank: 26 i: 27
+26: rank: 26 i: 28
+26: rank: 26 i: 29
+26: rank: 26 i: 30
+26: rank: 26 i: 31
+26: rank: 26 i: 32
+26: rank: 26 i: 33
+26: rank: 26 i: 34
+26: rank: 26 i: 35
+26: rank: 26 i: 36
+26: rank: 26 i: 37
+26: rank: 26 i: 38
+26: rank: 26 i: 39
+26: rank: 26 i: 40
+26: rank: 26 i: 41
+26: rank: 26 i: 42
+26: rank: 26 i: 43
+26: rank: 26 i: 44
+26: rank: 26 i: 45
+26: rank: 26 i: 46
+26: rank: 26 i: 47
+26: rank: 26 i: 48
+26: rank: 26 i: 49
+26: rank: 26 i: 50
+26: rank: 26 i: 51
+26: rank: 26 i: 52
+26: rank: 26 i: 53
+26: rank: 26 i: 54
+26: rank: 26 i: 55
+26: rank: 26 i: 56
+26: rank: 26 i: 57
+26: rank: 26 i: 58
+26: rank: 26 i: 59
+26: rank: 26 i: 60
+26: rank: 26 i: 61
+26: rank: 26 i: 62
+26: rank: 26 i: 63
+26: all to all counts
+26: all to all indices
+13: all to all done
+13: Epoch: 0
+30: create GCN model
+30: pre send indices
+30: rank: 30 i: 0
+30: rank: 30 i: 1
+30: rank: 30 i: 2
+30: rank: 30 i: 3
+30: rank: 30 i: 4
+30: rank: 30 i: 5
+30: rank: 30 i: 6
+30: rank: 30 i: 7
+30: rank: 30 i: 8
+30: rank: 30 i: 9
+30: rank: 30 i: 10
+30: rank: 30 i: 11
+30: rank: 30 i: 12
+30: rank: 30 i: 13
+30: rank: 30 i: 14
+30: rank: 30 i: 15
+30: rank: 30 i: 16
+30: rank: 30 i: 17
+30: rank: 30 i: 18
+30: rank: 30 i: 19
+30: rank: 30 i: 20
+30: rank: 30 i: 21
+30: rank: 30 i: 22
+30: rank: 30 i: 23
+30: rank: 30 i: 24
+30: rank: 30 i: 25
+30: rank: 30 i: 26
+30: rank: 30 i: 27
+30: rank: 30 i: 28
+30: rank: 30 i: 29
+30: rank: 30 i: 30
+30: rank: 30 i: 31
+30: rank: 30 i: 32
+30: rank: 30 i: 33
+30: rank: 30 i: 34
+30: rank: 30 i: 35
+30: rank: 30 i: 36
+30: rank: 30 i: 37
+30: rank: 30 i: 38
+30: rank: 30 i: 39
+30: rank: 30 i: 40
+30: rank: 30 i: 41
+30: rank: 30 i: 42
+30: rank: 30 i: 43
+30: rank: 30 i: 44
+30: rank: 30 i: 45
+30: rank: 30 i: 46
+30: rank: 30 i: 47
+30: rank: 30 i: 48
+30: rank: 30 i: 49
+30: rank: 30 i: 50
+30: rank: 30 i: 51
+30: rank: 30 i: 52
+30: rank: 30 i: 53
+30: rank: 30 i: 54
+30: rank: 30 i: 55
+30: rank: 30 i: 56
+30: rank: 30 i: 57
+30: rank: 30 i: 58
+30: rank: 30 i: 59
+30: rank: 30 i: 60
+30: rank: 30 i: 61
+30: rank: 30 i: 62
+30: rank: 30 i: 63
+30: all to all counts
+30: all to all indices
+26: all to all done
+26: Epoch: 0
+ 6: create GCN model
+ 6: pre send indices
+ 6: rank: 6 i: 0
+ 6: rank: 6 i: 1
+ 6: rank: 6 i: 2
+ 6: rank: 6 i: 3
+ 6: rank: 6 i: 4
+ 6: rank: 6 i: 5
+ 6: rank: 6 i: 6
+ 6: rank: 6 i: 7
+ 6: rank: 6 i: 8
+ 6: rank: 6 i: 9
+ 6: rank: 6 i: 10
+ 6: rank: 6 i: 11
+ 6: rank: 6 i: 12
+ 6: rank: 6 i: 13
+ 6: rank: 6 i: 14
+ 6: rank: 6 i: 15
+ 6: rank: 6 i: 16
+ 6: rank: 6 i: 17
+ 6: rank: 6 i: 18
+ 6: rank: 6 i: 19
+ 6: rank: 6 i: 20
+ 6: rank: 6 i: 21
+ 6: rank: 6 i: 22
+ 6: rank: 6 i: 23
+ 6: rank: 6 i: 24
+ 6: rank: 6 i: 25
+ 6: rank: 6 i: 26
+ 6: rank: 6 i: 27
+ 6: rank: 6 i: 28
+ 6: rank: 6 i: 29
+ 6: rank: 6 i: 30
+ 6: rank: 6 i: 31
+ 6: rank: 6 i: 32
+ 6: rank: 6 i: 33
+ 6: rank: 6 i: 34
+ 6: rank: 6 i: 35
+ 6: rank: 6 i: 36
+ 6: rank: 6 i: 37
+ 6: rank: 6 i: 38
+ 6: rank: 6 i: 39
+ 6: rank: 6 i: 40
+ 6: rank: 6 i: 41
+ 6: rank: 6 i: 42
+ 6: rank: 6 i: 43
+ 6: rank: 6 i: 44
+ 6: rank: 6 i: 45
+ 6: rank: 6 i: 46
+ 6: rank: 6 i: 47
+ 6: rank: 6 i: 48
+ 6: rank: 6 i: 49
+ 6: rank: 6 i: 50
+ 6: rank: 6 i: 51
+ 6: rank: 6 i: 52
+ 6: rank: 6 i: 53
+ 6: rank: 6 i: 54
+ 6: rank: 6 i: 55
+ 6: rank: 6 i: 56
+ 6: rank: 6 i: 57
+ 6: rank: 6 i: 58
+ 6: rank: 6 i: 59
+ 6: rank: 6 i: 60
+ 6: rank: 6 i: 61
+ 6: rank: 6 i: 62
+ 6: rank: 6 i: 63
+ 6: all to all counts
+ 6: all to all indices
+ 6: all to all done
+ 6: Epoch: 0
+14: create GCN model
+14: pre send indices
+14: rank: 14 i: 0
+14: rank: 14 i: 1
+14: rank: 14 i: 2
+14: rank: 14 i: 3
+14: rank: 14 i: 4
+14: rank: 14 i: 5
+14: rank: 14 i: 6
+14: rank: 14 i: 7
+14: rank: 14 i: 8
+14: rank: 14 i: 9
+14: rank: 14 i: 10
+14: rank: 14 i: 11
+14: rank: 14 i: 12
+14: rank: 14 i: 13
+14: rank: 14 i: 14
+14: rank: 14 i: 15
+14: rank: 14 i: 16
+14: rank: 14 i: 17
+14: rank: 14 i: 18
+14: rank: 14 i: 19
+14: rank: 14 i: 20
+14: rank: 14 i: 21
+14: rank: 14 i: 22
+14: rank: 14 i: 23
+14: rank: 14 i: 24
+14: rank: 14 i: 25
+14: rank: 14 i: 26
+14: rank: 14 i: 27
+14: rank: 14 i: 28
+14: rank: 14 i: 29
+14: rank: 14 i: 30
+14: rank: 14 i: 31
+14: rank: 14 i: 32
+14: rank: 14 i: 33
+14: rank: 14 i: 34
+14: rank: 14 i: 35
+14: rank: 14 i: 36
+14: rank: 14 i: 37
+14: rank: 14 i: 38
+14: rank: 14 i: 39
+14: rank: 14 i: 40
+14: rank: 14 i: 41
+14: rank: 14 i: 42
+14: rank: 14 i: 43
+14: rank: 14 i: 44
+14: rank: 14 i: 45
+14: rank: 14 i: 46
+14: rank: 14 i: 47
+14: rank: 14 i: 48
+14: rank: 14 i: 49
+14: rank: 14 i: 50
+14: rank: 14 i: 51
+14: rank: 14 i: 52
+14: rank: 14 i: 53
+14: rank: 14 i: 54
+14: rank: 14 i: 55
+14: rank: 14 i: 56
+14: rank: 14 i: 57
+14: rank: 14 i: 58
+14: rank: 14 i: 59
+14: rank: 14 i: 60
+14: rank: 14 i: 61
+14: rank: 14 i: 62
+14: rank: 14 i: 63
+14: all to all counts
+14: all to all indices
+30: all to all done
+30: Epoch: 0
+22: create GCN model
+22: pre send indices
+22: rank: 22 i: 0
+22: rank: 22 i: 1
+22: rank: 22 i: 2
+22: rank: 22 i: 3
+22: rank: 22 i: 4
+22: rank: 22 i: 5
+22: rank: 22 i: 6
+22: rank: 22 i: 7
+22: rank: 22 i: 8
+22: rank: 22 i: 9
+22: rank: 22 i: 10
+22: rank: 22 i: 11
+22: rank: 22 i: 12
+22: rank: 22 i: 13
+22: rank: 22 i: 14
+22: rank: 22 i: 15
+22: rank: 22 i: 16
+22: rank: 22 i: 17
+22: rank: 22 i: 18
+22: rank: 22 i: 19
+22: rank: 22 i: 20
+22: rank: 22 i: 21
+22: rank: 22 i: 22
+22: rank: 22 i: 23
+22: rank: 22 i: 24
+22: rank: 22 i: 25
+22: rank: 22 i: 26
+22: rank: 22 i: 27
+22: rank: 22 i: 28
+22: rank: 22 i: 29
+22: rank: 22 i: 30
+22: rank: 22 i: 31
+22: rank: 22 i: 32
+22: rank: 22 i: 33
+22: rank: 22 i: 34
+22: rank: 22 i: 35
+22: rank: 22 i: 36
+22: rank: 22 i: 37
+22: rank: 22 i: 38
+22: rank: 22 i: 39
+22: rank: 22 i: 40
+22: rank: 22 i: 41
+22: rank: 22 i: 42
+22: rank: 22 i: 43
+22: rank: 22 i: 44
+22: rank: 22 i: 45
+22: rank: 22 i: 46
+22: rank: 22 i: 47
+22: rank: 22 i: 48
+22: rank: 22 i: 49
+22: rank: 22 i: 50
+22: rank: 22 i: 51
+22: rank: 22 i: 52
+22: rank: 22 i: 53
+22: rank: 22 i: 54
+22: rank: 22 i: 55
+22: rank: 22 i: 56
+22: rank: 22 i: 57
+22: rank: 22 i: 58
+22: rank: 22 i: 59
+22: rank: 22 i: 60
+22: rank: 22 i: 61
+22: rank: 22 i: 62
+22: rank: 22 i: 63
+22: all to all counts
+22: all to all indices
+24: create GCN model
+24: pre send indices
+24: rank: 24 i: 0
+24: rank: 24 i: 1
+24: rank: 24 i: 2
+24: rank: 24 i: 3
+24: rank: 24 i: 4
+24: rank: 24 i: 5
+24: rank: 24 i: 6
+24: rank: 24 i: 7
+24: rank: 24 i: 8
+24: rank: 24 i: 9
+24: rank: 24 i: 10
+24: rank: 24 i: 11
+24: rank: 24 i: 12
+24: rank: 24 i: 13
+24: rank: 24 i: 14
+24: rank: 24 i: 15
+24: rank: 24 i: 16
+24: rank: 24 i: 17
+24: rank: 24 i: 18
+24: rank: 24 i: 19
+24: rank: 24 i: 20
+24: rank: 24 i: 21
+24: rank: 24 i: 22
+24: rank: 24 i: 23
+24: rank: 24 i: 24
+24: rank: 24 i: 25
+24: rank: 24 i: 26
+24: rank: 24 i: 27
+24: rank: 24 i: 28
+24: rank: 24 i: 29
+24: rank: 24 i: 30
+24: rank: 24 i: 31
+24: rank: 24 i: 32
+24: rank: 24 i: 33
+24: rank: 24 i: 34
+24: rank: 24 i: 35
+24: rank: 24 i: 36
+24: rank: 24 i: 37
+24: rank: 24 i: 38
+24: rank: 24 i: 39
+24: rank: 24 i: 40
+24: rank: 24 i: 41
+24: rank: 24 i: 42
+24: rank: 24 i: 43
+24: rank: 24 i: 44
+24: rank: 24 i: 45
+24: rank: 24 i: 46
+24: rank: 24 i: 47
+24: rank: 24 i: 48
+24: rank: 24 i: 49
+24: rank: 24 i: 50
+24: rank: 24 i: 51
+24: rank: 24 i: 52
+24: rank: 24 i: 53
+24: rank: 24 i: 54
+24: rank: 24 i: 55
+24: rank: 24 i: 56
+24: rank: 24 i: 57
+24: rank: 24 i: 58
+24: rank: 24 i: 59
+24: rank: 24 i: 60
+24: rank: 24 i: 61
+24: rank: 24 i: 62
+24: rank: 24 i: 63
+24: all to all counts
+24: all to all indices
+ 9: create GCN model
+ 9: pre send indices
+ 9: rank: 9 i: 0
+ 9: rank: 9 i: 1
+ 9: rank: 9 i: 2
+ 9: rank: 9 i: 3
+ 9: rank: 9 i: 4
+ 9: rank: 9 i: 5
+ 9: rank: 9 i: 6
+ 9: rank: 9 i: 7
+ 9: rank: 9 i: 8
+ 9: rank: 9 i: 9
+ 9: rank: 9 i: 10
+ 9: rank: 9 i: 11
+ 9: rank: 9 i: 12
+ 9: rank: 9 i: 13
+ 9: rank: 9 i: 14
+ 9: rank: 9 i: 15
+ 9: rank: 9 i: 16
+ 9: rank: 9 i: 17
+ 9: rank: 9 i: 18
+ 9: rank: 9 i: 19
+ 9: rank: 9 i: 20
+ 9: rank: 9 i: 21
+ 9: rank: 9 i: 22
+ 9: rank: 9 i: 23
+ 9: rank: 9 i: 24
+ 9: rank: 9 i: 25
+ 9: rank: 9 i: 26
+ 9: rank: 9 i: 27
+ 9: rank: 9 i: 28
+ 9: rank: 9 i: 29
+ 9: rank: 9 i: 30
+ 9: rank: 9 i: 31
+ 9: rank: 9 i: 32
+ 9: rank: 9 i: 33
+ 9: rank: 9 i: 34
+ 9: rank: 9 i: 35
+ 9: rank: 9 i: 36
+ 9: rank: 9 i: 37
+ 9: rank: 9 i: 38
+ 9: rank: 9 i: 39
+ 9: rank: 9 i: 40
+ 9: rank: 9 i: 41
+ 9: rank: 9 i: 42
+ 9: rank: 9 i: 43
+ 9: rank: 9 i: 44
+ 9: rank: 9 i: 45
+ 9: rank: 9 i: 46
+ 9: rank: 9 i: 47
+ 9: rank: 9 i: 48
+ 9: rank: 9 i: 49
+ 9: rank: 9 i: 50
+ 9: rank: 9 i: 51
+ 9: rank: 9 i: 52
+ 9: rank: 9 i: 53
+ 9: rank: 9 i: 54
+ 9: rank: 9 i: 55
+ 9: rank: 9 i: 56
+ 9: rank: 9 i: 57
+ 9: rank: 9 i: 58
+ 9: rank: 9 i: 59
+ 9: rank: 9 i: 60
+ 9: rank: 9 i: 61
+ 9: rank: 9 i: 62
+ 9: rank: 9 i: 63
+ 9: all to all counts
+ 9: all to all indices
+ 9: all to all done
+ 9: Epoch: 0
+17: create GCN model
+17: pre send indices
+17: rank: 17 i: 0
+17: rank: 17 i: 1
+17: rank: 17 i: 2
+17: rank: 17 i: 3
+17: rank: 17 i: 4
+17: rank: 17 i: 5
+17: rank: 17 i: 6
+17: rank: 17 i: 7
+17: rank: 17 i: 8
+17: rank: 17 i: 9
+17: rank: 17 i: 10
+17: rank: 17 i: 11
+17: rank: 17 i: 12
+17: rank: 17 i: 13
+17: rank: 17 i: 14
+17: rank: 17 i: 15
+17: rank: 17 i: 16
+17: rank: 17 i: 17
+17: rank: 17 i: 18
+17: rank: 17 i: 19
+17: rank: 17 i: 20
+17: rank: 17 i: 21
+17: rank: 17 i: 22
+17: rank: 17 i: 23
+17: rank: 17 i: 24
+17: rank: 17 i: 25
+17: rank: 17 i: 26
+17: rank: 17 i: 27
+17: rank: 17 i: 28
+17: rank: 17 i: 29
+17: rank: 17 i: 30
+17: rank: 17 i: 31
+17: rank: 17 i: 32
+17: rank: 17 i: 33
+17: rank: 17 i: 34
+17: rank: 17 i: 35
+17: rank: 17 i: 36
+17: rank: 17 i: 37
+17: rank: 17 i: 38
+17: rank: 17 i: 39
+17: rank: 17 i: 40
+17: rank: 17 i: 41
+17: rank: 17 i: 42
+17: rank: 17 i: 43
+17: rank: 17 i: 44
+17: rank: 17 i: 45
+17: rank: 17 i: 46
+17: rank: 17 i: 47
+17: rank: 17 i: 48
+17: rank: 17 i: 49
+17: rank: 17 i: 50
+17: rank: 17 i: 51
+17: rank: 17 i: 52
+17: rank: 17 i: 53
+17: rank: 17 i: 54
+17: rank: 17 i: 55
+17: rank: 17 i: 56
+17: rank: 17 i: 57
+17: rank: 17 i: 58
+17: rank: 17 i: 59
+17: rank: 17 i: 60
+17: rank: 17 i: 61
+17: rank: 17 i: 62
+17: rank: 17 i: 63
+17: all to all counts
+17: all to all indices
+ 7: create GCN model
+ 7: pre send indices
+ 7: rank: 7 i: 0
+ 7: rank: 7 i: 1
+ 7: rank: 7 i: 2
+ 7: rank: 7 i: 3
+ 7: rank: 7 i: 4
+ 7: rank: 7 i: 5
+ 7: rank: 7 i: 6
+ 7: rank: 7 i: 7
+ 7: rank: 7 i: 8
+ 7: rank: 7 i: 9
+ 7: rank: 7 i: 10
+ 7: rank: 7 i: 11
+ 7: rank: 7 i: 12
+ 7: rank: 7 i: 13
+ 7: rank: 7 i: 14
+ 7: rank: 7 i: 15
+ 7: rank: 7 i: 16
+ 7: rank: 7 i: 17
+ 7: rank: 7 i: 18
+ 7: rank: 7 i: 19
+ 7: rank: 7 i: 20
+ 7: rank: 7 i: 21
+ 7: rank: 7 i: 22
+ 7: rank: 7 i: 23
+ 7: rank: 7 i: 24
+ 7: rank: 7 i: 25
+ 7: rank: 7 i: 26
+ 7: rank: 7 i: 27
+ 7: rank: 7 i: 28
+ 7: rank: 7 i: 29
+ 7: rank: 7 i: 30
+ 7: rank: 7 i: 31
+ 7: rank: 7 i: 32
+ 7: rank: 7 i: 33
+ 7: rank: 7 i: 34
+ 7: rank: 7 i: 35
+ 7: rank: 7 i: 36
+ 7: rank: 7 i: 37
+ 7: rank: 7 i: 38
+ 7: rank: 7 i: 39
+ 7: rank: 7 i: 40
+ 7: rank: 7 i: 41
+ 7: rank: 7 i: 42
+ 7: rank: 7 i: 43
+ 7: rank: 7 i: 44
+ 7: rank: 7 i: 45
+ 7: rank: 7 i: 46
+ 7: rank: 7 i: 47
+ 7: rank: 7 i: 48
+ 7: rank: 7 i: 49
+ 7: rank: 7 i: 50
+ 7: rank: 7 i: 51
+ 7: rank: 7 i: 52
+ 7: rank: 7 i: 53
+ 7: rank: 7 i: 54
+ 7: rank: 7 i: 55
+ 7: rank: 7 i: 56
+ 7: rank: 7 i: 57
+ 7: rank: 7 i: 58
+ 7: rank: 7 i: 59
+ 7: rank: 7 i: 60
+ 7: rank: 7 i: 61
+ 7: rank: 7 i: 62
+ 7: rank: 7 i: 63
+ 7: all to all counts
+ 7: all to all indices
+ 7: all to all done
+ 7: Epoch: 0
+14: all to all done
+14: Epoch: 0
+31: create GCN model
+31: pre send indices
+31: rank: 31 i: 0
+31: rank: 31 i: 1
+31: rank: 31 i: 2
+31: rank: 31 i: 3
+31: rank: 31 i: 4
+31: rank: 31 i: 5
+31: rank: 31 i: 6
+31: rank: 31 i: 7
+31: rank: 31 i: 8
+31: rank: 31 i: 9
+31: rank: 31 i: 10
+31: rank: 31 i: 11
+31: rank: 31 i: 12
+31: rank: 31 i: 13
+31: rank: 31 i: 14
+31: rank: 31 i: 15
+31: rank: 31 i: 16
+31: rank: 31 i: 17
+31: rank: 31 i: 18
+31: rank: 31 i: 19
+31: rank: 31 i: 20
+31: rank: 31 i: 21
+31: rank: 31 i: 22
+31: rank: 31 i: 23
+31: rank: 31 i: 24
+31: rank: 31 i: 25
+31: rank: 31 i: 26
+31: rank: 31 i: 27
+31: rank: 31 i: 28
+31: rank: 31 i: 29
+31: rank: 31 i: 30
+31: rank: 31 i: 31
+31: rank: 31 i: 32
+31: rank: 31 i: 33
+31: rank: 31 i: 34
+31: rank: 31 i: 35
+31: rank: 31 i: 36
+31: rank: 31 i: 37
+31: rank: 31 i: 38
+31: rank: 31 i: 39
+31: rank: 31 i: 40
+31: rank: 31 i: 41
+31: rank: 31 i: 42
+31: rank: 31 i: 43
+31: rank: 31 i: 44
+31: rank: 31 i: 45
+31: rank: 31 i: 46
+31: rank: 31 i: 47
+31: rank: 31 i: 48
+31: rank: 31 i: 49
+31: rank: 31 i: 50
+31: rank: 31 i: 51
+31: rank: 31 i: 52
+31: rank: 31 i: 53
+31: rank: 31 i: 54
+31: rank: 31 i: 55
+31: rank: 31 i: 56
+31: rank: 31 i: 57
+31: rank: 31 i: 58
+31: rank: 31 i: 59
+31: rank: 31 i: 60
+31: rank: 31 i: 61
+31: rank: 31 i: 62
+31: rank: 31 i: 63
+31: all to all counts
+31: all to all indices
+22: all to all done
+22: Epoch: 0
+24: all to all done
+24: Epoch: 0
+ 8: create GCN model
+ 8: pre send indices
+ 8: rank: 8 i: 0
+ 8: rank: 8 i: 1
+ 8: rank: 8 i: 2
+ 8: rank: 8 i: 3
+ 8: rank: 8 i: 4
+ 8: rank: 8 i: 5
+ 8: rank: 8 i: 6
+ 8: rank: 8 i: 7
+ 8: rank: 8 i: 8
+ 8: rank: 8 i: 9
+ 8: rank: 8 i: 10
+ 8: rank: 8 i: 11
+ 8: rank: 8 i: 12
+ 8: rank: 8 i: 13
+ 8: rank: 8 i: 14
+ 8: rank: 8 i: 15
+ 8: rank: 8 i: 16
+ 8: rank: 8 i: 17
+ 8: rank: 8 i: 18
+ 8: rank: 8 i: 19
+ 8: rank: 8 i: 20
+ 8: rank: 8 i: 21
+ 8: rank: 8 i: 22
+ 8: rank: 8 i: 23
+ 8: rank: 8 i: 24
+ 8: rank: 8 i: 25
+ 8: rank: 8 i: 26
+ 8: rank: 8 i: 27
+ 8: rank: 8 i: 28
+ 8: rank: 8 i: 29
+ 8: rank: 8 i: 30
+ 8: rank: 8 i: 31
+ 8: rank: 8 i: 32
+ 8: rank: 8 i: 33
+ 8: rank: 8 i: 34
+ 8: rank: 8 i: 35
+ 8: rank: 8 i: 36
+ 8: rank: 8 i: 37
+ 8: rank: 8 i: 38
+ 8: rank: 8 i: 39
+ 8: rank: 8 i: 40
+ 8: rank: 8 i: 41
+ 8: rank: 8 i: 42
+ 8: rank: 8 i: 43
+ 8: rank: 8 i: 44
+ 8: rank: 8 i: 45
+ 8: rank: 8 i: 46
+ 8: rank: 8 i: 47
+ 8: rank: 8 i: 48
+ 8: rank: 8 i: 49
+ 8: rank: 8 i: 50
+ 8: rank: 8 i: 51
+ 8: rank: 8 i: 52
+ 8: rank: 8 i: 53
+ 8: rank: 8 i: 54
+ 8: rank: 8 i: 55
+ 8: rank: 8 i: 56
+ 8: rank: 8 i: 57
+ 8: rank: 8 i: 58
+ 8: rank: 8 i: 59
+ 8: rank: 8 i: 60
+ 8: rank: 8 i: 61
+ 8: rank: 8 i: 62
+ 8: rank: 8 i: 63
+ 8: all to all counts
+ 8: all to all indices
+ 8: all to all done
+ 8: Epoch: 0
+17: all to all done
+17: Epoch: 0
+15: create GCN model
+15: pre send indices
+15: rank: 15 i: 0
+15: rank: 15 i: 1
+15: rank: 15 i: 2
+15: rank: 15 i: 3
+15: rank: 15 i: 4
+15: rank: 15 i: 5
+15: rank: 15 i: 6
+15: rank: 15 i: 7
+15: rank: 15 i: 8
+15: rank: 15 i: 9
+15: rank: 15 i: 10
+15: rank: 15 i: 11
+15: rank: 15 i: 12
+15: rank: 15 i: 13
+15: rank: 15 i: 14
+15: rank: 15 i: 15
+15: rank: 15 i: 16
+15: rank: 15 i: 17
+15: rank: 15 i: 18
+15: rank: 15 i: 19
+15: rank: 15 i: 20
+15: rank: 15 i: 21
+15: rank: 15 i: 22
+15: rank: 15 i: 23
+15: rank: 15 i: 24
+15: rank: 15 i: 25
+15: rank: 15 i: 26
+15: rank: 15 i: 27
+15: rank: 15 i: 28
+15: rank: 15 i: 29
+15: rank: 15 i: 30
+15: rank: 15 i: 31
+15: rank: 15 i: 32
+15: rank: 15 i: 33
+15: rank: 15 i: 34
+15: rank: 15 i: 35
+15: rank: 15 i: 36
+15: rank: 15 i: 37
+15: rank: 15 i: 38
+15: rank: 15 i: 39
+15: rank: 15 i: 40
+15: rank: 15 i: 41
+15: rank: 15 i: 42
+15: rank: 15 i: 43
+15: rank: 15 i: 44
+15: rank: 15 i: 45
+15: rank: 15 i: 46
+15: rank: 15 i: 47
+15: rank: 15 i: 48
+15: rank: 15 i: 49
+15: rank: 15 i: 50
+15: rank: 15 i: 51
+15: rank: 15 i: 52
+15: rank: 15 i: 53
+15: rank: 15 i: 54
+15: rank: 15 i: 55
+15: rank: 15 i: 56
+15: rank: 15 i: 57
+15: rank: 15 i: 58
+15: rank: 15 i: 59
+15: rank: 15 i: 60
+15: rank: 15 i: 61
+15: rank: 15 i: 62
+15: rank: 15 i: 63
+15: all to all counts
+15: all to all indices
+31: all to all done
+31: Epoch: 0
+23: create GCN model
+23: pre send indices
+23: rank: 23 i: 0
+23: rank: 23 i: 1
+23: rank: 23 i: 2
+23: rank: 23 i: 3
+23: rank: 23 i: 4
+23: rank: 23 i: 5
+23: rank: 23 i: 6
+23: rank: 23 i: 7
+23: rank: 23 i: 8
+23: rank: 23 i: 9
+23: rank: 23 i: 10
+23: rank: 23 i: 11
+23: rank: 23 i: 12
+23: rank: 23 i: 13
+23: rank: 23 i: 14
+23: rank: 23 i: 15
+23: rank: 23 i: 16
+23: rank: 23 i: 17
+23: rank: 23 i: 18
+23: rank: 23 i: 19
+23: rank: 23 i: 20
+23: rank: 23 i: 21
+23: rank: 23 i: 22
+23: rank: 23 i: 23
+23: rank: 23 i: 24
+23: rank: 23 i: 25
+23: rank: 23 i: 26
+23: rank: 23 i: 27
+23: rank: 23 i: 28
+23: rank: 23 i: 29
+23: rank: 23 i: 30
+23: rank: 23 i: 31
+23: rank: 23 i: 32
+23: rank: 23 i: 33
+23: rank: 23 i: 34
+23: rank: 23 i: 35
+23: rank: 23 i: 36
+23: rank: 23 i: 37
+23: rank: 23 i: 38
+23: rank: 23 i: 39
+23: rank: 23 i: 40
+23: rank: 23 i: 41
+23: rank: 23 i: 42
+23: rank: 23 i: 43
+23: rank: 23 i: 44
+23: rank: 23 i: 45
+23: rank: 23 i: 46
+23: rank: 23 i: 47
+23: rank: 23 i: 48
+23: rank: 23 i: 49
+23: rank: 23 i: 50
+23: rank: 23 i: 51
+23: rank: 23 i: 52
+23: rank: 23 i: 53
+23: rank: 23 i: 54
+23: rank: 23 i: 55
+23: rank: 23 i: 56
+23: rank: 23 i: 57
+23: rank: 23 i: 58
+23: rank: 23 i: 59
+23: rank: 23 i: 60
+23: rank: 23 i: 61
+23: rank: 23 i: 62
+23: rank: 23 i: 63
+23: all to all counts
+23: all to all indices
+25: create GCN model
+25: pre send indices
+25: rank: 25 i: 0
+25: rank: 25 i: 1
+25: rank: 25 i: 2
+25: rank: 25 i: 3
+25: rank: 25 i: 4
+25: rank: 25 i: 5
+25: rank: 25 i: 6
+25: rank: 25 i: 7
+25: rank: 25 i: 8
+25: rank: 25 i: 9
+25: rank: 25 i: 10
+25: rank: 25 i: 11
+25: rank: 25 i: 12
+25: rank: 25 i: 13
+25: rank: 25 i: 14
+25: rank: 25 i: 15
+25: rank: 25 i: 16
+25: rank: 25 i: 17
+25: rank: 25 i: 18
+25: rank: 25 i: 19
+25: rank: 25 i: 20
+25: rank: 25 i: 21
+25: rank: 25 i: 22
+25: rank: 25 i: 23
+25: rank: 25 i: 24
+25: rank: 25 i: 25
+25: rank: 25 i: 26
+25: rank: 25 i: 27
+25: rank: 25 i: 28
+25: rank: 25 i: 29
+25: rank: 25 i: 30
+25: rank: 25 i: 31
+25: rank: 25 i: 32
+25: rank: 25 i: 33
+25: rank: 25 i: 34
+25: rank: 25 i: 35
+25: rank: 25 i: 36
+25: rank: 25 i: 37
+25: rank: 25 i: 38
+25: rank: 25 i: 39
+25: rank: 25 i: 40
+25: rank: 25 i: 41
+25: rank: 25 i: 42
+25: rank: 25 i: 43
+25: rank: 25 i: 44
+25: rank: 25 i: 45
+25: rank: 25 i: 46
+25: rank: 25 i: 47
+25: rank: 25 i: 48
+25: rank: 25 i: 49
+25: rank: 25 i: 50
+25: rank: 25 i: 51
+25: rank: 25 i: 52
+25: rank: 25 i: 53
+25: rank: 25 i: 54
+25: rank: 25 i: 55
+25: rank: 25 i: 56
+25: rank: 25 i: 57
+25: rank: 25 i: 58
+25: rank: 25 i: 59
+25: rank: 25 i: 60
+25: rank: 25 i: 61
+25: rank: 25 i: 62
+25: rank: 25 i: 63
+25: all to all counts
+25: all to all indices
+16: create GCN model
+16: pre send indices
+16: rank: 16 i: 0
+16: rank: 16 i: 1
+16: rank: 16 i: 2
+16: rank: 16 i: 3
+16: rank: 16 i: 4
+16: rank: 16 i: 5
+16: rank: 16 i: 6
+16: rank: 16 i: 7
+16: rank: 16 i: 8
+16: rank: 16 i: 9
+16: rank: 16 i: 10
+16: rank: 16 i: 11
+16: rank: 16 i: 12
+16: rank: 16 i: 13
+16: rank: 16 i: 14
+16: rank: 16 i: 15
+16: rank: 16 i: 16
+16: rank: 16 i: 17
+16: rank: 16 i: 18
+16: rank: 16 i: 19
+16: rank: 16 i: 20
+16: rank: 16 i: 21
+16: rank: 16 i: 22
+16: rank: 16 i: 23
+16: rank: 16 i: 24
+16: rank: 16 i: 25
+16: rank: 16 i: 26
+16: rank: 16 i: 27
+16: rank: 16 i: 28
+16: rank: 16 i: 29
+16: rank: 16 i: 30
+16: rank: 16 i: 31
+16: rank: 16 i: 32
+16: rank: 16 i: 33
+16: rank: 16 i: 34
+16: rank: 16 i: 35
+16: rank: 16 i: 36
+16: rank: 16 i: 37
+16: rank: 16 i: 38
+16: rank: 16 i: 39
+16: rank: 16 i: 40
+16: rank: 16 i: 41
+16: rank: 16 i: 42
+16: rank: 16 i: 43
+16: rank: 16 i: 44
+16: rank: 16 i: 45
+16: rank: 16 i: 46
+16: rank: 16 i: 47
+16: rank: 16 i: 48
+16: rank: 16 i: 49
+16: rank: 16 i: 50
+16: rank: 16 i: 51
+16: rank: 16 i: 52
+16: rank: 16 i: 53
+16: rank: 16 i: 54
+16: rank: 16 i: 55
+16: rank: 16 i: 56
+16: rank: 16 i: 57
+16: rank: 16 i: 58
+16: rank: 16 i: 59
+16: rank: 16 i: 60
+16: rank: 16 i: 61
+16: rank: 16 i: 62
+16: rank: 16 i: 63
+16: all to all counts
+16: all to all indices
+15: all to all done
+15: Epoch: 0
+28: create GCN model
+28: pre send indices
+28: rank: 28 i: 0
+28: rank: 28 i: 1
+28: rank: 28 i: 2
+28: rank: 28 i: 3
+28: rank: 28 i: 4
+28: rank: 28 i: 5
+28: rank: 28 i: 6
+28: rank: 28 i: 7
+28: rank: 28 i: 8
+28: rank: 28 i: 9
+28: rank: 28 i: 10
+28: rank: 28 i: 11
+28: rank: 28 i: 12
+28: rank: 28 i: 13
+28: rank: 28 i: 14
+28: rank: 28 i: 15
+28: rank: 28 i: 16
+28: rank: 28 i: 17
+28: rank: 28 i: 18
+28: rank: 28 i: 19
+28: rank: 28 i: 20
+28: rank: 28 i: 21
+28: rank: 28 i: 22
+28: rank: 28 i: 23
+28: rank: 28 i: 24
+28: rank: 28 i: 25
+28: rank: 28 i: 26
+28: rank: 28 i: 27
+28: rank: 28 i: 28
+28: rank: 28 i: 29
+28: rank: 28 i: 30
+28: rank: 28 i: 31
+28: rank: 28 i: 32
+28: rank: 28 i: 33
+28: rank: 28 i: 34
+28: rank: 28 i: 35
+28: rank: 28 i: 36
+28: rank: 28 i: 37
+28: rank: 28 i: 38
+28: rank: 28 i: 39
+28: rank: 28 i: 40
+28: rank: 28 i: 41
+28: rank: 28 i: 42
+28: rank: 28 i: 43
+28: rank: 28 i: 44
+28: rank: 28 i: 45
+28: rank: 28 i: 46
+28: rank: 28 i: 47
+28: rank: 28 i: 48
+28: rank: 28 i: 49
+28: rank: 28 i: 50
+28: rank: 28 i: 51
+28: rank: 28 i: 52
+28: rank: 28 i: 53
+28: rank: 28 i: 54
+28: rank: 28 i: 55
+28: rank: 28 i: 56
+28: rank: 28 i: 57
+28: rank: 28 i: 58
+28: rank: 28 i: 59
+28: rank: 28 i: 60
+28: rank: 28 i: 61
+28: rank: 28 i: 62
+28: rank: 28 i: 63
+28: all to all counts
+28: all to all indices
+23: all to all done
+23: Epoch: 0
+25: all to all done
+25: Epoch: 0
+16: all to all done
+16: Epoch: 0
+28: all to all done
+28: Epoch: 0
+18: create GCN model
+18: pre send indices
+18: rank: 18 i: 0
+18: rank: 18 i: 1
+18: rank: 18 i: 2
+18: rank: 18 i: 3
+18: rank: 18 i: 4
+18: rank: 18 i: 5
+18: rank: 18 i: 6
+18: rank: 18 i: 7
+18: rank: 18 i: 8
+18: rank: 18 i: 9
+18: rank: 18 i: 10
+18: rank: 18 i: 11
+18: rank: 18 i: 12
+18: rank: 18 i: 13
+18: rank: 18 i: 14
+18: rank: 18 i: 15
+18: rank: 18 i: 16
+18: rank: 18 i: 17
+18: rank: 18 i: 18
+18: rank: 18 i: 19
+18: rank: 18 i: 20
+18: rank: 18 i: 21
+18: rank: 18 i: 22
+18: rank: 18 i: 23
+18: rank: 18 i: 24
+18: rank: 18 i: 25
+18: rank: 18 i: 26
+18: rank: 18 i: 27
+18: rank: 18 i: 28
+18: rank: 18 i: 29
+18: rank: 18 i: 30
+18: rank: 18 i: 31
+18: rank: 18 i: 32
+18: rank: 18 i: 33
+18: rank: 18 i: 34
+18: rank: 18 i: 35
+18: rank: 18 i: 36
+18: rank: 18 i: 37
+18: rank: 18 i: 38
+18: rank: 18 i: 39
+18: rank: 18 i: 40
+18: rank: 18 i: 41
+18: rank: 18 i: 42
+18: rank: 18 i: 43
+18: rank: 18 i: 44
+18: rank: 18 i: 45
+18: rank: 18 i: 46
+18: rank: 18 i: 47
+18: rank: 18 i: 48
+18: rank: 18 i: 49
+18: rank: 18 i: 50
+18: rank: 18 i: 51
+18: rank: 18 i: 52
+18: rank: 18 i: 53
+18: rank: 18 i: 54
+18: rank: 18 i: 55
+18: rank: 18 i: 56
+18: rank: 18 i: 57
+18: rank: 18 i: 58
+18: rank: 18 i: 59
+18: rank: 18 i: 60
+18: rank: 18 i: 61
+18: rank: 18 i: 62
+18: rank: 18 i: 63
+18: all to all counts
+18: all to all indices
+ 3: create GCN model
+ 3: pre send indices
+ 3: rank: 3 i: 0
+ 3: rank: 3 i: 1
+ 3: rank: 3 i: 2
+ 3: rank: 3 i: 3
+ 3: rank: 3 i: 4
+ 3: rank: 3 i: 5
+ 3: rank: 3 i: 6
+ 3: rank: 3 i: 7
+ 3: rank: 3 i: 8
+ 3: rank: 3 i: 9
+ 3: rank: 3 i: 10
+ 3: rank: 3 i: 11
+ 3: rank: 3 i: 12
+ 3: rank: 3 i: 13
+ 3: rank: 3 i: 14
+ 3: rank: 3 i: 15
+ 3: rank: 3 i: 16
+ 3: rank: 3 i: 17
+ 3: rank: 3 i: 18
+ 3: rank: 3 i: 19
+ 3: rank: 3 i: 20
+ 3: rank: 3 i: 21
+ 3: rank: 3 i: 22
+ 3: rank: 3 i: 23
+ 3: rank: 3 i: 24
+ 3: rank: 3 i: 25
+ 3: rank: 3 i: 26
+ 3: rank: 3 i: 27
+ 3: rank: 3 i: 28
+ 3: rank: 3 i: 29
+ 3: rank: 3 i: 30
+ 3: rank: 3 i: 31
+ 3: rank: 3 i: 32
+ 3: rank: 3 i: 33
+ 3: rank: 3 i: 34
+ 3: rank: 3 i: 35
+ 3: rank: 3 i: 36
+ 3: rank: 3 i: 37
+ 3: rank: 3 i: 38
+ 3: rank: 3 i: 39
+ 3: rank: 3 i: 40
+ 3: rank: 3 i: 41
+ 3: rank: 3 i: 42
+ 3: rank: 3 i: 43
+ 3: rank: 3 i: 44
+ 3: rank: 3 i: 45
+ 3: rank: 3 i: 46
+ 3: rank: 3 i: 47
+ 3: rank: 3 i: 48
+ 3: rank: 3 i: 49
+ 3: rank: 3 i: 50
+ 3: rank: 3 i: 51
+ 3: rank: 3 i: 52
+ 3: rank: 3 i: 53
+ 3: rank: 3 i: 54
+ 3: rank: 3 i: 55
+ 3: rank: 3 i: 56
+ 3: rank: 3 i: 57
+ 3: rank: 3 i: 58
+ 3: rank: 3 i: 59
+ 3: rank: 3 i: 60
+ 3: rank: 3 i: 61
+ 3: rank: 3 i: 62
+ 3: rank: 3 i: 63
+ 3: all to all counts
+ 3: all to all indices
+ 3: all to all done
+ 3: Epoch: 0
+29: create GCN model
+29: pre send indices
+29: rank: 29 i: 0
+29: rank: 29 i: 1
+29: rank: 29 i: 2
+29: rank: 29 i: 3
+29: rank: 29 i: 4
+29: rank: 29 i: 5
+29: rank: 29 i: 6
+29: rank: 29 i: 7
+29: rank: 29 i: 8
+29: rank: 29 i: 9
+29: rank: 29 i: 10
+29: rank: 29 i: 11
+29: rank: 29 i: 12
+29: rank: 29 i: 13
+29: rank: 29 i: 14
+29: rank: 29 i: 15
+29: rank: 29 i: 16
+29: rank: 29 i: 17
+29: rank: 29 i: 18
+29: rank: 29 i: 19
+29: rank: 29 i: 20
+29: rank: 29 i: 21
+29: rank: 29 i: 22
+29: rank: 29 i: 23
+29: rank: 29 i: 24
+29: rank: 29 i: 25
+29: rank: 29 i: 26
+29: rank: 29 i: 27
+29: rank: 29 i: 28
+29: rank: 29 i: 29
+29: rank: 29 i: 30
+29: rank: 29 i: 31
+29: rank: 29 i: 32
+29: rank: 29 i: 33
+29: rank: 29 i: 34
+29: rank: 29 i: 35
+29: rank: 29 i: 36
+29: rank: 29 i: 37
+29: rank: 29 i: 38
+29: rank: 29 i: 39
+29: rank: 29 i: 40
+29: rank: 29 i: 41
+29: rank: 29 i: 42
+29: rank: 29 i: 43
+29: rank: 29 i: 44
+29: rank: 29 i: 45
+29: rank: 29 i: 46
+29: rank: 29 i: 47
+29: rank: 29 i: 48
+29: rank: 29 i: 49
+29: rank: 29 i: 50
+29: rank: 29 i: 51
+29: rank: 29 i: 52
+29: rank: 29 i: 53
+29: rank: 29 i: 54
+29: rank: 29 i: 55
+29: rank: 29 i: 56
+29: rank: 29 i: 57
+29: rank: 29 i: 58
+29: rank: 29 i: 59
+29: rank: 29 i: 60
+29: rank: 29 i: 61
+29: rank: 29 i: 62
+29: rank: 29 i: 63
+29: all to all counts
+29: all to all indices
+18: all to all done
+18: Epoch: 0
+ 2: create GCN model
+ 2: pre send indices
+ 2: rank: 2 i: 0
+ 2: rank: 2 i: 1
+ 2: rank: 2 i: 2
+ 2: rank: 2 i: 3
+ 2: rank: 2 i: 4
+ 2: rank: 2 i: 5
+ 2: rank: 2 i: 6
+ 2: rank: 2 i: 7
+ 2: rank: 2 i: 8
+ 2: rank: 2 i: 9
+ 2: rank: 2 i: 10
+ 2: rank: 2 i: 11
+ 2: rank: 2 i: 12
+ 2: rank: 2 i: 13
+ 2: rank: 2 i: 14
+ 2: rank: 2 i: 15
+ 2: rank: 2 i: 16
+ 2: rank: 2 i: 17
+ 2: rank: 2 i: 18
+ 2: rank: 2 i: 19
+ 2: rank: 2 i: 20
+ 2: rank: 2 i: 21
+ 2: rank: 2 i: 22
+ 2: rank: 2 i: 23
+ 2: rank: 2 i: 24
+ 2: rank: 2 i: 25
+ 2: rank: 2 i: 26
+ 2: rank: 2 i: 27
+ 2: rank: 2 i: 28
+ 2: rank: 2 i: 29
+ 2: rank: 2 i: 30
+ 2: rank: 2 i: 31
+ 2: rank: 2 i: 32
+ 2: rank: 2 i: 33
+ 2: rank: 2 i: 34
+ 2: rank: 2 i: 35
+ 2: rank: 2 i: 36
+ 2: rank: 2 i: 37
+ 2: rank: 2 i: 38
+ 2: rank: 2 i: 39
+ 2: rank: 2 i: 40
+ 2: rank: 2 i: 41
+ 2: rank: 2 i: 42
+ 2: rank: 2 i: 43
+ 2: rank: 2 i: 44
+ 2: rank: 2 i: 45
+ 2: rank: 2 i: 46
+ 2: rank: 2 i: 47
+ 2: rank: 2 i: 48
+ 2: rank: 2 i: 49
+ 2: rank: 2 i: 50
+ 2: rank: 2 i: 51
+ 2: rank: 2 i: 52
+ 2: rank: 2 i: 53
+ 2: rank: 2 i: 54
+ 2: rank: 2 i: 55
+ 2: rank: 2 i: 56
+ 2: rank: 2 i: 57
+ 2: rank: 2 i: 58
+ 2: rank: 2 i: 59
+ 2: rank: 2 i: 60
+ 2: rank: 2 i: 61
+ 2: rank: 2 i: 62
+ 2: rank: 2 i: 63
+ 2: all to all counts
+ 2: all to all indices
+ 2: all to all done
+ 2: Epoch: 0
+29: all to all done
+29: Epoch: 0
+ 1: create GCN model
+ 1: pre send indices
+ 1: rank: 1 i: 0
+ 1: rank: 1 i: 1
+ 1: rank: 1 i: 2
+ 1: rank: 1 i: 3
+ 1: rank: 1 i: 4
+ 1: rank: 1 i: 5
+ 1: rank: 1 i: 6
+ 1: rank: 1 i: 7
+ 1: rank: 1 i: 8
+ 1: rank: 1 i: 9
+ 1: rank: 1 i: 10
+ 1: rank: 1 i: 11
+ 1: rank: 1 i: 12
+ 1: rank: 1 i: 13
+ 1: rank: 1 i: 14
+ 1: rank: 1 i: 15
+ 1: rank: 1 i: 16
+ 1: rank: 1 i: 17
+ 1: rank: 1 i: 18
+ 1: rank: 1 i: 19
+ 1: rank: 1 i: 20
+ 1: rank: 1 i: 21
+ 1: rank: 1 i: 22
+ 1: rank: 1 i: 23
+ 1: rank: 1 i: 24
+ 1: rank: 1 i: 25
+ 1: rank: 1 i: 26
+ 1: rank: 1 i: 27
+ 1: rank: 1 i: 28
+ 1: rank: 1 i: 29
+ 1: rank: 1 i: 30
+ 1: rank: 1 i: 31
+ 1: rank: 1 i: 32
+ 1: rank: 1 i: 33
+ 1: rank: 1 i: 34
+ 1: rank: 1 i: 35
+ 1: rank: 1 i: 36
+ 1: rank: 1 i: 37
+ 1: rank: 1 i: 38
+ 1: rank: 1 i: 39
+ 1: rank: 1 i: 40
+ 1: rank: 1 i: 41
+ 1: rank: 1 i: 42
+ 1: rank: 1 i: 43
+ 1: rank: 1 i: 44
+ 1: rank: 1 i: 45
+ 1: rank: 1 i: 46
+ 1: rank: 1 i: 47
+ 1: rank: 1 i: 48
+ 1: rank: 1 i: 49
+ 1: rank: 1 i: 50
+ 1: rank: 1 i: 51
+ 1: rank: 1 i: 52
+ 1: rank: 1 i: 53
+ 1: rank: 1 i: 54
+ 1: rank: 1 i: 55
+ 1: rank: 1 i: 56
+ 1: rank: 1 i: 57
+ 1: rank: 1 i: 58
+ 1: rank: 1 i: 59
+ 1: rank: 1 i: 60
+ 1: rank: 1 i: 61
+ 1: rank: 1 i: 62
+ 1: rank: 1 i: 63
+ 1: all to all counts
+ 1: all to all indices
+ 1: all to all done
+ 1: Epoch: 0
+ 0: create GCN model
+ 0: pre send indices
+ 0: rank: 0 i: 0
+ 0: rank: 0 i: 1
+ 0: rank: 0 i: 2
+ 0: rank: 0 i: 3
+ 0: rank: 0 i: 4
+ 0: rank: 0 i: 5
+ 0: rank: 0 i: 6
+ 0: rank: 0 i: 7
+ 0: rank: 0 i: 8
+ 0: rank: 0 i: 9
+ 0: rank: 0 i: 10
+ 0: rank: 0 i: 11
+ 0: rank: 0 i: 12
+ 0: rank: 0 i: 13
+ 0: rank: 0 i: 14
+ 0: rank: 0 i: 15
+ 0: rank: 0 i: 16
+ 0: rank: 0 i: 17
+ 0: rank: 0 i: 18
+ 0: rank: 0 i: 19
+ 0: rank: 0 i: 20
+ 0: rank: 0 i: 21
+ 0: rank: 0 i: 22
+ 0: rank: 0 i: 23
+ 0: rank: 0 i: 24
+ 0: rank: 0 i: 25
+ 0: rank: 0 i: 26
+ 0: rank: 0 i: 27
+ 0: rank: 0 i: 28
+ 0: rank: 0 i: 29
+ 0: rank: 0 i: 30
+ 0: rank: 0 i: 31
+ 0: rank: 0 i: 32
+ 0: rank: 0 i: 33
+ 0: rank: 0 i: 34
+ 0: rank: 0 i: 35
+ 0: rank: 0 i: 36
+ 0: rank: 0 i: 37
+ 0: rank: 0 i: 38
+ 0: rank: 0 i: 39
+ 0: rank: 0 i: 40
+ 0: rank: 0 i: 41
+ 0: rank: 0 i: 42
+ 0: rank: 0 i: 43
+ 0: rank: 0 i: 44
+ 0: rank: 0 i: 45
+ 0: rank: 0 i: 46
+ 0: rank: 0 i: 47
+ 0: rank: 0 i: 48
+ 0: rank: 0 i: 49
+ 0: rank: 0 i: 50
+ 0: rank: 0 i: 51
+ 0: rank: 0 i: 52
+ 0: rank: 0 i: 53
+ 0: rank: 0 i: 54
+ 0: rank: 0 i: 55
+ 0: rank: 0 i: 56
+ 0: rank: 0 i: 57
+ 0: rank: 0 i: 58
+ 0: rank: 0 i: 59
+ 0: rank: 0 i: 60
+ 0: rank: 0 i: 61
+ 0: rank: 0 i: 62
+ 0: rank: 0 i: 63
+ 0: all to all counts
+ 0: all to all indices
+ 0: all to all done
+ 0: Epoch: 0
+19: create GCN model
+19: pre send indices
+19: rank: 19 i: 0
+19: rank: 19 i: 1
+19: rank: 19 i: 2
+19: rank: 19 i: 3
+19: rank: 19 i: 4
+19: rank: 19 i: 5
+19: rank: 19 i: 6
+19: rank: 19 i: 7
+19: rank: 19 i: 8
+19: rank: 19 i: 9
+19: rank: 19 i: 10
+19: rank: 19 i: 11
+19: rank: 19 i: 12
+19: rank: 19 i: 13
+19: rank: 19 i: 14
+19: rank: 19 i: 15
+19: rank: 19 i: 16
+19: rank: 19 i: 17
+19: rank: 19 i: 18
+19: rank: 19 i: 19
+19: rank: 19 i: 20
+19: rank: 19 i: 21
+19: rank: 19 i: 22
+19: rank: 19 i: 23
+19: rank: 19 i: 24
+19: rank: 19 i: 25
+19: rank: 19 i: 26
+19: rank: 19 i: 27
+19: rank: 19 i: 28
+19: rank: 19 i: 29
+19: rank: 19 i: 30
+19: rank: 19 i: 31
+19: rank: 19 i: 32
+19: rank: 19 i: 33
+19: rank: 19 i: 34
+19: rank: 19 i: 35
+19: rank: 19 i: 36
+19: rank: 19 i: 37
+19: rank: 19 i: 38
+19: rank: 19 i: 39
+19: rank: 19 i: 40
+19: rank: 19 i: 41
+19: rank: 19 i: 42
+19: rank: 19 i: 43
+19: rank: 19 i: 44
+19: rank: 19 i: 45
+19: rank: 19 i: 46
+19: rank: 19 i: 47
+19: rank: 19 i: 48
+19: rank: 19 i: 49
+19: rank: 19 i: 50
+19: rank: 19 i: 51
+19: rank: 19 i: 52
+19: rank: 19 i: 53
+19: rank: 19 i: 54
+19: rank: 19 i: 55
+19: rank: 19 i: 56
+19: rank: 19 i: 57
+19: rank: 19 i: 58
+19: rank: 19 i: 59
+19: rank: 19 i: 60
+19: rank: 19 i: 61
+19: rank: 19 i: 62
+19: rank: 19 i: 63
+19: all to all counts
+19: all to all indices
+19: all to all done
+19: Epoch: 0
+ 5: /global/common/software/nersc/pm-2021q4/sw/pytorch/1.11.0/lib/python3.9/site-packages/torch/distributed/distributed_c10d.py:278: UserWarning: Running all_gather on global rank 5 which does not belong to the given group.
+ 5:   warnings.warn(
+ 3: /global/common/software/nersc/pm-2021q4/sw/pytorch/1.11.0/lib/python3.9/site-packages/torch/distributed/distributed_c10d.py:278: UserWarning: Running all_gather on global rank 3 which does not belong to the given group.
+ 3:   warnings.warn(
+ 1: /global/common/software/nersc/pm-2021q4/sw/pytorch/1.11.0/lib/python3.9/site-packages/torch/distributed/distributed_c10d.py:278: UserWarning: Running all_gather on global rank 1 which does not belong to the given group.
+ 1:   warnings.warn(
+29: /global/common/software/nersc/pm-2021q4/sw/pytorch/1.11.0/lib/python3.9/site-packages/torch/distributed/distributed_c10d.py:278: UserWarning: Running all_gather on global rank 29 which does not belong to the given group.
+29:   warnings.warn(
+11: /global/common/software/nersc/pm-2021q4/sw/pytorch/1.11.0/lib/python3.9/site-packages/torch/distributed/distributed_c10d.py:278: UserWarning: Running all_gather on global rank 11 which does not belong to the given group.
+11:   warnings.warn(
+13: /global/common/software/nersc/pm-2021q4/sw/pytorch/1.11.0/lib/python3.9/site-packages/torch/distributed/distributed_c10d.py:278: UserWarning: Running all_gather on global rank 13 which does not belong to the given group.
+13:   warnings.warn(
+21: /global/common/software/nersc/pm-2021q4/sw/pytorch/1.11.0/lib/python3.9/site-packages/torch/distributed/distributed_c10d.py:278: UserWarning: Running all_gather on global rank 21 which does not belong to the given group.
+21:   warnings.warn(
+ 7: /global/common/software/nersc/pm-2021q4/sw/pytorch/1.11.0/lib/python3.9/site-packages/torch/distributed/distributed_c10d.py:278: UserWarning: Running all_gather on global rank 7 which does not belong to the given group.
+ 7:   warnings.warn(
+15: /global/common/software/nersc/pm-2021q4/sw/pytorch/1.11.0/lib/python3.9/site-packages/torch/distributed/distributed_c10d.py:278: UserWarning: Running all_gather on global rank 15 which does not belong to the given group.
+15:   warnings.warn(
+17: /global/common/software/nersc/pm-2021q4/sw/pytorch/1.11.0/lib/python3.9/site-packages/torch/distributed/distributed_c10d.py:278: UserWarning: Running all_gather on global rank 17 which does not belong to the given group.
+17:   warnings.warn(
+ 9: /global/common/software/nersc/pm-2021q4/sw/pytorch/1.11.0/lib/python3.9/site-packages/torch/distributed/distributed_c10d.py:278: UserWarning: Running all_gather on global rank 9 which does not belong to the given group.
+ 9:   warnings.warn(
+27: /global/common/software/nersc/pm-2021q4/sw/pytorch/1.11.0/lib/python3.9/site-packages/torch/distributed/distributed_c10d.py:278: UserWarning: Running all_gather on global rank 27 which does not belong to the given group.
+27:   warnings.warn(
+19: /global/common/software/nersc/pm-2021q4/sw/pytorch/1.11.0/lib/python3.9/site-packages/torch/distributed/distributed_c10d.py:278: UserWarning: Running all_gather on global rank 19 which does not belong to the given group.
+19:   warnings.warn(
+25: /global/common/software/nersc/pm-2021q4/sw/pytorch/1.11.0/lib/python3.9/site-packages/torch/distributed/distributed_c10d.py:278: UserWarning: Running all_gather on global rank 25 which does not belong to the given group.
+25:   warnings.warn(
+23: /global/common/software/nersc/pm-2021q4/sw/pytorch/1.11.0/lib/python3.9/site-packages/torch/distributed/distributed_c10d.py:278: UserWarning: Running all_gather on global rank 23 which does not belong to the given group.
+23:   warnings.warn(
+31: /global/common/software/nersc/pm-2021q4/sw/pytorch/1.11.0/lib/python3.9/site-packages/torch/distributed/distributed_c10d.py:278: UserWarning: Running all_gather on global rank 31 which does not belong to the given group.
+31:   warnings.warn(
+22: Epoch: 1
+16: Epoch: 1
+ 0: Epoch: 1
+28: Epoch: 1
+20: Epoch: 1
+18: Epoch: 1
+30: Epoch: 1
+ 4: Epoch: 1
+ 6: Epoch: 1
+24: Epoch: 1
+ 2: Epoch: 1
+ 5: Epoch: 1
+26: Epoch: 1
+ 7: Epoch: 1
+ 3: Epoch: 1
+13: Epoch: 1
+ 1: Epoch: 1
+10: Epoch: 1
+15: Epoch: 1
+11: Epoch: 1
+ 9: Epoch: 1
+17: Epoch: 1
+12: Epoch: 1
+29: Epoch: 1
+19: Epoch: 1
+27: Epoch: 1
+ 8: Epoch: 1
+23: Epoch: 1
+25: Epoch: 1
+21: Epoch: 1
+14: Epoch: 1
+31: Epoch: 1
+ 5: Epoch: 2
+11: Epoch: 2
+ 1: Epoch: 2
+ 4: Epoch: 2
+28: Epoch: 2
+16: Epoch: 2
+ 0: Epoch: 2
+ 7: Epoch: 2
+ 3: Epoch: 2
+20: Epoch: 2
+ 2: Epoch: 2
+ 6: Epoch: 2
+29: Epoch: 2
+ 9: Epoch: 2
+17: Epoch: 2
+10: Epoch: 2
+26: Epoch: 2
+13: Epoch: 2
+18: Epoch: 2
+21: Epoch: 2
+22: Epoch: 2
+ 8: Epoch: 2
+12: Epoch: 2
+24: Epoch: 2
+27: Epoch: 2
+25: Epoch: 2
+19: Epoch: 2
+23: Epoch: 2
+30: Epoch: 2
+31: Epoch: 2
+15: Epoch: 2
+14: Epoch: 2
+ 7: Epoch: 3
+16: Epoch: 3
+ 1: Epoch: 3
+ 5: Epoch: 3
+28: Epoch: 3
+11: Epoch: 3
+ 6: Epoch: 3
+20: Epoch: 3
+10: Epoch: 3
+17: Epoch: 3
+ 0: Epoch: 3
+ 4: Epoch: 3
+ 2: Epoch: 3
+ 3: Epoch: 3
+29: Epoch: 3
+26: Epoch: 3
+22: Epoch: 3
+24: Epoch: 3
+18: Epoch: 3
+ 9: Epoch: 3
+27: Epoch: 3
+13: Epoch: 3
+25: Epoch: 3
+23: Epoch: 3
+19: Epoch: 3
+21: Epoch: 3
+12: Epoch: 3
+ 8: Epoch: 3
+30: Epoch: 3
+31: Epoch: 3
+15: Epoch: 3
+14: Epoch: 3
+ 1: Epoch: 4
+ 7: Epoch: 4
+28: Epoch: 4
+11: Epoch: 4
+16: Epoch: 4
+ 0: Epoch: 4
+ 5: Epoch: 4
+20: Epoch: 4
+ 6: Epoch: 4
+17: Epoch: 4
+10: Epoch: 4
+ 4: Epoch: 4
+ 2: Epoch: 4
+29: Epoch: 4
+ 3: Epoch: 4
+26: Epoch: 4
+27: Epoch: 4
+18: Epoch: 4
+ 9: Epoch: 4
+22: Epoch: 4
+24: Epoch: 4
+25: Epoch: 4
+13: Epoch: 4
+21: Epoch: 4
+23: Epoch: 4
+19: Epoch: 4
+12: Epoch: 4
+ 8: Epoch: 4
+30: Epoch: 4
+31: Epoch: 4
+15: Epoch: 4
+14: Epoch: 4
+16: Epoch: 5
+ 1: Epoch: 5
+28: Epoch: 5
+11: Epoch: 5
+ 7: Epoch: 5
+17: Epoch: 5
+ 0: Epoch: 5
+ 5: Epoch: 5
+20: Epoch: 5
+ 6: Epoch: 5
+24: Epoch: 5
+18: Epoch: 5
+29: Epoch: 5
+10: Epoch: 5
+26: Epoch: 5
+ 3: Epoch: 5
+ 4: Epoch: 5
+ 2: Epoch: 5
+25: Epoch: 5
+27: Epoch: 5
+19: Epoch: 5
+21: Epoch: 5
+ 9: Epoch: 5
+13: Epoch: 5
+12: Epoch: 5
+ 8: Epoch: 5
+30: Epoch: 5
+31: Epoch: 5
+22: Epoch: 5
+23: Epoch: 5
+15: Epoch: 5
+14: Epoch: 5
+ 1: Epoch: 6
+ 7: Epoch: 6
+28: Epoch: 6
+11: Epoch: 6
+16: Epoch: 6
+20: Epoch: 6
+ 0: Epoch: 6
+ 5: Epoch: 6
+17: Epoch: 6
+18: Epoch: 6
+ 6: Epoch: 6
+29: Epoch: 6
+26: Epoch: 6
+22: Epoch: 6
+ 3: Epoch: 6
+ 4: Epoch: 6
+24: Epoch: 6
+10: Epoch: 6
+ 2: Epoch: 6
+19: Epoch: 6
+27: Epoch: 6
+25: Epoch: 6
+ 9: Epoch: 6
+21: Epoch: 6
+13: Epoch: 6
+23: Epoch: 6
+12: Epoch: 6
+ 8: Epoch: 6
+30: Epoch: 6
+31: Epoch: 6
+15: Epoch: 6
+14: Epoch: 6
+ 1: Epoch: 7
+ 7: Epoch: 7
+11: Epoch: 7
+28: Epoch: 7
+ 0: Epoch: 7
+20: Epoch: 7
+ 5: Epoch: 7
+16: Epoch: 7
+ 6: Epoch: 7
+17: Epoch: 7
+ 3: Epoch: 7
+ 2: Epoch: 7
+ 4: Epoch: 7
+29: Epoch: 7
+21: Epoch: 7
+26: Epoch: 7
+10: Epoch: 7
+18: Epoch: 7
+22: Epoch: 7
+24: Epoch: 7
+25: Epoch: 7
+ 9: Epoch: 7
+27: Epoch: 7
+13: Epoch: 7
+19: Epoch: 7
+23: Epoch: 7
+12: Epoch: 7
+ 8: Epoch: 7
+30: Epoch: 7
+31: Epoch: 7
+15: Epoch: 7
+14: Epoch: 7
+16: Epoch: 8
+ 1: Epoch: 8
+17: Epoch: 8
+28: Epoch: 8
+ 7: Epoch: 8
+11: Epoch: 8
+20: Epoch: 8
+ 0: Epoch: 8
+18: Epoch: 8
+ 5: Epoch: 8
+29: Epoch: 8
+26: Epoch: 8
+22: Epoch: 8
+10: Epoch: 8
+ 3: Epoch: 8
+ 6: Epoch: 8
+ 2: Epoch: 8
+27: Epoch: 8
+ 4: Epoch: 8
+19: Epoch: 8
+24: Epoch: 8
+25: Epoch: 8
+21: Epoch: 8
+23: Epoch: 8
+ 9: Epoch: 8
+13: Epoch: 8
+12: Epoch: 8
+ 8: Epoch: 8
+30: Epoch: 8
+31: Epoch: 8
+15: Epoch: 8
+14: Epoch: 8
+28: Epoch: 9
+11: Epoch: 9
+ 1: Epoch: 9
+ 7: Epoch: 9
+20: Epoch: 9
+16: Epoch: 9
+29: Epoch: 9
+ 5: Epoch: 9
+17: Epoch: 9
+ 0: Epoch: 9
+ 3: Epoch: 9
+ 2: Epoch: 9
+ 6: Epoch: 9
+21: Epoch: 9
+24: Epoch: 9
+18: Epoch: 9
+10: Epoch: 9
+ 4: Epoch: 9
+22: Epoch: 9
+26: Epoch: 9
+27: Epoch: 9
+ 9: Epoch: 9
+25: Epoch: 9
+19: Epoch: 9
+13: Epoch: 9
+23: Epoch: 9
+12: Epoch: 9
+ 8: Epoch: 9
+30: Epoch: 9
+31: Epoch: 9
+15: Epoch: 9
+14: Epoch: 9
+16: Epoch: 10
+ 1: Epoch: 10
+ 7: Epoch: 10
+28: Epoch: 10
+ 0: Epoch: 10
+20: Epoch: 10
+11: Epoch: 10
+17: Epoch: 10
+24: Epoch: 10
+22: Epoch: 10
+ 5: Epoch: 10
+26: Epoch: 10
+18: Epoch: 10
+29: Epoch: 10
+ 6: Epoch: 10
+25: Epoch: 10
+10: Epoch: 10
+ 3: Epoch: 10
+ 2: Epoch: 10
+21: Epoch: 10
+27: Epoch: 10
+23: Epoch: 10
+ 4: Epoch: 10
+19: Epoch: 10
+ 9: Epoch: 10
+13: Epoch: 10
+12: Epoch: 10
+ 8: Epoch: 10
+30: Epoch: 10
+31: Epoch: 10
+15: Epoch: 10
+14: Epoch: 10
+16: Epoch: 11
+28: Epoch: 11
+ 1: Epoch: 11
+ 7: Epoch: 11
+11: Epoch: 11
+ 3: Epoch: 11
+29: Epoch: 11
+17: Epoch: 11
+ 0: Epoch: 11
+ 5: Epoch: 11
+20: Epoch: 11
+ 6: Epoch: 11
+10: Epoch: 11
+26: Epoch: 11
+ 2: Epoch: 11
+18: Epoch: 11
+22: Epoch: 11
+24: Epoch: 11
+ 4: Epoch: 11
+27: Epoch: 11
+ 9: Epoch: 11
+25: Epoch: 11
+21: Epoch: 11
+19: Epoch: 11
+13: Epoch: 11
+23: Epoch: 11
+12: Epoch: 11
+ 8: Epoch: 11
+30: Epoch: 11
+31: Epoch: 11
+15: Epoch: 11
+14: Epoch: 11
+16: Epoch: 12
+28: Epoch: 12
+ 1: Epoch: 12
+ 7: Epoch: 12
+11: Epoch: 12
+20: Epoch: 12
+17: Epoch: 12
+ 0: Epoch: 12
+ 5: Epoch: 12
+29: Epoch: 12
+ 3: Epoch: 12
+26: Epoch: 12
+18: Epoch: 12
+ 6: Epoch: 12
+22: Epoch: 12
+10: Epoch: 12
+24: Epoch: 12
+21: Epoch: 12
+ 4: Epoch: 12
+ 2: Epoch: 12
+27: Epoch: 12
+19: Epoch: 12
+25: Epoch: 12
+ 9: Epoch: 12
+23: Epoch: 12
+13: Epoch: 12
+12: Epoch: 12
+ 8: Epoch: 12
+30: Epoch: 12
+31: Epoch: 12
+15: Epoch: 12
+14: Epoch: 12
+ 5: Epoch: 13
+ 1: Epoch: 13
+28: Epoch: 13
+16: Epoch: 13
+ 4: Epoch: 13
+11: Epoch: 13
+ 7: Epoch: 13
+ 0: Epoch: 13
+20: Epoch: 13
+ 3: Epoch: 13
+ 2: Epoch: 13
+ 6: Epoch: 13
+29: Epoch: 13
+ 9: Epoch: 13
+17: Epoch: 13
+10: Epoch: 13
+13: Epoch: 13
+26: Epoch: 13
+18: Epoch: 13
+22: Epoch: 13
+12: Epoch: 13
+27: Epoch: 13
+21: Epoch: 13
+24: Epoch: 13
+ 8: Epoch: 13
+19: Epoch: 13
+25: Epoch: 13
+23: Epoch: 13
+30: Epoch: 13
+31: Epoch: 13
+15: Epoch: 13
+14: Epoch: 13
+ 1: Epoch: 14
+11: Epoch: 14
+28: Epoch: 14
+ 0: Epoch: 14
+ 7: Epoch: 14
+16: Epoch: 14
+29: Epoch: 14
+ 5: Epoch: 14
+ 6: Epoch: 14
+26: Epoch: 14
+17: Epoch: 14
+ 3: Epoch: 14
+24: Epoch: 14
+ 2: Epoch: 14
+27: Epoch: 14
+18: Epoch: 14
+ 4: Epoch: 14
+10: Epoch: 14
+25: Epoch: 14
+ 9: Epoch: 14
+19: Epoch: 14
+13: Epoch: 14
+12: Epoch: 14
+ 8: Epoch: 14
+30: Epoch: 14
+20: Epoch: 14
+31: Epoch: 14
+22: Epoch: 14
+23: Epoch: 14
+21: Epoch: 14
+15: Epoch: 14
+14: Epoch: 14
+ 5: Epoch: 15
+28: Epoch: 15
+11: Epoch: 15
+ 1: Epoch: 15
+ 3: Epoch: 15
+ 7: Epoch: 15
+ 0: Epoch: 15
+ 6: Epoch: 15
+ 4: Epoch: 15
+10: Epoch: 15
+29: Epoch: 15
+20: Epoch: 15
+ 2: Epoch: 15
+ 9: Epoch: 15
+16: Epoch: 15
+17: Epoch: 15
+26: Epoch: 15
+13: Epoch: 15
+18: Epoch: 15
+22: Epoch: 15
+24: Epoch: 15
+12: Epoch: 15
+27: Epoch: 15
+21: Epoch: 15
+25: Epoch: 15
+ 8: Epoch: 15
+19: Epoch: 15
+23: Epoch: 15
+30: Epoch: 15
+31: Epoch: 15
+15: Epoch: 15
+14: Epoch: 15
+11: Epoch: 16
+ 3: Epoch: 16
+ 1: Epoch: 16
+ 5: Epoch: 16
+28: Epoch: 16
+ 0: Epoch: 16
+ 2: Epoch: 16
+ 7: Epoch: 16
+20: Epoch: 16
+29: Epoch: 16
+16: Epoch: 16
+ 6: Epoch: 16
+ 9: Epoch: 16
+ 4: Epoch: 16
+17: Epoch: 16
+18: Epoch: 16
+10: Epoch: 16
+22: Epoch: 16
+13: Epoch: 16
+26: Epoch: 16
+24: Epoch: 16
+27: Epoch: 16
+12: Epoch: 16
+19: Epoch: 16
+25: Epoch: 16
+21: Epoch: 16
+ 8: Epoch: 16
+23: Epoch: 16
+30: Epoch: 16
+31: Epoch: 16
+15: Epoch: 16
+14: Epoch: 16
+ 5: Epoch: 17
+11: Epoch: 17
+ 7: Epoch: 17
+28: Epoch: 17
+ 4: Epoch: 17
+ 9: Epoch: 17
+16: Epoch: 17
+29: Epoch: 17
+20: Epoch: 17
+ 6: Epoch: 17
+17: Epoch: 17
+10: Epoch: 17
+13: Epoch: 17
+26: Epoch: 17
+24: Epoch: 17
+18: Epoch: 17
+22: Epoch: 17
+27: Epoch: 17
+12: Epoch: 17
+ 8: Epoch: 17
+25: Epoch: 17
+21: Epoch: 17
+19: Epoch: 17
+23: Epoch: 17
+ 3: Epoch: 17
+30: Epoch: 17
+ 1: Epoch: 17
+ 0: Epoch: 17
+ 2: Epoch: 17
+31: Epoch: 17
+15: Epoch: 17
+14: Epoch: 17
+16: Epoch: 18
+ 1: Epoch: 18
+ 7: Epoch: 18
+ 3: Epoch: 18
+17: Epoch: 18
+ 0: Epoch: 18
+20: Epoch: 18
+ 5: Epoch: 18
+26: Epoch: 18
+ 6: Epoch: 18
+11: Epoch: 18
+18: Epoch: 18
+22: Epoch: 18
+24: Epoch: 18
+ 2: Epoch: 18
+27: Epoch: 18
+ 9: Epoch: 18
+ 4: Epoch: 18
+23: Epoch: 18
+25: Epoch: 18
+10: Epoch: 18
+19: Epoch: 18
+21: Epoch: 18
+13: Epoch: 18
+12: Epoch: 18
+ 8: Epoch: 18
+30: Epoch: 18
+28: Epoch: 18
+31: Epoch: 18
+29: Epoch: 18
+15: Epoch: 18
+14: Epoch: 18
+16: Epoch: 19
+ 1: Epoch: 19
+ 7: Epoch: 19
+ 0: Epoch: 19
+28: Epoch: 19
+11: Epoch: 19
+17: Epoch: 19
+ 5: Epoch: 19
+20: Epoch: 19
+ 6: Epoch: 19
+29: Epoch: 19
+26: Epoch: 19
+10: Epoch: 19
+18: Epoch: 19
+ 3: Epoch: 19
+27: Epoch: 19
+ 9: Epoch: 19
+ 2: Epoch: 19
+ 4: Epoch: 19
+21: Epoch: 19
+24: Epoch: 19
+22: Epoch: 19
+25: Epoch: 19
+23: Epoch: 19
+19: Epoch: 19
+13: Epoch: 19
+ 8: Epoch: 19
+12: Epoch: 19
+30: Epoch: 19
+31: Epoch: 19
+15: Epoch: 19
+14: Epoch: 19
+ 1: Epoch: 20
+28: Epoch: 20
+ 0: Epoch: 20
+16: Epoch: 20
+ 7: Epoch: 20
+29: Epoch: 20
+11: Epoch: 20
+17: Epoch: 20
+ 5: Epoch: 20
+20: Epoch: 20
+26: Epoch: 20
+ 6: Epoch: 20
+10: Epoch: 20
+18: Epoch: 20
+ 2: Epoch: 20
+ 4: Epoch: 20
+22: Epoch: 20
+27: Epoch: 20
+ 9: Epoch: 20
+ 3: Epoch: 20
+19: Epoch: 20
+21: Epoch: 20
+24: Epoch: 20
+23: Epoch: 20
+25: Epoch: 20
+13: Epoch: 20
+ 8: Epoch: 20
+12: Epoch: 20
+30: Epoch: 20
+31: Epoch: 20
+15: Epoch: 20
+14: Epoch: 20
+ 5: Epoch: 21
+ 4: Epoch: 21
+13: Epoch: 21
+ 1: Epoch: 21
+ 7: Epoch: 21
+28: Epoch: 21
+11: Epoch: 21
+16: Epoch: 21
+ 0: Epoch: 21
+ 6: Epoch: 21
+12: Epoch: 21
+20: Epoch: 21
+ 9: Epoch: 21
+ 2: Epoch: 21
+29: Epoch: 21
+17: Epoch: 21
+ 3: Epoch: 21
+15: Epoch: 21
+26: Epoch: 21
+18: Epoch: 21
+14: Epoch: 21
+24: Epoch: 21
+27: Epoch: 21
+10: Epoch: 21
+21: Epoch: 21
+22: Epoch: 21
+25: Epoch: 21
+ 8: Epoch: 21
+19: Epoch: 21
+23: Epoch: 21
+30: Epoch: 21
+31: Epoch: 21
+ 1: Epoch: 22
+ 3: Epoch: 22
+ 5: Epoch: 22
+11: Epoch: 22
+ 0: Epoch: 22
+28: Epoch: 22
+16: Epoch: 22
+ 7: Epoch: 22
+20: Epoch: 22
+ 9: Epoch: 22
+17: Epoch: 22
+ 4: Epoch: 22
+29: Epoch: 22
+ 2: Epoch: 22
+10: Epoch: 22
+ 6: Epoch: 22
+18: Epoch: 22
+26: Epoch: 22
+22: Epoch: 22
+13: Epoch: 22
+27: Epoch: 22
+21: Epoch: 22
+24: Epoch: 22
+ 8: Epoch: 22
+19: Epoch: 22
+25: Epoch: 22
+23: Epoch: 22
+12: Epoch: 22
+30: Epoch: 22
+31: Epoch: 22
+15: Epoch: 22
+14: Epoch: 22
+16: Epoch: 23
+ 1: Epoch: 23
+17: Epoch: 23
+28: Epoch: 23
+18: Epoch: 23
+ 7: Epoch: 23
+11: Epoch: 23
+ 0: Epoch: 23
+ 5: Epoch: 23
+29: Epoch: 23
+22: Epoch: 23
+24: Epoch: 23
+ 3: Epoch: 23
+ 6: Epoch: 23
+20: Epoch: 23
+10: Epoch: 23
+19: Epoch: 23
+ 2: Epoch: 23
+ 4: Epoch: 23
+23: Epoch: 23
+26: Epoch: 23
+27: Epoch: 23
+ 9: Epoch: 23
+25: Epoch: 23
+21: Epoch: 23
+13: Epoch: 23
+ 8: Epoch: 23
+12: Epoch: 23
+30: Epoch: 23
+31: Epoch: 23
+15: Epoch: 23
+14: Epoch: 23
+ 3: Epoch: 24
+ 5: Epoch: 24
+11: Epoch: 24
+16: Epoch: 24
+ 1: Epoch: 24
+28: Epoch: 24
+ 2: Epoch: 24
+ 7: Epoch: 24
+20: Epoch: 24
+ 0: Epoch: 24
+ 9: Epoch: 24
+ 4: Epoch: 24
+29: Epoch: 24
+17: Epoch: 24
+ 6: Epoch: 24
+26: Epoch: 24
+10: Epoch: 24
+18: Epoch: 24
+22: Epoch: 24
+ 8: Epoch: 24
+24: Epoch: 24
+13: Epoch: 24
+21: Epoch: 24
+27: Epoch: 24
+25: Epoch: 24
+23: Epoch: 24
+19: Epoch: 24
+12: Epoch: 24
+30: Epoch: 24
+31: Epoch: 24
+15: Epoch: 24
+14: Epoch: 24
+ 5: Epoch: 25
+11: Epoch: 25
+ 1: Epoch: 25
+ 3: Epoch: 25
+ 7: Epoch: 25
+28: Epoch: 25
+ 0: Epoch: 25
+ 2: Epoch: 25
+ 4: Epoch: 25
+ 9: Epoch: 25
+16: Epoch: 25
+29: Epoch: 25
+20: Epoch: 25
+ 6: Epoch: 25
+17: Epoch: 25
+18: Epoch: 25
+13: Epoch: 25
+26: Epoch: 25
+10: Epoch: 25
+21: Epoch: 25
+27: Epoch: 25
+22: Epoch: 25
+12: Epoch: 25
+ 8: Epoch: 25
+19: Epoch: 25
+24: Epoch: 25
+23: Epoch: 25
+25: Epoch: 25
+30: Epoch: 25
+31: Epoch: 25
+15: Epoch: 25
+14: Epoch: 25
+ 5: Epoch: 26
+ 4: Epoch: 26
+ 3: Epoch: 26
+11: Epoch: 26
+ 1: Epoch: 26
+ 7: Epoch: 26
+13: Epoch: 26
+28: Epoch: 26
+ 2: Epoch: 26
+ 6: Epoch: 26
+16: Epoch: 26
+ 0: Epoch: 26
+20: Epoch: 26
+12: Epoch: 26
+ 9: Epoch: 26
+17: Epoch: 26
+29: Epoch: 26
+10: Epoch: 26
+18: Epoch: 26
+15: Epoch: 26
+24: Epoch: 26
+22: Epoch: 26
+26: Epoch: 26
+27: Epoch: 26
+14: Epoch: 26
+25: Epoch: 26
+ 8: Epoch: 26
+21: Epoch: 26
+19: Epoch: 26
+23: Epoch: 26
+30: Epoch: 26
+31: Epoch: 26
+ 5: Epoch: 27
+11: Epoch: 27
+ 1: Epoch: 27
+ 7: Epoch: 27
+28: Epoch: 27
+16: Epoch: 27
+ 3: Epoch: 27
+20: Epoch: 27
+ 9: Epoch: 27
+ 2: Epoch: 27
+ 4: Epoch: 27
+29: Epoch: 27
+ 0: Epoch: 27
+ 6: Epoch: 27
+10: Epoch: 27
+17: Epoch: 27
+18: Epoch: 27
+13: Epoch: 27
+26: Epoch: 27
+22: Epoch: 27
+27: Epoch: 27
+19: Epoch: 27
+12: Epoch: 27
+ 8: Epoch: 27
+21: Epoch: 27
+23: Epoch: 27
+30: Epoch: 27
+31: Epoch: 27
+15: Epoch: 27
+14: Epoch: 27
+24: Epoch: 27
+25: Epoch: 27
+ 5: Epoch: 28
+11: Epoch: 28
+ 1: Epoch: 28
+ 7: Epoch: 28
+28: Epoch: 28
+16: Epoch: 28
+ 0: Epoch: 28
+ 4: Epoch: 28
+20: Epoch: 28
+ 2: Epoch: 28
+ 6: Epoch: 28
+ 9: Epoch: 28
+ 3: Epoch: 28
+29: Epoch: 28
+17: Epoch: 28
+10: Epoch: 28
+18: Epoch: 28
+26: Epoch: 28
+13: Epoch: 28
+21: Epoch: 28
+24: Epoch: 28
+22: Epoch: 28
+27: Epoch: 28
+19: Epoch: 28
+25: Epoch: 28
+12: Epoch: 28
+ 8: Epoch: 28
+23: Epoch: 28
+30: Epoch: 28
+31: Epoch: 28
+15: Epoch: 28
+14: Epoch: 28
+ 1: Epoch: 29
+ 7: Epoch: 29
+ 3: Epoch: 29
+28: Epoch: 29
+11: Epoch: 29
+ 0: Epoch: 29
+16: Epoch: 29
+ 5: Epoch: 29
+20: Epoch: 29
+ 6: Epoch: 29
+29: Epoch: 29
+ 2: Epoch: 29
+17: Epoch: 29
+ 9: Epoch: 29
+18: Epoch: 29
+22: Epoch: 29
+ 4: Epoch: 29
+26: Epoch: 29
+10: Epoch: 29
+24: Epoch: 29
+19: Epoch: 29
+21: Epoch: 29
+27: Epoch: 29
+25: Epoch: 29
+23: Epoch: 29
+13: Epoch: 29
+ 8: Epoch: 29
+12: Epoch: 29
+30: Epoch: 29
+31: Epoch: 29
+15: Epoch: 29
+14: Epoch: 29
+ 1: Epoch: 30
+16: Epoch: 30
+ 0: Epoch: 30
+ 7: Epoch: 30
+28: Epoch: 30
+11: Epoch: 30
+ 5: Epoch: 30
+17: Epoch: 30
+ 6: Epoch: 30
+29: Epoch: 30
+20: Epoch: 30
+18: Epoch: 30
+ 3: Epoch: 30
+24: Epoch: 30
+ 2: Epoch: 30
+10: Epoch: 30
+22: Epoch: 30
+26: Epoch: 30
+27: Epoch: 30
+ 9: Epoch: 30
+ 4: Epoch: 30
+25: Epoch: 30
+19: Epoch: 30
+23: Epoch: 30
+21: Epoch: 30
+13: Epoch: 30
+ 8: Epoch: 30
+12: Epoch: 30
+30: Epoch: 30
+31: Epoch: 30
+15: Epoch: 30
+14: Epoch: 30
+ 1: Epoch: 31
+16: Epoch: 31
+ 0: Epoch: 31
+ 7: Epoch: 31
+28: Epoch: 31
+11: Epoch: 31
+20: Epoch: 31
+ 5: Epoch: 31
+17: Epoch: 31
+29: Epoch: 31
+ 6: Epoch: 31
+18: Epoch: 31
+ 9: Epoch: 31
+ 3: Epoch: 31
+ 2: Epoch: 31
+ 4: Epoch: 31
+10: Epoch: 31
+21: Epoch: 31
+26: Epoch: 31
+19: Epoch: 31
+22: Epoch: 31
+24: Epoch: 31
+27: Epoch: 31
+13: Epoch: 31
+25: Epoch: 31
+23: Epoch: 31
+ 8: Epoch: 31
+12: Epoch: 31
+30: Epoch: 31
+31: Epoch: 31
+15: Epoch: 31
+14: Epoch: 31
+16: Epoch: 32
+ 1: Epoch: 32
+28: Epoch: 32
+ 7: Epoch: 32
+ 0: Epoch: 32
+11: Epoch: 32
+20: Epoch: 32
+17: Epoch: 32
+ 5: Epoch: 32
+29: Epoch: 32
+ 6: Epoch: 32
+ 3: Epoch: 32
+18: Epoch: 32
+ 2: Epoch: 32
+26: Epoch: 32
+10: Epoch: 32
+ 4: Epoch: 32
+22: Epoch: 32
+ 9: Epoch: 32
+24: Epoch: 32
+21: Epoch: 32
+27: Epoch: 32
+25: Epoch: 32
+19: Epoch: 32
+23: Epoch: 32
+13: Epoch: 32
+ 8: Epoch: 32
+12: Epoch: 32
+30: Epoch: 32
+31: Epoch: 32
+15: Epoch: 32
+14: Epoch: 32
+ 1: Epoch: 33
+ 7: Epoch: 33
+28: Epoch: 33
+11: Epoch: 33
+16: Epoch: 33
+ 0: Epoch: 33
+ 5: Epoch: 33
+ 3: Epoch: 33
+20: Epoch: 33
+ 6: Epoch: 33
+29: Epoch: 33
+ 9: Epoch: 33
+ 2: Epoch: 33
+17: Epoch: 33
+26: Epoch: 33
+ 4: Epoch: 33
+18: Epoch: 33
+24: Epoch: 33
+21: Epoch: 33
+10: Epoch: 33
+22: Epoch: 33
+25: Epoch: 33
+19: Epoch: 33
+13: Epoch: 33
+27: Epoch: 33
+23: Epoch: 33
+ 8: Epoch: 33
+12: Epoch: 33
+30: Epoch: 33
+31: Epoch: 33
+15: Epoch: 33
+14: Epoch: 33
+ 5: Epoch: 34
+ 1: Epoch: 34
+11: Epoch: 34
+16: Epoch: 34
+ 3: Epoch: 34
+ 7: Epoch: 34
+28: Epoch: 34
+ 0: Epoch: 34
+ 2: Epoch: 34
+ 4: Epoch: 34
+20: Epoch: 34
+ 9: Epoch: 34
+ 6: Epoch: 34
+29: Epoch: 34
+17: Epoch: 34
+10: Epoch: 34
+18: Epoch: 34
+26: Epoch: 34
+13: Epoch: 34
+22: Epoch: 34
+24: Epoch: 34
+19: Epoch: 34
+12: Epoch: 34
+27: Epoch: 34
+21: Epoch: 34
+ 8: Epoch: 34
+25: Epoch: 34
+23: Epoch: 34
+30: Epoch: 34
+31: Epoch: 34
+15: Epoch: 34
+14: Epoch: 34
+ 1: Epoch: 35
+ 7: Epoch: 35
+11: Epoch: 35
+28: Epoch: 35
+ 0: Epoch: 35
+ 5: Epoch: 35
+16: Epoch: 35
+ 6: Epoch: 35
+29: Epoch: 35
+20: Epoch: 35
+ 3: Epoch: 35
+ 9: Epoch: 35
+17: Epoch: 35
+ 2: Epoch: 35
+ 4: Epoch: 35
+10: Epoch: 35
+18: Epoch: 35
+26: Epoch: 35
+22: Epoch: 35
+24: Epoch: 35
+19: Epoch: 35
+13: Epoch: 35
+27: Epoch: 35
+25: Epoch: 35
+21: Epoch: 35
+ 8: Epoch: 35
+12: Epoch: 35
+23: Epoch: 35
+30: Epoch: 35
+31: Epoch: 35
+15: Epoch: 35
+14: Epoch: 35
+ 1: Epoch: 36
+ 5: Epoch: 36
+11: Epoch: 36
+28: Epoch: 36
+16: Epoch: 36
+ 0: Epoch: 36
+ 7: Epoch: 36
+ 3: Epoch: 36
+ 4: Epoch: 36
+10: Epoch: 36
+ 2: Epoch: 36
+20: Epoch: 36
+29: Epoch: 36
+ 6: Epoch: 36
+ 9: Epoch: 36
+17: Epoch: 36
+26: Epoch: 36
+18: Epoch: 36
+22: Epoch: 36
+24: Epoch: 36
+27: Epoch: 36
+13: Epoch: 36
+19: Epoch: 36
+25: Epoch: 36
+ 8: Epoch: 36
+21: Epoch: 36
+12: Epoch: 36
+23: Epoch: 36
+30: Epoch: 36
+31: Epoch: 36
+15: Epoch: 36
+14: Epoch: 36
+ 5: Epoch: 37
+ 1: Epoch: 37
+ 7: Epoch: 37
+11: Epoch: 37
+28: Epoch: 37
+16: Epoch: 37
+ 0: Epoch: 37
+ 4: Epoch: 37
+20: Epoch: 37
+ 3: Epoch: 37
+ 9: Epoch: 37
+17: Epoch: 37
+ 2: Epoch: 37
+ 6: Epoch: 37
+29: Epoch: 37
+10: Epoch: 37
+18: Epoch: 37
+26: Epoch: 37
+21: Epoch: 37
+13: Epoch: 37
+22: Epoch: 37
+24: Epoch: 37
+27: Epoch: 37
+19: Epoch: 37
+23: Epoch: 37
+ 8: Epoch: 37
+25: Epoch: 37
+12: Epoch: 37
+30: Epoch: 37
+31: Epoch: 37
+15: Epoch: 37
+14: Epoch: 37
+16: Epoch: 38
+ 1: Epoch: 38
+ 7: Epoch: 38
+28: Epoch: 38
+ 0: Epoch: 38
+11: Epoch: 38
+ 3: Epoch: 38
+ 5: Epoch: 38
+29: Epoch: 38
+20: Epoch: 38
+17: Epoch: 38
+ 6: Epoch: 38
+18: Epoch: 38
+ 9: Epoch: 38
+ 2: Epoch: 38
+ 4: Epoch: 38
+24: Epoch: 38
+10: Epoch: 38
+22: Epoch: 38
+26: Epoch: 38
+19: Epoch: 38
+27: Epoch: 38
+25: Epoch: 38
+21: Epoch: 38
+13: Epoch: 38
+23: Epoch: 38
+ 8: Epoch: 38
+12: Epoch: 38
+30: Epoch: 38
+31: Epoch: 38
+15: Epoch: 38
+14: Epoch: 38
+16: Epoch: 39
+ 1: Epoch: 39
+ 7: Epoch: 39
+28: Epoch: 39
+11: Epoch: 39
+ 5: Epoch: 39
+20: Epoch: 39
+26: Epoch: 39
+17: Epoch: 39
+29: Epoch: 39
+ 6: Epoch: 39
+27: Epoch: 39
+18: Epoch: 39
+ 0: Epoch: 39
+22: Epoch: 39
+24: Epoch: 39
+ 3: Epoch: 39
+10: Epoch: 39
+ 2: Epoch: 39
+ 4: Epoch: 39
+25: Epoch: 39
+ 9: Epoch: 39
+23: Epoch: 39
+19: Epoch: 39
+13: Epoch: 39
+12: Epoch: 39
+21: Epoch: 39
+ 8: Epoch: 39
+30: Epoch: 39
+31: Epoch: 39
+14: Epoch: 39
+15: Epoch: 39
+ 1: Epoch: 40
+ 7: Epoch: 40
+28: Epoch: 40
+16: Epoch: 40
+ 0: Epoch: 40
+ 5: Epoch: 40
+11: Epoch: 40
+20: Epoch: 40
+29: Epoch: 40
+ 6: Epoch: 40
+ 3: Epoch: 40
+ 4: Epoch: 40
+26: Epoch: 40
+ 9: Epoch: 40
+17: Epoch: 40
+ 2: Epoch: 40
+22: Epoch: 40
+27: Epoch: 40
+10: Epoch: 40
+18: Epoch: 40
+13: Epoch: 40
+24: Epoch: 40
+21: Epoch: 40
+19: Epoch: 40
+23: Epoch: 40
+25: Epoch: 40
+ 8: Epoch: 40
+12: Epoch: 40
+30: Epoch: 40
+31: Epoch: 40
+15: Epoch: 40
+14: Epoch: 40
+16: Epoch: 41
+ 1: Epoch: 41
+ 7: Epoch: 41
+17: Epoch: 41
+28: Epoch: 41
+ 0: Epoch: 41
+ 5: Epoch: 41
+20: Epoch: 41
+18: Epoch: 41
+ 3: Epoch: 41
+29: Epoch: 41
+26: Epoch: 41
+11: Epoch: 41
+ 6: Epoch: 41
+ 2: Epoch: 41
+22: Epoch: 41
+24: Epoch: 41
+27: Epoch: 41
+ 9: Epoch: 41
+19: Epoch: 41
+21: Epoch: 41
+ 4: Epoch: 41
+25: Epoch: 41
+10: Epoch: 41
+23: Epoch: 41
+13: Epoch: 41
+ 8: Epoch: 41
+12: Epoch: 41
+30: Epoch: 41
+31: Epoch: 41
+15: Epoch: 41
+14: Epoch: 41
+ 1: Epoch: 42
+ 7: Epoch: 42
+16: Epoch: 42
+ 0: Epoch: 42
+28: Epoch: 42
+ 6: Epoch: 42
+11: Epoch: 42
+ 5: Epoch: 42
+29: Epoch: 42
+17: Epoch: 42
+20: Epoch: 42
+ 3: Epoch: 42
+18: Epoch: 42
+ 2: Epoch: 42
+26: Epoch: 42
+ 9: Epoch: 42
+ 4: Epoch: 42
+27: Epoch: 42
+22: Epoch: 42
+10: Epoch: 42
+19: Epoch: 42
+24: Epoch: 42
+25: Epoch: 42
+13: Epoch: 42
+21: Epoch: 42
+23: Epoch: 42
+ 8: Epoch: 42
+12: Epoch: 42
+30: Epoch: 42
+31: Epoch: 42
+15: Epoch: 42
+14: Epoch: 42
+16: Epoch: 43
+ 1: Epoch: 43
+28: Epoch: 43
+ 7: Epoch: 43
+17: Epoch: 43
+18: Epoch: 43
+ 0: Epoch: 43
+20: Epoch: 43
+ 3: Epoch: 43
+ 5: Epoch: 43
+29: Epoch: 43
+26: Epoch: 43
+11: Epoch: 43
+ 2: Epoch: 43
+ 6: Epoch: 43
+22: Epoch: 43
+24: Epoch: 43
+27: Epoch: 43
+25: Epoch: 43
+19: Epoch: 43
+ 9: Epoch: 43
+ 4: Epoch: 43
+10: Epoch: 43
+23: Epoch: 43
+21: Epoch: 43
+13: Epoch: 43
+ 8: Epoch: 43
+12: Epoch: 43
+30: Epoch: 43
+31: Epoch: 43
+15: Epoch: 43
+14: Epoch: 43
+ 1: Epoch: 44
+ 7: Epoch: 44
+28: Epoch: 44
+11: Epoch: 44
+16: Epoch: 44
+ 0: Epoch: 44
+ 5: Epoch: 44
+ 3: Epoch: 44
+20: Epoch: 44
+29: Epoch: 44
+ 6: Epoch: 44
+10: Epoch: 44
+ 2: Epoch: 44
+ 9: Epoch: 44
+ 4: Epoch: 44
+17: Epoch: 44
+26: Epoch: 44
+18: Epoch: 44
+24: Epoch: 44
+27: Epoch: 44
+22: Epoch: 44
+19: Epoch: 44
+ 8: Epoch: 44
+13: Epoch: 44
+25: Epoch: 44
+21: Epoch: 44
+23: Epoch: 44
+12: Epoch: 44
+30: Epoch: 44
+31: Epoch: 44
+15: Epoch: 44
+14: Epoch: 44
+ 1: Epoch: 45
+ 7: Epoch: 45
+28: Epoch: 45
+16: Epoch: 45
+ 0: Epoch: 45
+11: Epoch: 45
+ 5: Epoch: 45
+ 6: Epoch: 45
+17: Epoch: 45
+29: Epoch: 45
+18: Epoch: 45
+20: Epoch: 45
+ 3: Epoch: 45
+26: Epoch: 45
+ 9: Epoch: 45
+ 2: Epoch: 45
+ 4: Epoch: 45
+22: Epoch: 45
+24: Epoch: 45
+10: Epoch: 45
+19: Epoch: 45
+27: Epoch: 45
+25: Epoch: 45
+13: Epoch: 45
+21: Epoch: 45
+23: Epoch: 45
+ 8: Epoch: 45
+12: Epoch: 45
+30: Epoch: 45
+31: Epoch: 45
+15: Epoch: 45
+14: Epoch: 45
+ 1: Epoch: 46
+28: Epoch: 46
+ 7: Epoch: 46
+11: Epoch: 46
+ 0: Epoch: 46
+20: Epoch: 46
+ 5: Epoch: 46
+29: Epoch: 46
+ 6: Epoch: 46
+ 3: Epoch: 46
+ 2: Epoch: 46
+26: Epoch: 46
+18: Epoch: 46
+10: Epoch: 46
+24: Epoch: 46
+27: Epoch: 46
+22: Epoch: 46
+ 9: Epoch: 46
+ 4: Epoch: 46
+25: Epoch: 46
+19: Epoch: 46
+21: Epoch: 46
+13: Epoch: 46
+23: Epoch: 46
+12: Epoch: 46
+ 8: Epoch: 46
+16: Epoch: 46
+30: Epoch: 46
+31: Epoch: 46
+17: Epoch: 46
+15: Epoch: 46
+14: Epoch: 46
+ 1: Epoch: 47
+16: Epoch: 47
+ 0: Epoch: 47
+28: Epoch: 47
+ 7: Epoch: 47
+11: Epoch: 47
+17: Epoch: 47
+ 5: Epoch: 47
+20: Epoch: 47
+29: Epoch: 47
+18: Epoch: 47
+26: Epoch: 47
+ 6: Epoch: 47
+13: Epoch: 47
+10: Epoch: 47
+ 3: Epoch: 47
+ 4: Epoch: 47
+22: Epoch: 47
+27: Epoch: 47
+19: Epoch: 47
+ 2: Epoch: 47
+12: Epoch: 47
+ 9: Epoch: 47
+21: Epoch: 47
+24: Epoch: 47
+23: Epoch: 47
+25: Epoch: 47
+ 8: Epoch: 47
+30: Epoch: 47
+31: Epoch: 47
+15: Epoch: 47
+14: Epoch: 47
+ 1: Epoch: 48
+ 5: Epoch: 48
+11: Epoch: 48
+ 3: Epoch: 48
+28: Epoch: 48
+ 0: Epoch: 48
+ 7: Epoch: 48
+20: Epoch: 48
+16: Epoch: 48
+ 2: Epoch: 48
+ 9: Epoch: 48
+ 6: Epoch: 48
+29: Epoch: 48
+ 4: Epoch: 48
+17: Epoch: 48
+10: Epoch: 48
+18: Epoch: 48
+22: Epoch: 48
+26: Epoch: 48
+13: Epoch: 48
+19: Epoch: 48
+24: Epoch: 48
+27: Epoch: 48
+12: Epoch: 48
+21: Epoch: 48
+25: Epoch: 48
+ 8: Epoch: 48
+23: Epoch: 48
+30: Epoch: 48
+31: Epoch: 48
+15: Epoch: 48
+14: Epoch: 48
+ 1: Epoch: 49
+28: Epoch: 49
+11: Epoch: 49
+ 7: Epoch: 49
+ 0: Epoch: 49
+16: Epoch: 49
+20: Epoch: 49
+29: Epoch: 49
+ 5: Epoch: 49
+17: Epoch: 49
+ 3: Epoch: 49
+ 6: Epoch: 49
+26: Epoch: 49
+ 2: Epoch: 49
+18: Epoch: 49
+ 9: Epoch: 49
+ 4: Epoch: 49
+22: Epoch: 49
+10: Epoch: 49
+24: Epoch: 49
+27: Epoch: 49
+19: Epoch: 49
+25: Epoch: 49
+21: Epoch: 49
+13: Epoch: 49
+23: Epoch: 49
+ 8: Epoch: 49
+12: Epoch: 49
+30: Epoch: 49
+31: Epoch: 49
+15: Epoch: 49
+14: Epoch: 49
+16: Epoch: 50
+ 1: Epoch: 50
+ 7: Epoch: 50
+28: Epoch: 50
+17: Epoch: 50
+ 0: Epoch: 50
+ 5: Epoch: 50
+29: Epoch: 50
+20: Epoch: 50
+26: Epoch: 50
+18: Epoch: 50
+ 3: Epoch: 50
+ 6: Epoch: 50
+ 2: Epoch: 50
+27: Epoch: 50
+22: Epoch: 50
+19: Epoch: 50
+ 4: Epoch: 50
+24: Epoch: 50
+21: Epoch: 50
+25: Epoch: 50
+23: Epoch: 50
+13: Epoch: 50
+12: Epoch: 50
+11: Epoch: 50
+ 9: Epoch: 50
+30: Epoch: 50
+10: Epoch: 50
+31: Epoch: 50
+ 8: Epoch: 50
+15: Epoch: 50
+14: Epoch: 50
+ 1: Epoch: 51
+16: Epoch: 51
+28: Epoch: 51
+ 0: Epoch: 51
+ 7: Epoch: 51
+11: Epoch: 51
+ 5: Epoch: 51
+17: Epoch: 51
+29: Epoch: 51
+20: Epoch: 51
+ 6: Epoch: 51
+18: Epoch: 51
+22: Epoch: 51
+10: Epoch: 51
+ 3: Epoch: 51
+ 4: Epoch: 51
+24: Epoch: 51
+19: Epoch: 51
+ 2: Epoch: 51
+23: Epoch: 51
+25: Epoch: 51
+ 9: Epoch: 51
+13: Epoch: 51
+21: Epoch: 51
+ 8: Epoch: 51
+12: Epoch: 51
+30: Epoch: 51
+31: Epoch: 51
+26: Epoch: 51
+27: Epoch: 51
+15: Epoch: 51
+14: Epoch: 51
+ 1: Epoch: 52
+28: Epoch: 52
+16: Epoch: 52
+ 7: Epoch: 52
+ 0: Epoch: 52
+29: Epoch: 52
+ 3: Epoch: 52
+ 5: Epoch: 52
+20: Epoch: 52
+17: Epoch: 52
+11: Epoch: 52
+ 6: Epoch: 52
+18: Epoch: 52
+ 2: Epoch: 52
+26: Epoch: 52
+ 9: Epoch: 52
+22: Epoch: 52
+ 4: Epoch: 52
+24: Epoch: 52
+10: Epoch: 52
+19: Epoch: 52
+27: Epoch: 52
+21: Epoch: 52
+25: Epoch: 52
+23: Epoch: 52
+13: Epoch: 52
+ 8: Epoch: 52
+12: Epoch: 52
+30: Epoch: 52
+31: Epoch: 52
+15: Epoch: 52
+14: Epoch: 52
+ 1: Epoch: 53
+ 7: Epoch: 53
+28: Epoch: 53
+16: Epoch: 53
+ 0: Epoch: 53
+ 5: Epoch: 53
+29: Epoch: 53
+11: Epoch: 53
+ 3: Epoch: 53
+ 6: Epoch: 53
+17: Epoch: 53
+ 2: Epoch: 53
+ 9: Epoch: 53
+18: Epoch: 53
+26: Epoch: 53
+10: Epoch: 53
+24: Epoch: 53
+27: Epoch: 53
+ 4: Epoch: 53
+19: Epoch: 53
+25: Epoch: 53
+ 8: Epoch: 53
+13: Epoch: 53
+12: Epoch: 53
+30: Epoch: 53
+31: Epoch: 53
+20: Epoch: 53
+22: Epoch: 53
+23: Epoch: 53
+21: Epoch: 53
+15: Epoch: 53
+14: Epoch: 53
+ 5: Epoch: 54
+ 1: Epoch: 54
+ 7: Epoch: 54
+11: Epoch: 54
+28: Epoch: 54
+16: Epoch: 54
+ 0: Epoch: 54
+ 3: Epoch: 54
+ 4: Epoch: 54
+20: Epoch: 54
+ 2: Epoch: 54
+ 9: Epoch: 54
+ 6: Epoch: 54
+29: Epoch: 54
+17: Epoch: 54
+10: Epoch: 54
+13: Epoch: 54
+22: Epoch: 54
+24: Epoch: 54
+18: Epoch: 54
+12: Epoch: 54
+ 8: Epoch: 54
+21: Epoch: 54
+26: Epoch: 54
+19: Epoch: 54
+23: Epoch: 54
+27: Epoch: 54
+25: Epoch: 54
+30: Epoch: 54
+31: Epoch: 54
+15: Epoch: 54
+14: Epoch: 54
+16: Epoch: 55
+ 1: Epoch: 55
+28: Epoch: 55
+ 0: Epoch: 55
+11: Epoch: 55
+ 7: Epoch: 55
+17: Epoch: 55
+29: Epoch: 55
+18: Epoch: 55
+ 5: Epoch: 55
+20: Epoch: 55
+26: Epoch: 55
+ 6: Epoch: 55
+24: Epoch: 55
+27: Epoch: 55
+22: Epoch: 55
+ 9: Epoch: 55
+ 3: Epoch: 55
+25: Epoch: 55
+19: Epoch: 55
+ 2: Epoch: 55
+ 4: Epoch: 55
+10: Epoch: 55
+23: Epoch: 55
+21: Epoch: 55
+13: Epoch: 55
+ 8: Epoch: 55
+12: Epoch: 55
+30: Epoch: 55
+31: Epoch: 55
+15: Epoch: 55
+14: Epoch: 55
+ 1: Epoch: 56
+ 7: Epoch: 56
+28: Epoch: 56
+11: Epoch: 56
+16: Epoch: 56
+ 0: Epoch: 56
+ 5: Epoch: 56
+20: Epoch: 56
+ 3: Epoch: 56
+29: Epoch: 56
+ 6: Epoch: 56
+18: Epoch: 56
+ 2: Epoch: 56
+ 9: Epoch: 56
+17: Epoch: 56
+ 4: Epoch: 56
+26: Epoch: 56
+10: Epoch: 56
+21: Epoch: 56
+24: Epoch: 56
+19: Epoch: 56
+27: Epoch: 56
+25: Epoch: 56
+22: Epoch: 56
+ 8: Epoch: 56
+23: Epoch: 56
+30: Epoch: 56
+31: Epoch: 56
+13: Epoch: 56
+12: Epoch: 56
+15: Epoch: 56
+14: Epoch: 56
+ 1: Epoch: 57
+ 7: Epoch: 57
+28: Epoch: 57
+ 0: Epoch: 57
+16: Epoch: 57
+ 5: Epoch: 57
+20: Epoch: 57
+29: Epoch: 57
+11: Epoch: 57
+18: Epoch: 57
+ 6: Epoch: 57
+26: Epoch: 57
+17: Epoch: 57
+ 9: Epoch: 57
+ 4: Epoch: 57
+19: Epoch: 57
+ 3: Epoch: 57
+22: Epoch: 57
+24: Epoch: 57
+10: Epoch: 57
+ 2: Epoch: 57
+13: Epoch: 57
+21: Epoch: 57
+27: Epoch: 57
+25: Epoch: 57
+23: Epoch: 57
+ 8: Epoch: 57
+12: Epoch: 57
+30: Epoch: 57
+31: Epoch: 57
+15: Epoch: 57
+14: Epoch: 57
+ 1: Epoch: 58
+28: Epoch: 58
+16: Epoch: 58
+ 7: Epoch: 58
+ 0: Epoch: 58
+20: Epoch: 58
+11: Epoch: 58
+ 5: Epoch: 58
+29: Epoch: 58
+17: Epoch: 58
+ 6: Epoch: 58
+18: Epoch: 58
+26: Epoch: 58
+ 9: Epoch: 58
+ 3: Epoch: 58
+ 2: Epoch: 58
+ 4: Epoch: 58
+24: Epoch: 58
+19: Epoch: 58
+22: Epoch: 58
+27: Epoch: 58
+10: Epoch: 58
+21: Epoch: 58
+25: Epoch: 58
+13: Epoch: 58
+23: Epoch: 58
+ 8: Epoch: 58
+12: Epoch: 58
+30: Epoch: 58
+31: Epoch: 58
+15: Epoch: 58
+14: Epoch: 58
+16: Epoch: 59
+ 1: Epoch: 59
+ 7: Epoch: 59
+28: Epoch: 59
+17: Epoch: 59
+ 0: Epoch: 59
+20: Epoch: 59
+11: Epoch: 59
+ 5: Epoch: 59
+29: Epoch: 59
+26: Epoch: 59
+18: Epoch: 59
+ 3: Epoch: 59
+ 6: Epoch: 59
+10: Epoch: 59
+ 2: Epoch: 59
+19: Epoch: 59
+ 4: Epoch: 59
+21: Epoch: 59
+24: Epoch: 59
+ 9: Epoch: 59
+27: Epoch: 59
+25: Epoch: 59
+13: Epoch: 59
+ 8: Epoch: 59
+12: Epoch: 59
+30: Epoch: 59
+31: Epoch: 59
+22: Epoch: 59
+23: Epoch: 59
+15: Epoch: 59
+14: Epoch: 59
+16: Epoch: 60
+ 1: Epoch: 60
+ 7: Epoch: 60
+28: Epoch: 60
+20: Epoch: 60
+ 0: Epoch: 60
+11: Epoch: 60
+26: Epoch: 60
+17: Epoch: 60
+ 5: Epoch: 60
+29: Epoch: 60
+24: Epoch: 60
+ 9: Epoch: 60
+18: Epoch: 60
+ 6: Epoch: 60
+22: Epoch: 60
+27: Epoch: 60
+ 3: Epoch: 60
+19: Epoch: 60
+ 2: Epoch: 60
+25: Epoch: 60
+10: Epoch: 60
+ 4: Epoch: 60
+21: Epoch: 60
+13: Epoch: 60
+23: Epoch: 60
+ 8: Epoch: 60
+12: Epoch: 60
+30: Epoch: 60
+31: Epoch: 60
+15: Epoch: 60
+14: Epoch: 60
+ 1: Epoch: 61
+ 7: Epoch: 61
+11: Epoch: 61
+16: Epoch: 61
+ 0: Epoch: 61
+28: Epoch: 61
+ 5: Epoch: 61
+10: Epoch: 61
+ 6: Epoch: 61
+17: Epoch: 61
+29: Epoch: 61
+20: Epoch: 61
+ 3: Epoch: 61
+ 9: Epoch: 61
+ 2: Epoch: 61
+18: Epoch: 61
+26: Epoch: 61
+ 4: Epoch: 61
+13: Epoch: 61
+21: Epoch: 61
+27: Epoch: 61
+19: Epoch: 61
+22: Epoch: 61
+24: Epoch: 61
+25: Epoch: 61
+12: Epoch: 61
+ 8: Epoch: 61
+23: Epoch: 61
+30: Epoch: 61
+31: Epoch: 61
+15: Epoch: 61
+14: Epoch: 61
+ 1: Epoch: 62
+11: Epoch: 62
+ 5: Epoch: 62
+16: Epoch: 62
+ 0: Epoch: 62
+28: Epoch: 62
+ 7: Epoch: 62
+20: Epoch: 62
+ 3: Epoch: 62
+ 6: Epoch: 62
+29: Epoch: 62
+ 9: Epoch: 62
+ 2: Epoch: 62
+ 4: Epoch: 62
+17: Epoch: 62
+26: Epoch: 62
+18: Epoch: 62
+10: Epoch: 62
+13: Epoch: 62
+24: Epoch: 62
+19: Epoch: 62
+27: Epoch: 62
+21: Epoch: 62
+25: Epoch: 62
+ 8: Epoch: 62
+22: Epoch: 62
+12: Epoch: 62
+23: Epoch: 62
+30: Epoch: 62
+31: Epoch: 62
+15: Epoch: 62
+14: Epoch: 62
+ 1: Epoch: 63
+ 7: Epoch: 63
+28: Epoch: 63
+ 0: Epoch: 63
+11: Epoch: 63
+16: Epoch: 63
+ 5: Epoch: 63
+29: Epoch: 63
+20: Epoch: 63
+17: Epoch: 63
+ 6: Epoch: 63
+26: Epoch: 63
+18: Epoch: 63
+ 3: Epoch: 63
+ 9: Epoch: 63
+ 2: Epoch: 63
+24: Epoch: 63
+ 4: Epoch: 63
+10: Epoch: 63
+27: Epoch: 63
+22: Epoch: 63
+25: Epoch: 63
+ 8: Epoch: 63
+13: Epoch: 63
+21: Epoch: 63
+19: Epoch: 63
+12: Epoch: 63
+23: Epoch: 63
+30: Epoch: 63
+31: Epoch: 63
+15: Epoch: 63
+14: Epoch: 63
+ 7: Epoch: 64
+28: Epoch: 64
+16: Epoch: 64
+ 1: Epoch: 64
+ 0: Epoch: 64
+ 6: Epoch: 64
+29: Epoch: 64
+20: Epoch: 64
+26: Epoch: 64
+11: Epoch: 64
+17: Epoch: 64
+18: Epoch: 64
+ 5: Epoch: 64
+24: Epoch: 64
+19: Epoch: 64
+ 3: Epoch: 64
+ 4: Epoch: 64
+21: Epoch: 64
+27: Epoch: 64
+ 9: Epoch: 64
+ 2: Epoch: 64
+25: Epoch: 64
+13: Epoch: 64
+22: Epoch: 64
+23: Epoch: 64
+10: Epoch: 64
+ 8: Epoch: 64
+12: Epoch: 64
+30: Epoch: 64
+31: Epoch: 64
+15: Epoch: 64
+14: Epoch: 64
+ 5: Epoch: 65
+ 4: Epoch: 65
+11: Epoch: 65
+ 1: Epoch: 65
+ 7: Epoch: 65
+13: Epoch: 65
+16: Epoch: 65
+ 3: Epoch: 65
+ 2: Epoch: 65
+28: Epoch: 65
+ 0: Epoch: 65
+ 6: Epoch: 65
+ 9: Epoch: 65
+20: Epoch: 65
+17: Epoch: 65
+29: Epoch: 65
+26: Epoch: 65
+10: Epoch: 65
+18: Epoch: 65
+24: Epoch: 65
+12: Epoch: 65
+19: Epoch: 65
+27: Epoch: 65
+22: Epoch: 65
+ 8: Epoch: 65
+25: Epoch: 65
+21: Epoch: 65
+15: Epoch: 65
+23: Epoch: 65
+14: Epoch: 65
+30: Epoch: 65
+31: Epoch: 65
+16: Epoch: 66
+ 1: Epoch: 66
+ 7: Epoch: 66
+28: Epoch: 66
+17: Epoch: 66
+ 0: Epoch: 66
+20: Epoch: 66
+11: Epoch: 66
+18: Epoch: 66
+ 5: Epoch: 66
+29: Epoch: 66
+24: Epoch: 66
+22: Epoch: 66
+ 3: Epoch: 66
+ 6: Epoch: 66
+26: Epoch: 66
+ 2: Epoch: 66
+ 9: Epoch: 66
+21: Epoch: 66
+19: Epoch: 66
+ 4: Epoch: 66
+25: Epoch: 66
+27: Epoch: 66
+10: Epoch: 66
+23: Epoch: 66
+ 8: Epoch: 66
+13: Epoch: 66
+12: Epoch: 66
+30: Epoch: 66
+31: Epoch: 66
+15: Epoch: 66
+14: Epoch: 66
+ 1: Epoch: 67
+ 7: Epoch: 67
+28: Epoch: 67
+11: Epoch: 67
+16: Epoch: 67
+ 0: Epoch: 67
+ 5: Epoch: 67
+ 3: Epoch: 67
+ 6: Epoch: 67
+20: Epoch: 67
+17: Epoch: 67
+29: Epoch: 67
+18: Epoch: 67
+ 9: Epoch: 67
+26: Epoch: 67
+ 2: Epoch: 67
+10: Epoch: 67
+ 4: Epoch: 67
+21: Epoch: 67
+19: Epoch: 67
+24: Epoch: 67
+22: Epoch: 67
+27: Epoch: 67
+25: Epoch: 67
+13: Epoch: 67
+ 8: Epoch: 67
+23: Epoch: 67
+12: Epoch: 67
+30: Epoch: 67
+31: Epoch: 67
+15: Epoch: 67
+14: Epoch: 67
+ 1: Epoch: 68
+ 7: Epoch: 68
+28: Epoch: 68
+16: Epoch: 68
+ 0: Epoch: 68
+ 5: Epoch: 68
+20: Epoch: 68
+ 6: Epoch: 68
+29: Epoch: 68
+11: Epoch: 68
+ 3: Epoch: 68
+26: Epoch: 68
+17: Epoch: 68
+ 2: Epoch: 68
+ 4: Epoch: 68
+10: Epoch: 68
+18: Epoch: 68
+24: Epoch: 68
+ 9: Epoch: 68
+27: Epoch: 68
+19: Epoch: 68
+22: Epoch: 68
+25: Epoch: 68
+21: Epoch: 68
+13: Epoch: 68
+23: Epoch: 68
+ 8: Epoch: 68
+12: Epoch: 68
+30: Epoch: 68
+31: Epoch: 68
+15: Epoch: 68
+14: Epoch: 68
+ 1: Epoch: 69
+ 3: Epoch: 69
+28: Epoch: 69
+11: Epoch: 69
+ 0: Epoch: 69
+ 5: Epoch: 69
+16: Epoch: 69
+20: Epoch: 69
+29: Epoch: 69
+10: Epoch: 69
+17: Epoch: 69
+ 2: Epoch: 69
+ 4: Epoch: 69
+ 9: Epoch: 69
+18: Epoch: 69
+26: Epoch: 69
+22: Epoch: 69
+27: Epoch: 69
+13: Epoch: 69
+19: Epoch: 69
+24: Epoch: 69
+21: Epoch: 69
+25: Epoch: 69
+12: Epoch: 69
+ 8: Epoch: 69
+23: Epoch: 69
+ 7: Epoch: 69
+30: Epoch: 69
+ 6: Epoch: 69
+31: Epoch: 69
+15: Epoch: 69
+14: Epoch: 69
+ 1: Epoch: 70
+ 7: Epoch: 70
+11: Epoch: 70
+28: Epoch: 70
+16: Epoch: 70
+ 0: Epoch: 70
+ 3: Epoch: 70
+ 5: Epoch: 70
+20: Epoch: 70
+ 6: Epoch: 70
+29: Epoch: 70
+ 9: Epoch: 70
+17: Epoch: 70
+ 2: Epoch: 70
+ 4: Epoch: 70
+10: Epoch: 70
+18: Epoch: 70
+26: Epoch: 70
+24: Epoch: 70
+27: Epoch: 70
+22: Epoch: 70
+19: Epoch: 70
+25: Epoch: 70
+13: Epoch: 70
+21: Epoch: 70
+ 8: Epoch: 70
+12: Epoch: 70
+23: Epoch: 70
+30: Epoch: 70
+31: Epoch: 70
+15: Epoch: 70
+14: Epoch: 70
+ 5: Epoch: 71
+ 1: Epoch: 71
+ 7: Epoch: 71
+28: Epoch: 71
+11: Epoch: 71
+16: Epoch: 71
+ 3: Epoch: 71
+ 2: Epoch: 71
+20: Epoch: 71
+ 0: Epoch: 71
+ 4: Epoch: 71
+ 9: Epoch: 71
+29: Epoch: 71
+ 6: Epoch: 71
+10: Epoch: 71
+17: Epoch: 71
+26: Epoch: 71
+18: Epoch: 71
+13: Epoch: 71
+21: Epoch: 71
+24: Epoch: 71
+27: Epoch: 71
+ 8: Epoch: 71
+12: Epoch: 71
+19: Epoch: 71
+25: Epoch: 71
+22: Epoch: 71
+23: Epoch: 71
+30: Epoch: 71
+15: Epoch: 71
+31: Epoch: 71
+14: Epoch: 71
+11: Epoch: 72
+ 1: Epoch: 72
+ 7: Epoch: 72
+16: Epoch: 72
+ 3: Epoch: 72
+28: Epoch: 72
+ 0: Epoch: 72
+ 6: Epoch: 72
+20: Epoch: 72
+ 5: Epoch: 72
+10: Epoch: 72
+ 2: Epoch: 72
+17: Epoch: 72
+29: Epoch: 72
+ 9: Epoch: 72
+26: Epoch: 72
+18: Epoch: 72
+ 4: Epoch: 72
+21: Epoch: 72
+24: Epoch: 72
+13: Epoch: 72
+19: Epoch: 72
+27: Epoch: 72
+22: Epoch: 72
+25: Epoch: 72
+ 8: Epoch: 72
+12: Epoch: 72
+23: Epoch: 72
+30: Epoch: 72
+31: Epoch: 72
+15: Epoch: 72
+14: Epoch: 72
+ 1: Epoch: 73
+11: Epoch: 73
+ 5: Epoch: 73
+ 0: Epoch: 73
+10: Epoch: 73
+ 7: Epoch: 73
+16: Epoch: 73
+ 6: Epoch: 73
+20: Epoch: 73
+ 3: Epoch: 73
+ 9: Epoch: 73
+ 2: Epoch: 73
+ 4: Epoch: 73
+26: Epoch: 73
+17: Epoch: 73
+18: Epoch: 73
+13: Epoch: 73
+24: Epoch: 73
+27: Epoch: 73
+22: Epoch: 73
+19: Epoch: 73
+25: Epoch: 73
+21: Epoch: 73
+ 8: Epoch: 73
+12: Epoch: 73
+23: Epoch: 73
+30: Epoch: 73
+28: Epoch: 73
+31: Epoch: 73
+29: Epoch: 73
+15: Epoch: 73
+14: Epoch: 73
+ 1: Epoch: 74
+ 5: Epoch: 74
+28: Epoch: 74
+11: Epoch: 74
+16: Epoch: 74
+ 3: Epoch: 74
+ 0: Epoch: 74
+ 2: Epoch: 74
+ 7: Epoch: 74
+20: Epoch: 74
+ 6: Epoch: 74
+ 9: Epoch: 74
+29: Epoch: 74
+17: Epoch: 74
+10: Epoch: 74
+ 4: Epoch: 74
+26: Epoch: 74
+18: Epoch: 74
+13: Epoch: 74
+27: Epoch: 74
+22: Epoch: 74
+24: Epoch: 74
+12: Epoch: 74
+21: Epoch: 74
+ 8: Epoch: 74
+19: Epoch: 74
+25: Epoch: 74
+23: Epoch: 74
+30: Epoch: 74
+31: Epoch: 74
+15: Epoch: 74
+14: Epoch: 74
+ 1: Epoch: 75
+ 7: Epoch: 75
+28: Epoch: 75
+16: Epoch: 75
+ 0: Epoch: 75
+ 5: Epoch: 75
+20: Epoch: 75
+11: Epoch: 75
+ 6: Epoch: 75
+29: Epoch: 75
+ 3: Epoch: 75
+ 2: Epoch: 75
+ 9: Epoch: 75
+17: Epoch: 75
+ 4: Epoch: 75
+26: Epoch: 75
+10: Epoch: 75
+18: Epoch: 75
+22: Epoch: 75
+24: Epoch: 75
+19: Epoch: 75
+13: Epoch: 75
+21: Epoch: 75
+27: Epoch: 75
+25: Epoch: 75
+ 8: Epoch: 75
+23: Epoch: 75
+12: Epoch: 75
+30: Epoch: 75
+31: Epoch: 75
+15: Epoch: 75
+14: Epoch: 75
+ 5: Epoch: 76
+ 3: Epoch: 76
+ 7: Epoch: 76
+ 1: Epoch: 76
+11: Epoch: 76
+16: Epoch: 76
+ 2: Epoch: 76
+28: Epoch: 76
+ 0: Epoch: 76
+ 4: Epoch: 76
+ 9: Epoch: 76
+ 6: Epoch: 76
+20: Epoch: 76
+29: Epoch: 76
+10: Epoch: 76
+17: Epoch: 76
+18: Epoch: 76
+26: Epoch: 76
+13: Epoch: 76
+ 8: Epoch: 76
+27: Epoch: 76
+19: Epoch: 76
+12: Epoch: 76
+24: Epoch: 76
+21: Epoch: 76
+25: Epoch: 76
+22: Epoch: 76
+23: Epoch: 76
+30: Epoch: 76
+15: Epoch: 76
+31: Epoch: 76
+14: Epoch: 76
+ 1: Epoch: 77
+ 7: Epoch: 77
+28: Epoch: 77
+11: Epoch: 77
+16: Epoch: 77
+ 0: Epoch: 77
+ 5: Epoch: 77
+ 3: Epoch: 77
+ 6: Epoch: 77
+ 2: Epoch: 77
+29: Epoch: 77
+20: Epoch: 77
+10: Epoch: 77
+ 9: Epoch: 77
+17: Epoch: 77
+26: Epoch: 77
+18: Epoch: 77
+ 4: Epoch: 77
+24: Epoch: 77
+ 8: Epoch: 77
+19: Epoch: 77
+13: Epoch: 77
+27: Epoch: 77
+22: Epoch: 77
+25: Epoch: 77
+12: Epoch: 77
+21: Epoch: 77
+23: Epoch: 77
+30: Epoch: 77
+31: Epoch: 77
+15: Epoch: 77
+14: Epoch: 77
+ 5: Epoch: 78
+11: Epoch: 78
+ 1: Epoch: 78
+ 7: Epoch: 78
+ 3: Epoch: 78
+ 2: Epoch: 78
+16: Epoch: 78
+ 0: Epoch: 78
+10: Epoch: 78
+ 4: Epoch: 78
+28: Epoch: 78
+ 6: Epoch: 78
+20: Epoch: 78
+ 9: Epoch: 78
+17: Epoch: 78
+29: Epoch: 78
+18: Epoch: 78
+26: Epoch: 78
+13: Epoch: 78
+27: Epoch: 78
+19: Epoch: 78
+12: Epoch: 78
+24: Epoch: 78
+21: Epoch: 78
+25: Epoch: 78
+ 8: Epoch: 78
+22: Epoch: 78
+23: Epoch: 78
+30: Epoch: 78
+15: Epoch: 78
+31: Epoch: 78
+14: Epoch: 78
+ 1: Epoch: 79
+ 7: Epoch: 79
+28: Epoch: 79
+16: Epoch: 79
+ 0: Epoch: 79
+11: Epoch: 79
+29: Epoch: 79
+20: Epoch: 79
+17: Epoch: 79
+ 6: Epoch: 79
+26: Epoch: 79
+18: Epoch: 79
+ 5: Epoch: 79
+10: Epoch: 79
+ 9: Epoch: 79
+ 2: Epoch: 79
+24: Epoch: 79
+19: Epoch: 79
+ 3: Epoch: 79
+ 4: Epoch: 79
+21: Epoch: 79
+27: Epoch: 79
+ 8: Epoch: 79
+13: Epoch: 79
+25: Epoch: 79
+12: Epoch: 79
+30: Epoch: 79
+31: Epoch: 79
+22: Epoch: 79
+23: Epoch: 79
+15: Epoch: 79
+14: Epoch: 79
+ 1: Epoch: 80
+ 7: Epoch: 80
+11: Epoch: 80
+28: Epoch: 80
+16: Epoch: 80
+ 0: Epoch: 80
+ 5: Epoch: 80
+ 6: Epoch: 80
+20: Epoch: 80
+17: Epoch: 80
+29: Epoch: 80
+ 9: Epoch: 80
+ 2: Epoch: 80
+26: Epoch: 80
+ 3: Epoch: 80
+ 4: Epoch: 80
+10: Epoch: 80
+18: Epoch: 80
+21: Epoch: 80
+24: Epoch: 80
+27: Epoch: 80
+19: Epoch: 80
+13: Epoch: 80
+25: Epoch: 80
+22: Epoch: 80
+ 8: Epoch: 80
+12: Epoch: 80
+23: Epoch: 80
+30: Epoch: 80
+31: Epoch: 80
+15: Epoch: 80
+14: Epoch: 80
+ 1: Epoch: 81
+ 7: Epoch: 81
+28: Epoch: 81
+16: Epoch: 81
+11: Epoch: 81
+ 0: Epoch: 81
+20: Epoch: 81
+ 6: Epoch: 81
+29: Epoch: 81
+ 5: Epoch: 81
+17: Epoch: 81
+ 9: Epoch: 81
+ 2: Epoch: 81
+26: Epoch: 81
+18: Epoch: 81
+ 3: Epoch: 81
+10: Epoch: 81
+22: Epoch: 81
+ 4: Epoch: 81
+24: Epoch: 81
+27: Epoch: 81
+19: Epoch: 81
+25: Epoch: 81
+13: Epoch: 81
+21: Epoch: 81
+ 8: Epoch: 81
+23: Epoch: 81
+12: Epoch: 81
+30: Epoch: 81
+31: Epoch: 81
+15: Epoch: 81
+14: Epoch: 81
+ 1: Epoch: 82
+ 5: Epoch: 82
+28: Epoch: 82
+11: Epoch: 82
+16: Epoch: 82
+ 0: Epoch: 82
+ 7: Epoch: 82
+ 2: Epoch: 82
+20: Epoch: 82
+ 3: Epoch: 82
+ 9: Epoch: 82
+ 6: Epoch: 82
+29: Epoch: 82
+ 4: Epoch: 82
+17: Epoch: 82
+10: Epoch: 82
+18: Epoch: 82
+26: Epoch: 82
+13: Epoch: 82
+24: Epoch: 82
+19: Epoch: 82
+27: Epoch: 82
+22: Epoch: 82
+25: Epoch: 82
+12: Epoch: 82
+21: Epoch: 82
+ 8: Epoch: 82
+23: Epoch: 82
+30: Epoch: 82
+31: Epoch: 82
+15: Epoch: 82
+14: Epoch: 82
+ 1: Epoch: 83
+11: Epoch: 83
+ 5: Epoch: 83
+ 0: Epoch: 83
+28: Epoch: 83
+ 2: Epoch: 83
+ 3: Epoch: 83
+ 7: Epoch: 83
+20: Epoch: 83
+ 9: Epoch: 83
+16: Epoch: 83
+ 6: Epoch: 83
+29: Epoch: 83
+10: Epoch: 83
+ 4: Epoch: 83
+17: Epoch: 83
+26: Epoch: 83
+18: Epoch: 83
+13: Epoch: 83
+27: Epoch: 83
+19: Epoch: 83
+24: Epoch: 83
+21: Epoch: 83
+12: Epoch: 83
+25: Epoch: 83
+ 8: Epoch: 83
+22: Epoch: 83
+23: Epoch: 83
+30: Epoch: 83
+31: Epoch: 83
+15: Epoch: 83
+14: Epoch: 83
+ 7: Epoch: 84
+28: Epoch: 84
+16: Epoch: 84
+ 1: Epoch: 84
+20: Epoch: 84
+11: Epoch: 84
+ 5: Epoch: 84
+29: Epoch: 84
+17: Epoch: 84
+ 0: Epoch: 84
+ 6: Epoch: 84
+26: Epoch: 84
+ 3: Epoch: 84
+18: Epoch: 84
+ 2: Epoch: 84
+10: Epoch: 84
+ 9: Epoch: 84
+24: Epoch: 84
+ 4: Epoch: 84
+22: Epoch: 84
+27: Epoch: 84
+19: Epoch: 84
+21: Epoch: 84
+25: Epoch: 84
+13: Epoch: 84
+23: Epoch: 84
+ 8: Epoch: 84
+12: Epoch: 84
+30: Epoch: 84
+31: Epoch: 84
+15: Epoch: 84
+14: Epoch: 84
+ 7: Epoch: 85
+16: Epoch: 85
+ 1: Epoch: 85
+28: Epoch: 85
+24: Epoch: 85
+ 0: Epoch: 85
+20: Epoch: 85
+11: Epoch: 85
+17: Epoch: 85
+ 6: Epoch: 85
+29: Epoch: 85
+26: Epoch: 85
+18: Epoch: 85
+ 5: Epoch: 85
+25: Epoch: 85
+10: Epoch: 85
+22: Epoch: 85
+19: Epoch: 85
+27: Epoch: 85
+ 9: Epoch: 85
+ 2: Epoch: 85
+ 3: Epoch: 85
+ 4: Epoch: 85
+23: Epoch: 85
+21: Epoch: 85
+13: Epoch: 85
+ 8: Epoch: 85
+12: Epoch: 85
+30: Epoch: 85
+31: Epoch: 85
+15: Epoch: 85
+14: Epoch: 85
+ 1: Epoch: 86
+ 3: Epoch: 86
+ 7: Epoch: 86
+11: Epoch: 86
+16: Epoch: 86
+ 0: Epoch: 86
+28: Epoch: 86
+ 5: Epoch: 86
+20: Epoch: 86
+10: Epoch: 86
+ 2: Epoch: 86
+ 6: Epoch: 86
+29: Epoch: 86
+ 9: Epoch: 86
+17: Epoch: 86
+ 4: Epoch: 86
+18: Epoch: 86
+26: Epoch: 86
+24: Epoch: 86
+13: Epoch: 86
+25: Epoch: 86
+19: Epoch: 86
+27: Epoch: 86
+ 8: Epoch: 86
+12: Epoch: 86
+21: Epoch: 86
+22: Epoch: 86
+23: Epoch: 86
+30: Epoch: 86
+31: Epoch: 86
+15: Epoch: 86
+14: Epoch: 86
+11: Epoch: 87
+ 1: Epoch: 87
+ 5: Epoch: 87
+ 0: Epoch: 87
+ 2: Epoch: 87
+ 3: Epoch: 87
+ 7: Epoch: 87
+28: Epoch: 87
+16: Epoch: 87
+20: Epoch: 87
+10: Epoch: 87
+ 6: Epoch: 87
+ 9: Epoch: 87
+ 4: Epoch: 87
+29: Epoch: 87
+18: Epoch: 87
+17: Epoch: 87
+26: Epoch: 87
+13: Epoch: 87
+24: Epoch: 87
+19: Epoch: 87
+12: Epoch: 87
+27: Epoch: 87
+21: Epoch: 87
+25: Epoch: 87
+ 8: Epoch: 87
+22: Epoch: 87
+23: Epoch: 87
+30: Epoch: 87
+31: Epoch: 87
+15: Epoch: 87
+14: Epoch: 87
+ 1: Epoch: 88
+ 7: Epoch: 88
+28: Epoch: 88
+16: Epoch: 88
+11: Epoch: 88
+ 0: Epoch: 88
+20: Epoch: 88
+ 6: Epoch: 88
+29: Epoch: 88
+17: Epoch: 88
+ 5: Epoch: 88
+10: Epoch: 88
+18: Epoch: 88
+26: Epoch: 88
+ 9: Epoch: 88
+ 2: Epoch: 88
+ 3: Epoch: 88
+ 4: Epoch: 88
+24: Epoch: 88
+19: Epoch: 88
+21: Epoch: 88
+27: Epoch: 88
+13: Epoch: 88
+22: Epoch: 88
+25: Epoch: 88
+23: Epoch: 88
+ 8: Epoch: 88
+12: Epoch: 88
+30: Epoch: 88
+31: Epoch: 88
+15: Epoch: 88
+14: Epoch: 88
+ 1: Epoch: 89
+ 7: Epoch: 89
+11: Epoch: 89
+ 0: Epoch: 89
+28: Epoch: 89
+ 6: Epoch: 89
+16: Epoch: 89
+20: Epoch: 89
+ 5: Epoch: 89
+10: Epoch: 89
+29: Epoch: 89
+17: Epoch: 89
+ 2: Epoch: 89
+26: Epoch: 89
+ 9: Epoch: 89
+ 3: Epoch: 89
+18: Epoch: 89
+24: Epoch: 89
+ 8: Epoch: 89
+ 4: Epoch: 89
+27: Epoch: 89
+13: Epoch: 89
+22: Epoch: 89
+25: Epoch: 89
+19: Epoch: 89
+21: Epoch: 89
+23: Epoch: 89
+12: Epoch: 89
+30: Epoch: 89
+31: Epoch: 89
+15: Epoch: 89
+14: Epoch: 89
+ 5: Epoch: 90
+11: Epoch: 90
+ 1: Epoch: 90
+ 7: Epoch: 90
+28: Epoch: 90
+16: Epoch: 90
+ 0: Epoch: 90
+ 4: Epoch: 90
+20: Epoch: 90
+ 9: Epoch: 90
+ 2: Epoch: 90
+ 3: Epoch: 90
+29: Epoch: 90
+ 6: Epoch: 90
+10: Epoch: 90
+18: Epoch: 90
+26: Epoch: 90
+17: Epoch: 90
+22: Epoch: 90
+ 8: Epoch: 90
+13: Epoch: 90
+24: Epoch: 90
+19: Epoch: 90
+27: Epoch: 90
+12: Epoch: 90
+23: Epoch: 90
+25: Epoch: 90
+21: Epoch: 90
+30: Epoch: 90
+31: Epoch: 90
+15: Epoch: 90
+14: Epoch: 90
+ 5: Epoch: 91
+ 1: Epoch: 91
+28: Epoch: 91
+11: Epoch: 91
+16: Epoch: 91
+ 7: Epoch: 91
+ 0: Epoch: 91
+ 4: Epoch: 91
+20: Epoch: 91
+ 2: Epoch: 91
+ 6: Epoch: 91
+29: Epoch: 91
+ 9: Epoch: 91
+ 3: Epoch: 91
+17: Epoch: 91
+10: Epoch: 91
+18: Epoch: 91
+26: Epoch: 91
+13: Epoch: 91
+22: Epoch: 91
+24: Epoch: 91
+27: Epoch: 91
+19: Epoch: 91
+12: Epoch: 91
+25: Epoch: 91
+ 8: Epoch: 91
+21: Epoch: 91
+23: Epoch: 91
+30: Epoch: 91
+31: Epoch: 91
+15: Epoch: 91
+14: Epoch: 91
+ 1: Epoch: 92
+11: Epoch: 92
+16: Epoch: 92
+ 7: Epoch: 92
+28: Epoch: 92
+ 0: Epoch: 92
+ 5: Epoch: 92
+ 6: Epoch: 92
+17: Epoch: 92
+29: Epoch: 92
+20: Epoch: 92
+10: Epoch: 92
+ 4: Epoch: 92
+26: Epoch: 92
+ 2: Epoch: 92
+ 9: Epoch: 92
+18: Epoch: 92
+ 3: Epoch: 92
+22: Epoch: 92
+27: Epoch: 92
+13: Epoch: 92
+24: Epoch: 92
+19: Epoch: 92
+23: Epoch: 92
+25: Epoch: 92
+21: Epoch: 92
+ 8: Epoch: 92
+12: Epoch: 92
+30: Epoch: 92
+31: Epoch: 92
+15: Epoch: 92
+14: Epoch: 92
+28: Epoch: 93
+ 1: Epoch: 93
+ 7: Epoch: 93
+11: Epoch: 93
+16: Epoch: 93
+ 0: Epoch: 93
+29: Epoch: 93
+20: Epoch: 93
+17: Epoch: 93
+ 6: Epoch: 93
+ 5: Epoch: 93
+18: Epoch: 93
+10: Epoch: 93
+ 2: Epoch: 93
+26: Epoch: 93
+ 3: Epoch: 93
+22: Epoch: 93
+ 9: Epoch: 93
+24: Epoch: 93
+27: Epoch: 93
+19: Epoch: 93
+23: Epoch: 93
+25: Epoch: 93
+ 4: Epoch: 93
+21: Epoch: 93
+13: Epoch: 93
+ 8: Epoch: 93
+12: Epoch: 93
+30: Epoch: 93
+31: Epoch: 93
+15: Epoch: 93
+14: Epoch: 93
+ 1: Epoch: 94
+ 7: Epoch: 94
+28: Epoch: 94
+11: Epoch: 94
+16: Epoch: 94
+ 0: Epoch: 94
+20: Epoch: 94
+ 6: Epoch: 94
+29: Epoch: 94
+17: Epoch: 94
+ 5: Epoch: 94
+26: Epoch: 94
+18: Epoch: 94
+24: Epoch: 94
+10: Epoch: 94
+22: Epoch: 94
+27: Epoch: 94
+ 9: Epoch: 94
+ 2: Epoch: 94
+21: Epoch: 94
+ 3: Epoch: 94
+ 4: Epoch: 94
+25: Epoch: 94
+19: Epoch: 94
+23: Epoch: 94
+13: Epoch: 94
+ 8: Epoch: 94
+12: Epoch: 94
+30: Epoch: 94
+31: Epoch: 94
+15: Epoch: 94
+14: Epoch: 94
+16: Epoch: 95
+ 1: Epoch: 95
+ 7: Epoch: 95
+17: Epoch: 95
+28: Epoch: 95
+ 0: Epoch: 95
+26: Epoch: 95
+ 5: Epoch: 95
+20: Epoch: 95
+18: Epoch: 95
+29: Epoch: 95
+11: Epoch: 95
+ 6: Epoch: 95
+22: Epoch: 95
+24: Epoch: 95
+27: Epoch: 95
+ 9: Epoch: 95
+25: Epoch: 95
+ 2: Epoch: 95
+ 4: Epoch: 95
+23: Epoch: 95
+10: Epoch: 95
+19: Epoch: 95
+ 3: Epoch: 95
+21: Epoch: 95
+13: Epoch: 95
+ 8: Epoch: 95
+12: Epoch: 95
+30: Epoch: 95
+31: Epoch: 95
+15: Epoch: 95
+14: Epoch: 95
+ 1: Epoch: 96
+ 7: Epoch: 96
+11: Epoch: 96
+28: Epoch: 96
+16: Epoch: 96
+ 0: Epoch: 96
+20: Epoch: 96
+ 3: Epoch: 96
+ 5: Epoch: 96
+29: Epoch: 96
+17: Epoch: 96
+ 6: Epoch: 96
+10: Epoch: 96
+26: Epoch: 96
+18: Epoch: 96
+ 2: Epoch: 96
+22: Epoch: 96
+ 9: Epoch: 96
+24: Epoch: 96
+27: Epoch: 96
+ 4: Epoch: 96
+19: Epoch: 96
+25: Epoch: 96
+21: Epoch: 96
+23: Epoch: 96
+13: Epoch: 96
+ 8: Epoch: 96
+12: Epoch: 96
+30: Epoch: 96
+31: Epoch: 96
+15: Epoch: 96
+14: Epoch: 96
+ 5: Epoch: 97
+ 4: Epoch: 97
+13: Epoch: 97
+11: Epoch: 97
+ 7: Epoch: 97
+28: Epoch: 97
+16: Epoch: 97
+ 1: Epoch: 97
+12: Epoch: 97
+20: Epoch: 97
+ 2: Epoch: 97
+ 6: Epoch: 97
+ 9: Epoch: 97
+ 3: Epoch: 97
+29: Epoch: 97
+ 0: Epoch: 97
+17: Epoch: 97
+10: Epoch: 97
+26: Epoch: 97
+18: Epoch: 97
+ 8: Epoch: 97
+22: Epoch: 97
+24: Epoch: 97
+27: Epoch: 97
+19: Epoch: 97
+25: Epoch: 97
+21: Epoch: 97
+23: Epoch: 97
+15: Epoch: 97
+14: Epoch: 97
+30: Epoch: 97
+31: Epoch: 97
+11: Epoch: 98
+ 1: Epoch: 98
+ 5: Epoch: 98
+16: Epoch: 98
+ 0: Epoch: 98
+28: Epoch: 98
+10: Epoch: 98
+ 3: Epoch: 98
+ 7: Epoch: 98
+20: Epoch: 98
+ 9: Epoch: 98
+ 2: Epoch: 98
+ 6: Epoch: 98
+29: Epoch: 98
+17: Epoch: 98
+ 4: Epoch: 98
+26: Epoch: 98
+18: Epoch: 98
+13: Epoch: 98
+22: Epoch: 98
+21: Epoch: 98
+19: Epoch: 98
+24: Epoch: 98
+12: Epoch: 98
+27: Epoch: 98
+ 8: Epoch: 98
+23: Epoch: 98
+25: Epoch: 98
+30: Epoch: 98
+31: Epoch: 98
+15: Epoch: 98
+14: Epoch: 98
+ 5: Epoch: 99
+ 1: Epoch: 99
+11: Epoch: 99
+16: Epoch: 99
+ 7: Epoch: 99
+28: Epoch: 99
+ 0: Epoch: 99
+ 6: Epoch: 99
+20: Epoch: 99
+ 2: Epoch: 99
+ 3: Epoch: 99
+ 9: Epoch: 99
+ 4: Epoch: 99
+29: Epoch: 99
+17: Epoch: 99
+10: Epoch: 99
+26: Epoch: 99
+18: Epoch: 99
+22: Epoch: 99
+13: Epoch: 99
+27: Epoch: 99
+24: Epoch: 99
+19: Epoch: 99
+12: Epoch: 99
+25: Epoch: 99
+ 8: Epoch: 99
+21: Epoch: 99
+23: Epoch: 99
+30: Epoch: 99
+31: Epoch: 99
+15: Epoch: 99
+14: Epoch: 99
+15: total_time: 15.52877402305603
+15: rank: 15 timings: defaultdict(<class 'float'>, {'allocate/math': 1.0767898559570312, 'barrier': 0.12441778182983398, 'communication': 7.611986398696899, 'spmm_gpu': 1.8029766082763672, 'reduce': 4.660218000411987})
+ 1: total_time: 15.52872371673584
+ 1: rank: 1 timings: defaultdict(<class 'float'>, {'allocate/math': 1.1768944263458252, 'barrier': 3.821965456008911, 'communication': 7.5222694873809814, 'spmm_gpu': 2.0096418857574463, 'reduce': 0.7444319725036621})
+24: total_time: 15.528950691223145
+24: rank: 24 timings: defaultdict(<class 'float'>, {'allocate/math': 1.3138387203216553, 'barrier': 3.255814790725708, 'communication': 7.419993162155151, 'spmm_gpu': 1.8505384922027588, 'reduce': 1.4138951301574707})
+13: total_time: 15.528777599334717
+13: rank: 13 timings: defaultdict(<class 'float'>, {'allocate/math': 1.140368938446045, 'barrier': 1.5534756183624268, 'communication': 7.39989161491394, 'spmm_gpu': 1.9674077033996582, 'reduce': 3.2131755352020264})
+11: total_time: 15.528769254684448
+11: rank: 11 timings: defaultdict(<class 'float'>, {'allocate/math': 1.2341105937957764, 'barrier': 2.0342283248901367, 'communication': 7.491181135177612, 'spmm_gpu': 1.8931849002838135, 'reduce': 2.6213021278381348})
+30: total_time: 15.529039144515991
+30: rank: 30 timings: defaultdict(<class 'float'>, {'allocate/math': 1.1993896961212158, 'barrier': 1.6498091220855713, 'communication': 7.1093831062316895, 'spmm_gpu': 2.0488786697387695, 'reduce': 3.2545440196990967})
+17: total_time: 15.528654336929321
+17: rank: 17 timings: defaultdict(<class 'float'>, {'allocate/math': 1.1750822067260742, 'barrier': 3.810248851776123, 'gather_row_data': 0.28255438804626465, 'send_ops': 0.06157493591308594, 'communication': 5.805889844894409, 'spmm_gpu': 3.3867831230163574, 'reduce': 0.7244937419891357})
+ 2: total_time: 15.528851747512817
+ 2: rank: 2 timings: defaultdict(<class 'float'>, {'allocate/math': 1.2784879207611084, 'barrier': 3.6983516216278076, 'communication': 5.711813926696777, 'spmm_gpu': 3.403519630432129, 'gather_row_data': 0.2890350818634033, 'send_ops': 0.07045960426330566, 'reduce': 0.7467138767242432})
+ 3: total_time: 15.528762102127075
+ 3: rank: 3 timings: defaultdict(<class 'float'>, {'allocate/math': 1.1484482288360596, 'barrier': 3.8848092555999756, 'communication': 7.770168304443359, 'spmm_gpu': 1.5915982723236084, 'reduce': 0.8584821224212646})
+19: total_time: 15.52853798866272
+19: rank: 19 timings: defaultdict(<class 'float'>, {'allocate/math': 1.1595423221588135, 'barrier': 3.691638231277466, 'communication': 5.964135646820068, 'spmm_gpu': 3.3148505687713623, 'gather_row_data': 0.2704174518585205, 'send_ops': 0.06542205810546875, 'reduce': 0.7451915740966797})
+14: total_time: 15.528071880340576
+14: rank: 14 timings: defaultdict(<class 'float'>, {'allocate/math': 1.024811029434204, 'barrier': 0.0988318920135498, 'communication': 8.492063760757446, 'spmm_gpu': 4.468585014343262, 'gather_row_data': 0.29108285903930664, 'send_ops': 0.06443572044372559, 'reduce': 0.7602875232696533})
+ 8: total_time: 15.52852463722229
+ 8: rank: 8 timings: defaultdict(<class 'float'>, {'allocate/math': 1.2352678775787354, 'barrier': 2.2478671073913574, 'communication': 5.3843560218811035, 'spmm_gpu': 5.24813437461853, 'gather_row_data': 0.28163814544677734, 'send_ops': 0.06307482719421387, 'reduce': 0.7218711376190186})
+16: total_time: 15.529089212417603
+16: rank: 16 timings: defaultdict(<class 'float'>, {'allocate/math': 1.339977741241455, 'barrier': 3.6586625576019287, 'communication': 7.070552110671997, 'spmm_gpu': 2.1115057468414307, 'reduce': 1.0765821933746338})
+25: total_time: 15.528442859649658
+25: rank: 25 timings: defaultdict(<class 'float'>, {'allocate/math': 1.1932291984558105, 'barrier': 3.3686418533325195, 'communication': 6.110692501068115, 'spmm_gpu': 3.5153849124908447, 'gather_row_data': 0.2591218948364258, 'send_ops': 0.06250214576721191, 'reduce': 0.742210865020752})
+10: total_time: 15.528749465942383
+10: rank: 10 timings: defaultdict(<class 'float'>, {'allocate/math': 1.3178129196166992, 'barrier': 1.8717303276062012, 'communication': 7.50403618812561, 'spmm_gpu': 3.4117796421051025, 'gather_row_data': 0.2784857749938965, 'send_ops': 0.06668806076049805, 'reduce': 0.7466936111450195})
+ 0: total_time: 15.52897334098816
+ 0: rank: 0 timings: defaultdict(<class 'float'>, {'allocate/math': 1.3143091201782227, 'barrier': 3.633558511734009, 'gather_row_data': 0.27309250831604004, 'send_ops': 0.06852436065673828, 'communication': 5.829108476638794, 'spmm_gpu': 3.236987352371216, 'reduce': 0.8751907348632812})
+29: total_time: 15.528590202331543
+29: rank: 29 timings: defaultdict(<class 'float'>, {'allocate/math': 1.242969036102295, 'barrier': 2.5602660179138184, 'communication': 6.4020891189575195, 'spmm_gpu': 3.9555113315582275, 'gather_row_data': 0.26665210723876953, 'send_ops': 0.0614933967590332, 'reduce': 0.7537767887115479})
+31: total_time: 15.528029441833496
+31: rank: 31 timings: defaultdict(<class 'float'>, {'allocate/math': 1.1488521099090576, 'barrier': 1.6747303009033203, 'communication': 7.733170747756958, 'spmm_gpu': 3.576251268386841, 'gather_row_data': 0.26648902893066406, 'send_ops': 0.06383872032165527, 'reduce': 0.7759363651275635})
+18: total_time: 15.529006004333496
+18: rank: 18 timings: defaultdict(<class 'float'>, {'allocate/math': 1.3209869861602783, 'barrier': 3.5744481086730957, 'communication': 7.171466827392578, 'spmm_gpu': 2.126164197921753, 'reduce': 1.0619323253631592})
+27: total_time: 15.528542757034302
+27: rank: 27 timings: defaultdict(<class 'float'>, {'allocate/math': 1.2438571453094482, 'barrier': 3.121649742126465, 'communication': 6.985437631607056, 'spmm_gpu': 2.814222812652588, 'gather_row_data': 0.26697731018066406, 'send_ops': 0.06194949150085449, 'reduce': 0.7617337703704834})
+28: total_time: 15.529030799865723
+28: rank: 28 timings: defaultdict(<class 'float'>, {'allocate/math': 1.3767035007476807, 'barrier': 2.448833465576172, 'communication': 7.323731422424316, 'spmm_gpu': 1.8903493881225586, 'reduce': 2.221303701400757})
+22: total_time: 15.529111623764038
+22: rank: 22 timings: defaultdict(<class 'float'>, {'allocate/math': 1.3187355995178223, 'barrier': 3.2669947147369385, 'communication': 6.97188663482666, 'spmm_gpu': 2.0743539333343506, 'reduce': 1.6267306804656982})
+12: total_time: 15.528608560562134
+12: rank: 12 timings: defaultdict(<class 'float'>, {'allocate/math': 1.2065792083740234, 'barrier': 1.4088046550750732, 'communication': 6.572317600250244, 'spmm_gpu': 4.908241510391235, 'gather_row_data': 0.2947230339050293, 'send_ops': 0.06798839569091797, 'reduce': 0.7369086742401123})
+26: total_time: 15.528955936431885
+26: rank: 26 timings: defaultdict(<class 'float'>, {'allocate/math': 1.3436200618743896, 'barrier': 3.0293281078338623, 'communication': 7.370396852493286, 'spmm_gpu': 2.0130715370178223, 'reduce': 1.5001888275146484})
+ 9: total_time: 15.52866530418396
+ 9: rank: 9 timings: defaultdict(<class 'float'>, {'allocate/math': 1.1573731899261475, 'barrier': 2.418829917907715, 'communication': 7.638020277023315, 'spmm_gpu': 1.9669451713562012, 'reduce': 2.0913095474243164})
+23: total_time: 15.52849531173706
+23: rank: 23 timings: defaultdict(<class 'float'>, {'allocate/math': 1.2119975090026855, 'barrier': 3.3550097942352295, 'communication': 5.963017225265503, 'spmm_gpu': 3.6220102310180664, 'gather_row_data': 0.2698941230773926, 'send_ops': 0.06764769554138184, 'reduce': 0.7507293224334717})
+21: total_time: 15.528361082077026
+21: rank: 21 timings: defaultdict(<class 'float'>, {'allocate/math': 1.201563835144043, 'barrier': 3.7424588203430176, 'communication': 6.391463756561279, 'spmm_gpu': 2.7942352294921875, 'gather_row_data': 0.26241540908813477, 'send_ops': 0.06848883628845215, 'reduce': 0.760483980178833})
+20: total_time: 15.52900743484497
+20: rank: 20 timings: defaultdict(<class 'float'>, {'allocate/math': 1.3518431186676025, 'barrier': 3.626920700073242, 'communication': 7.617254734039307, 'spmm_gpu': 1.7258598804473877, 'reduce': 0.9325594902038574})
+ 4: total_time: 15.528969526290894
+ 4: rank: 4 timings: defaultdict(<class 'float'>, {'allocate/math': 1.315678358078003, 'barrier': 3.6723079681396484, 'communication': 5.78107476234436, 'spmm_gpu': 3.3903846740722656, 'gather_row_data': 0.28189682960510254, 'send_ops': 0.06297111511230469, 'reduce': 0.7180569171905518})
+ 6: total_time: 15.528934001922607
+ 6: rank: 6 timings: defaultdict(<class 'float'>, {'allocate/math': 1.3338418006896973, 'barrier': 3.7034449577331543, 'communication': 5.679607152938843, 'spmm_gpu': 3.3127801418304443, 'gather_row_data': 0.2990574836730957, 'send_ops': 0.06462955474853516, 'reduce': 0.8317840099334717})
+ 7: total_time: 15.528814792633057
+ 7: rank: 7 timings: defaultdict(<class 'float'>, {'allocate/math': 1.2121858596801758, 'barrier': 3.8800222873687744, 'communication': 7.196518659591675, 'spmm_gpu': 2.198437213897705, 'reduce': 0.7899374961853027})
+ 5: total_time: 15.52890157699585
+ 5: rank: 5 timings: defaultdict(<class 'float'>, {'allocate/math': 1.2096989154815674, 'barrier': 3.8299560546875, 'communication': 7.204423189163208, 'spmm_gpu': 1.7753241062164307, 'reduce': 1.2574081420898438})

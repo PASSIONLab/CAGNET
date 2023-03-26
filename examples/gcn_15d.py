@@ -155,7 +155,8 @@ def one5d_partition(rank, size, inputs, adj_matrix, data, features, classes, rep
     with torch.no_grad():
         # Column partitions
         am_partitions, vtx_indices = split_coo(adj_matrix, partitions, 1)
-
+        print(vtx_indices)
+        print(rank_c)
         proc_node_count = vtx_indices[rank_c + 1] - vtx_indices[rank_c]
         am_pbyp, _ = split_coo(am_partitions[rank_c], partitions, 0)
         for i in range(len(am_pbyp)):
@@ -603,7 +604,7 @@ def main(args):
               "ETputs(KTEPS) {:.2f}".format(rank, epoch, np.mean(dur), loss.item(),
                                             acc, n_edges / np.mean(dur) / 1000), flush=True)
         """
-    # dist.barrier()
+    dist.barrier()
     total_stop = time.time()
     print(f"total_time: {total_stop - total_start}")
     print(f"rank: {rank} timings: {model.timings}")

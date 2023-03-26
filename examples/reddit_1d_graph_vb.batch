@@ -1,0 +1,25 @@
+#!/bin/bash
+#SBATCH -A m1982_g
+#SBATCH -C gpu
+#SBATCH --job-name="job-1d-Reddit-graph-vb"
+#SBATCH -q regular
+#SBATCH -t 15:00
+#SBATCH -n 64
+#SBATCH -N 16
+
+
+export MASTER_ADDR=$(scontrol show hostnames | head -n 1)
+
+export PYTHONPATH="/global/u2/j/jinimukh/CAGNET/sparse-extension/build/lib/python3.9/site-packages":$PYTHONPATH
+export PYTHONPATH="/global/u2/j/jinimukh/CAGNET/sparse-extension/build/lib/python3.9/site-packages/sparse_coo_tensor_cpp-0.0.0-py3.9-linux-x86_64.egg":$PYTHONPATH
+
+export CFLAGS="-I$CUDA_HOME/include"
+module load pytorch
+
+#srun -l -n 4 --cpus-per-task 32 --ntasks-per-node 4 --gpus-per-node 4 python3 gcn_1d.py --dataset Reddit_4_graph_vb --n-epochs 100 --n-hidden 16 --weight-decay 0 --timers --hostname=$MASTER_ADDR --partitions=/pscratch/sd/j/jinimukh/Reddit_4_graph_vb/processed/partitions.txt &> sp_reddit_p4_graph_vb.out
+
+srun -l -n 16 --cpus-per-task 32 --ntasks-per-node 4 --gpus-per-node 4 python3 gcn_1d.py --dataset Reddit_16_graph_vb --n-epochs 100 --n-hidden 16 --weight-decay 0 --timers --hostname=$MASTER_ADDR --partitions=/pscratch/sd/j/jinimukh/Reddit_16_graph_vb/processed/partitions.txt &> sp_reddit_p16_graph_vb.out
+
+#srun -l -n 32 --cpus-per-task 32 --ntasks-per-node 4 --gpus-per-node 4 python3 gcn_1d.py --dataset Reddit_32_graph_vb --n-epochs 100 --n-hidden 16 --weight-decay 0 --timers --hostname=$MASTER_ADDR --partitions=/pscratch/sd/j/jinimukh/Reddit_32_graph_vb/processed/partitions.txt &> sp_reddit_p32_graph_vb.out
+
+srun -l -n 64 --cpus-per-task 32 --ntasks-per-node 4 --gpus-per-node 4 python3 gcn_1d.py --dataset Reddit_64_graph_vb --n-epochs 100 --n-hidden 16 --weight-decay 0 --timers --hostname=$MASTER_ADDR --partitions=/pscratch/sd/j/jinimukh/Reddit_64_graph_vb/processed/partitions.txt &> sp_reddit_p64_graph_vb.out
