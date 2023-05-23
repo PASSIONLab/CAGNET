@@ -25,7 +25,7 @@ def stop_time(start_timer, stop_timer, barrier=False):
         torch.cuda.synchronize()
         time_taken = start_timer.elapsed_time(stop_timer)
         if barrier:
-            dist.barrier()
+            dist.barrier(torch.distributed.group.WORLD)
         return time_taken
     else:
         return 0.0
@@ -89,7 +89,6 @@ def col_select15D(sample_mtx, col_select_mtx, bulk_items, node_count_total, bulk
     rank_c = rank // replication
     rank_col = rank % replication
     stages = (bulk_items // semibulk_size) // replication
-    print(f"stages: {stages} bulk_items: {bulk_items} semibulk_size: {semibulk_size}", flush=True)
    
     sample_mtxs = [None] * stages
 
@@ -103,6 +102,7 @@ def col_select15D(sample_mtx, col_select_mtx, bulk_items, node_count_total, bulk
         mask = torch.cuda.BoolTensor(sample_mtx.size(1)).fill_(0)
         col_indices_mask = torch.cuda.LongTensor(sample_mtx.size(1)).fill_(0)
         idx_range = torch.arange(sample_mtx.size(1)).cuda()
+    
     start_time(start_timer)
     for i in range(stages): 
         q = stages * rank_col + i 
@@ -139,10 +139,11 @@ def col_select15D(sample_mtx, col_select_mtx, bulk_items, node_count_total, bulk
         start_time(start_inner_timer)
         if alg == "ladies":
             sample_chunk_indices, sample_chunk_values = torch_sparse.spspmm(batch_mtx._indices(), \
-                                                                batch_mtx._values().double(), col_chunk_indices, \
-                                                                col_chunk_values, batch_mtx.size(0), \
-                                                                semibulk_size * node_count_total, \
-                                                                col_select_mtx.size(1), coalesced=True)
+                                                            batch_mtx._values().double(), col_chunk_indices, \
+                                                            col_chunk_values, batch_mtx.size(0), \
+                                                            semibulk_size * node_count_total, \
+                                                            # col_select_mtx.size(1))
+                                                            col_select_mtx.size(1), coalesced=True)
         elif alg == "sage":
             mask.fill_(0)
             batch_mtx = batch_mtx.to_sparse_coo()
@@ -403,7 +404,7 @@ def dist_spgemm15D(mata, matb, replication, rank, size, row_groups, col_groups, 
     return matc_nnz_indices, matc_nnz_values
 
 def dist_saspgemm15D(mata, matb, replication, rank, size, row_groups, col_groups, \
-                            name, nnz_row_masks, matb_recv_buff, timing_dict=None, alg=None):
+                            name, nnz_row_masks, timing_dict=None, alg=None):
 
     start_timer = torch.cuda.Event(enable_timing=True)
     stop_timer = torch.cuda.Event(enable_timing=True)
@@ -925,7 +926,7 @@ def dist_saspgemm15D(mata, matb, replication, rank, size, row_groups, col_groups
     # return matc_nnz_indices, matc_nnz_values
 
 def gen_prob_dist(numerator, adj_matrix, mb_count, node_count_total, replication, 
-                    rank, size, row_groups, col_groups, sa_masks, sa_recv_buff, 
+                    rank, size, row_groups, col_groups, sa_masks, 
                     timing_dict, name, timing_arg):
 
     global timing
@@ -941,7 +942,7 @@ def gen_prob_dist(numerator, adj_matrix, mb_count, node_count_total, replication
     p_num_indices, p_num_values = dist_saspgemm15D(
                                         numerator, adj_matrix, replication, rank, size, 
                                         row_groups, col_groups, "prob", sa_masks, 
-                                        sa_recv_buff, timing_dict, name)
+                                        timing_dict, name)
     # p_num_indices, p_num_values =  dist_spgemm15D(numerator, adj_matrix, replication, rank, size, row_groups, col_groups, "prob")
     torch.cuda.nvtx.range_pop()
     stop_timer.record()
@@ -1262,12 +1263,14 @@ def sample(p, frontier_size, mb_count, node_count_total, n_darts, replication,
 
     return next_frontier
 
-def select(next_frontier, adj_matrix, batches, sa_masks, sa_recv_buff, nnz, \
+def select(next_frontier, adj_matrix, batches, sa_masks, nnz, \
                 batch_size, frontier_size, mb_count, mb_count_total, node_count_total, replication, \
-                rank, size, row_groups, col_groups, timing_dict, layer_id, name):
+                rank, size, row_groups, col_groups, timing_dict, layer_id, name, semibulk_size=128):
 
     start_timer = torch.cuda.Event(enable_timing=True)
     stop_timer = torch.cuda.Event(enable_timing=True)
+
+    semibulk_size = min(semibulk_size, mb_count // replication)
 
     start_time(start_timer)
     torch.cuda.nvtx.range_push("nvtx-construct-nextf")
@@ -1334,14 +1337,14 @@ def select(next_frontier, adj_matrix, batches, sa_masks, sa_recv_buff, nnz, \
     row_select_mtx = sparse_coo_tensor_gpu(row_select_mtx_indices, row_select_mtx_values, 
                                                     torch.Size([nnz * mb_count, node_count_total]))
     sa_masks.fill_(0)
-    sa_recv_buff.fill_(0)
     row_select_mtx = row_select_mtx.to_sparse_csr()
-    adj_matrix = adj_matrix.to_sparse_csr()
+    # adj_matrix = adj_matrix.to_sparse_csr()
+    print(f"adj_matrix.layout: {adj_matrix.layout}")
     sampled_indices, sampled_values = dist_saspgemm15D(row_select_mtx, adj_matrix, replication, rank, size, \
                                                         row_groups, col_groups, "rowsel", sa_masks, 
-                                                        sa_recv_buff, timing_dict)
+                                                        timing_dict)
     row_select_mtx = row_select_mtx.to_sparse_coo()
-    adj_matrix = adj_matrix.to_sparse_coo()
+    # adj_matrix = adj_matrix.to_sparse_coo()
     # sample_mtx = torch.sparse_coo_tensor(sampled_indices, sampled_values, 
     #                                         size=(nnz * mb_count, node_count_total))
     sample_mtx = sparse_coo_tensor_gpu(sampled_indices, sampled_values, 
@@ -1355,13 +1358,14 @@ def select(next_frontier, adj_matrix, batches, sa_masks, sa_recv_buff, nnz, \
     torch.cuda.nvtx.range_push("nvtx-row-select-expand")
     row_shift = torch.cuda.LongTensor(sampled_values.size(0)).fill_(0)
     if name == "ladies":
-        semibulk_size = mb_count // (16 * replication) # number of batches to column extract from in bulk
+        # semibulk_size = mb_count // (64 * replication) # number of batches to column extract from in bulk
+        # semibulk_size = 4 # number of batches to column extract from in bulk
+        # semibulk_size = 128 # number of batches to column extract from in bulk
         shift_rowselect_gpu(row_shift, sampled_indices[0,:], sampled_values.size(0), 
                                 rank, size, replication, batch_size, node_count_total, mb_count_total, 
                                 batch_size, semibulk_size)
     elif name == "sage":
         semibulk_size = mb_count * nnz # vtxs to column extract from in bulk
-        print(f"nnz: {nnz} semibulk_size: {semibulk_size}", flush=True)
         shift_rowselect_gpu(row_shift, sampled_indices[0,:], sampled_values.size(0), 
                                 rank, size, replication, batch_size, node_count_total, mb_count_total, 1,
                                 semibulk_size)
@@ -1399,22 +1403,22 @@ def select(next_frontier, adj_matrix, batches, sa_masks, sa_recv_buff, nnz, \
         col_select_mtx = torch.sparse_coo_tensor(col_select_mtx_indices, col_select_mtx_values,
                 torch.Size([node_count_total * mb_count * batch_size, next_frontier_select.size(1) * batch_size]))
 
-    sampled_indices, sampled_values = dist_spgemm15D(sample_mtx, col_select_mtx, replication, rank, size, \
-                                                        row_groups, col_groups, "colsel", timing_dict)
+    # sampled_indices, sampled_values = dist_spgemm15D(sample_mtx, col_select_mtx, replication, rank, size, \
+    #                                                     row_groups, col_groups, "colsel", timing_dict)
 
-    # sample_mtx = sample_mtx.to_sparse_csr()
+    sample_mtx = sample_mtx.to_sparse_csr()
     # sampled_indices, sampled_values = col_select15D(sample_mtx, next_frontier_select, mb_count, batch_size,
     #                                             replication, rank, size, row_groups, col_groups, "colsel", 
     #                                             timing_dict)
-    # if name == "ladies":
-    #     bulk_items = mb_count
-    #     bulk_size = batch_size
-    # elif name == "sage":
-    #     bulk_items = mb_count * nnz
-    #     bulk_size = 1
-    # sampled_indices, sampled_values = col_select15D(sample_mtx, col_select_mtx, bulk_items, node_count_total, 
-    #                                             bulk_size, semibulk_size, replication, rank, size, row_groups,
-    #                                             col_groups, "colsel", name, timing_dict)
+    if name == "ladies":
+        bulk_items = mb_count
+        bulk_size = batch_size
+    elif name == "sage":
+        bulk_items = mb_count * nnz
+        bulk_size = 1
+    sampled_indices, sampled_values = col_select15D(sample_mtx, col_select_mtx, bulk_items, node_count_total, 
+                                                bulk_size, semibulk_size, replication, rank, size, row_groups,
+                                                col_groups, "colsel", name, timing_dict)
 
     torch.cuda.nvtx.range_pop()
     timing_dict["col-select-spgemm"].append(stop_time(start_timer, stop_timer, barrier=True))

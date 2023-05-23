@@ -22,7 +22,7 @@ from cagnet.samplers import ladies_sampler, sage_sampler
 import cagnet.nn.functional as CAGF
 
 import ogb
-# from ogb.nodeproppred import PygNodePropPredDataset
+from ogb.nodeproppred import PygNodePropPredDataset
 
 import socket
 
@@ -255,7 +255,27 @@ def evaluate(model, graph, features, labels, nid, nid_count, ampbyp, group):
 
 def main(args, batches=None):
     # load and preprocess dataset
-    device = torch.device('cuda')
+    # Initialize distributed environment with SLURM
+    if "SLURM_PROCID" in os.environ.keys():
+        os.environ["RANK"] = os.environ["SLURM_PROCID"]
+
+    if "SLURM_NTASKS" in os.environ.keys():
+        os.environ["WORLD_SIZE"] = os.environ["SLURM_NTASKS"]
+
+    os.environ["MASTER_ADDR"] = args.hostname 
+    os.environ["MASTER_PORT"] = "1234"
+    
+    print(f"device_count: {torch.cuda.device_count()}")
+    print(f"hostname: {socket.gethostname()}", flush=True)
+    if not dist.is_initialized():
+        dist.init_process_group(backend=args.dist_backend)
+    rank = dist.get_rank()
+    size = dist.get_world_size()
+    print(f"hostname: {socket.gethostname()} rank: {rank} size: {size}", flush=True)
+    torch.cuda.set_device(rank % args.gpu)
+
+    device = torch.device(f'cuda:{rank % args.gpu}')
+    print(f"device1: {device}")
 
     path = osp.join(osp.dirname(osp.realpath(__file__)), '../..', 'data', args.dataset)
 
@@ -307,56 +327,54 @@ def main(args, batches=None):
         data = data.to(device)
         inputs.requires_grad = True
         data.y = data.y.to(device)
+    elif args.dataset == "Protein_sg2":
+        n = 17491085
+        num_features = 128
+        num_classes = 256
+        if rank % args.gpu == 0:
+            print(f"Loading coo...", flush=True)
+            edge_index = torch.load("../../data/protein_sg2/processed/protein_sg2.pt")
+            print(f"Done loading coo", flush=True)
+            inputs = torch.rand(n, num_features)
+            adj_matrix = edge_index.t_()
+            inputs.requires_grad = True
+        data = Data()
+        data.y = torch.rand(n).uniform_(0, num_classes - 1).long()
+        data.train_mask = torch.ones(n).long()
+        data.test_mask = torch.ones(n).long()
+        data = data.to(device)
+        data.y = data.y.to(device)
     elif args.dataset.startswith("ogb"):
-        dataset = PygNodePropPredDataset(name=args.dataset, root="../../data")
-	 
-        split_idx = dataset.get_idx_split() 
-        # train_loader = DataLoader(dataset[split_idx["train"]], batch_size=32, shuffle=True)
-        # valid_loader = DataLoader(dataset[split_idx["valid"]], batch_size=32, shuffle=False)
-        # test_loader = DataLoader(dataset[split_idx["test"]], batch_size=32, shuffle=False)
-        data = dataset[0]
-        # data = data.to(device)
-        # data.x.requires_grad = True
-        # inputs = data.x.to(device)
-        inputs = data.x
-        # inputs.requires_grad = True
-        # data.y = data.y.to(device)
-        edge_index = data.edge_index
-        num_features = dataset.num_features
-        num_classes = dataset.num_classes
-        adj_matrix = edge_index
-        split_idx = dataset.get_idx_split()
-        train_idx = split_idx['train'].to(device)
+        if ("papers100M" in args.dataset and rank % args.gpu == 0) or "products" in args.dataset:
+            dataset = PygNodePropPredDataset(name=args.dataset, root="../../data")
+             
+            split_idx = dataset.get_idx_split() 
+            # train_loader = DataLoader(dataset[split_idx["train"]], batch_size=32, shuffle=True)
+            # valid_loader = DataLoader(dataset[split_idx["valid"]], batch_size=32, shuffle=False)
+            # test_loader = DataLoader(dataset[split_idx["test"]], batch_size=32, shuffle=False)
+            data = dataset[0]
+            # data = data.to(device)
+            # data.x.requires_grad = True
+            # inputs = data.x.to(device)
+            inputs = data.x
+            # inputs.requires_grad = True
+            # data.y = data.y.to(device)
+            edge_index = data.edge_index
+            num_features = dataset.num_features
+            num_classes = dataset.num_classes
+            adj_matrix = edge_index
+            split_idx = dataset.get_idx_split()
+            train_idx = split_idx['train'].to(device)
 
-    print(f"adj_matrix.size(): {adj_matrix.size()}")
-    print(f"adj_matrix: {adj_matrix}")
-
-    # Initialize distributed environment with SLURM
-    if "SLURM_PROCID" in os.environ.keys():
-        os.environ["RANK"] = os.environ["SLURM_PROCID"]
-
-    if "SLURM_NTASKS" in os.environ.keys():
-        os.environ["WORLD_SIZE"] = os.environ["SLURM_NTASKS"]
-
-    os.environ["MASTER_ADDR"] = args.hostname 
-    os.environ["MASTER_PORT"] = "1234"
-    
-    print(f"device_count: {torch.cuda.device_count()}")
-    print(f"hostname: {socket.gethostname()}", flush=True)
-    if not dist.is_initialized():
-        dist.init_process_group(backend=args.dist_backend)
-    rank = dist.get_rank()
-    size = dist.get_world_size()
-    print(f"hostname: {socket.gethostname()} rank: {rank} size: {size}", flush=True)
-    torch.cuda.set_device(rank % args.gpu)
+    # print(f"adj_matrix.size(): {adj_matrix.size()}")
+    # print(f"adj_matrix: {adj_matrix}")
 
     # if args.sample_method == "ladies":
     #     print(f"before adj_matrix.size: {adj_matrix.size()}", flush=True)
     #     adj_matrix, _ = add_remaining_self_loops(adj_matrix, num_nodes=inputs.size(0))
     #     print(f"after adj_matrix.size: {adj_matrix.size()}", flush=True)
-    edge_count = adj_matrix.size(1)
-    torch.cuda.synchronize()
-    print(f"reached here", flush=True)
+    if args.dataset != "ogbn-papers100M" and args.dataset != "Protein_sg2":
+        edge_count = adj_matrix.size(1)
 
     partitioning = Partitioning.ONE5D
 
@@ -367,25 +385,89 @@ def main(args, batches=None):
     if rank_c >= (size // args.replication):
         return
 
+
     print("start partitioning", flush=True)
-    features_loc, g_loc, ampbyp = one5d_partition(rank, size, inputs, adj_matrix, data, \
-                                                      inputs, num_classes, args.replication, \
-                                                      args.normalize)
+    if args.dataset == "ogbn-papers100M" or args.dataset == "Protein_sg2":
+        if rank % args.gpu == 0:
+            # send g_loc.nnz, g_loc, train_idx.len, and train_idx
+            for i in range(1, args.gpu):
+                print(f"iteration i: {i}", flush=True)
+                _, g_loc, _ = one5d_partition(rank + i, size, inputs, adj_matrix, data, inputs, num_classes, \
+                                                args.replication, args.normalize)
+                print("coalescing", flush=True)
+                g_loc = g_loc.coalesce().t_()
+                print("normalizing", flush=True)
+                g_loc = g_loc.to(device)
+                g_loc = g_loc.double()
+                edge_count = adj_matrix.size(1)
+
+                dst_gpu = rank + i
+
+                g_loc_meta = torch.cuda.LongTensor(4)
+                g_loc_meta[0] = g_loc._nnz()
+                g_loc_meta[1] = g_loc.size(0)
+                g_loc_meta[2] = g_loc.size(1)
+                g_loc_meta[3] = adj_matrix.size(1)
+                dist.send(g_loc_meta, dst=dst_gpu)
+                dist.send(g_loc._indices(), dst=dst_gpu)
+                dist.send(g_loc._values(), dst=dst_gpu)
+
+                if args.dataset == "ogbn-papers100M":
+                    train_idx_len = torch.cuda.LongTensor(1).fill_(train_idx.size(0))
+                    dist.send(train_idx_len, dst=dst_gpu)
+                    print(f"train_idx_len: {train_idx_len} train_idx: {train_idx}", flush=True)
+                    dist.send(train_idx, dst=dst_gpu)
+
+            _, g_loc, _ = one5d_partition(rank, size, inputs, adj_matrix, data, inputs, num_classes, \
+                                            args.replication, args.normalize)
+            print("coalescing", flush=True)
+            g_loc = g_loc.coalesce().t_()
+            print("normalizing", flush=True)
+            g_loc = g_loc.to(device)
+            g_loc = g_loc.double()
+            edge_count = adj_matrix.size(1)
+
+            del adj_matrix # Comment when testing
+            del inputs
+        else:
+            src_gpu = rank - (rank % args.gpu)
+            g_loc_meta = torch.cuda.LongTensor(4).fill_(0)
+            dist.recv(g_loc_meta, src=src_gpu)
+
+            g_loc_indices = torch.cuda.LongTensor(2, g_loc_meta[0].item())
+            dist.recv(g_loc_indices, src=src_gpu)
+
+            g_loc_values = torch.cuda.DoubleTensor(g_loc_meta[0].item())
+            dist.recv(g_loc_values, src=src_gpu)
+
+            g_loc = torch.sparse_coo_tensor(g_loc_indices, g_loc_values, \
+                                                size=torch.Size([g_loc_meta[1], g_loc_meta[2]]))
+            edge_count = g_loc_meta[3].item()
+
+            if args.dataset == "ogbn-papers100M":
+                train_idx_len = torch.cuda.LongTensor(1).fill_(0)
+                dist.recv(train_idx_len, src=src_gpu)
+
+                train_idx = torch.cuda.LongTensor(train_idx_len.item()).fill_(0)
+                dist.recv(train_idx, src=src_gpu)
+                print(f"recv train_idx: {train_idx}", flush=True)
+            torch.cuda.synchronize()
+
+    else:
+        _, g_loc, _ = one5d_partition(rank, size, inputs, adj_matrix, data, inputs, num_classes, \
+                                        args.replication, args.normalize)
+        print("coalescing", flush=True)
+        g_loc = g_loc.coalesce().t_()
+        print("normalizing", flush=True)
+        g_loc = g_loc.to(device)
+        g_loc = g_loc.double()
 
     print("end partitioning", flush=True)
+    print(f"g_loc.nnz: {g_loc._nnz()}", flush=True)
 
-    # features_loc = features_loc.to(device)
-    # for i in range(len(ampbyp)):
-    #     ampbyp[i] = ampbyp[i].t().coalesce().to(device)
-
-    print("coalescing", flush=True)
-    g_loc = g_loc.coalesce().t_()
-    print("normalizing", flush=True)
-    g_loc = g_loc.to(device)
-    g_loc = g_loc.double()
-    g_loc_indices, _ = add_remaining_self_loops(g_loc._indices(), num_nodes=g_loc.size(0))
-    g_loc_values = torch.cuda.DoubleTensor(g_loc_indices.size(1)).fill_(1)
-    g_loc = torch.sparse_coo_tensor(g_loc_indices, g_loc_values, g_loc.size())
+    # g_loc_indices, _ = add_remaining_self_loops(g_loc._indices(), num_nodes=g_loc.size(0))
+    # g_loc_values = torch.cuda.DoubleTensor(g_loc_indices.size(1)).fill_(1)
+    # g_loc = torch.sparse_coo_tensor(g_loc_indices, g_loc_values, g_loc.size())
     # g_loc = row_normalize(g_loc)
     print("done normalizing", flush=True)
     torch.set_printoptions(precision=10)
@@ -406,6 +488,7 @@ def main(args, batches=None):
     
     torch.cuda.nvtx.range_pop()
 
+    print(f"device: {device}")
     if batches is None:
         print("beginning constructing batches")
         batches = torch.cuda.IntTensor(args.n_bulkmb, args.batch_size) # initially the minibatch, note row-major
@@ -422,7 +505,9 @@ def main(args, batches=None):
     batches_loc = one5d_partition_mb(rank, size, batches, args.replication, args.n_bulkmb)
 
     torch.cuda.nvtx.range_push("nvtx-gen-sparse-batches")
-    batches_indices_rows = torch.arange(batches_loc.size(0)).cuda()
+    batches_indices_rows = torch.arange(batches_loc.size(0)).to(device)
+    print(f"device2: {device}")
+    print(f"batches_indices_rows.device: {batches_indices_rows.device}")
     batches_indices_rows = batches_indices_rows.repeat_interleave(batches_loc.size(1))
     batches_indices_cols = batches_loc.view(-1)
     batches_indices = torch.stack((batches_indices_rows, batches_indices_cols))
@@ -433,16 +518,14 @@ def main(args, batches=None):
     print(f"g_loc: {g_loc}")
 
     node_count = g_loc.size(1)
-    adj_matrix = adj_matrix.cuda()
+    # adj_matrix = adj_matrix.cuda()
     if args.n_darts == -1:
         avg_degree = int(edge_count / node_count)
         if args.sample_method == "ladies":
             args.n_darts = avg_degree * args.batch_size * (args.replication ** 2)
         elif args.sample_method == "sage":
-            args.n_darts = avg_degree
+            args.n_darts = avg_degree * 2
         print(f"n_darts: {args.n_darts}")
-
-    # del adj_matrix # Comment when testing
 
     print(f"rank: {rank} g_loc: {g_loc}")
     print(f"rank: {rank} batches_loc: {batches_loc}", flush=True)
@@ -452,7 +535,6 @@ def main(args, batches=None):
     nnz_row_masks.fill_(0)
     
     nnz_recv_upperbound = edge_count // (size // args.replication)
-    sa_recv_buff = torch.cuda.DoubleTensor(3 * nnz_recv_upperbound).fill_(0)
 
     if args.sample_method == "ladies":
         # torch.manual_seed(rank_col)
@@ -461,32 +543,32 @@ def main(args, batches=None):
                                         ladies_sampler(g_loc, batches_loc, args.batch_size, \
                                                                     args.samp_num, args.n_bulkmb, \
                                                                     args.n_layers, args.n_darts, \
-                                                                    args.replication, nnz_row_masks, 
-                                                                    sa_recv_buff, rank, size, row_groups, 
-                                                                    col_groups, args.timing)
+                                                                    args.semibulk, args.replication, 
+                                                                    nnz_row_masks, rank, size, 
+                                                                    row_groups, col_groups, args.timing)
 
         print("second runs", flush=True)
         nnz_row_masks.fill_(False)
-        torch.cuda.profiler.cudart().cudaProfilerStart()
+        # torch.cuda.profiler.cudart().cudaProfilerStart()
         torch.cuda.nvtx.range_push("nvtx-sampler")
         # torch.manual_seed(rank_col)
         current_frontier, next_frontier, adj_matrices_bulk = \
                                         ladies_sampler(g_loc, batches_loc, args.batch_size, \
                                                                     args.samp_num, args.n_bulkmb, \
                                                                     args.n_layers, args.n_darts, \
-                                                                    args.replication, nnz_row_masks, 
-                                                                    sa_recv_buff, rank, size, row_groups, 
-                                                                    col_groups, args.timing)
+                                                                    args.semibulk, args.replication, \
+                                                                    nnz_row_masks, rank, size, 
+                                                                    row_groups, col_groups, args.timing)
     elif args.sample_method == "sage":
-        # torch.manual_seed(rank_col)
-        # print("first (warmup) run")
-        # current_frontier, next_frontier, adj_matrices = \
-        #                                 sage_sampler(g_loc, batches_loc, args.batch_size, \
-        #                                                             args.samp_num, args.n_bulkmb, \
-        #                                                             args.n_layers, args.n_darts, \
-        #                                                             args.replication, nnz_row_masks, 
-        #                                                             sa_recv_buff, rank, size, row_groups, 
-        #                                                             col_groups, args.timing, args.baseline)
+        torch.manual_seed(rank_col)
+        print("first (warmup) run")
+        current_frontier, next_frontier, adj_matrices = \
+                                        sage_sampler(g_loc, batches_loc, args.batch_size, \
+                                                                    args.samp_num, args.n_bulkmb, \
+                                                                    args.n_layers, args.n_darts, \
+                                                                    args.replication, nnz_row_masks, 
+                                                                    rank, size, row_groups, 
+                                                                    col_groups, args.timing, args.baseline)
 
         print("second runs", flush=True)
         nnz_row_masks.fill_(False)
@@ -498,11 +580,11 @@ def main(args, batches=None):
                                                                     args.samp_num, args.n_bulkmb, \
                                                                     args.n_layers, args.n_darts, \
                                                                     args.replication, nnz_row_masks, 
-                                                                    sa_recv_buff, rank, size, row_groups, 
+                                                                    rank, size, row_groups, 
                                                                     col_groups, args.timing, args.baseline)
 
     torch.cuda.nvtx.range_pop()
-    torch.cuda.profiler.cudart().cudaProfilerStop()
+    # torch.cuda.profiler.cudart().cudaProfilerStop()
 
     if current_frontier is not None:
         # adj_matrices[i][j] --  mb i layer j
@@ -532,21 +614,22 @@ def main(args, batches=None):
                                                     (args.batch_size, args.batch_size + args.samp_num * args.batch_size))
                 adj_matrices[j][i] = adj_matrix_sample
 
-        # print(f"sample: {adj_matrices}")
-        # adj_matrix = None # Uncomment bottom for testing
-        adj_matrix = adj_matrix.cuda()
-        adj_matrix = torch.sparse_coo_tensor(adj_matrix, 
-                                            torch.cuda.FloatTensor(adj_matrix.size(1)).fill_(1.0), 
-                                            size=(node_count, node_count))
-        adj_matrix = adj_matrix.coalesce().cuda().double()
+        # # print(f"sample: {adj_matrices}")
+        # # adj_matrix = None # Uncomment bottom for testing
+        # adj_matrix = adj_matrix.cuda()
+        # adj_matrix = torch.sparse_coo_tensor(adj_matrix, 
+        #                                     torch.cuda.FloatTensor(adj_matrix.size(1)).fill_(1.0), 
+        #                                     size=(node_count, node_count))
+        # adj_matrix = adj_matrix.coalesce().cuda().double()
 
-        # Note: Uncomment when testing correctness
-        adj_matrix = row_normalize(adj_matrix)
-        adj_matrix = torch.pow(adj_matrix, 2)
-        # return here while testing sampling code
+        # # Note: Uncomment when testing correctness
+        # adj_matrix = row_normalize(adj_matrix)
+        # adj_matrix = torch.pow(adj_matrix, 2)
+        # # return here while testing sampling code
 
         # return current_frontier, next_frontier, adj_matrices, adj_matrix
-        return current_frontier, next_frontier, adj_matrices, adj_matrix, col_groups
+        # return current_frontier, next_frontier, adj_matrices, adj_matrix, col_groups
+        return current_frontier, next_frontier, adj_matrices, col_groups
     return
 
     # create GCN model
@@ -668,6 +751,8 @@ if __name__ == '__main__':
                             help='number of minibatches to sample in bulk')
     parser.add_argument('--n-darts', default=-1, type=int,
                             help='number of darts to throw per minibatch in LADIES sampling')
+    parser.add_argument('--semibulk', default=128, type=int,
+                            help='number of batches to column extract from in bulk')
     parser.add_argument('--timing', action="store_true",
                             help='whether to turn on timers')
     parser.add_argument('--baseline', action="store_true",

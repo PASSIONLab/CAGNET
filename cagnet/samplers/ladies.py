@@ -24,7 +24,8 @@ def stop_time(start_timer, stop_timer, barrier=False):
     return time_taken
     
 def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_total, n_layers, n_darts, \
-                        replication, sa_masks, sa_recv_buff, rank, size, row_groups, col_groups, timing):
+                        semibulk_size, replication, sa_masks, rank, size, \
+                        row_groups, col_groups, timing):
 
     total_start_timer = torch.cuda.Event(enable_timing=True)
     total_stop_timer = torch.cuda.Event(enable_timing=True)
@@ -56,22 +57,22 @@ def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_tota
             nnz = current_frontier[0, :].size(0)
 
         batches = batches.to_sparse_csr()
-        print(f"prob_adj_matrix: {adj_matrix}", flush=True)
         adj_matrix_sq = adj_matrix.square().to_sparse_csr()
         p = gen_prob_dist(batches, adj_matrix_sq, mb_count, node_count_total, replication, rank, size, \
-                            row_groups, col_groups, sa_masks, sa_recv_buff, timing_dict, "ladies", timing)
+                            row_groups, col_groups, sa_masks, timing_dict, "ladies", timing)
 
         next_frontier = sample(p, frontier_size, mb_count, node_count_total, n_darts, replication, rank, size, \
                                     row_groups, col_groups, timing_dict, "ladies")
-        adj_matrix = adj_matrix.to_sparse_coo()
+        # adj_matrix = adj_matrix.to_sparse_coo()
         if p.layout == torch.sparse_csr:
             p = p.to_sparse_coo()
         batches = batches.to_sparse_coo()
 
         batches_select, next_frontier_select, adj_matrix_sample = \
-                    select(next_frontier, adj_matrix, batches, sa_masks, sa_recv_buff, nnz, \
+                    select(next_frontier, adj_matrix_sq, batches, sa_masks, nnz, \
                                     batch_size, frontier_size, mb_count, mb_count_total, node_count_total, \
-                                    replication, rank, size, row_groups, col_groups, timing_dict, i, "ladies")
+                                    replication, rank, size, row_groups, col_groups, timing_dict, i, "ladies",
+                                    semibulk_size)
 
         adj_matrices[i] = adj_matrix_sample
         current_frontier = next_frontier

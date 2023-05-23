@@ -32,7 +32,7 @@ def stop_time(start_timer, stop_timer, barrier=False):
         return 0.0
 
 def sage_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_total, n_layers, n_darts, \
-                        replication, sa_masks, sa_recv_buff, rank, size, row_groups, col_groups,
+                        replication, sa_masks, rank, size, row_groups, col_groups,
                         timing_arg, baseline_arg):
 
     global timing
@@ -69,6 +69,16 @@ def sage_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_total,
 
     gpu = torch.device(f"cuda:{torch.cuda.current_device()}")
 
+    batches_expand_rows = torch.arange(mb_count * batch_size, device=gpu)
+    batches_expand_idxs = torch.stack((batches_expand_rows, batches._indices()[1, :]))
+    batches_expand = torch.sparse_coo_tensor(
+                            batches_expand_idxs,
+                            batches._values(), 
+                            size=(mb_count * batch_size, node_count_total))
+
+    batches_expand = batches_expand.to_sparse_csr()
+    adj_matrix = adj_matrix.to_sparse_csr()
+
     if not baseline_compare:
         # start_time(total_start_timer)
         total_start_timer.record()
@@ -81,18 +91,9 @@ def sage_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_total,
         # Expand batches matrix
         if baseline_compare:
             total_start_timer.record()
-        batches_expand_rows = torch.arange(mb_count * nnz, device=gpu)
-        batches_expand_idxs = torch.stack((batches_expand_rows, batches._indices()[1, :]))
-        batches_expand = torch.sparse_coo_tensor(
-                                batches_expand_idxs,
-                                batches._values(), 
-                                size=(mb_count * nnz, node_count_total))
-
-        batches_expand = batches_expand.to_sparse_csr()
-        adj_matrix = adj_matrix.to_sparse_csr()
         p = gen_prob_dist(batches_expand, adj_matrix, mb_count, node_count_total,
                                 replication, rank, size, row_groups, col_groups,
-                                sa_masks, sa_recv_buff, timing_dict, "sage",
+                                sa_masks, timing_dict, "sage",
                                 timing_arg)
         adj_matrix = adj_matrix.to_sparse_coo()
         if p.layout == torch.sparse_csr:
@@ -103,6 +104,7 @@ def sage_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_total,
                                     replication, rank, size, row_groups, col_groups,
                                     timing_dict, "sage")
 
+        start_time(start_timer)
         # add explicit 0's to next_frontier
         next_frontier_nnz = next_frontier._values().nonzero().squeeze()
         frontier_nnz_sizes = torch.histc(next_frontier._indices()[0,next_frontier_nnz], bins=p.size(0))
@@ -150,6 +152,7 @@ def sage_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_total,
 
         adj_matrices = [torch.sparse_coo_tensor(adj_matrices_indices, adj_matrices_values, 
                                 size=torch.Size([mb_count * nnz, next_frontier_select.size(1) * batch_size]))]
+        timing_dict["row-col-select"].append(stop_time(start_timer, stop_timer, barrier=True))
 
         if baseline_compare:
             total_stop_timer.record()
@@ -167,7 +170,7 @@ def sage_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_total,
         # next_frontier._values().fill_(1)
 
         batches_select, next_frontier_select, adj_matrix_sample = \
-                    select(next_frontier, adj_matrix, batches, sa_masks, sa_recv_buff, 
+                    select(next_frontier, adj_matrix, batches, sa_masks, 
                                 nnz, batch_size, frontier_size, mb_count, 
                                 mb_count_total, node_count_total, replication, rank, 
                                 size, row_groups, col_groups, timing_dict, i, "sage")

@@ -355,6 +355,36 @@ def test_nccl(args):
     torch.cuda.nvtx.range_pop()
     torch.cuda.profiler.cudart().cudaProfilerStop()
 
+    print(f"alltoall", flush=True)
+    buffer_size = 10 * 2**20
+    tensors = []
+    for i in range(size):
+        tensors.append(torch.cuda.FloatTensor(buffer_size).fill_(i))
+    tensors[-1] = torch.cuda.FloatTensor(0).fill_(i)
+
+    recv_tensors = []
+    for i in range(size):
+        if rank == size - 1:
+            recv_tensors.append(torch.cuda.FloatTensor(0))
+        else:
+            recv_tensors.append(torch.cuda.FloatTensor(buffer_size))
+
+
+    if rank == 0:
+        start_time(start_timer)
+
+    # dist.scatter(recv_tensor, tensors, src=0)
+    dist.all_to_all(recv_tensors, tensors)
+    torch.cuda.synchronize()
+
+    if rank == 0:
+        seconds = stop_time(start_timer, stop_timer) / 1000
+        gb_count = (buffer_size * 4) / 2**30
+        bw = gb_count / seconds
+        print(f"gb: {gb_count} GB time: {seconds}s bw: {bw}GB/s")
+        print(f"time(ms): {seconds * 1000}")
+    dist.barrier()
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='NCCL P2P test')
     parser.add_argument('--hostname', default='127.0.0.1', type=str,
