@@ -49,8 +49,6 @@ def sage_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_total,
 
     timing_dict = defaultdict(list)
 
-    current_frontier = torch.cuda.IntTensor(mb_count_total, batch_size + frontier_size)
-
     node_count = adj_matrix.size(0)
     node_count_total = adj_matrix.size(1)
     mb_count = batches.size(0)
@@ -78,27 +76,35 @@ def sage_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_total,
 
     batches_expand = batches_expand.to_sparse_csr()
     adj_matrix = adj_matrix.to_sparse_csr()
+    current_frontier = batches_expand
+    frontiers = [None] * (n_layers + 1)
 
-    if not baseline_compare:
-        # start_time(total_start_timer)
+    if baseline_compare:
         total_start_timer.record()
     for i in range(n_layers):
         if i == 0:
             nnz = batch_size
         else:
-            nnz = current_frontier[0, :].size(0)
+            current_frontier_nnzmask = current_frontier._values().nonzero().squeeze()
+            current_frontier_nnzinds = current_frontier._indices()[:, current_frontier_nnzmask]
+            current_frontier_nnzvals = current_frontier._values()[current_frontier_nnzmask].double()
+            current_frontier = torch.sparse_coo_tensor(current_frontier_nnzinds, current_frontier_nnzvals,
+                                                            size=current_frontier.size())
+            nnz = current_frontier._nnz()
+            current_frontier = current_frontier.to_sparse_csr()
 
+        print(f"i: {i} nnz: {nnz}", flush=True)
         # Expand batches matrix
         if baseline_compare:
             total_start_timer.record()
-        p = gen_prob_dist(batches_expand, adj_matrix, mb_count, node_count_total,
+        p = gen_prob_dist(current_frontier, adj_matrix, mb_count, node_count_total,
                                 replication, rank, size, row_groups, col_groups,
                                 sa_masks, timing_dict, "sage",
                                 timing_arg)
         adj_matrix = adj_matrix.to_sparse_coo()
         if p.layout == torch.sparse_csr:
             p = p.to_sparse_coo()
-        batches = batches.to_sparse_coo()
+        # batches = batches.to_sparse_coo()
 
         next_frontier = sample(p, frontier_size, mb_count, node_count_total, n_darts,
                                     replication, rank, size, row_groups, col_groups,
@@ -111,7 +117,8 @@ def sage_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_total,
 
         frontier_nnz_sizes = torch.clamp(frontier_nnz_sizes, max=frontier_size)
         next_frontier_rows = torch.repeat_interleave(
-                                torch.arange(batch_size * mb_count, device=gpu),
+                                torch.arange(nnz * mb_count, device=gpu),
+                                # torch.arange(batch_size * mb_count, device=gpu),
                                 frontier_size)
         nextf_cols_idxs = torch.arange(next_frontier_nnz.size(0), device=gpu)
         frontier_remainder = frontier_size - frontier_nnz_sizes
@@ -128,60 +135,52 @@ def sage_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_total,
         # Construct sampled adj matrix
         next_frontier = torch.sparse_coo_tensor(next_frontier_idxs, 
                                             next_frontier_values,
-                                            size=(batch_size * mb_count, node_count_total))
+                                            size=(nnz * mb_count, node_count_total))
+                                            # size=(batch_size * mb_count, node_count_total))
 
-        next_frontier_select = next_frontier._indices()[1,:].view(mb_count * batch_size, frontier_size)
-        batches_select = torch.masked_select(batches._indices()[1,:], \
-                                                batches._values().bool()).view(mb_count * batch_size, 1)
-        next_frontier_select = torch.cat((next_frontier_select, batches_select), dim=1)
-        batch_vals = torch.cuda.LongTensor(batches_select.size()).fill_(1)
-        next_frontier_select_vals = next_frontier._values().view(mb_count * batch_size, frontier_size)
+        # next_frontier_select = next_frontier._indices()[1,:].view(mb_count * batch_size, frontier_size)
+        next_frontier_select = next_frontier._indices()[1,:].view(mb_count * nnz, frontier_size)
+        # batches_select = torch.masked_select(batches._indices()[1,:], \
+        #                                         batches._values().bool()).view(mb_count * batch_size, 1)
+        current_frontier_select = torch.masked_select(current_frontier.col_indices(), \
+                                                current_frontier.values().bool()).view(mb_count * batch_size, 1)
+        next_frontier_select = torch.cat((next_frontier_select, current_frontier_select), dim=1)
+        batch_vals = torch.cuda.LongTensor(current_frontier_select.size()).fill_(1)
+        # next_frontier_select_vals = next_frontier._values().view(mb_count * batch_size, frontier_size)
+        next_frontier_select_vals = next_frontier._values().view(mb_count * nnz, frontier_size)
         next_frontier_select_vals = torch.cat((next_frontier_select_vals, batch_vals), dim=1).view(-1)
 
-        batch_rows = torch.arange(mb_count * batch_size).cuda().view(mb_count * batch_size, 1)
-        next_frontier_select_rows = next_frontier._indices()[0,:].view(mb_count * batch_size, frontier_size)
+        # batch_rows = torch.arange(mb_count * batch_size).cuda().view(mb_count * batch_size, 1)
+        batch_rows = torch.arange(mb_count * nnz).cuda().view(mb_count * nnz, 1)
+        # next_frontier_select_rows = next_frontier._indices()[0,:].view(mb_count * batch_size, frontier_size)
+        next_frontier_select_rows = next_frontier._indices()[0,:].view(mb_count * nnz, frontier_size)
         next_frontier_select_rows = torch.cat((next_frontier_select_rows, batch_rows), dim=1).view(-1)
 
         nnz_mask = next_frontier_select_vals.nonzero().squeeze()
         adj_sample_rows = next_frontier_select_rows[nnz_mask]
         adj_sample_cols = torch.arange(next_frontier_select.numel()).cuda()
-        adj_sample_cols = adj_sample_cols.remainder(next_frontier_select.size(1) * batch_size)
+        # adj_sample_cols = adj_sample_cols.remainder(next_frontier_select.size(1) * batch_size)
+        adj_sample_cols = adj_sample_cols.remainder(next_frontier_select.size(1) * nnz)
         adj_sample_cols = adj_sample_cols[nnz_mask]
         adj_matrices_indices = torch.stack((adj_sample_rows, adj_sample_cols))
         adj_matrices_values = torch.cuda.DoubleTensor(adj_sample_rows.size(0)).fill_(1)
 
-        adj_matrices = [torch.sparse_coo_tensor(adj_matrices_indices, adj_matrices_values, 
-                                size=torch.Size([mb_count * nnz, next_frontier_select.size(1) * batch_size]))]
-        timing_dict["row-col-select"].append(stop_time(start_timer, stop_timer, barrier=True))
-
-        if baseline_compare:
-            total_stop_timer.record()
-            torch.cuda.synchronize()
-            total_time = total_start_timer.elapsed_time(total_stop_timer)
-            print(f"total_time_baseline: {total_time}", flush=True)
-
-            # batches_select = None
-            # next_frontier_select = None
-            # adj_matrices = None
-            break # for comparing with quiver
-
-
-        # next_frontier = next_frontier.coalesce()
-        # next_frontier._values().fill_(1)
-
-        batches_select, next_frontier_select, adj_matrix_sample = \
-                    select(next_frontier, adj_matrix, batches, sa_masks, 
-                                nnz, batch_size, frontier_size, mb_count, 
-                                mb_count_total, node_count_total, replication, rank, 
-                                size, row_groups, col_groups, timing_dict, i, "sage")
-
+        # adj_matrices = [torch.sparse_coo_tensor(adj_matrices_indices, adj_matrices_values, 
+        #                         size=torch.Size([mb_count * nnz, next_frontier_select.size(1) * batch_size]))]
+        adj_matrix_sample = torch.sparse_coo_tensor(adj_matrices_indices, adj_matrices_values, 
+                                # size=torch.Size([mb_count * nnz, next_frontier_select.size(1) * batch_size]))
+                                size=torch.Size([mb_count * nnz, next_frontier_select.size(1) * nnz]))
         adj_matrices[i] = adj_matrix_sample
+        frontiers[i] = current_frontier_select.clone()
         current_frontier = next_frontier
+        timing_dict["row-col-select"].append(stop_time(start_timer, stop_timer, barrier=True))
+    frontiers[n_layers] = next_frontier_select.clone()
 
     # print(f"total_time: {stop_time(total_start_timer, total_stop_timer)}", flush=True)
-    total_stop_timer.record()
-    torch.cuda.synchronize()
-    total_time = total_start_timer.elapsed_time(total_stop_timer)
+    if baseline_compare:
+        total_stop_timer.record()
+        torch.cuda.synchronize()
+        total_time = total_start_timer.elapsed_time(total_stop_timer)
     print(f"total_time: {total_time}", flush=True)
     if timing:
         for k, v in sorted(timing_dict.items()):
@@ -206,4 +205,5 @@ def sage_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_total,
             else:
                 avg_time = -1.0
             print(f"{k} total_time: {sum(v)} avg_time {avg_time} len: {len(v)}")
-    return batches_select, next_frontier_select, adj_matrices
+    # return current_frontier_select, next_frontier_select, adj_matrices
+    return frontiers, adj_matrices

@@ -88,7 +88,11 @@ def main(args):
         No other edges exist in sample (i.e. edges with an endpoint outside the two frontiers of vertices)
         """
         if nnz_count != adj_matrix._nnz():
-            print("there exist other edges in sampled adj matrix")
+            print(f"there exist other edges in sampled adj matrix {nnz_count} {adj_matrix._nnz()}")
+            # print(f"current_frontier: {current_frontier}")
+            # print(f"next_frontier: {next_frontier}")
+            # print(f"adj_matrix: {adj_matrix}")
+            # print(f"g_loc[current_frontier]: {g_loc._indices()[1, g_loc._indices()[0,:] == current_frontier.item()]}")
         else:
             print("no other edges exist in sampled adj matrix")
 
