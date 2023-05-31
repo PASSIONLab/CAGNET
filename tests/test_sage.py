@@ -15,86 +15,98 @@ def main(args):
     """
     
     # Compute aggregated neighborhood
-    current_frontier_all, next_frontier_all, adj_matrices_all, g_loc = examples.gcn_15d.main(args)
-    torch.set_printoptions(edgeitems=25)
-    print(f"g_loc: {g_loc}")
+    frontiers, adj_matrices_all, g_loc = examples.gcn_15d.main(args)
 
+    print(f"g_loc: {g_loc}")
     print("")
     print("Beginning SAGE sampler test")
-    size = dist.get_world_size()
-    rank_n_bulkmb = int(args.n_bulkmb / (size / args.replication)) * args.batch_size
-    for i in range(rank_n_bulkmb):
-        print(f"Testing {i}")
-        current_frontier = current_frontier_all[i] # current_frontier for minibatch i
-        # next_frontier = next_frontier_all[i] # next_frontier for minibatch i
-        # current_frontier = current_frontier_all[i].unique(sorted=True) # current_frontier for minibatch i
-        next_frontier = next_frontier_all[i].unique(sorted=True) # next_frontier for minibatch i
+    for l in range(args.n_layers):
+        print(f"Testing layer {l}", flush=True)
 
-        mb_id = i // args.batch_size
-        adj_matrices = adj_matrices_all[mb_id] # adj_matrices for minibatch i
+        current_frontier_all = frontiers[l]
+        next_frontier_all = frontiers[l + 1]
+        torch.set_printoptions(edgeitems=25)
+        size = dist.get_world_size()
+        rank_n_bulkmb = int(args.n_bulkmb / (size / args.replication)) * args.batch_size
 
-        vtx_mask = adj_matrices[0]._indices()[0,:] == (i % args.batch_size)
-        vtx_indices = adj_matrices[0]._indices()[:, vtx_mask]
-        vtx_values = adj_matrices[0]._values()[vtx_mask]
-        adj_matrices = [torch.sparse_coo_tensor(vtx_indices, vtx_values, size=adj_matrices[0].size())]
+        for i in range(rank_n_bulkmb):
+            print(f"Testing batch {i}", flush=True)
+            mb_id = i // args.batch_size
+            current_frontier = current_frontier_all[mb_id].view(current_frontier_all[mb_id].numel(), 1)
+            current_frontier = current_frontier[i % args.batch_size] # current_frontier for minibatch i
+            next_frontier = next_frontier_all[mb_id]
+            next_frontier = next_frontier[i % args.batch_size].unique(sorted=True) 
 
-        agg_neighbors = []
-        for v in current_frontier:
-            vtx = v.item()
-            neighbors_mask = g_loc._indices()[0,:] == vtx
-            neighbors = (g_loc._indices()[1,:])[neighbors_mask]
-            agg_neighbors += neighbors.tolist()
+            adj_matrices = adj_matrices_all[l][mb_id] # adj_matrices for minibatch i
 
-        agg_neighbors = torch.IntTensor(agg_neighbors)
-        agg_neighbors = agg_neighbors.unique()
 
-        # Verify each vertex in next_frontier exists in aggregated neighorhood
-        vertices_match = True
-        for v in next_frontier:
-            vtx = v.item()
-            if vtx not in agg_neighbors and vtx not in current_frontier:
-                vertices_match = False
-                print(f"vtx {vtx} not in aggregated neighborhood")
+            vtx_mask = adj_matrices._indices()[0,:] == (i % args.batch_size)
+            vtx_indices = adj_matrices._indices()[:, vtx_mask]
+            vtx_values = adj_matrices._values()[vtx_mask]
+            adj_matrices = [torch.sparse_coo_tensor(vtx_indices, vtx_values, size=adj_matrices.size())]
 
-        if vertices_match:
-            print("next_frontier within aggregated neighorhood")
-
-        """
-        All edges between the two frontiers of vertices exist in the sample
-        """
-        adj_matrix = adj_matrices[0] # assume only one layer for now
-        nnz_count = 0
-        edges_match = True
-        for u in current_frontier:
-            for v in next_frontier:
-                u_vtx = u.item()
-                v_vtx = v.item()
-
-                neighbors_mask = g_loc._indices()[0,:] == u_vtx
+            agg_neighbors = []
+            for v in current_frontier:
+                vtx = v.item()
+                neighbors_mask = g_loc._indices()[0,:] == vtx
                 neighbors = (g_loc._indices()[1,:])[neighbors_mask]
-                neighbors_nnz = (g_loc._values())[neighbors_mask]
-                
-                if v_vtx in neighbors:
-                    v_vtx_idx = (neighbors == v_vtx).nonzero().item()
-                    if math.fabs(adj_matrix._values()[nnz_count] - neighbors_nnz[v_vtx_idx]) > eps:
-                        print(f"nnz differs u: {u_vtx} v: {v_vtx} sample_nnz: {adj_matrix._values()[nnz_count]} g_loc_nnz: {neighbors_nnz[v_vtx_idx]}")
-                        edges_match = False
-                    nnz_count += 1
+                agg_neighbors += neighbors.tolist()
 
-        if edges_match:
-            print("all edges between two frontiers exist in sampled adj matrix")
+            agg_neighbors = torch.IntTensor(agg_neighbors)
+            agg_neighbors = agg_neighbors.unique()
 
-        """
-        No other edges exist in sample (i.e. edges with an endpoint outside the two frontiers of vertices)
-        """
-        if nnz_count != adj_matrix._nnz():
-            print(f"there exist other edges in sampled adj matrix {nnz_count} {adj_matrix._nnz()}")
-            # print(f"current_frontier: {current_frontier}")
-            # print(f"next_frontier: {next_frontier}")
-            # print(f"adj_matrix: {adj_matrix}")
-            # print(f"g_loc[current_frontier]: {g_loc._indices()[1, g_loc._indices()[0,:] == current_frontier.item()]}")
-        else:
-            print("no other edges exist in sampled adj matrix")
+            # Verify each vertex in next_frontier exists in aggregated neighorhood
+            vertices_match = True
+            for v in next_frontier:
+                vtx = v.item()
+                if vtx not in agg_neighbors and vtx not in current_frontier:
+                    vertices_match = False
+                    print(f"current_frontier: {current_frontier}")
+                    print(f"next_frontier: {next_frontier}")
+                    print(f"agg_neighbors: {agg_neighbors}")
+                    print(f"neighbors[1256]: {g_loc._indices()[1,(g_loc._indices()[0,:] == 1256)]}")
+                    print(f"vtx {vtx} not in aggregated neighborhood")
+
+            if vertices_match:
+                print("next_frontier within aggregated neighorhood")
+
+            """
+            All edges between the two frontiers of vertices exist in the sample
+            """
+            adj_matrix = adj_matrices[0] # assume only one layer for now
+            nnz_count = 0
+            edges_match = True
+
+            for u in current_frontier:
+                for v in next_frontier:
+                    u_vtx = u.item()
+                    v_vtx = v.item()
+
+                    neighbors_mask = g_loc._indices()[0,:] == u_vtx
+                    neighbors = (g_loc._indices()[1,:])[neighbors_mask]
+                    neighbors_nnz = (g_loc._values())[neighbors_mask]
+
+                    if v_vtx in neighbors:
+                        v_vtx_idx = (neighbors == v_vtx).nonzero().item()
+                        if math.fabs(adj_matrix._values()[nnz_count] - neighbors_nnz[v_vtx_idx]) > eps:
+                            print(f"nnz differs u: {u_vtx} v: {v_vtx} sample_nnz: {adj_matrix._values()[nnz_count]} g_loc_nnz: {neighbors_nnz[v_vtx_idx]}")
+                            edges_match = False
+                        nnz_count += 1
+
+            if edges_match:
+                print("all edges between two frontiers exist in sampled adj matrix")
+
+            """
+            No other edges exist in sample (i.e. edges with an endpoint outside the two frontiers of vertices)
+            """
+            if nnz_count != adj_matrix._nnz():
+                print(f"there exist other edges in sampled adj matrix {nnz_count} {adj_matrix._nnz()}")
+                # print(f"current_frontier: {current_frontier}")
+                # print(f"next_frontier: {next_frontier}")
+                # print(f"adj_matrix: {adj_matrix}")
+                # print(f"g_loc[current_frontier]: {g_loc._indices()[1, g_loc._indices()[0,:] == current_frontier.item()]}")
+            else:
+                print("no other edges exist in sampled adj matrix")
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='test LADIES sampling code')
