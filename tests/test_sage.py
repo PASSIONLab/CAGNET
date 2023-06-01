@@ -64,7 +64,7 @@ def main(args):
                     print(f"current_frontier: {current_frontier}")
                     print(f"next_frontier: {next_frontier}")
                     print(f"agg_neighbors: {agg_neighbors}")
-                    print(f"neighbors[1256]: {g_loc._indices()[1,(g_loc._indices()[0,:] == 1256)]}")
+                    print(f"neighbors[2662]: {g_loc._indices()[1,(g_loc._indices()[0,:] == 2662)]}")
                     print(f"vtx {vtx} not in aggregated neighborhood")
 
             if vertices_match:

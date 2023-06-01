@@ -585,14 +585,19 @@ def main(args, batches=None):
     torch.cuda.nvtx.range_pop()
     # torch.cuda.profiler.cudart().cudaProfilerStop()
 
+    print(f"frontiers_bulks: {frontiers_bulk}")
     # adj_matrices[i][j] --  layer i mb j
     rank_n_bulkmb = int(args.n_bulkmb / (size / args.replication))
     adj_matrices = [[None] * rank_n_bulkmb for x in range(args.n_layers)] 
     frontiers = [[None] * rank_n_bulkmb for x in range(args.n_layers + 1)] 
     for i in range(args.n_layers + 1):
         for j in range(rank_n_bulkmb):
-            row_select_min = j * args.batch_size
-            row_select_max = (j + 1) * args.batch_size
+            if i == 0:
+                row_select_min = j * args.batch_size 
+                row_select_max = (j + 1) * args.batch_size
+            else:
+                row_select_min = j * args.batch_size * (args.samp_num ** (i - 1))
+                row_select_max = (j + 1) * args.batch_size  * (args.samp_num ** (i - 1))
             
             if i < args.n_layers:
                 sampled_indices = adj_matrices_bulk[i]._indices()
@@ -611,10 +616,12 @@ def main(args, batches=None):
                 else:
                     adj_matrix_sample = torch.sparse_coo_tensor(adj_matrix_sample_indices, \
                                                     adj_matrix_sample_values, \
-                                                    (args.batch_size, \
-                                                            args.batch_size + args.samp_num * args.batch_size))
+                                                    (args.batch_size * (args.samp_num ** i), \
+                                                            args.batch_size * (args.samp_num ** (i + 1))))
                 adj_matrices[i][j] = adj_matrix_sample
             frontiers_sample = frontiers_bulk[i][row_select_min:row_select_max,:]
+            print(f"i: {i} j: {j}")
+            print(f"frontiers_sample: {frontiers_sample}")
             frontiers[i][j] = frontiers_sample
 
     # # adj_matrix = None # Uncomment bottom for testing
@@ -624,17 +631,6 @@ def main(args, batches=None):
                                         size=(node_count, node_count))
     adj_matrix = adj_matrix.coalesce().cuda().double()
 
-    # Note: Uncomment when testing correctness
-    # adj_matrix = adj_matrix.to_sparse_coo().double()
-    # adj_matrix = row_normalize(adj_matrix)
-    # adj_matrix = torch.pow(adj_matrix, 2)
-    # return here while testing sampling code
-
-    # print(f"frontiers[0][0].size: {frontiers[0][0].size()}")
-    # print(f"frontiers[0][1].size: {frontiers[1][0].size()}")
-    # print(f"frontiers[0][0]: {frontiers[0][0]}")
-    # print(f"frontiers[0][1]: {frontiers[1][0]}")
-    # print(f"batches: {batches}")
     return frontiers, adj_matrices, adj_matrix
 
     # create GCN model
