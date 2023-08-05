@@ -369,7 +369,7 @@ def main(args, batches=None):
     # print(f"adj_matrix.size(): {adj_matrix.size()}")
     # print(f"adj_matrix: {adj_matrix}")
 
-    adj_matrix, _ = add_remaining_self_loops(adj_matrix, num_nodes=inputs.size(0))
+    # adj_matrix, _ = add_remaining_self_loops(adj_matrix, num_nodes=inputs.size(0))
     # if args.sample_method == "ladies":
     #     print(f"before adj_matrix.size: {adj_matrix.size()}", flush=True)
     #     adj_matrix, _ = add_remaining_self_loops(adj_matrix, num_nodes=inputs.size(0))
@@ -561,7 +561,7 @@ def main(args, batches=None):
                                                                     nnz_row_masks, rank, size, 
                                                                     row_groups, col_groups, args.timing)
     elif args.sample_method == "sage":
-        torch.manual_seed(rank_col)
+        # torch.manual_seed(rank_col)
         print("first (warmup) run")
         frontiers, adj_matrices = sage_sampler(g_loc, batches_loc, args.batch_size, \
                                                                     args.samp_num, args.n_bulkmb, \
@@ -585,7 +585,6 @@ def main(args, batches=None):
     torch.cuda.nvtx.range_pop()
     # torch.cuda.profiler.cudart().cudaProfilerStop()
 
-    print(f"frontiers_bulks: {frontiers_bulk}")
     # adj_matrices[i][j] --  layer i mb j
     rank_n_bulkmb = int(args.n_bulkmb / (size / args.replication))
     adj_matrices = [[None] * rank_n_bulkmb for x in range(args.n_layers)] 
@@ -598,17 +597,21 @@ def main(args, batches=None):
             else:
                 row_select_min = j * args.batch_size * (args.samp_num ** (i - 1))
                 row_select_max = (j + 1) * args.batch_size  * (args.samp_num ** (i - 1))
+            adj_row_select_min = j * args.batch_size * (args.samp_num ** i)
+            adj_row_select_max = (j + 1) * args.batch_size  * (args.samp_num ** i)
             
             if i < args.n_layers:
                 sampled_indices = adj_matrices_bulk[i]._indices()
                 sampled_values = adj_matrices_bulk[i]._values()
 
-                sample_select_mask = (row_select_min <= sampled_indices[0,:]) & \
-                                     (sampled_indices[0,:] < row_select_max)
+                sample_select_mask = (adj_row_select_min <= sampled_indices[0,:]) & \
+                                     (sampled_indices[0,:] < adj_row_select_max)
                 adj_matrix_sample_indices = sampled_indices[:, sample_select_mask]
-                adj_matrix_sample_indices[0,:] -= row_select_min
+                # adj_matrix_sample_indices[0,:] -= row_select_min
+                adj_matrix_sample_indices[0,:] -= adj_row_select_min
                 adj_matrix_sample_values = sampled_values[sample_select_mask]
 
+                print(F"i: {i} j: {j} adj_matrix_sample_indices: {adj_matrix_sample_indices}")
                 if args.sample_method == "ladies":
                     adj_matrix_sample = torch.sparse_coo_tensor(adj_matrix_sample_indices, \
                                                     adj_matrix_sample_values, \
@@ -618,10 +621,9 @@ def main(args, batches=None):
                                                     adj_matrix_sample_values, \
                                                     (args.batch_size * (args.samp_num ** i), \
                                                             args.batch_size * (args.samp_num ** (i + 1))))
+                print(f"after layer {i} adj_matrix_sample: {adj_matrix_sample}")
                 adj_matrices[i][j] = adj_matrix_sample
             frontiers_sample = frontiers_bulk[i][row_select_min:row_select_max,:]
-            print(f"i: {i} j: {j}")
-            print(f"frontiers_sample: {frontiers_sample}")
             frontiers[i][j] = frontiers_sample
 
     # # adj_matrix = None # Uncomment bottom for testing
@@ -631,7 +633,8 @@ def main(args, batches=None):
                                         size=(node_count, node_count))
     adj_matrix = adj_matrix.coalesce().cuda().double()
 
-    return frontiers, adj_matrices, adj_matrix
+    # return frontiers, adj_matrices, adj_matrix
+    return frontiers, adj_matrices, adj_matrix, col_groups
 
     # create GCN model
     torch.manual_seed(0)

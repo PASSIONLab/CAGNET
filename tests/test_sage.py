@@ -61,10 +61,6 @@ def main(args):
                 vtx = v.item()
                 if vtx not in agg_neighbors and vtx not in current_frontier:
                     vertices_match = False
-                    print(f"current_frontier: {current_frontier}")
-                    print(f"next_frontier: {next_frontier}")
-                    print(f"agg_neighbors: {agg_neighbors}")
-                    print(f"neighbors[2662]: {g_loc._indices()[1,(g_loc._indices()[0,:] == 2662)]}")
                     print(f"vtx {vtx} not in aggregated neighborhood")
 
             if vertices_match:

@@ -943,6 +943,8 @@ def gen_prob_dist(numerator, adj_matrix, mb_count, node_count_total, replication
                                         numerator, adj_matrix, replication, rank, size, 
                                         row_groups, col_groups, "prob", sa_masks, 
                                         timing_dict, name)
+    print(f"p_num_indices: {p_num_indices}")
+    print(f"p_num_values: {p_num_values}")
     # p_num_indices, p_num_values =  dist_spgemm15D(numerator, adj_matrix, replication, rank, size, row_groups, col_groups, "prob")
     torch.cuda.nvtx.range_pop()
     stop_timer.record()
@@ -958,15 +960,18 @@ def gen_prob_dist(numerator, adj_matrix, mb_count, node_count_total, replication
         # p_num_values = torch.square(p_num_values).double()
         p_num_values = p_num_values.double()
     elif name == "sage":
-        p_num_values = torch.cuda.DoubleTensor(p_num_values.size(0)).fill_(1.0)
+        # p_num_values = torch.cuda.DoubleTensor(p_num_values.size(0)).fill_(1.0)
+        p_num_values = p_num_values.double()
     scatterd_add_gpu(p_den, p_num_indices[0, :], p_num_values, p_num_values.size(0))
     # p = torch.sparse_coo_tensor(indices=p_num_indices, 
     #                                 values=p_num_values, 
     #                                 size=(numerator.size(0), node_count_total))
+    # p = sparse_coo_tensor_gpu(p_num_indices, p_num_values, torch.Size([numerator.size(0), node_count_total]))
+    # normalize_gpu(p._values(), p_den, p._indices()[0, :], p._nnz())
+    normalize_gpu(p_num_values, p_den, p_num_indices[0, :], p_num_values.size(0))
+    p_num_values = torch.nan_to_num(p_num_values)
     p = sparse_coo_tensor_gpu(p_num_indices, p_num_values, torch.Size([numerator.size(0), node_count_total]))
-    # print(f"p: {p}")
     print(f"p.nnz: {p._nnz()}", flush=True)
-    normalize_gpu(p._values(), p_den, p._indices()[0, :], p._nnz())
     timing_dict["compute-p"].append(stop_time(start_timer, stop_timer))
     return p
 
@@ -1007,6 +1012,9 @@ def sample(p, frontier_size, mb_count, node_count_total, n_darts, replication,
     frontier_nnz_sizes.scatter_add_(0, next_frontier._indices()[0,:], ones)
     zero_count = (next_frontier._indices()[0,:] == 0).nonzero().size(0)
     frontier_nnz_sizes[0] = zero_count
+
+    zero_idxs = p._indices()[0, (p._values() == 0)].unique()
+    frontier_nnz_sizes[zero_idxs] = 0
 
     torch.cuda.nvtx.range_pop()
     timing_dict["pre-loop"].append(stop_time(start_timer, stop_timer))
