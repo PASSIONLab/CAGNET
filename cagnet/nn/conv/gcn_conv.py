@@ -4,7 +4,7 @@ import torch.distributed as dist
 import torch.nn as nn
 
 from cagnet.partitionings import Partitioning
-from sparse_coo_tensor_cpp import sparse_coo_tensor_gpu, spmm_gpu
+from sparse_coo_tensor_cpp import sparse_coo_tensor_gpu, spmm_gpu, normalize_batch_gpu
 
 def broad_func_oned(self, graph, ampbyp, inputs):
     n_per_proc = math.ceil(float(graph.size(0) / self.size))
@@ -551,7 +551,7 @@ def split3dspmm_dense(self, adj_matrix, inputs, height, middim, width):
     return z_loc
 
 class GCNConv(nn.Module):
-    def __init__(self, in_feats, out_feats, partitioning, device):
+    def __init__(self, in_feats, out_feats, partitioning, device, aggr="sum"):
         super(GCNConv, self).__init__()
 
         weight_nonleaf = torch.rand(in_feats, out_feats, requires_grad=True)
@@ -559,6 +559,7 @@ class GCNConv(nn.Module):
         weight_nonleaf.retain_grad()
         self.weight = nn.Parameter(weight_nonleaf)
         self.partitioning = partitioning
+        self.aggr = aggr
 
     def forward(self, gcn, graph, inputs, ampbyp=None):
         if self.partitioning == Partitioning.ONED:
@@ -569,7 +570,64 @@ class GCNConv(nn.Module):
             return GCNFuncTWOD.apply(gcn, graph, inputs, self.weight)
         elif self.partitioning == Partitioning.THREED:
             return GCNFuncTHREED.apply(gcn, graph, inputs, self.weight)
+        elif self.partitioning == Partitioning.NONE:
+            return GCNFuncNONE.apply(gcn, graph, inputs, self.weight)
         
+
+class GCNFuncNONE(torch.autograd.Function):
+    @staticmethod
+    def forward(ctx, self, graph, inputs, weight):
+        # inputs: H
+        # graph: A
+        # weight: W
+
+        z = torch.cuda.FloatTensor(graph.size(0), inputs.size(1), \
+                                            device=self.device).fill_(0)
+
+        spmm_gpu(graph.indices()[0].int(), graph.indices()[1].int(), 
+                        graph.values(), graph.size(0), 
+                        graph.size(1), inputs, z)
+        
+        z = z.mm(weight)
+
+        if self.aggr == "mean":
+            degs = torch.cuda.IntTensor(graph.size(0)).fill_(0)
+            ones = torch.cuda.IntTensor(graph._indices()[0,:].size(0)).fill_(1)
+            degs.scatter_add_(0, graph._indices()[0,:], ones)
+            degs.clamp_(min=1)
+            normalize_batch_gpu(z, degs, z.size(0), z.size(1))
+
+        ctx.save_for_backward(inputs, weight)
+        ctx.graph = graph
+        ctx.self = self
+
+        return z
+
+    @staticmethod
+    def backward(ctx, grad_output):
+        graph = ctx.graph
+        inputs, weight = ctx.saved_tensors
+        self = ctx.self
+
+        ag = torch.cuda.FloatTensor(graph.size(1), grad_output.size(1), \
+                                            device=self.device).fill_(0)
+        
+        # Use A^T instead of A implicitly
+        spmm_gpu(graph.indices()[1].int(), graph.indices()[0].int(), 
+                        graph.values(), graph.size(1), 
+                        graph.size(0), grad_output, ag)
+
+        if self.aggr == "mean":
+            degs = torch.cuda.IntTensor(graph.size(1)).fill_(0)
+            ones = torch.cuda.IntTensor(graph._indices()[0,:].size(0)).fill_(1)
+            degs.scatter_add_(0, graph._indices()[1,:], ones)
+            degs.clamp_(min=1)
+            normalize_batch_gpu(ag, degs, ag.size(0), ag.size(1))
+
+        grad_input = ag.mm(weight.t())
+        grad_weight = outer_product(inputs.t(), ag, self.group)
+
+        return None, None, grad_input, grad_weight
 
 class GCNFuncONED(torch.autograd.Function):
     @staticmethod

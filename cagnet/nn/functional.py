@@ -42,7 +42,10 @@ def relu(x, partitioning):
     return F.relu(x)
 
 def log_softmax(self, x, partitioning, dim=1):
-    if partitioning == Partitioning.ONED or partitioning == Partitioning.ONE5D:
+    if partitioning == Partitioning.ONED \
+        or partitioning == Partitioning.ONE5D \
+        or partitioning == Partitioning.NONE:
+
         return F.log_softmax(x, dim)
     elif partitioning == Partitioning.TWOD:
         return LogSoftmaxTWOD.apply(self, x)

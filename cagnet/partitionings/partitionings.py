@@ -5,3 +5,4 @@ class Partitioning(enum.IntEnum):
     ONE5D = 1
     TWOD = 2
     THREED = 3
+    NONE = 4

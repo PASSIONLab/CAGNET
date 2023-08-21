@@ -908,6 +908,27 @@ void normalize_gpu(const at::Tensor& output, const at::Tensor& input, const at::
     CHECK_ERROR("normalize error")
 }
 
+__global__ void NormalizeBatch(float *output, int *input, int output_rows, int output_cols) { 
+    long     id = blockIdx.x * blockDim.x + threadIdx.x;
+    long stride = blockDim.x * gridDim.x;
+
+    for (int i = id; i < output_rows * output_cols; i += stride) {
+        int row = i / output_cols;
+        output[i] /= input[row];
+    }
+}
+
+void normalize_batch_gpu(const at::Tensor& output, const at::Tensor& input, int rows, int cols) {
+
+
+    int BLOCK_SIZE = 256;
+    int BLOCK_COUNT = std::ceil((rows * cols) / ((float) BLOCK_SIZE));
+    BLOCK_COUNT = std::min(BLOCK_COUNT, 65535);
+
+    NormalizeBatch<<<BLOCK_COUNT, BLOCK_SIZE>>>(output.data<float>(), input.data<int>(), rows, cols);
+    CHECK_ERROR("normalize batch error")
+}
+
 __global__ void ShiftRowSelect(long *row_shift, long *row_select_rows, int rank, int size,
                                     int replication, int nnz, int batch_size, int node_count, int mb_count,
                                     int shift_size, int semibulk_size) { 
@@ -1153,4 +1174,5 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
     m.def("rowselect_coo_gpu", &rowselect_coo_gpu, "COO row selection for sparsity-aware spgemm");
     m.def("coogeam_gpu", &coogeam_gpu, "csrgeam2 wrapper for cusparse");
     m.def("rowselect_csr_gpu", &rowselect_csr_gpu, "CSR row selection for sparsity-aware spgemm");
+    m.def("normalize_batch_gpu", &normalize_batch_gpu, "Normalize SpMM output");
 }
