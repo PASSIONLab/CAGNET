@@ -58,7 +58,6 @@ class GCN(nn.Module):
     def forward(self, graphs, inputs):
         h = inputs
         for l, layer in enumerate(self.layers):
-            print(f"l: {l} graphs[l].size: {graphs[l].size()} h.size: {h.size()}")
             h = layer(self, graphs[l], h)
             if l != len(self.layers) - 1:
                 h = CAGF.relu(h, self.partitioning)
@@ -544,8 +543,8 @@ def main(args, batches=None):
     total_start = time.time()
     for epoch in range(args.n_epochs):
         print(f"Epoch: {epoch}", flush=True)
-        if epoch == 1:
-            total_start = time.time()
+        if epoch >= 1:
+            epoch_start = time.time()
         model.train()
 
         print("Constructing batches", flush=True)
@@ -581,7 +580,6 @@ def main(args, batches=None):
             elif args.sample_method == "sage":
                 args.n_darts = avg_degree * 2
 
-        print(f"rank: {rank} batches_loc: {batches_loc}", flush=True)
         nnz_row_masks = torch.cuda.BoolTensor((size // args.replication) * g_loc._indices().size(1)) # for sa-spgemm
         nnz_row_masks.fill_(0)
         
@@ -675,7 +673,6 @@ def main(args, batches=None):
             adjs = [adj[i].coalesce() for adj in adj_matrices]
             adjs.reverse()
             logits = model(adjs, features_batch)
-            print(f"logits: {logits}")
             # loss = CAGF.cross_entropy(logits[train_nid], data.y[train_nid], train_nid.size(0), \
             #                                 num_classes, partitioning, rank_c, col_groups[0], \
             #                                 size // args.replication)
@@ -691,17 +688,18 @@ def main(args, batches=None):
             # acc = evaluate(model, g_loc, features_loc, labels_rank, rank_val_nids, \
             #                     val_mask.nonzero().squeeze().size(0), ampbyp, ampbyp_dgl, degrees, col_groups[0])
 
-            if rank == 0 and epoch >= 1 and i == args.n_bulkmb - 1:
-                dur.append(time.time() - total_start)
-                print("Evaluating...")
-                # acc = model.evaluate(g_loc, features_loc, labels_rank, rank_val_nids, \
-                #                     data.val_mask.nonzero().squeeze().size(0), col_groups[0])
-                out = model.evaluate(g_loc, features_loc)
-                res = out.argmax(dim=-1) == data.y
-                acc1 = int(res[data.train_mask].sum()) / int(data.train_mask.sum())
-                acc2 = int(res[data.val_mask].sum()) / int(data.val_mask.sum())
-                acc3 = int(res[data.test_mask].sum()) / int(data.test_mask.sum())
-                print("Rank: {:05d} | Epoch: {:05d} | Time(s): {:.4f} | Loss: {:.4f} | Accuracy: {:.4f}".format(rank, epoch, np.mean(dur), loss.item(), acc3), flush=True)
+        if epoch >= 1:
+            dur.append(time.time() - epoch_start)
+        if rank == 0 and (epoch % 5 == 0 or epoch == args.n_epochs - 1):
+            print("Evaluating", flush=True)
+            # acc = model.evaluate(g_loc, features_loc, labels_rank, rank_val_nids, \
+            #                     data.val_mask.nonzero().squeeze().size(0), col_groups[0])
+            out = model.evaluate(g_loc, features_loc)
+            res = out.argmax(dim=-1) == data.y
+            acc1 = int(res[data.train_mask].sum()) / int(data.train_mask.sum())
+            acc2 = int(res[data.val_mask].sum()) / int(data.val_mask.sum())
+            acc3 = int(res[data.test_mask].sum()) / int(data.test_mask.sum())
+            print("Rank: {:05d} | Epoch: {:05d} | Time(s): {:.4f} | Loss: {:.4f} | Accuracy: {:.4f}".format(rank, epoch, np.sum(dur), loss.item(), acc3), flush=True)
     total_stop = time.time()
     print(f"total_time: {total_stop - total_start}")
 

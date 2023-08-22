@@ -943,8 +943,6 @@ def gen_prob_dist(numerator, adj_matrix, mb_count, node_count_total, replication
                                         numerator, adj_matrix, replication, rank, size, 
                                         row_groups, col_groups, "prob", sa_masks, 
                                         timing_dict, name)
-    print(f"p_num_indices: {p_num_indices}")
-    print(f"p_num_values: {p_num_values}")
     # p_num_indices, p_num_values =  dist_spgemm15D(numerator, adj_matrix, replication, rank, size, row_groups, col_groups, "prob")
     torch.cuda.nvtx.range_pop()
     stop_timer.record()
@@ -971,7 +969,6 @@ def gen_prob_dist(numerator, adj_matrix, mb_count, node_count_total, replication
     normalize_gpu(p_num_values, p_den, p_num_indices[0, :], p_num_values.size(0))
     p_num_values = torch.nan_to_num(p_num_values)
     p = sparse_coo_tensor_gpu(p_num_indices, p_num_values, torch.Size([numerator.size(0), node_count_total]))
-    print(f"p.nnz: {p._nnz()}", flush=True)
     timing_dict["compute-p"].append(stop_time(start_timer, stop_timer))
     return p
 
