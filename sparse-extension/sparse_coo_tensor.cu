@@ -246,7 +246,6 @@ void spmm_gpu(const at::Tensor& A_rowindices,
                                             B.data<float>(), // values
                                             CUDA_R_32F,      // valueType
                                             CUSPARSE_ORDER_COL)); // order
-        
     // Row-major to column-major
     C.t_();
     C.set_data(C.contiguous());
@@ -274,9 +273,7 @@ void spmm_gpu(const at::Tensor& A_rowindices,
                                                 CUSPARSE_CSRMM_ALG1,                // alg
                                                 &bufferSize));                      // bufferSize
 
-
     void* d_buffer = NULL;
-    // CHECK_ERROR(cudaMalloc(&d_buffer, bufferSize));
     cudaMalloc(&d_buffer, bufferSize);
 
     CHECK_CUSPARSE(cusparseSpMM(handle, // handle,
@@ -292,8 +289,8 @@ void spmm_gpu(const at::Tensor& A_rowindices,
                                     d_buffer));                         // buffer
 
 
-    cudaFree(d_a_csrrows);
-    cudaFree(d_buffer);
+    // cudaFree(d_a_csrrows);
+    // cudaFree(d_buffer);
 
     // Column-major to row-major
     C.set_data(C.view({c_col, c_row}));
@@ -905,7 +902,6 @@ void normalize_gpu(const at::Tensor& output, const at::Tensor& input, const at::
     BLOCK_COUNT = std::min(BLOCK_COUNT, 65535);
 
     Normalize<<<BLOCK_COUNT, BLOCK_SIZE>>>(output.data<double>(), input.data<double>(), index.data<long>(), len);
-    CHECK_ERROR("normalize error")
 }
 
 __global__ void NormalizeBatch(float *output, int *input, int output_rows, int output_cols) { 
@@ -1154,6 +1150,65 @@ void rowselect_csr_gpu(const at::Tensor& nnz_cols, const at::Tensor& row_offsets
     CHECK_ERROR("rowselect csr error")
 }
 
+__global__ void VtxTally(int *proc_tally, long *vtxs, int vtxs_count, int node_count, int proc_count) { 
+    int     id = blockIdx.x * blockDim.x + threadIdx.x;
+    int stride = blockDim.x * gridDim.x;
+
+    int nodes_per_proc = node_count / proc_count;
+    for (int i = id; i < vtxs_count; i += stride) {
+        int vtx = (int) vtxs[i];
+        int dst_proc = vtx / nodes_per_proc;
+        atomicAdd(&proc_tally[dst_proc], 1);
+    } 
+}
+
+__global__ void SortVtxs(long *vtxs, long *src_vtx_send, int *ps_proc_tally, long *og_idx, int vtxs_count, 
+                            int node_count, int proc_count) { 
+
+    int     id = blockIdx.x * blockDim.x + threadIdx.x;
+    int stride = blockDim.x * gridDim.x;
+
+    int nodes_per_proc = node_count / proc_count;
+    for (int i = id; i < vtxs_count; i += stride) {
+        long vtx = vtxs[i];
+        int dst_proc = vtx / nodes_per_proc;
+        int idx = atomicAdd(&ps_proc_tally[dst_proc], 1);
+        src_vtx_send[idx] = vtx;
+        og_idx[idx] = i;
+    } 
+}
+
+void sort_dst_proc_gpu(const at::Tensor& vtxs, const at::Tensor& src_vtx_sort, const at::Tensor& og_idxs, 
+                            const at::Tensor& tally, int node_count, int proc_count) {
+
+
+    int BLOCK_SIZE = 256;
+    int BLOCK_COUNT = std::ceil(vtxs.sizes()[0] / ((float) BLOCK_SIZE));
+    BLOCK_COUNT = std::min(BLOCK_COUNT, 65535);
+
+    if (node_count == 0 || vtxs.sizes()[0] == 0) {
+        return;
+    }
+
+    VtxTally<<<BLOCK_COUNT, BLOCK_SIZE>>>(tally.data<int>(), 
+                                            vtxs.data<long>(), 
+                                            vtxs.sizes()[0], 
+                                            node_count, 
+                                            proc_count);
+
+    auto ps_proc_tally = tally.cumsum(0, torch::kInt32).roll(1);
+    ps_proc_tally[0] = 0;
+
+    SortVtxs<<<BLOCK_COUNT, BLOCK_SIZE>>>(vtxs.data<long>(), 
+                                            src_vtx_sort.data<long>(), 
+                                            ps_proc_tally.data<int>(), 
+                                            og_idxs.data<long>(), 
+                                            vtxs.sizes()[0], 
+                                            node_count, 
+                                            proc_count);
+    CHECK_ERROR("sort_dst_proc error")
+}
+
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
     m.def("sparse_coo_tensor_gpu", &sparse_coo_tensor_gpu, "Sparse COO Tensor GPU-only constructor");
     m.def("sparse_csr_tensor_gpu", &sparse_csr_tensor_gpu, "Sparse CSR Tensor GPU-only constructor");
@@ -1175,4 +1230,5 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
     m.def("coogeam_gpu", &coogeam_gpu, "csrgeam2 wrapper for cusparse");
     m.def("rowselect_csr_gpu", &rowselect_csr_gpu, "CSR row selection for sparsity-aware spgemm");
     m.def("normalize_batch_gpu", &normalize_batch_gpu, "Normalize SpMM output");
+    m.def("sort_dst_proc_gpu", &sort_dst_proc_gpu, "Sort vertices by destination process");
 }

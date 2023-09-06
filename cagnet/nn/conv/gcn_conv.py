@@ -2,8 +2,10 @@ import math
 import torch
 import torch.distributed as dist
 import torch.nn as nn
+import time
 
 from cagnet.partitionings import Partitioning
+from cagnet.samplers.utils import *
 from sparse_coo_tensor_cpp import sparse_coo_tensor_gpu, spmm_gpu, normalize_batch_gpu
 
 def broad_func_oned(self, graph, ampbyp, inputs):
@@ -561,7 +563,7 @@ class GCNConv(nn.Module):
         self.partitioning = partitioning
         self.aggr = aggr
 
-    def forward(self, gcn, graph, inputs, ampbyp=None):
+    def forward(self, gcn, graph, inputs, epoch=0, ampbyp=None):
         if self.partitioning == Partitioning.ONED:
             return GCNFuncONED.apply(gcn, graph, ampbyp, inputs, self.weight)
         elif self.partitioning == Partitioning.ONE5D:
@@ -571,12 +573,12 @@ class GCNConv(nn.Module):
         elif self.partitioning == Partitioning.THREED:
             return GCNFuncTHREED.apply(gcn, graph, inputs, self.weight)
         elif self.partitioning == Partitioning.NONE:
-            return GCNFuncNONE.apply(gcn, graph, inputs, self.weight)
+            return GCNFuncNONE.apply(gcn, graph, inputs, self.weight, epoch)
         
 
 class GCNFuncNONE(torch.autograd.Function):
     @staticmethod
-    def forward(ctx, self, graph, inputs, weight):
+    def forward(ctx, self, graph, inputs, weight, epoch=0):
         # inputs: H
         # graph: A
         # weight: W
@@ -587,7 +589,7 @@ class GCNFuncNONE(torch.autograd.Function):
         spmm_gpu(graph.indices()[0].int(), graph.indices()[1].int(), 
                         graph.values(), graph.size(0), 
                         graph.size(1), inputs, z)
-        
+
         z = z.mm(weight)
 
         if self.aggr == "mean":
@@ -599,35 +601,75 @@ class GCNFuncNONE(torch.autograd.Function):
 
         ctx.save_for_backward(inputs, weight)
         ctx.graph = graph
-        ctx.self = self
+        # ctx.self = self
+        ctx.device = self.device
+        ctx.aggr = self.aggr
+        ctx.epoch = epoch
+        ctx.timings = self.timings
 
         return z
 
     @staticmethod
     def backward(ctx, grad_output):
+        start_timer = torch.cuda.Event(enable_timing=True)
+        stop_timer = torch.cuda.Event(enable_timing=True)
+
+        epoch = ctx.epoch
+        if epoch >= 1:
+            start_time(start_timer)
         graph = ctx.graph
         inputs, weight = ctx.saved_tensors
-        self = ctx.self
+        # self = ctx.self
+        device = ctx.device
+        aggr = ctx.aggr
+        timings = ctx.timings
 
         ag = torch.cuda.FloatTensor(graph.size(1), grad_output.size(1), \
-                                            device=self.device).fill_(0)
+                                            device=device).fill_(0)
+        if epoch >= 1:
+            timings["precomp"].append(stop_time(start_timer, stop_timer))
         
         # Use A^T instead of A implicitly
+        if epoch >= 1:
+            start_time(start_timer)
+        torch.cuda.nvtx.range_push("nvtx-bwd-spmm")
         spmm_gpu(graph.indices()[1].int(), graph.indices()[0].int(), 
                         graph.values(), graph.size(1), 
                         graph.size(0), grad_output, ag)
+        torch.cuda.nvtx.range_pop()
+        if epoch >= 1:
+            timings["spmm"].append(stop_time(start_timer, stop_timer))
 
-        if self.aggr == "mean":
+        if epoch >= 1:
+            start_time(start_timer)
+        torch.cuda.nvtx.range_push("nvtx-bwd-aggr")
+        if aggr == "mean":
             degs = torch.cuda.IntTensor(graph.size(1)).fill_(0)
             ones = torch.cuda.IntTensor(graph._indices()[0,:].size(0)).fill_(1)
             degs.scatter_add_(0, graph._indices()[1,:], ones)
             degs.clamp_(min=1)
             normalize_batch_gpu(ag, degs, ag.size(0), ag.size(1))
+        torch.cuda.nvtx.range_pop()
+        if epoch >= 1:
+            timings["aggr"].append(stop_time(start_timer, stop_timer))
 
+        if epoch >= 1:
+            start_time(start_timer)
+        torch.cuda.nvtx.range_push("nvtx-bwd-gemmi")
         grad_input = ag.mm(weight.t())
-        grad_weight = outer_product(inputs.t(), ag, self.group)
+        torch.cuda.nvtx.range_pop()
+        if epoch >= 1:
+            timings["gemm_i"].append(stop_time(start_timer, stop_timer))
 
-        return None, None, grad_input, grad_weight
+        if epoch >= 1:
+            start_time(start_timer)
+        torch.cuda.nvtx.range_push("nvtx-bwd-gemmw")
+        grad_weight = inputs.t().mm(ag)
+        torch.cuda.nvtx.range_pop()
+        if epoch >= 1:
+            timings["gemm_w"].append(stop_time(start_timer, stop_timer))
+
+        return None, None, grad_input, grad_weight, None
 
 class GCNFuncONED(torch.autograd.Function):
     @staticmethod
