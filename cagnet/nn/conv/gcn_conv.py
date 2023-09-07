@@ -583,6 +583,18 @@ class GCNFuncNONE(torch.autograd.Function):
         # graph: A
         # weight: W
 
+        if epoch == -1: # inference
+            z = torch.FloatTensor(graph.size(0), inputs.size(1)).fill_(0)
+            z += torch.sparse.mm(graph, inputs)
+            z = z.mm(weight.cpu())
+            if self.aggr == "mean":
+                degs = torch.IntTensor(graph.size(0)).fill_(0)
+                ones = torch.IntTensor(graph._indices()[0,:].size(0)).fill_(1)
+                degs.scatter_add_(0, graph._indices()[0,:], ones)
+                degs.clamp_(min=1)
+                z = torch.div(z, degs.unsqueeze(1))
+            return z
+
         z = torch.cuda.FloatTensor(graph.size(0), inputs.size(1), \
                                             device=self.device).fill_(0)
 

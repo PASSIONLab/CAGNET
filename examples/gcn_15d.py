@@ -96,70 +96,28 @@ class GCN(nn.Module):
 
     @torch.no_grad()
     def evaluate(self, graph, features):
-        subgraph_loader = NeighborSampler(graph._indices(), node_idx=None,
+        subgraph_loader = NeighborSampler(graph, node_idx=None,
                                           sizes=[-1], batch_size=2048,
                                           shuffle=False)
         non_eval_timings = copy.deepcopy(self.timings)
         for l, layer in enumerate(self.layers):
             hs = []
             for batch_size, n_id, adj in subgraph_loader:
-                edge_index, _, size = adj.to(self.device)
+                # edge_index, _, size = adj.to(self.device)
+                edge_index, _, size = adj
                 adj_batch = torch.sparse_coo_tensor(edge_index, 
-                                                        torch.cuda.FloatTensor(edge_index.size(1)).fill_(1.0),
+                                                        torch.FloatTensor(edge_index.size(1)).fill_(1.0),
                                                         size)
                 adj_batch = adj_batch.t().coalesce()
+                h_batch = features[n_id]
 
-                src_vtxs_sort = torch.cuda.LongTensor(n_id.size(0))
-                og_idxs = torch.cuda.LongTensor(n_id.size(0))
-                tally = torch.cuda.IntTensor(self.size).fill_(0)
-
-                node_count = graph.size(1)
-                n_id = n_id.to(self.device)
-                sort_dst_proc_gpu(n_id, src_vtxs_sort, og_idxs, tally, node_count, self.size)
-                src_vtx_per_proc = src_vtxs_sort.split(tally.tolist())
-    
-                output_tally = []
-                for j in range(self.size):
-                    output_tally.append(torch.cuda.IntTensor(1))
-                input_tally = list(torch.split(tally, 1))
-
-                dist.all_to_all(output_tally, input_tally)
-
-                output_src_vtxs = torch.cuda.LongTensor(sum(output_tally).item())
-                dist.all_to_all_single(output_src_vtxs, src_vtxs_sort, output_tally, input_tally)
-                output_src_vtxs -= (node_count // self.size) * self.rank
-
-                input_features = features[output_src_vtxs]
-                output_features = torch.cuda.FloatTensor(n_id.size(0), features.size(1))
-                dist.all_to_all_single(output_features, input_features, input_tally, output_tally)
-
-                h_batch = torch.cuda.FloatTensor(output_features.size())
-                h_batch[og_idxs] = output_features
-                # h_batch = features[n_id].to(self.device)
-
-                h = layer(self, adj_batch, h_batch) # GCNConv
+                h = layer(self, adj_batch, h_batch, epoch=-1) # GCNConv
                 # h = layer(h_batch, edge_index) # SAGEConv
                 if l != len(self.layers) - 1:
                     h = CAGF.relu(h, self.partitioning)
                 hs.append(h)
             features = torch.cat(hs, dim=0)
         return features
-
-        # logits = model(graph, features)
-        # model.timings = non_eval_timings # don't include evaluation timings
-
-        # logits = logits[nid]
-        # labels = labels[nid]
-        # if logits.size(0) > 0:
-        #     _, indices = torch.max(logits, dim=1)
-        #     correct = torch.sum(indices == labels)
-        # else:
-        #     correct = torch.tensor(0)
-
-        # dist.all_reduce(correct, op=dist.reduce_op.SUM, group=group)
-        # return correct.item() * 1.0 / nid_count
-        # # return correct.item() * 1.0 / len(labels)
-
 
 def get_proc_groups(rank, size, replication):
     rank_c = rank // replication
@@ -543,11 +501,14 @@ def main(args, batches=None):
         g_loc = g_loc.double()
         # features_loc = inputs
         features_loc = features_loc.to(device)
-        del inputs
+        # del inputs
 
     print("end partitioning", flush=True)
     print(f"g_loc.nnz: {g_loc._nnz()}", flush=True)
     print(f"features_loc.size: {features_loc.size()}", flush=True)
+
+    adj_matrix = adj_matrix.cpu()
+    inputs = inputs.cpu()
 
     # g_loc_indices, _ = add_remaining_self_loops(g_loc._indices(), num_nodes=g_loc.size(0))
     # g_loc_values = torch.cuda.DoubleTensor(g_loc_indices.size(1)).fill_(1)
@@ -819,15 +780,17 @@ def main(args, batches=None):
 
         if epoch >= 1:
             dur.append(time.time() - epoch_start)
-        if epoch >= 1 and (epoch % 5 == 0 or epoch == args.n_epochs - 1):
+        if rank == 0 and epoch >= 1 and (epoch % 5 == 0 or epoch == args.n_epochs - 1):
             print("Evaluating", flush=True)
             # acc = model.evaluate(g_loc, features_loc, labels_rank, rank_val_nids, \
             #                     data.val_mask.nonzero().squeeze().size(0), col_groups[0])
             acc1 = 0.0
             acc3 = 0.0
             if args.dataset != "Amazon" and ("Protein" not in args.dataset):
-                out = model.evaluate(g_loc, features_loc)
-                res = out.argmax(dim=-1) == data.y
+                # out = model.evaluate(g_loc, features_loc)
+                out = model.evaluate(adj_matrix, inputs)
+                datay_cpu = data.y.cpu()
+                res = out.argmax(dim=-1) == datay_cpu
                 acc1 = int(res[train_nid].sum()) / train_nid.size(0)
                 acc3 = int(res[test_nid].sum()) / test_nid.size(0)
             print("Rank: {:05d} | Epoch: {:05d} | Time(s): {:.4f} | Loss: {:.4f} | Accuracy: {:.4f}".format(rank, epoch, np.sum(dur), loss.item(), acc3), flush=True)
