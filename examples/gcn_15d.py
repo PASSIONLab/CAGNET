@@ -708,7 +708,8 @@ def main(args, batches=None):
                 og_idxs = torch.cuda.LongTensor(src_vtxs.size(0))
                 tally.fill_(0)
 
-                sort_dst_proc_gpu(src_vtxs, src_vtxs_sort, og_idxs, tally, node_count, size)
+                node_per_proc = int(math.ceil(node_count / (size / args.replication)))
+                sort_dst_proc_gpu(src_vtxs, src_vtxs_sort, og_idxs, tally, node_per_proc)
                 src_vtx_per_proc = src_vtxs_sort.split(tally.tolist())
     
                 output_tally = []
@@ -720,7 +721,7 @@ def main(args, batches=None):
 
                 output_src_vtxs = torch.cuda.LongTensor(sum(output_tally).item())
                 dist.all_to_all_single(output_src_vtxs, src_vtxs_sort, output_tally, input_tally)
-                output_src_vtxs -= (node_count // size) * rank
+                output_src_vtxs -= node_per_proc * rank
 
                 input_features = features_loc[output_src_vtxs]
                 output_features = torch.cuda.FloatTensor(src_vtxs.size(0), features_loc.size(1))
@@ -800,22 +801,9 @@ def main(args, batches=None):
                 train_dur = [x / 1000 for x in model.timings["train"]]
                 selectfeats_dur = [x / 1000 for x in model.timings["selectfeats"]]
                 extract_dur = [x / 1000 for x in model.timings["extract"]]
-                fwd_dur = [x / 1000 for x in model.timings["fwd"]]
-                bwd_dur = [x / 1000 for x in model.timings["bwd"]]
-                loss_dur = [x / 1000 for x in model.timings["loss"]]
 
-                precomp_time = sum(model.timings["precomp"])
-                spmm_time = sum(model.timings["spmm"])
-                gemmi_time = sum(model.timings["gemm_i"])
-                gemmw_time = sum(model.timings["gemm_w"])
-                aggr_time = sum(model.timings["aggr"])
-
-                print(f"sample: {np.sum(sample_dur)} extract: {np.sum(extract_dur)} train: {np.sum(train_dur)} feats: {np.sum(selectfeats_dur)} fwd: {np.sum(fwd_dur)} bwd: {np.sum(bwd_dur)} loss: {np.sum(loss_dur)}")
-                print(f"precomp: {precomp_time} spmm: {spmm_time} gemmi: {gemmi_time} gemmw: {gemmw_time} aggr: {aggr_time}")
-                print(f"fwd_med: {np.median(fwd_dur)} fwd_avg: {np.average(fwd_dur)} fwd_max: {np.max(fwd_dur)}")
-                print(f"len(fwd_dur): {len(fwd_dur)}")
-                print(f"bwd_med: {np.median(bwd_dur)} bwd_avg: {np.average(bwd_dur)} bwd_max: {np.max(bwd_dur)}")
-                print(f"len(bwd_dur): {len(bwd_dur)}")
+                print(f"sample: {np.sum(sample_dur)} extract: {np.sum(extract_dur)} train: {np.sum(train_dur)}")
+                print(f"feats: {np.sum(selectfeats_dur)}")
         dist.barrier() 
                 
     total_stop = time.time()

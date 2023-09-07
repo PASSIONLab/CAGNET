@@ -1150,11 +1150,10 @@ void rowselect_csr_gpu(const at::Tensor& nnz_cols, const at::Tensor& row_offsets
     CHECK_ERROR("rowselect csr error")
 }
 
-__global__ void VtxTally(int *proc_tally, long *vtxs, int vtxs_count, int node_count, int proc_count) { 
+__global__ void VtxTally(int *proc_tally, long *vtxs, int vtxs_count, int nodes_per_proc) { 
     int     id = blockIdx.x * blockDim.x + threadIdx.x;
     int stride = blockDim.x * gridDim.x;
 
-    int nodes_per_proc = node_count / proc_count;
     for (int i = id; i < vtxs_count; i += stride) {
         int vtx = (int) vtxs[i];
         int dst_proc = vtx / nodes_per_proc;
@@ -1163,12 +1162,11 @@ __global__ void VtxTally(int *proc_tally, long *vtxs, int vtxs_count, int node_c
 }
 
 __global__ void SortVtxs(long *vtxs, long *src_vtx_send, int *ps_proc_tally, long *og_idx, int vtxs_count, 
-                            int node_count, int proc_count) { 
+                            int nodes_per_proc) { 
 
     int     id = blockIdx.x * blockDim.x + threadIdx.x;
     int stride = blockDim.x * gridDim.x;
 
-    int nodes_per_proc = node_count / proc_count;
     for (int i = id; i < vtxs_count; i += stride) {
         long vtx = vtxs[i];
         int dst_proc = vtx / nodes_per_proc;
@@ -1179,22 +1177,21 @@ __global__ void SortVtxs(long *vtxs, long *src_vtx_send, int *ps_proc_tally, lon
 }
 
 void sort_dst_proc_gpu(const at::Tensor& vtxs, const at::Tensor& src_vtx_sort, const at::Tensor& og_idxs, 
-                            const at::Tensor& tally, int node_count, int proc_count) {
+                            const at::Tensor& tally, int nodes_per_proc) {
 
 
     int BLOCK_SIZE = 256;
     int BLOCK_COUNT = std::ceil(vtxs.sizes()[0] / ((float) BLOCK_SIZE));
     BLOCK_COUNT = std::min(BLOCK_COUNT, 65535);
 
-    if (node_count == 0 || vtxs.sizes()[0] == 0) {
+    if (nodes_per_proc == 0 || vtxs.sizes()[0] == 0) {
         return;
     }
 
     VtxTally<<<BLOCK_COUNT, BLOCK_SIZE>>>(tally.data<int>(), 
                                             vtxs.data<long>(), 
                                             vtxs.sizes()[0], 
-                                            node_count, 
-                                            proc_count);
+                                            nodes_per_proc);
 
     auto ps_proc_tally = tally.cumsum(0, torch::kInt32).roll(1);
     ps_proc_tally[0] = 0;
@@ -1204,8 +1201,7 @@ void sort_dst_proc_gpu(const at::Tensor& vtxs, const at::Tensor& src_vtx_sort, c
                                             ps_proc_tally.data<int>(), 
                                             og_idxs.data<long>(), 
                                             vtxs.sizes()[0], 
-                                            node_count, 
-                                            proc_count);
+                                            nodes_per_proc);
     CHECK_ERROR("sort_dst_proc error")
 }
 
