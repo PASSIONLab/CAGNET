@@ -417,9 +417,10 @@ def main(args, batches=None):
 
     row_groups, col_groups = get_proc_groups(rank, size, args.replication)
 
-    rank_c = rank // args.replication
+    proc_row = size // args.replication
+    rank_row = rank // args.replication
     rank_col = rank % args.replication
-    if rank_c >= (size // args.replication):
+    if rank_row >= (size // args.replication):
         return
 
 
@@ -519,7 +520,7 @@ def main(args, batches=None):
 
     n_per_proc = math.ceil(float(g_loc.size(0)) / (size / args.replication))
 
-    labels_rank = torch.split(data.y, n_per_proc, dim=0)[rank_c]
+    labels_rank = torch.split(data.y, n_per_proc, dim=0)[rank_row]
 
     if not args.dataset.startswith("ogb"):
         train_nid = data.train_mask.nonzero().squeeze()
@@ -562,9 +563,45 @@ def main(args, batches=None):
     dur = []
     # torch.manual_seed(0)
     tally = torch.cuda.IntTensor(size).fill_(0)
-    rank_n_bulkmb = int(args.n_bulkmb / (size / args.replication))
+    row_n_bulkmb = int(args.n_bulkmb / (size / args.replication))
     if rank == size - 1:
-        rank_n_bulkmb = args.n_bulkmb - rank_n_bulkmb * (size - 1)
+        row_n_bulkmb = args.n_bulkmb - row_n_bulkmb * (proc_row - 1)
+
+    rank_n_bulkmb = int(row_n_bulkmb / args.replication)
+    if rank == size - 1:
+        rank_n_bulkmb = row_n_bulkmb - rank_n_bulkmb * (args.replication - 1)
+
+    for epoch in range(args.n_epochs):
+        print(f"Epoch: {epoch}", flush=True)
+        if epoch >= 1:
+            epoch_start = time.time()
+        model.train()
+
+        print("Constructing batches", flush=True)
+        torch.cuda.nvtx.range_push("nvtx-construct-batches")
+        batch_count = -(train_nid.size(0) // -args.batch_size) # ceil(train_nid.size(0) / batch_size)
+        if batches is None:
+            torch.manual_seed(epoch)
+            vertex_perm = torch.randperm(train_nid.size(0))
+            batches_all = train_nid[vertex_perm]
+        torch.cuda.nvtx.range_pop()
+
+        last_batch = False
+        for b in range(0, batch_count, args.n_bulkmb):
+            if b + args.n_bulkmb > batch_count:
+                break
+                last_batch = True
+                tmp_bulkmb = args.n_bulkmb
+                tmp_batch_size = args.batch_size
+                args.n_bulkmb = 1
+                args.batch_size = batch_count - b
+            batches = batches_all[b:(b + args.n_bulkmb * args.batch_size)].view(args.n_bulkmb, args.batch_size)
+            batches_loc = one5d_partition_mb(rank, size, batches, args.replication, args.n_bulkmb)
+
+            batches_indices_rows = torch.arange(batches_loc.size(0)).to(device)
+            batches_indices_rows = batches_indices_rows.repeat_interleave(batches_loc.size(1))
+            batches_indices_cols = batches_loc.view(-1)
+            batches_indices = torch.stack((batches_indices_rows, batches_indices_cols))
     for epoch in range(args.n_epochs):
         print(f"Epoch: {epoch}", flush=True)
         if epoch >= 1:
@@ -630,11 +667,11 @@ def main(args, batches=None):
             elif args.sample_method == "sage":
                 nnz_row_masks.fill_(False)
                 frontiers_bulk, adj_matrices_bulk = sage_sampler(g_loc, batches_loc, args.batch_size, \
-                                                                            args.samp_num, args.n_bulkmb, \
-                                                                            args.n_layers, args.n_darts, \
-                                                                            args.replication, nnz_row_masks, 
-                                                                            rank, size, row_groups, 
-                                                                            col_groups, args.timing, args.baseline)
+                                                                        args.samp_num, args.n_bulkmb, \
+                                                                        args.n_layers, args.n_darts, \
+                                                                        args.replication, nnz_row_masks, 
+                                                                        rank, size, row_groups, 
+                                                                        col_groups, args.timing, args.baseline)
                 
             if epoch >= 1:
                 model.timings["sample"].append(stop_time(start_timer, stop_timer))
@@ -657,6 +694,14 @@ def main(args, batches=None):
                         row_select_max = (j + 1) * args.batch_size  * (args.samp_num ** (i - 1))
                     adj_row_select_min = j * args.batch_size * (args.samp_num ** i)
                     adj_row_select_max = (j + 1) * args.batch_size  * (args.samp_num ** i)
+
+                    rank_n_bulkmb_row = int(rank_n_bulkmb /  args.replication)
+                    if rank_col == args.replication - 1:
+                        rank_n_bulkmb_row = rank_n_bulkmb_row - rank_n_bulkmb_row * (args.replication - 1)
+                    row_select_min += rank_col * rank_n_bulkmb_row
+                    row_select_max += rank_col * rank_n_bulkmb_row
+                    adj_row_select_min += rank_col * rank_n_bulkmb_row
+                    adj_row_select_max += rank_col * rank_n_bulkmb_row
                     
                     if i < args.n_layers:
                         sampled_indices = adj_matrices_bulk[i]._indices()
@@ -695,6 +740,7 @@ def main(args, batches=None):
             print("Training", flush=True)
             torch.cuda.nvtx.range_push("nvtx-training")
             # for i in range(args.n_bulkmb):
+            print(f"rank_n_bulkmb: {rank_n_bulkmb}", flush=True)
             for i in range(rank_n_bulkmb):
                 # print(f"batch {i}", flush=True)
                 # forward
@@ -703,12 +749,15 @@ def main(args, batches=None):
                 torch.cuda.nvtx.range_push("nvtx-selectfeats")
                 batch_vtxs = frontiers[0][i].view(-1)
                 src_vtxs = frontiers[-1][i].view(-1)
+                adjs = [adj[i] for adj in adj_matrices]
+                adjs.reverse()
 
                 src_vtxs_sort = torch.cuda.LongTensor(src_vtxs.size(0))
                 og_idxs = torch.cuda.LongTensor(src_vtxs.size(0))
                 tally.fill_(0)
 
-                node_per_proc = int(math.ceil(node_count / (size / args.replication)))
+                node_per_row = int(math.ceil(node_count / (size / args.replication)))
+                node_per_proc = int(math.ceil(node_count / size))
                 sort_dst_proc_gpu(src_vtxs, src_vtxs_sort, og_idxs, tally, node_per_proc)
                 src_vtx_per_proc = src_vtxs_sort.split(tally.tolist())
     
@@ -732,8 +781,6 @@ def main(args, batches=None):
                 # features_batch = output_features[og_idxs]
 
                 # features_batch = features_loc[src_vtxs]
-                adjs = [adj[i] for adj in adj_matrices]
-                adjs.reverse()
                 torch.cuda.nvtx.range_pop()
                 if epoch >= 1:
                     model.timings["selectfeats"].append(stop_time(start_inner_timer, stop_inner_timer))
