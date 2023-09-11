@@ -111,7 +111,7 @@ def sage_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_total,
                                 replication, rank, size, row_groups, col_groups,
                                 sa_masks, timing_dict, "sage",
                                 timing_arg)
-        adj_matrix = adj_matrix.to_sparse_coo()
+        # adj_matrix = adj_matrix.to_sparse_coo()
         if p.layout == torch.sparse_csr:
             p = p.to_sparse_coo()
 

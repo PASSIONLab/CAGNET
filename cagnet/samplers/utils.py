@@ -519,6 +519,8 @@ def dist_saspgemm15D(mata, matb, replication, rank, size, row_groups, col_groups
             nnz_cols_count_list = torch.cat(nnz_cols_count_list, dim=0)
             if matb.layout == torch.sparse_coo:
                 start_time(start_inner_timer)
+                # print(f"nnz_col_ids.size: {nnz_col_ids.size()}", flush=True)
+                # print(f"nnz_col_ids: {nnz_col_ids}", flush=True)
                 rowselect_coo_gpu(nnz_col_ids, matb._indices()[0,:].long(), nnz_row_masks, nnz_cols_count_list.int(), \
                                         matb._indices().size(1), size // replication)
                 stop_time_add(start_inner_timer, stop_inner_timer, timing_dict, f"spgemm-send-rowsel-{name}")
@@ -916,6 +918,7 @@ def gen_prob_dist(numerator, adj_matrix, mb_count, node_count_total, replication
     # TODO: assume n_layers=1 for now
     # start_time(start_timer)
     start_timer.record()
+    sa_masks.fill_(False)
     p_num_indices, p_num_values = dist_saspgemm15D(
                                         numerator, adj_matrix, replication, rank, size, 
                                         row_groups, col_groups, "prob", sa_masks, 

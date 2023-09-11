@@ -337,8 +337,8 @@ def main(args, batches=None):
         inputs = torch.rand(n, num_features)
         data = Data()
         data.y = torch.rand(n).uniform_(0, num_classes - 1).long()
-        data.train_mask = torch.zeros(n).long()
-        data.train_mask[:args.batch_size * args.n_bulkmb] = 1
+        data.train_mask = torch.ones(n).long()
+        # data.train_mask[:args.batch_size * 3000] = 1
         data.test_mask = torch.zeros(n).long()
         data.test_mask[args.batch_size * args.n_bulkmb:] = 1
         adj_matrix = edge_index.t_()
@@ -528,8 +528,8 @@ def main(args, batches=None):
     else:
         train_nid = train_idx
         test_nid = test_idx
-        print(f"train_nid.size: {train_nid.size()}")
-        print(f"test_nid.size: {test_nid.size()}")
+    print(f"train_nid.size: {train_nid.size()}")
+    print(f"test_nid.size: {test_nid.size()}")
     
     # # # adj_matrix = None # Uncomment bottom for testing
     # adj_matrix = adj_matrix.cuda()
@@ -602,7 +602,6 @@ def main(args, batches=None):
             batches_indices_rows = batches_indices_rows.repeat_interleave(batches_loc.size(1))
             batches_indices_cols = batches_loc.view(-1)
             batches_indices = torch.stack((batches_indices_rows, batches_indices_cols))
-    for epoch in range(args.n_epochs):
         print(f"Epoch: {epoch}", flush=True)
         if epoch >= 1:
             epoch_start = time.time()
@@ -665,7 +664,7 @@ def main(args, batches=None):
                                                                             nnz_row_masks, rank, size, 
                                                                             row_groups, col_groups, args.timing)
             elif args.sample_method == "sage":
-                nnz_row_masks.fill_(False)
+                # nnz_row_masks.fill_(False)
                 frontiers_bulk, adj_matrices_bulk = sage_sampler(g_loc, batches_loc, args.batch_size, \
                                                                         args.samp_num, args.n_bulkmb, \
                                                                         args.n_layers, args.n_darts, \
