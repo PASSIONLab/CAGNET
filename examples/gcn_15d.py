@@ -771,9 +771,7 @@ def main(args, batches=None):
                 # node_per_proc = int(math.ceil(node_count / size))
                 node_per_row = node_count // (size // args.replication)
                 node_per_proc = node_count // size
-                print(f"node_count: {node_count} node_per_proc: {node_per_proc} node_per_row: {node_per_row}", flush=True)
                 sort_dst_proc_gpu(src_vtxs, src_vtxs_sort, og_idxs, tally, node_per_proc)
-                print(f"tally.sum: {tally.sum()}", flush=True)
                 src_vtx_per_proc = src_vtxs_sort.split(tally.tolist())
     
                 output_tally = []
@@ -787,7 +785,6 @@ def main(args, batches=None):
                 dist.all_to_all_single(output_src_vtxs, src_vtxs_sort, output_tally, input_tally)
                 output_src_vtxs -= node_per_row * rank_row
                 # output_src_vtxs -= node_per_proc * rank
-                print(f"output_src_vtxs.min: {output_src_vtxs.min()} max: {output_src_vtxs.max()} features_loc.size: {features_loc.size()}", flush=True)
 
                 input_features = features_loc[output_src_vtxs]
                 output_features = torch.cuda.FloatTensor(src_vtxs.size(0), features_loc.size(1))
