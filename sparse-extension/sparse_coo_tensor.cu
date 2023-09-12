@@ -1157,6 +1157,9 @@ __global__ void VtxTally(int *proc_tally, long *vtxs, int vtxs_count, int nodes_
     for (int i = id; i < vtxs_count; i += stride) {
         int vtx = (int) vtxs[i];
         int dst_proc = vtx / nodes_per_proc;
+        if (dst_proc >= 16) {
+            dst_proc = 15;
+        }
         atomicAdd(&proc_tally[dst_proc], 1);
     } 
 }
@@ -1169,7 +1172,10 @@ __global__ void SortVtxs(long *vtxs, long *src_vtx_send, int *ps_proc_tally, lon
 
     for (int i = id; i < vtxs_count; i += stride) {
         long vtx = vtxs[i];
-        int dst_proc = vtx / nodes_per_proc;
+        int dst_proc = vtx / nodes_per_proc; 
+        if (dst_proc >= 16) {
+            dst_proc = 15;
+        }
         int idx = atomicAdd(&ps_proc_tally[dst_proc], 1);
         src_vtx_send[idx] = vtx;
         og_idx[idx] = i;

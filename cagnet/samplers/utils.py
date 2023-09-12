@@ -413,7 +413,8 @@ def dist_saspgemm15D(mata, matb, replication, rank, size, row_groups, col_groups
     stop_inner_timer = torch.cuda.Event(enable_timing=True)
 
     start_time(start_timer)
-    chunk_size = math.ceil(float(mata.size(1) / (size / replication)))
+    # chunk_size = math.ceil(float(mata.size(1) / (size / replication)))
+    chunk_size = mata.size(1) // (size // replication)
     if True or mata.layout == torch.sparse_coo or (name == "prob" and alg == "sage"):
         matc = torch.sparse_coo_tensor(size=(mata.size(0), matb.size(1))).cuda()
     elif mata.layout == torch.sparse_csr:
@@ -1205,8 +1206,8 @@ def sample(p, frontier_size, mb_count, node_count_total, n_darts, replication,
 
         timing_dict["sampling-iters"].append(stop_time(sample_start_timer, sample_stop_timer))
 
-    print(f"iter_count: {iter_count}")
-    print(f"selection_iter_count: {selection_iter_count}")
+    # print(f"iter_count: {iter_count}")
+    # print(f"selection_iter_count: {selection_iter_count}")
 
     return next_frontier
 

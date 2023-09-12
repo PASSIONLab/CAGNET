@@ -219,7 +219,8 @@ def one5d_partition(rank, size, inputs, adj_matrix, data, features, classes, rep
                             normalize):
     node_count = inputs.size(0)
     # n_per_proc = math.ceil(float(node_count) / size)
-    n_per_proc = math.ceil(float(node_count) / (size / replication))
+    # n_per_proc = math.ceil(float(node_count) / (size / replication))
+    n_per_proc = node_count // (size // replication)
 
     am_partitions = None
     am_pbyp = None
@@ -264,7 +265,13 @@ def one5d_partition(rank, size, inputs, adj_matrix, data, features, classes, rep
             am_partitions[i] = scale_elements(adj_matrix, am_partitions[i], node_count,  0, vtx_indices[i], \
                                                     normalize)
 
-        input_partitions = torch.split(inputs, math.ceil(float(inputs.size(0)) / (size / replication)), dim=0)
+        # input_partitions = torch.split(inputs, math.ceil(float(inputs.size(0)) / (size / replication)), dim=0)
+        input_partitions = torch.split(inputs, inputs.size(0) // (size // replication), dim=0)
+        if len(input_partitions) > (size // replication):
+            input_partitions_fused = [None] * (size // replication)
+            input_partitions_fused[:-1] = input_partitions[:-2]
+            input_partitions_fused[-1] = torch.cat(input_partitions[-2:], dim=0)
+            input_partitions = input_partitions_fused
 
         adj_matrix_loc = am_partitions[rank_c]
         inputs_loc = input_partitions[rank_c]
@@ -518,7 +525,8 @@ def main(args, batches=None):
     print("done normalizing", flush=True)
     torch.set_printoptions(precision=10)
 
-    n_per_proc = math.ceil(float(g_loc.size(0)) / (size / args.replication))
+    # n_per_proc = math.ceil(float(g_loc.size(0)) / (size / args.replication))
+    n_per_proc = g_loc.size(0) // (size // args.replication)
 
     labels_rank = torch.split(data.y, n_per_proc, dim=0)[rank_row]
 
@@ -686,22 +694,27 @@ def main(args, batches=None):
             for i in range(args.n_layers + 1):
                 for j in range(rank_n_bulkmb):
                     if i == 0:
+                        row_select_size = args.batch_size
                         row_select_min = j * args.batch_size 
                         row_select_max = (j + 1) * args.batch_size
                     else:
+                        row_select_size = args.batch_size * (args.samp_num ** (i - 1))
                         row_select_min = j * args.batch_size * (args.samp_num ** (i - 1))
                         row_select_max = (j + 1) * args.batch_size  * (args.samp_num ** (i - 1))
+
+                    adj_select_size = args.batch_size * (args.samp_num ** i)
                     adj_row_select_min = j * args.batch_size * (args.samp_num ** i)
                     adj_row_select_max = (j + 1) * args.batch_size  * (args.samp_num ** i)
 
-                    rank_n_bulkmb_row = int(rank_n_bulkmb /  args.replication)
+                    # rank_n_bulkmb_row = int(math.ceil(rank_n_bulkmb /  args.replication))
+                    rank_n_bulkmb_row = rank_n_bulkmb // args.replication
                     if rank_col == args.replication - 1:
-                        rank_n_bulkmb_row = rank_n_bulkmb_row - rank_n_bulkmb_row * (args.replication - 1)
-                    row_select_min += rank_col * rank_n_bulkmb_row
-                    row_select_max += rank_col * rank_n_bulkmb_row
-                    adj_row_select_min += rank_col * rank_n_bulkmb_row
-                    adj_row_select_max += rank_col * rank_n_bulkmb_row
-                    
+                        rank_n_bulkmb_row = rank_n_bulkmb - rank_n_bulkmb_row * (args.replication - 1)
+                    row_select_min += row_select_size * rank_col * rank_n_bulkmb_row
+                    row_select_max += row_select_size * rank_col * rank_n_bulkmb_row
+                    adj_row_select_min += adj_select_size * rank_col * rank_n_bulkmb_row
+                    adj_row_select_max += adj_select_size * rank_col * rank_n_bulkmb_row
+
                     if i < args.n_layers:
                         sampled_indices = adj_matrices_bulk[i]._indices()
                         sampled_values = adj_matrices_bulk[i]._values()
@@ -739,7 +752,6 @@ def main(args, batches=None):
             print("Training", flush=True)
             torch.cuda.nvtx.range_push("nvtx-training")
             # for i in range(args.n_bulkmb):
-            print(f"rank_n_bulkmb: {rank_n_bulkmb}", flush=True)
             for i in range(rank_n_bulkmb):
                 # print(f"batch {i}", flush=True)
                 # forward
@@ -755,9 +767,13 @@ def main(args, batches=None):
                 og_idxs = torch.cuda.LongTensor(src_vtxs.size(0))
                 tally.fill_(0)
 
-                node_per_row = int(math.ceil(node_count / (size / args.replication)))
-                node_per_proc = int(math.ceil(node_count / size))
+                # node_per_row = int(math.ceil(node_count / (size / args.replication)))
+                # node_per_proc = int(math.ceil(node_count / size))
+                node_per_row = node_count // (size // args.replication)
+                node_per_proc = node_count // size
+                print(f"node_count: {node_count} node_per_proc: {node_per_proc} node_per_row: {node_per_row}", flush=True)
                 sort_dst_proc_gpu(src_vtxs, src_vtxs_sort, og_idxs, tally, node_per_proc)
+                print(f"tally.sum: {tally.sum()}", flush=True)
                 src_vtx_per_proc = src_vtxs_sort.split(tally.tolist())
     
                 output_tally = []
@@ -769,7 +785,9 @@ def main(args, batches=None):
 
                 output_src_vtxs = torch.cuda.LongTensor(sum(output_tally).item())
                 dist.all_to_all_single(output_src_vtxs, src_vtxs_sort, output_tally, input_tally)
-                output_src_vtxs -= node_per_proc * rank
+                output_src_vtxs -= node_per_row * rank_row
+                # output_src_vtxs -= node_per_proc * rank
+                print(f"output_src_vtxs.min: {output_src_vtxs.min()} max: {output_src_vtxs.max()} features_loc.size: {features_loc.size()}", flush=True)
 
                 input_features = features_loc[output_src_vtxs]
                 output_features = torch.cuda.FloatTensor(src_vtxs.size(0), features_loc.size(1))
