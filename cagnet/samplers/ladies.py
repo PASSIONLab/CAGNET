@@ -9,7 +9,7 @@ from sparse_coo_tensor_cpp import downsample_gpu, compute_darts_gpu, throw_darts
                                     compute_darts_select_gpu, throw_darts_select_gpu, \
                                     compute_darts1d_gpu, throw_darts1d_gpu, normalize_gpu, \
                                     shift_rowselect_gpu, shift_colselect_gpu, \
-                                    scatterd_add_gpu, scatteri_add_gpu, rowselect_coo_gpu
+                                    scatteri_add_gpu, rowselect_coo_gpu
 
 
 def start_time(timer):

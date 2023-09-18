@@ -8,9 +8,9 @@ from sparse_coo_tensor_cpp import downsample_gpu, compute_darts_gpu, throw_darts
                                     compute_darts_select_gpu, throw_darts_select_gpu, \
                                     compute_darts1d_gpu, throw_darts1d_gpu, normalize_gpu, \
                                     shift_rowselect_gpu, shift_colselect_gpu, \
-                                    scatterd_add_gpu, scatteri_add_gpu, rowselect_coo_gpu, \
+                                    scatteri_add_gpu, rowselect_coo_gpu, \
                                     rowselect_csr_gpu, sparse_coo_tensor_gpu, spgemm_gpu, coogeam_gpu, \
-                                    sparse_csr_tensor_gpu
+                                    sparse_csr_tensor_gpu, nsparse_spgemm
 
 
 timing = True
@@ -628,25 +628,42 @@ def dist_saspgemm15D(mata, matb, replication, rank, size, row_groups, col_groups
                 timing_dict[f"spgemm-send-calls-{name}"] = []
 
             start_time(start_inner_timer)
-            selected_rows_count_recv = torch.cuda.IntTensor(1)
-            dist.recv(selected_rows_count_recv, tag=0, src=q)
+            selected_rows_count_recv = torch.cuda.IntTensor(1).fill_(-1)
+            recv_ops = [dist.P2POp(dist.irecv, selected_rows_count_recv, q, tag=0)]
+            reqs = dist.batch_isend_irecv(recv_ops)
+            for req in reqs:
+                req.wait()
+            torch.cuda.synchronize()
+            # dist.recv(selected_rows_count_recv, tag=0, src=q)
 
             if matb.layout == torch.sparse_csr:
                 # matb_recv_crows = torch.cuda.LongTensor(chunk_col_size + 1)
                 # dist.recv(matb_recv_crows, tag=1, src=q)
 
                 # matb_recv_lengths = torch.cuda.LongTensor(nnz_cols.size(0))
+                recv_ops = []
                 matb_recv_lengths = torch.cuda.IntTensor(nnz_cols.size(0))
-                dist.recv(matb_recv_lengths, tag=1, src=q)
-                matb_recv_lengths = matb_recv_lengths.long()
+                # dist.recv(matb_recv_lengths, tag=1, src=q)
+                recv_ops.append(dist.P2POp(dist.irecv, matb_recv_lengths, q, tag=1))
+                # matb_recv_lengths = matb_recv_lengths.long()
 
                 # matb_recv_cols = torch.cuda.LongTensor(selected_rows_count_recv.item())
                 matb_recv_cols = torch.cuda.IntTensor(selected_rows_count_recv.item())
-                dist.recv(matb_recv_cols, tag=2, src=q)
-                matb_recv_cols = matb_recv_cols.long()
+                # dist.recv(matb_recv_cols, tag=2, src=q)
+                recv_ops.append(dist.P2POp(dist.irecv, matb_recv_cols, q, tag=2))
+                # matb_recv_cols = matb_recv_cols.long()
 
                 matb_recv_values = torch.cuda.DoubleTensor(selected_rows_count_recv.item())
-                dist.recv(matb_recv_values, tag=3, src=q)
+                # dist.recv(matb_recv_values, tag=3, src=q)
+                recv_ops.append(dist.P2POp(dist.irecv, matb_recv_values, q, tag=3))
+
+                reqs = dist.batch_isend_irecv(recv_ops)
+                for req in reqs:
+                    req.wait()
+                torch.cuda.synchronize()
+
+                matb_recv_lengths = matb_recv_lengths.long()
+                matb_recv_cols = matb_recv_cols.long()
 
                 # the spgemm is better with COO for SAGE prob
                 if not (name == "prob" and alg == "sage"):
@@ -710,26 +727,50 @@ def dist_saspgemm15D(mata, matb, replication, rank, size, row_groups, col_groups
                 start_time(start_inner_timer)
                 mata_recv = torch.sparse_csr_tensor(mata_chunk_crows, mata_chunk_cols, mata_chunk_values,
                                                         size=(mata.size(0), chunk_col_size))
-                # matb_recv = torch.sparse_csr_tensor(matb_recv_crows, matb_recv_cols, matb_recv_values.float(),
-                #                                         size=(chunk_col_size, matb.size(1)))
+                matb_recv = sparse_coo_tensor_gpu(matb_recv_indices, matb_recv_values.float(),
+                                                        torch.Size([chunk_col_size, matb.size(1)]))
+                matb_recv = matb_recv.to_sparse_csr()
                 stop_time_add(start_inner_timer, stop_inner_timer, timing_dict, f"spgemm-loc-csrinst-{name}")
 
 
                 start_time(start_inner_timer)
-                mata_recv = mata_recv.to_sparse_coo()
+                # mata_recv = mata_recv.to_sparse_coo()
                 # matb_recv = matb_recv.to_sparse_coo()
                 stop_time_add(start_inner_timer, stop_inner_timer, timing_dict, f"spgemm-loc-csr2coo-{name}")
 
                 # matc += torch.mm(mata_recv, matb_recv)
                 start_time(start_inner_timer)
-                matc_chunk_indices, matc_chunk_values = torch_sparse.spspmm(mata_recv._indices(), \
-                                                            mata_recv._values().float(), matb_recv_indices, \
-                                                            matb_recv_values.float(), mata.size(0), \
-                                                            chunk_col_size, matb.size(1), coalesced=True)
-                matc_chunk = sparse_coo_tensor_gpu(matc_chunk_indices, matc_chunk_values, 
-                                                        torch.Size([matc.size(0), matc.size(1)]))
-                # matc_chunk = matc_chunk.coalesce()
+                # matc_chunk_indices, matc_chunk_values = torch_sparse.spspmm(mata_recv._indices(), \
+                #                                             mata_recv._values().float(), matb_recv_indices, \
+                #                                             matb_recv_values.float(), mata.size(0), \
+                #                                             chunk_col_size, matb.size(1), coalesced=True)
+                matc_chunk = nsparse_spgemm(mata_recv.crow_indices().int(), \
+                                        mata_recv.col_indices().int(), \
+                                        mata_recv.values().float(), \
+                                        matb_recv.crow_indices().int(), \
+                                        matb_recv.col_indices().int(), \
+                                        matb_recv.values().float(), \
+                                        mata_recv.size(0), mata_recv.size(1), matb_recv.size(1))
+                matc_chunk_crows = matc_chunk[0]
+                matc_chunk_cols = matc_chunk[1]
+                matc_chunk_values = matc_chunk[2]
+
+                # mata_recv = mata_recv.to_sparse_coo()
+                # matb_recv = matb_recv.to_sparse_coo()
+                # matc_chunk = torch.sparse.mm(mata_recv.float(), matb_recv.float())
+                # matc_chunk_crows = matc_chunk.crow_indices()
+                # matc_chunk_cols = matc_chunk.col_indices()
+                # matc_chunk_values = matc_chunk.values()
+                matc_row_lens = matc_chunk_crows[1:] - matc_chunk_crows[:-1]
+                matc_chunk_rows = torch.repeat_interleave(
+                                    torch.arange(0, mata_recv.size(0), device=mata_recv.device), 
+                                    matc_row_lens)
+                matc_chunk_indices = torch.stack((matc_chunk_rows, matc_chunk_cols))
+
+                matc_chunk = torch.sparse_coo_tensor(matc_chunk_indices, matc_chunk_values, size=matc.size())
+                matc_chunk = matc_chunk.coalesce()
                 matc += matc_chunk
+                torch.cuda.synchronize()
                 stop_time_add(start_inner_timer, stop_inner_timer, timing_dict, f"spgemm-loc-spspmm-{name}")
                 # matc = matc.to_sparse_csr()
             elif mata.layout == torch.sparse_csr:
@@ -939,7 +980,9 @@ def gen_prob_dist(numerator, adj_matrix, mb_count, node_count_total, replication
     elif name == "sage":
         # p_num_values = torch.cuda.DoubleTensor(p_num_values.size(0)).fill_(1.0)
         p_num_values = p_num_values.double()
-    scatterd_add_gpu(p_den, p_num_indices[0, :], p_num_values, p_num_values.size(0))
+    # scatterd_add_gpu(p_den, p_num_indices[0, :], p_num_values, p_num_values.size(0))
+    # frontier_nnz_sizes.scatter_add_(0, next_frontier._indices()[0,:], ones)
+    p_den.scatter_add_(0, p_num_indices[0, :], p_num_values)
     # p = torch.sparse_coo_tensor(indices=p_num_indices, 
     #                                 values=p_num_values, 
     #                                 size=(numerator.size(0), node_count_total))
