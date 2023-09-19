@@ -26,8 +26,6 @@ from cagnet.samplers.utils import *
 import cagnet.nn.functional as CAGF
 import torch.nn.functional as F
 
-import ogb
-from ogb.nodeproppred import PygNodePropPredDataset
 from sparse_coo_tensor_cpp import sort_dst_proc_gpu
 from torchviz import make_dot
 
@@ -53,15 +51,11 @@ class GCN(nn.Module):
         self.timings["total"] = []
         self.timings["sample"] = []
         self.timings["extract"] = []
+        self.timings["extract-select"] = []
+        self.timings["extract-inst"] = []
+        self.timings["extract-coalesce"] = []
         self.timings["train"] = []
         self.timings["selectfeats"] = []
-        # self.timings["selectfeats-precomp"] = []
-        # self.timings["selectfeats-sortdst"] = []
-        # self.timings["selectfeats-tallysplit"] = []
-        # self.timings["selectfeats-tallya2a"] = []
-        # self.timings["selectfeats-vtxsa2a"] = []
-        # self.timings["selectfeats-featsa2a"] = []
-        # self.timings["selectfeats-p2pop"] = []
         self.timings["fwd"] = []
         self.timings["bwd"] = []
         self.timings["loss"] = []
@@ -395,6 +389,8 @@ def main(args, batches=None):
         data = data.to(device)
         data.y = data.y.to(device)
     elif args.dataset.startswith("ogb"):
+        import ogb
+        from ogb.nodeproppred import PygNodePropPredDataset # only import if necessary, takes a long time
         if ("papers100M" in args.dataset and rank % args.gpu == 0) or "products" in args.dataset:
             dataset = PygNodePropPredDataset(name=args.dataset, root="../../data")
             data = dataset[0]
@@ -802,8 +798,6 @@ def main(args, batches=None):
             for i in range(args.n_bulkmb):
                 # forward
                 # batch_vtxs = frontiers[0][i].view(-1)
-                if epoch >= 1:
-                    start_time(start_inner_timer)
                 torch.cuda.nvtx.range_push("nvtx-extracting")
 
                 batch_select_size = args.batch_size
@@ -835,29 +829,48 @@ def main(args, batches=None):
                     adj_row_select_min += adj_select_size * rank_col * rank_n_bulkmb_row
                     adj_row_select_max += adj_select_size * rank_col * rank_n_bulkmb_row
 
-                    sampled_indices = adj_matrices_bulk[l]._indices()
-                    sampled_values = adj_matrices_bulk[l]._values()
+                    if epoch >= 1:
+                        start_time(start_inner_timer)
 
-                    sample_select_mask = (adj_row_select_min <= sampled_indices[0,:]) & \
-                                         (sampled_indices[0,:] < adj_row_select_max)
-                    adj_matrix_sample_indices = sampled_indices[:, sample_select_mask]
-                    # adj_matrix_sample_indices[0,:] -= row_select_min
-                    adj_matrix_sample_indices[0,:] -= adj_row_select_min
-                    adj_matrix_sample_values = sampled_values[sample_select_mask].float()
+                    adj_nnz_start = adj_matrices_bulk[l].crow_indices()[adj_row_select_min]
+                    adj_nnz_stop = adj_matrices_bulk[l].crow_indices()[adj_row_select_max]
 
+                    adj_sample_crows = adj_matrices_bulk[l].crow_indices()[adj_row_select_min:(adj_row_select_max+1)].clone()
+                    adj_sample_cols = adj_matrices_bulk[l].col_indices()[adj_nnz_start:adj_nnz_stop]
+                    crows_start = adj_sample_crows[0].item()
+                    adj_sample_crows -= crows_start
+
+                    adj_sample_values = adj_matrices_bulk[l].values()[adj_nnz_start:adj_nnz_stop].float()
+
+                    if epoch >= 1:
+                        model.timings["extract-select"].append(stop_time(start_inner_timer, stop_inner_timer))
+
+                    if epoch >= 1:
+                        start_time(start_inner_timer)
                     if args.sample_method == "ladies":
                         adj_matrix_sample = torch.sparse_coo_tensor(adj_matrix_sample_indices, \
                                                         adj_matrix_sample_values, \
                                                         (args.batch_size, args.samp_num + args.batch_size))
                     else:
-                        adj_matrix_sample = torch.sparse_coo_tensor(adj_matrix_sample_indices, \
-                                                        adj_matrix_sample_values, \
+                        adj_sample_row_lens = adj_sample_crows[1:] - adj_sample_crows[:-1]
+                        adj_sample_rows = torch.repeat_interleave(
+                                            torch.arange(0, args.batch_size * (args.samp_num ** l), 
+                                                            device=adj_sample_row_lens.device), 
+                                            adj_sample_row_lens)
+                        adj_sample_indices = torch.stack((adj_sample_rows, adj_sample_cols))
+                        adj_matrix_sample = torch.sparse_coo_tensor(adj_sample_indices, \
+                                                        adj_sample_values, \
                                                         (args.batch_size * (args.samp_num ** l), \
                                                                 args.batch_size * (args.samp_num ** (l + 1))))
-                    adjs[args.n_layers - l - 1] = adj_matrix_sample.coalesce()
+                    if epoch >= 1:
+                        model.timings["extract-inst"].append(stop_time(start_inner_timer, stop_inner_timer))
 
-                if epoch >= 1:
-                    model.timings["extract"].append(stop_time(start_inner_timer, stop_inner_timer))
+                    if epoch >= 1:
+                        start_time(start_inner_timer)
+                    g adjs[args.n_layers - l - 1] = adj_matrix_sample.to_sparse_coo()
+                    adjs[args.n_layers - l - 1] = adj_matrix_sample.coalesce()
+                    if epoch >= 1:
+                        model.timings["extract-coalesce"].append(stop_time(start_inner_timer, stop_inner_timer))
 
                 if epoch >= 1:
                     start_time(start_inner_timer)
@@ -977,9 +990,13 @@ def main(args, batches=None):
                 # sf_tallya2a_dur = [x / 1000 for x in model.timings["selectfeats-tallya2a"]]
                 # sf_vtxsa2a_dur = [x / 1000 for x in model.timings["selectfeats-vtxsa2a"]]
                 # sf_featsa2a_dur = [x / 1000 for x in model.timings["selectfeats-featsa2a"]]
-                extract_dur = [x / 1000 for x in model.timings["extract"]]
+                
+                # extract_dur = [x / 1000 for x in model.timings["extract"]]
+                extract_select_dur = [x / 1000 for x in model.timings["extract-select"]]
+                extract_inst_dur = [x / 1000 for x in model.timings["extract-inst"]]
+                extract_coalesce_dur = [x / 1000 for x in model.timings["extract-coalesce"]]
 
-                print(f"sample: {np.sum(sample_dur)} extract: {np.sum(extract_dur)} train: {np.sum(train_dur)}", flush=True)
+                print(f"sample: {np.sum(sample_dur)} extract-select: {np.sum(extract_select_dur)} extract-inst: {np.sum(extract_inst_dur)} extract-coalesce: {np.sum(extract_coalesce_dur)} train: {np.sum(train_dur)}", flush=True)
                 print(f"feats: {np.sum(selectfeats_dur)} fwd: {np.sum(fwd_dur)} bwd: {np.sum(bwd_dur)}")
                 print(f"precomp: {np.sum(precomp_dur)} spmm: {np.sum(spmm_dur)} gemmi: {np.sum(gemmi_dur)} gemmw: {np.sum(gemmw_dur)} aggr: {np.sum(aggr_dur)}")
                 # print(f"precomp: {np.sum(sf_precomp_dur)} sortdst: {np.sum(sf_sortdst_dur)} tallysplit: {np.sum(sf_tallysplit_dur)} tallya2a: {np.sum(sf_tallya2a_dur)} vtxsa2a: {np.sum(sf_vtxsa2a_dur)} featsa2a: {np.sum(sf_featsa2a_dur)}", flush=True)

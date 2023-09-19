@@ -169,7 +169,8 @@ def sage_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_total,
 
         adj_matrix_sample = torch.sparse_coo_tensor(adj_matrices_indices, adj_matrices_values, 
                                 size=torch.Size([mb_count * nnz, next_frontier_select.size(1) * nnz]))
-        adj_matrices[i] = adj_matrix_sample
+        # adj_matrices[i] = adj_matrix_sample
+        adj_matrices[i] = adj_matrix_sample.to_sparse_csr()
         frontiers[i + 1] = next_frontier_select.clone()
         current_frontier = next_frontier
         timing_dict["row-col-select"].append(stop_time(start_timer, stop_timer, barrier=True))
