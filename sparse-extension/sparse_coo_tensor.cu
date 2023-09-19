@@ -1501,13 +1501,13 @@ void spmm_gpu(const at::Tensor& A_rowindices,
 
     clock_t start, stop;
     
-    int32_t *d_a_csrrows;
-    
-    // int devid_old = 0;
-    // cudaGetDevice(&devid_old);
-    // cudaSetDevice(devid);
+    // int32_t *d_a_csrrows;
+    // cudaMalloc(&d_a_csrrows, (n + 1) * sizeof(int32_t));
+    torch::Tensor A_csrrows_tens = torch::zeros({n + 1}, torch::TensorOptions()
+                                                                    .dtype(torch::kInt32)
+                                                                    .device(torch::kCUDA));
+    int32_t *d_a_csrrows = A_csrrows_tens.data<int>();
 
-    cudaMalloc(&d_a_csrrows, (n + 1) * sizeof(int32_t));
     CHECK_CUSPARSE(cusparseXcoo2csr(handle, 
                                         A_rowindices.data<int>(), 
                                         nnz, 
@@ -1587,7 +1587,7 @@ void spmm_gpu(const at::Tensor& A_rowindices,
 
 
     // cudaFree(d_a_csrrows);
-    // cudaFree(d_buffer);
+    cudaFree(d_buffer);
 
     // Column-major to row-major
     C.set_data(C.view({c_col, c_row}));

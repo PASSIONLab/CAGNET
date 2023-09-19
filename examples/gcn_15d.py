@@ -29,6 +29,7 @@ import torch.nn.functional as F
 import ogb
 from ogb.nodeproppred import PygNodePropPredDataset
 from sparse_coo_tensor_cpp import sort_dst_proc_gpu
+from torchviz import make_dot
 
 import socket
 
@@ -53,14 +54,14 @@ class GCN(nn.Module):
         self.timings["sample"] = []
         self.timings["extract"] = []
         self.timings["train"] = []
-        # self.timings["selectfeats"] = []
-        self.timings["selectfeats-precomp"] = []
-        self.timings["selectfeats-sortdst"] = []
-        self.timings["selectfeats-tallysplit"] = []
-        self.timings["selectfeats-tallya2a"] = []
-        self.timings["selectfeats-vtxsa2a"] = []
-        self.timings["selectfeats-featsa2a"] = []
-        self.timings["selectfeats-p2pop"] = []
+        self.timings["selectfeats"] = []
+        # self.timings["selectfeats-precomp"] = []
+        # self.timings["selectfeats-sortdst"] = []
+        # self.timings["selectfeats-tallysplit"] = []
+        # self.timings["selectfeats-tallya2a"] = []
+        # self.timings["selectfeats-vtxsa2a"] = []
+        # self.timings["selectfeats-featsa2a"] = []
+        # self.timings["selectfeats-p2pop"] = []
         self.timings["fwd"] = []
         self.timings["bwd"] = []
         self.timings["loss"] = []
@@ -79,11 +80,11 @@ class GCN(nn.Module):
         # output layer
         self.layers.append(GCNConv(n_hidden, n_classes, self.partitioning, self.device))
         # self.layers.append(GCNConv(in_feats, n_classes, self.partitioning, self.device))
+
         # self.layers.append(SAGEConv(in_feats, n_hidden, root_weight=False, bias=False))
         # for _ in range(n_layers - 2):
         #     self.layers.append(SAGEConv(n_hidden, n_hidden, root_weight=False, bias=False))
         # self.layers.append(SAGEConv(n_hidden, n_classes, root_weight=False, bias=False))
-
 
     def forward(self, graphs, inputs, epoch):
         h = inputs
@@ -91,6 +92,7 @@ class GCN(nn.Module):
             h = layer(self, graphs[l], h, epoch) # GCNConv
             # nnz_index = graphs[l]._values().nonzero().squeeze() # SAGEConv
             # edge_index = graphs[l]._indices()[:, nnz_index] # SAGEConv
+            # edge_index = graphs[l] # SAGEConvfake
             # h = self.layers[l](h, edge_index) # SAGEConv
             if l != len(self.layers) - 1:
                 # h = CAGF.relu(h, self.partitioning)
@@ -440,7 +442,6 @@ def main(args, batches=None):
     if rank_row >= (size // args.replication):
         return
 
-
     print("start partitioning", flush=True)
     if args.dataset == "ogbn-papers100M" or args.dataset == "Protein_sg2":
         if rank % args.gpu == 0:
@@ -620,6 +621,7 @@ def main(args, batches=None):
     if rank == size - 1:
         rank_n_bulkmb = row_n_bulkmb - rank_n_bulkmb * (args.replication - 1)
 
+    print(f"rank_n_bulkmb: {rank_n_bulkmb}")
     dist.barrier()
     for epoch in range(args.n_epochs):
         print(f"Epoch: {epoch}", flush=True)
@@ -726,62 +728,62 @@ def main(args, batches=None):
                 model.timings["sample"].append(stop_time(start_timer, stop_timer))
             torch.cuda.nvtx.range_pop()
 
-            if epoch >= 1:
-                start_time(start_timer)
-            print("Extracting batches", flush=True)
-            torch.cuda.nvtx.range_push("nvtx-extracting")
-            # adj_matrices[i][j] --  layer i mb j
-            adj_matrices = [[None] * rank_n_bulkmb for x in range(args.n_layers)] 
-            frontiers = [[None] * rank_n_bulkmb for x in range(args.n_layers + 1)] 
-            for i in range(args.n_layers + 1):
-                for j in range(rank_n_bulkmb):
-                    if i == 0:
-                        row_select_size = args.batch_size
-                        row_select_min = j * args.batch_size 
-                        row_select_max = (j + 1) * args.batch_size
-                    else:
-                        row_select_size = args.batch_size * (args.samp_num ** (i - 1))
-                        row_select_min = j * args.batch_size * (args.samp_num ** (i - 1))
-                        row_select_max = (j + 1) * args.batch_size  * (args.samp_num ** (i - 1))
+            # if epoch >= 1:
+            #     start_time(start_timer)
+            # print("Extracting batches", flush=True)
+            # torch.cuda.nvtx.range_push("nvtx-extracting")
+            # # adj_matrices[i][j] --  layer i mb j
+            # adj_matrices = [[None] * rank_n_bulkmb for x in range(args.n_layers)] 
+            # frontiers = [[None] * rank_n_bulkmb for x in range(args.n_layers + 1)] 
+            # for i in range(args.n_layers + 1):
+            #     for j in range(rank_n_bulkmb):
+            #         if i == 0:
+            #             row_select_size = args.batch_size
+            #             row_select_min = j * args.batch_size 
+            #             row_select_max = (j + 1) * args.batch_size
+            #         else:
+            #             row_select_size = args.batch_size * (args.samp_num ** (i - 1))
+            #             row_select_min = j * args.batch_size * (args.samp_num ** (i - 1))
+            #             row_select_max = (j + 1) * args.batch_size  * (args.samp_num ** (i - 1))
 
-                    adj_select_size = args.batch_size * (args.samp_num ** i)
-                    adj_row_select_min = j * args.batch_size * (args.samp_num ** i)
-                    adj_row_select_max = (j + 1) * args.batch_size  * (args.samp_num ** i)
+            #         adj_select_size = args.batch_size * (args.samp_num ** i)
+            #         adj_row_select_min = j * args.batch_size * (args.samp_num ** i)
+            #         adj_row_select_max = (j + 1) * args.batch_size  * (args.samp_num ** i)
 
-                    # rank_n_bulkmb_row = int(math.ceil(rank_n_bulkmb /  args.replication))
-                    rank_n_bulkmb_row = rank_n_bulkmb // args.replication
-                    if rank_col == args.replication - 1:
-                        rank_n_bulkmb_row = rank_n_bulkmb - rank_n_bulkmb_row * (args.replication - 1)
-                    row_select_min += row_select_size * rank_col * rank_n_bulkmb_row
-                    row_select_max += row_select_size * rank_col * rank_n_bulkmb_row
-                    adj_row_select_min += adj_select_size * rank_col * rank_n_bulkmb_row
-                    adj_row_select_max += adj_select_size * rank_col * rank_n_bulkmb_row
+            #         # rank_n_bulkmb_row = int(math.ceil(rank_n_bulkmb /  args.replication))
+            #         rank_n_bulkmb_row = rank_n_bulkmb // args.replication
+            #         if rank_col == args.replication - 1:
+            #             rank_n_bulkmb_row = rank_n_bulkmb - rank_n_bulkmb_row * (args.replication - 1)
+            #         row_select_min += row_select_size * rank_col * rank_n_bulkmb_row
+            #         row_select_max += row_select_size * rank_col * rank_n_bulkmb_row
+            #         adj_row_select_min += adj_select_size * rank_col * rank_n_bulkmb_row
+            #         adj_row_select_max += adj_select_size * rank_col * rank_n_bulkmb_row
 
-                    if i < args.n_layers:
-                        sampled_indices = adj_matrices_bulk[i]._indices()
-                        sampled_values = adj_matrices_bulk[i]._values()
+            #         if i < args.n_layers:
+            #             sampled_indices = adj_matrices_bulk[i]._indices()
+            #             sampled_values = adj_matrices_bulk[i]._values()
 
-                        sample_select_mask = (adj_row_select_min <= sampled_indices[0,:]) & \
-                                             (sampled_indices[0,:] < adj_row_select_max)
-                        adj_matrix_sample_indices = sampled_indices[:, sample_select_mask]
-                        # adj_matrix_sample_indices[0,:] -= row_select_min
-                        adj_matrix_sample_indices[0,:] -= adj_row_select_min
-                        adj_matrix_sample_values = sampled_values[sample_select_mask].float()
+            #             sample_select_mask = (adj_row_select_min <= sampled_indices[0,:]) & \
+            #                                  (sampled_indices[0,:] < adj_row_select_max)
+            #             adj_matrix_sample_indices = sampled_indices[:, sample_select_mask]
+            #             # adj_matrix_sample_indices[0,:] -= row_select_min
+            #             adj_matrix_sample_indices[0,:] -= adj_row_select_min
+            #             adj_matrix_sample_values = sampled_values[sample_select_mask].float()
 
-                        if args.sample_method == "ladies":
-                            adj_matrix_sample = torch.sparse_coo_tensor(adj_matrix_sample_indices, \
-                                                            adj_matrix_sample_values, \
-                                                            (args.batch_size, args.samp_num + args.batch_size))
-                        else:
-                            adj_matrix_sample = torch.sparse_coo_tensor(adj_matrix_sample_indices, \
-                                                            adj_matrix_sample_values, \
-                                                            (args.batch_size * (args.samp_num ** i), \
-                                                                    args.batch_size * (args.samp_num ** (i + 1))))
-                        adj_matrices[i][j] = adj_matrix_sample.coalesce()
-                    frontiers_sample = frontiers_bulk[i][row_select_min:row_select_max,:]
-                    frontiers[i][j] = frontiers_sample
-            if epoch >= 1:
-                model.timings["extract"].append(stop_time(start_timer, stop_timer))
+            #             if args.sample_method == "ladies":
+            #                 adj_matrix_sample = torch.sparse_coo_tensor(adj_matrix_sample_indices, \
+            #                                                 adj_matrix_sample_values, \
+            #                                                 (args.batch_size, args.samp_num + args.batch_size))
+            #             else:
+            #                 adj_matrix_sample = torch.sparse_coo_tensor(adj_matrix_sample_indices, \
+            #                                                 adj_matrix_sample_values, \
+            #                                                 (args.batch_size * (args.samp_num ** i), \
+            #                                                         args.batch_size * (args.samp_num ** (i + 1))))
+            #             adj_matrices[i][j] = adj_matrix_sample.coalesce()
+            #         frontiers_sample = frontiers_bulk[i][row_select_min:row_select_max,:]
+            #         frontiers[i][j] = frontiers_sample
+            # if epoch >= 1:
+            #     model.timings["extract"].append(stop_time(start_timer, stop_timer))
 
             # if args.dataset != "Amazon" and args.dataset != "Protein":
             # return frontiers, adj_matrices, adj_matrix, col_groups
@@ -795,173 +797,150 @@ def main(args, batches=None):
             torch.cuda.nvtx.range_push("nvtx-training")
             bulk_batch_count = args.bulk_batch_fetch
 
-            # for i in range(args.n_bulkmb):
-            for b in range(0, rank_n_bulkmb, bulk_batch_count):
-                # print(f"batch {i}", flush=True)
-                src_vtxs_len = frontiers[-1][b].view(-1).size(0)
-                og_idxs_bulk = torch.cuda.LongTensor(bulk_batch_count * src_vtxs_len)
-                output_features_bulk = torch.cuda.FloatTensor(bulk_batch_count * src_vtxs_len, 
-                                                                features_loc.size(1))
-                print(f"Bulk Fetching {b} rank_n_bulkmb: {rank_n_bulkmb}", flush=True)
-                elem_count = 0
-                ops = []
-                for i in range(b, min(rank_n_bulkmb, b + bulk_batch_count)):
-                    # forward
-                    if epoch >= 1:
-                        start_time(start_inner_timer)
-                    torch.cuda.nvtx.range_push("nvtx-selectfeats")
-                    batch_vtxs = frontiers[0][i].view(-1)
-                    src_vtxs = frontiers[-1][i].view(-1)
-                    adjs = [adj[i] for adj in adj_matrices]
-                    adjs.reverse()
+            # for b in range(0, rank_n_bulkmb, bulk_batch_count):
+            # for i in range(b, b + bulk_batch_count):
+            for i in range(args.n_bulkmb):
+                # forward
+                # batch_vtxs = frontiers[0][i].view(-1)
+                if epoch >= 1:
+                    start_time(start_inner_timer)
+                torch.cuda.nvtx.range_push("nvtx-extracting")
 
+                batch_select_size = args.batch_size
+                batch_select_min = i * args.batch_size 
+                batch_select_max = (i + 1) * args.batch_size
+
+                rank_n_bulkmb_row = rank_n_bulkmb // args.replication
+                if rank_col == args.replication - 1:
+                    rank_n_bulkmb_row = rank_n_bulkmb - rank_n_bulkmb_row * (args.replication - 1)
+
+                batch_select_min += batch_select_size * rank_col * rank_n_bulkmb_row
+                batch_select_max += batch_select_size * rank_col * rank_n_bulkmb_row
+                batch_vtxs = frontiers_bulk[0][batch_select_min:batch_select_max,:].view(-1)
+
+                # src_vtxs = frontiers[-1][i].view(-1)
+                src_select_size = args.batch_size * (args.samp_num ** (args.n_layers - 1))
+                src_select_min = i * args.batch_size * (args.samp_num ** (args.n_layers - 1))
+                src_select_max = (i + 1) * args.batch_size  * (args.samp_num ** (args.n_layers - 1))
+                
+                src_select_min += src_select_size * rank_col * rank_n_bulkmb_row
+                src_select_max += src_select_size * rank_col * rank_n_bulkmb_row
+                src_vtxs = frontiers_bulk[-1][src_select_min:src_select_max,:].view(-1)
+
+                adjs = [None] * args.n_layers
+                for l in range(args.n_layers):
+                    adj_select_size = args.batch_size * (args.samp_num ** l)
+                    adj_row_select_min = i * args.batch_size * (args.samp_num ** l)
+                    adj_row_select_max = (i + 1) * args.batch_size  * (args.samp_num ** l)
+                    adj_row_select_min += adj_select_size * rank_col * rank_n_bulkmb_row
+                    adj_row_select_max += adj_select_size * rank_col * rank_n_bulkmb_row
+
+                    sampled_indices = adj_matrices_bulk[l]._indices()
+                    sampled_values = adj_matrices_bulk[l]._values()
+
+                    sample_select_mask = (adj_row_select_min <= sampled_indices[0,:]) & \
+                                         (sampled_indices[0,:] < adj_row_select_max)
+                    adj_matrix_sample_indices = sampled_indices[:, sample_select_mask]
+                    # adj_matrix_sample_indices[0,:] -= row_select_min
+                    adj_matrix_sample_indices[0,:] -= adj_row_select_min
+                    adj_matrix_sample_values = sampled_values[sample_select_mask].float()
+
+                    if args.sample_method == "ladies":
+                        adj_matrix_sample = torch.sparse_coo_tensor(adj_matrix_sample_indices, \
+                                                        adj_matrix_sample_values, \
+                                                        (args.batch_size, args.samp_num + args.batch_size))
+                    else:
+                        adj_matrix_sample = torch.sparse_coo_tensor(adj_matrix_sample_indices, \
+                                                        adj_matrix_sample_values, \
+                                                        (args.batch_size * (args.samp_num ** l), \
+                                                                args.batch_size * (args.samp_num ** (l + 1))))
+                    adjs[args.n_layers - l - 1] = adj_matrix_sample.coalesce()
+
+                if epoch >= 1:
+                    model.timings["extract"].append(stop_time(start_inner_timer, stop_inner_timer))
+
+                if epoch >= 1:
+                    start_time(start_inner_timer)
+                torch.cuda.nvtx.range_push("nvtx-selectfeats")
+                if size > 1:
                     src_vtxs_sort = torch.cuda.LongTensor(src_vtxs.size(0))
-                    # og_idxs = torch.cuda.LongTensor(src_vtxs.size(0))
-                    og_idxs = og_idxs_bulk[(i - b) * src_vtxs.size(0):(i - b + 1) * src_vtxs.size(0)]
+                    og_idxs = torch.cuda.LongTensor(src_vtxs.size(0))
                     tally.fill_(0)
-                    if epoch >= 1:
-                        model.timings["selectfeats-precomp"].append(stop_time(start_inner_timer, stop_inner_timer))
 
-                    if epoch >= 1:
-                        start_time(start_inner_timer)
                     # node_per_row = int(math.ceil(node_count / (size / args.replication)))
                     # node_per_proc = int(math.ceil(node_count / size))
                     node_per_row = node_count // (size // args.replication)
                     node_per_proc = node_count // size
-                    # sort_dst_proc_gpu(src_vtxs, src_vtxs_sort, og_idxs, tally, node_per_proc, size)
-                    sort_dst_proc_gpu(src_vtxs, src_vtxs_sort, og_idxs, tally, node_per_row, proc_row)
+                    # sort_dst_proc_gpu(src_vtxs, src_vtxs_sort, og_idxs, tally, node_per_proc)
+                    sort_dst_proc_gpu(src_vtxs, src_vtxs_sort, og_idxs, tally, 
+                                        node_per_row, proc_row)
                     src_vtx_per_proc = src_vtxs_sort.split(tally.tolist())
-                    if epoch >= 1:
-                        model.timings["selectfeats-sortdst"].append(stop_time(start_inner_timer, stop_inner_timer))
         
-                    if epoch >= 1:
-                        start_time(start_inner_timer)
                     output_tally = []
-                    # for j in range(size):
-                    for j in range(proc_row):
+                    for j in range(size):
                         output_tally.append(torch.cuda.IntTensor(1))
                     input_tally = list(torch.split(tally, 1))
-                    if epoch >= 1:
-                        model.timings["selectfeats-tallysplit"].append(stop_time(start_inner_timer,stop_inner_timer))
 
-                    if epoch >= 1:
-                        start_time(start_inner_timer)
-                    # dist.all_to_all(output_tally, input_tally)
-                    dist.all_to_all(output_tally, input_tally, group=col_groups[rank_col])
-                    if epoch >= 1:
-                        model.timings["selectfeats-tallya2a"].append(stop_time(start_inner_timer, stop_inner_timer))
+                    dist.all_to_all(output_tally, input_tally, col_groups[rank_col])
 
-                    if epoch >= 1:
-                        start_time(start_inner_timer)
                     output_src_vtxs = torch.cuda.LongTensor(sum(output_tally).item())
-                    # dist.all_to_all_single(output_src_vtxs, src_vtxs_sort, output_tally, input_tally)
-                    dist.all_to_all_single(output_src_vtxs, src_vtxs_sort, output_tally, input_tally, 
-                                                group=col_groups[rank_col])
+                    dist.all_to_all_single(output_src_vtxs, src_vtxs_sort, 
+                                                output_tally, input_tally, 
+                                                col_groups[rank_col])
                     output_src_vtxs -= node_per_row * rank_row
                     # output_src_vtxs -= node_per_proc * rank
-                    if epoch >= 1:
-                        model.timings["selectfeats-vtxsa2a"].append(stop_time(start_inner_timer, stop_inner_timer))
-
-                    if epoch >= 1:
-                        start_time(start_inner_timer)
 
                     input_features = features_loc[output_src_vtxs]
-                    # output_features = torch.cuda.FloatTensor(src_vtxs.size(0), features_loc.size(1))
-                    output_features = output_features_bulk[(i - b) * src_vtxs.size(0):(i - b + 1) * src_vtxs.size(0)]
-
-                    # dist.all_to_all_single(output_features, input_features, input_tally, output_tally)
-                    # dist.all_to_all_single(output_features, input_features, input_tally, output_tally, 
-                    #                             group=col_groups[rank_col])
-
-                    input_start = 0
-                    output_start = 0
-                    for j in range(size // args.replication):
-                        if j != rank_row:
-                            elem_count += input_features[output_start:output_start + output_tally[j]].numel()
-                            ops.append(dist.P2POp(dist.isend, 
-                                                    input_features[output_start:output_start + output_tally[j]],
-                                                    j * args.replication + rank_col))
-                            ops.append(dist.P2POp(dist.irecv, 
-                                                    output_features[input_start:input_start + input_tally[j]],
-                                                    j * args.replication + rank_col))
-                        else:
-                            output_features[input_start:input_start + input_tally[j]] = \
-                                                input_features[output_start:output_start + output_tally[j]]
-
-                        input_start += input_tally[j]
-                        output_start += output_tally[j]
-                    if epoch >= 1:
-                        model.timings["selectfeats-p2pop"].append(stop_time(start_inner_timer, stop_inner_timer))
-
-                print(f"Bulk A2A", flush=True)
-                elem_count_tens = torch.cuda.LongTensor(1).fill_(elem_count)
-                dist.all_reduce(elem_count_tens)
-                dist.barrier()
-                if epoch >= 1:
-                    start_time(start_inner_timer)
-
-                if len(ops) > 0:
-                    print(f"elem_count_tens: {elem_count_tens}", flush=True)
-                    reqs = dist.batch_isend_irecv(ops)
-                    for req in reqs:
-                        req.wait()
-                    torch.cuda.synchronize()
-                if epoch >= 1:
-                    model.timings["selectfeats-featsa2a"].append(stop_time(start_inner_timer, stop_inner_timer, barrier=True))
-
-                dist.barrier()
-                print(f"FwdBwd Propagation", flush=True)
-                for i in range(b, b + bulk_batch_count):
-                    # forward
-                    if epoch >= 1:
-                        start_time(start_inner_timer)
-                    torch.cuda.nvtx.range_push("nvtx-selectfeats")
-                    batch_vtxs = frontiers[0][i].view(-1)
-                    src_vtxs = frontiers[-1][i].view(-1)
-                    adjs = [adj[i] for adj in adj_matrices]
-                    adjs.reverse()
-
-                    og_idxs = og_idxs_bulk[(i - b) * src_vtxs.size(0):(i - b + 1) * src_vtxs.size(0)]
-                    output_features = output_features_bulk[(i - b) * src_vtxs.size(0):(i - b + 1) * src_vtxs.size(0)]
+                    output_features = torch.cuda.FloatTensor(src_vtxs.size(0), features_loc.size(1))
+                    dist.all_to_all_single(output_features, input_features, 
+                                                input_tally, output_tally, 
+                                                col_groups[rank_col])
 
                     features_batch = torch.cuda.FloatTensor(output_features.size())
                     features_batch[og_idxs] = output_features
-                    # features_batch = output_features[og_idxs]
+                else:
+                    features_batch = features_loc[src_vtxs]
 
-                    # features_batch = features_loc[src_vtxs]
-                    torch.cuda.nvtx.range_pop() # nvtx-selectfeats
+                torch.cuda.nvtx.range_pop() # nvtx-selectfeats
+                if epoch >= 1:
+                    model.timings["selectfeats"].append(stop_time(start_inner_timer, stop_inner_timer))
 
-                    if epoch >= 1:
-                        start_time(start_inner_timer)
-                    torch.cuda.nvtx.range_push("nvtx-fwd")
-                    logits = model(adjs, features_batch, epoch)
-                    torch.cuda.nvtx.range_pop()
-                    if epoch >= 1:
-                        model.timings["fwd"].append(stop_time(start_inner_timer, stop_inner_timer))
+                # features_batch = torch.cuda.FloatTensor(4000, 128)
+                # adjs[0] = torch.randint(0, 4000, (2, 4000)).cuda().long()
+                # adjs[1] = torch.randint(0, 600, (2, 600)).cuda().long()
 
-                    if epoch >= 1:
-                        start_time(start_inner_timer)
-                    torch.cuda.nvtx.range_push("nvtx-loss")
-                    loss = F.nll_loss(logits, data.y[batch_vtxs].long()) # GCNConv
-                    # loss = F.nll_loss(logits[:args.batch_size], data.y[batch_vtxs]) # SAGEConv
-                    optimizer.zero_grad()
-                    torch.cuda.nvtx.range_pop()
-                    if epoch >= 1:
-                        model.timings["loss"].append(stop_time(start_inner_timer, stop_inner_timer))
-                    
-                    if epoch >= 1:
-                        start_time(start_inner_timer)
-                    torch.cuda.nvtx.range_push("nvtx-bwd")
-                    loss.backward()
-                    torch.cuda.nvtx.range_pop()
-                    if epoch >= 1:
-                        model.timings["bwd"].append(stop_time(start_inner_timer, stop_inner_timer))
+                if epoch >= 1:
+                    start_time(start_inner_timer)
+                torch.cuda.nvtx.range_push("nvtx-fwd")
+                logits = model(adjs, features_batch, epoch)
+                torch.cuda.nvtx.range_pop()
+                if epoch >= 1:
+                    model.timings["fwd"].append(stop_time(start_inner_timer, stop_inner_timer))
 
-                    for W in model.parameters():
-                        dist.all_reduce(W.grad)
-                    torch.cuda.nvtx.range_push("nvtx-optstep")
-                    optimizer.step()
-                    torch.cuda.nvtx.range_pop()
+                if epoch >= 1:
+                    start_time(start_inner_timer)
+                torch.cuda.nvtx.range_push("nvtx-loss")
+                loss = F.nll_loss(logits, data.y[batch_vtxs].long()) # GCNConv
+                # loss = F.nll_loss(logits[:args.batch_size], data.y[batch_vtxs]) # SAGEConv
+
+                optimizer.zero_grad()
+                torch.cuda.nvtx.range_pop()
+                if epoch >= 1:
+                    model.timings["loss"].append(stop_time(start_inner_timer, stop_inner_timer))
+                
+                if epoch >= 1:
+                    start_time(start_inner_timer)
+                torch.cuda.nvtx.range_push("nvtx-bwd")
+                loss.backward()
+                torch.cuda.nvtx.range_pop()
+                if epoch >= 1:
+                    model.timings["bwd"].append(stop_time(start_inner_timer, stop_inner_timer))
+
+                for W in model.parameters():
+                    dist.all_reduce(W.grad)
+                torch.cuda.nvtx.range_push("nvtx-optstep")
+                optimizer.step()
+                torch.cuda.nvtx.range_pop()
             if epoch >= 1:
                 model.timings["train"].append(stop_time(start_timer, stop_timer))
 
@@ -984,19 +963,27 @@ def main(args, batches=None):
             if args.timing:
                 sample_dur = [x / 1000 for x in model.timings["sample"]]
                 train_dur = [x / 1000 for x in model.timings["train"]]
-                # selectfeats_dur = [x / 1000 for x in model.timings["selectfeats"]]
-                sf_precomp_dur = [x / 1000 for x in model.timings["selectfeats-precomp"]]
-                sf_sortdst_dur = [x / 1000 for x in model.timings["selectfeats-sortdst"]]
-                sf_tallysplit_dur = [x / 1000 for x in model.timings["selectfeats-tallysplit"]]
-                sf_tallya2a_dur = [x / 1000 for x in model.timings["selectfeats-tallya2a"]]
-                sf_vtxsa2a_dur = [x / 1000 for x in model.timings["selectfeats-vtxsa2a"]]
-                sf_featsa2a_dur = [x / 1000 for x in model.timings["selectfeats-featsa2a"]]
+                fwd_dur = [x / 1000 for x in model.timings["fwd"]]
+                bwd_dur = [x / 1000 for x in model.timings["bwd"]]
+                selectfeats_dur = [x / 1000 for x in model.timings["selectfeats"]]
+                precomp_dur = [x / 1000 for x in model.timings["precomp"]]
+                spmm_dur = [x / 1000 for x in model.timings["spmm"]]
+                gemmi_dur = [x / 1000 for x in model.timings["gemm_i"]]
+                gemmw_dur = [x / 1000 for x in model.timings["gemm_w"]]
+                aggr_dur = [x / 1000 for x in model.timings["aggr"]]
+                # sf_precomp_dur = [x / 1000 for x in model.timings["selectfeats-precomp"]]
+                # sf_sortdst_dur = [x / 1000 for x in model.timings["selectfeats-sortdst"]]
+                # sf_tallysplit_dur = [x / 1000 for x in model.timings["selectfeats-tallysplit"]]
+                # sf_tallya2a_dur = [x / 1000 for x in model.timings["selectfeats-tallya2a"]]
+                # sf_vtxsa2a_dur = [x / 1000 for x in model.timings["selectfeats-vtxsa2a"]]
+                # sf_featsa2a_dur = [x / 1000 for x in model.timings["selectfeats-featsa2a"]]
                 extract_dur = [x / 1000 for x in model.timings["extract"]]
 
                 print(f"sample: {np.sum(sample_dur)} extract: {np.sum(extract_dur)} train: {np.sum(train_dur)}", flush=True)
-                # print(f"feats: {np.sum(selectfeats_dur)}")
-                print(f"precomp: {np.sum(sf_precomp_dur)} sortdst: {np.sum(sf_sortdst_dur)} tallysplit: {np.sum(sf_tallysplit_dur)} tallya2a: {np.sum(sf_tallya2a_dur)} vtxsa2a: {np.sum(sf_vtxsa2a_dur)} featsa2a: {np.sum(sf_featsa2a_dur)}", flush=True)
-                print(f"median: {np.median(sf_featsa2a_dur)}", flush=True)
+                print(f"feats: {np.sum(selectfeats_dur)} fwd: {np.sum(fwd_dur)} bwd: {np.sum(bwd_dur)}")
+                print(f"precomp: {np.sum(precomp_dur)} spmm: {np.sum(spmm_dur)} gemmi: {np.sum(gemmi_dur)} gemmw: {np.sum(gemmw_dur)} aggr: {np.sum(aggr_dur)}")
+                # print(f"precomp: {np.sum(sf_precomp_dur)} sortdst: {np.sum(sf_sortdst_dur)} tallysplit: {np.sum(sf_tallysplit_dur)} tallya2a: {np.sum(sf_tallya2a_dur)} vtxsa2a: {np.sum(sf_vtxsa2a_dur)} featsa2a: {np.sum(sf_featsa2a_dur)}", flush=True)
+                # print(f"median: {np.median(sf_featsa2a_dur)}", flush=True)
                 print(f"total: {np.sum(dur)}", flush=True)
             if args.dataset != "Amazon" and ("Protein" not in args.dataset):
                 # out = model.evaluate(g_loc, features_loc)
