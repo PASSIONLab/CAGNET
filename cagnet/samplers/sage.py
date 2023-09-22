@@ -76,6 +76,7 @@ def sage_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_total,
                             size=(mb_count * batch_size, node_count_total))
 
     batches_expand = batches_expand.to_sparse_csr()
+
     adj_matrix = adj_matrix.to_sparse_csr()
     current_frontier = batches_expand
 
@@ -83,7 +84,7 @@ def sage_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_total,
         total_start_timer.record()
 
     for i in range(n_layers):
-        print(f"Sampling layer {i}", flush=True)
+        # print(f"Sampling layer {i}", flush=True)
         if i == 0:
             nnz = batch_size
         else:

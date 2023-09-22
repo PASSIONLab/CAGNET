@@ -66,28 +66,28 @@ class GCN(nn.Module):
         self.timings["gemm_w"] = []
         self.timings["aggr"] = []
 
-        # # input layer
-        self.layers.append(GCNConv(in_feats, n_hidden, self.partitioning, self.device))
-        # hidden layers
-        for i in range(n_layers - 2):
-                self.layers.append(GCNConv(n_hidden, n_hidden, self.partitioning, self.device))
-        # output layer
-        self.layers.append(GCNConv(n_hidden, n_classes, self.partitioning, self.device))
-        # self.layers.append(GCNConv(in_feats, n_classes, self.partitioning, self.device))
+        # # # input layer
+        # self.layers.append(GCNConv(in_feats, n_hidden, self.partitioning, self.device))
+        # # hidden layers
+        # for i in range(n_layers - 2):
+        #         self.layers.append(GCNConv(n_hidden, n_hidden, self.partitioning, self.device))
+        # # output layer
+        # self.layers.append(GCNConv(n_hidden, n_classes, self.partitioning, self.device))
+        # # self.layers.append(GCNConv(in_feats, n_classes, self.partitioning, self.device))
 
-        # self.layers.append(SAGEConv(in_feats, n_hidden, root_weight=False, bias=False))
-        # for _ in range(n_layers - 2):
-        #     self.layers.append(SAGEConv(n_hidden, n_hidden, root_weight=False, bias=False))
-        # self.layers.append(SAGEConv(n_hidden, n_classes, root_weight=False, bias=False))
+        self.layers.append(SAGEConv(in_feats, n_hidden, root_weight=False, bias=False))
+        for _ in range(n_layers - 2):
+            self.layers.append(SAGEConv(n_hidden, n_hidden, root_weight=False, bias=False))
+        self.layers.append(SAGEConv(n_hidden, n_classes, root_weight=False, bias=False))
 
     def forward(self, graphs, inputs, epoch):
         h = inputs
         for l, layer in enumerate(self.layers):
-            h = layer(self, graphs[l], h, epoch) # GCNConv
-            # nnz_index = graphs[l]._values().nonzero().squeeze() # SAGEConv
-            # edge_index = graphs[l]._indices()[:, nnz_index] # SAGEConv
+            # h = layer(self, graphs[l], h, epoch) # GCNConv
+            nnz_index = graphs[l]._values().nonzero().squeeze() # SAGEConv
+            edge_index = graphs[l]._indices()[:, nnz_index] # SAGEConv
             # edge_index = graphs[l] # SAGEConvfake
-            # h = self.layers[l](h, edge_index) # SAGEConv
+            h = self.layers[l](h, edge_index) # SAGEConv
             if l != len(self.layers) - 1:
                 # h = CAGF.relu(h, self.partitioning)
                 h = F.relu(h)
@@ -113,8 +113,8 @@ class GCN(nn.Module):
                 adj_batch = adj_batch.t().coalesce()
                 h_batch = features[n_id]
 
-                h = layer(self, adj_batch, h_batch, epoch=-1) # GCNConv
-                # h = layer(h_batch, edge_index) # SAGEConv
+                # h = layer(self, adj_batch, h_batch, epoch=-1) # GCNConv
+                h = layer(h_batch, edge_index) # SAGEConv
                 if l != len(self.layers) - 1:
                     h = CAGF.relu(h, self.partitioning)
                 hs.append(h)
@@ -227,9 +227,9 @@ def one5d_partition(rank, size, inputs, adj_matrix, data, features, classes, rep
     am_partitions = None
     am_pbyp = None
 
-    inputs = inputs.to(torch.device("cpu"))
-    adj_matrix = adj_matrix.to(torch.device("cpu"))
-    torch.cuda.synchronize()
+    # inputs = inputs.to(torch.device("cpu"))
+    # adj_matrix = adj_matrix.to(torch.device("cpu"))
+    # torch.cuda.synchronize()
 
     rank_c = rank // replication
     # Compute the adj_matrix and inputs partitions for this process
@@ -280,7 +280,7 @@ def one5d_partition(rank, size, inputs, adj_matrix, data, features, classes, rep
 
     print(f"rank: {rank} adj_matrix_loc.size: {adj_matrix_loc.size()}", flush=True)
     print(f"rank: {rank} inputs_loc.size: {inputs_loc.size()}", flush=True)
-    return inputs_loc, adj_matrix_loc, am_pbyp
+    return inputs_loc, adj_matrix_loc, am_partitions, input_partitions
 
 def one5d_partition_mb(rank, size, batches, replication, mb_count):
     rank_c = rank // replication
@@ -348,7 +348,7 @@ def main(args, batches=None):
         data.y = torch.rand(n).uniform_(0, num_classes - 1).long()
         # data.train_mask = torch.ones(n).long()
         data.train_mask = torch.zeros(n).long()
-        data.train_mask[:args.batch_size * 4096] = 1
+        data.train_mask[:args.batch_size * 1024] = 1
         data.test_mask = torch.zeros(n).long()
         data.test_mask[args.batch_size * args.n_bulkmb:] = 1
         adj_matrix = edge_index.t_()
@@ -365,7 +365,9 @@ def main(args, batches=None):
         inputs = torch.rand(n, num_features)
         data = Data()
         data.y = torch.rand(n).uniform_(0, num_classes - 1).long()
-        data.train_mask = torch.ones(n).long()
+        # data.train_mask = torch.ones(n).long()
+        data.train_mask = torch.zeros(n).long()
+        data.train_mask[:args.batch_size * 2048] = 1
         data.test_mask = torch.ones(n).long()
         adj_matrix = edge_index.t_()
         data = data.to(device)
@@ -390,6 +392,7 @@ def main(args, batches=None):
         data.y = data.y.to(device)
     elif args.dataset.startswith("ogb"):
         import ogb
+        data = Data()
         from ogb.nodeproppred import PygNodePropPredDataset # only import if necessary, takes a long time
         if ("papers100M" in args.dataset and rank % args.gpu == 0) or "products" in args.dataset:
             dataset = PygNodePropPredDataset(name=args.dataset, root="../../data")
@@ -439,35 +442,44 @@ def main(args, batches=None):
         return
 
     print("start partitioning", flush=True)
-    if args.dataset == "ogbn-papers100M" or args.dataset == "Protein_sg2":
+
+    torch.cuda.synchronize()
+    if args.dataset == "ogbn-papers100M" or "Protein" in args.dataset:
         if rank % args.gpu == 0:
+            inputs = inputs.to(torch.device("cpu"))
+            adj_matrix = adj_matrix.to(torch.device("cpu"))
             # send g_loc.nnz, g_loc, train_idx.len, and train_idx
+            features_loc, g_loc, am_partitions, input_partitions = \
+                    one5d_partition(rank, size, inputs, adj_matrix, data, 
+                                        inputs, num_classes, args.replication, \
+                                        args.normalize)
+
             for i in range(1, args.gpu):
                 print(f"iteration i: {i}", flush=True)
-                features_loc, g_loc, _ = one5d_partition(rank + i, size, inputs, adj_matrix, data, inputs, \
-                                                num_classes, args.replication, args.normalize)
+                rank_send_row = (rank + i) // args.replication
+                dst_gpu = rank + i
+                g_send = am_partitions[rank_send_row]
                 print("coalescing", flush=True)
-                g_loc = g_loc.coalesce().t_()
+                g_send = g_send.coalesce().t_()
                 print("normalizing", flush=True)
-                g_loc = g_loc.to(device)
-                g_loc = g_loc.double()
-                features_loc = features_loc.to(device)
+                g_send = g_send.to(device)
+                g_send = g_send.double()
+                features_send = input_partitions[rank_send_row].to(device)
                 edge_count = adj_matrix.size(1)
 
-                dst_gpu = rank + i
 
-                g_loc_meta = torch.cuda.LongTensor(6)
-                g_loc_meta[0] = g_loc._nnz()
-                g_loc_meta[1] = g_loc.size(0)
-                g_loc_meta[2] = g_loc.size(1)
-                g_loc_meta[3] = adj_matrix.size(1)
-                g_loc_meta[4] = num_features
-                g_loc_meta[5] = num_classes
-                dist.send(g_loc_meta, dst=dst_gpu)
-                dist.send(g_loc._indices(), dst=dst_gpu)
-                dist.send(g_loc._values(), dst=dst_gpu)
-                dist.send(features_loc, dst=dst_gpu)
-                dist.send(data.y, dst=dst_gpu)
+                g_send_meta = torch.cuda.LongTensor(6)
+                g_send_meta[0] = g_send._nnz()
+                g_send_meta[1] = g_send.size(0)
+                g_send_meta[2] = g_send.size(1)
+                g_send_meta[3] = adj_matrix.size(1)
+                g_send_meta[4] = num_features
+                g_send_meta[5] = num_classes
+                dist.send(g_send_meta, dst=dst_gpu)
+                dist.send(g_send._indices(), dst=dst_gpu)
+                dist.send(g_send._values(), dst=dst_gpu)
+                dist.send(features_send, dst=dst_gpu)
+                dist.send(data.y.float(), dst=dst_gpu)
 
                 if args.dataset == "ogbn-papers100M":
                     train_idx_len = torch.cuda.LongTensor(1).fill_(train_idx.size(0))
@@ -479,8 +491,8 @@ def main(args, batches=None):
                     dist.send(train_idx, dst=dst_gpu)
                     dist.send(test_idx, dst=dst_gpu)
 
-            features_loc, g_loc, _ = one5d_partition(rank, size, inputs, adj_matrix, data, inputs, num_classes, \
-                                            args.replication, args.normalize)
+            # features_loc, g_loc, _, _ = one5d_partition(rank, size, inputs, adj_matrix, data, inputs, num_classes, \
+            #                                 args.replication, args.normalize)
             print("coalescing", flush=True)
             g_loc = g_loc.coalesce().t_()
             print("normalizing", flush=True)
@@ -512,7 +524,7 @@ def main(args, batches=None):
                 inputs = torch.cuda.FloatTensor(rows, num_features)
             dist.recv(inputs, src=src_gpu)
 
-            data = Data()
+            # data = Data()
             data.y = torch.cuda.FloatTensor(g_loc_meta[2].item())
             dist.recv(data.y, src=src_gpu)
             data.y = data.y.long()
@@ -536,7 +548,7 @@ def main(args, batches=None):
             torch.cuda.synchronize()
             features_loc = inputs.to(device)
     else:
-        features_loc, g_loc, _ = one5d_partition(rank, size, inputs, adj_matrix, data, inputs, num_classes, \
+        features_loc, g_loc, _, _ = one5d_partition(rank, size, inputs, adj_matrix, data, inputs, num_classes, \
                                                     args.replication, args.normalize)
         print("coalescing", flush=True)
         g_loc = g_loc.coalesce().t_()
@@ -550,6 +562,7 @@ def main(args, batches=None):
     print("end partitioning", flush=True)
     print(f"g_loc.nnz: {g_loc._nnz()}", flush=True)
     print(f"features_loc.size: {features_loc.size()}", flush=True)
+    dist.barrier()
 
     if rank == 0:
         adj_matrix = adj_matrix.cpu()
@@ -625,7 +638,7 @@ def main(args, batches=None):
             epoch_start = time.time()
         model.train()
 
-        print("Constructing batches", flush=True)
+        # print("Constructing batches", flush=True)
         torch.cuda.nvtx.range_push("nvtx-construct-batches")
         batch_count = -(train_nid.size(0) // -args.batch_size) # ceil(train_nid.size(0) / batch_size)
         if batches is None:
@@ -654,10 +667,9 @@ def main(args, batches=None):
             epoch_start = time.time()
         model.train()
 
-        print("Constructing batches", flush=True)
         torch.cuda.nvtx.range_push("nvtx-construct-batches")
         batch_count = -(train_nid.size(0) // -args.batch_size) # ceil(train_nid.size(0) / batch_size)
-        print(f"batch_count: {batch_count}", flush=True)
+        # print(f"batch_count: {batch_count}", flush=True)
         if batches is None:
             torch.manual_seed(epoch)
             vertex_perm = torch.randperm(train_nid.size(0))
@@ -701,7 +713,7 @@ def main(args, batches=None):
 
             if epoch >= 1:
                 start_time(start_timer)
-            print("Sampling", flush=True)
+            # print("Sampling", flush=True)
             torch.cuda.nvtx.range_push("nvtx-sampling")
             if args.sample_method == "ladies":
                 current_frontier, next_frontier, adj_matrices_bulk = \
@@ -789,13 +801,13 @@ def main(args, batches=None):
             torch.cuda.nvtx.range_pop()
 
             torch.cuda.synchronize()
-            print("Training", flush=True)
+            # print("Training", flush=True)
             torch.cuda.nvtx.range_push("nvtx-training")
             bulk_batch_count = args.bulk_batch_fetch
 
             # for b in range(0, rank_n_bulkmb, bulk_batch_count):
             # for i in range(b, b + bulk_batch_count):
-            for i in range(args.n_bulkmb):
+            for i in range(rank_n_bulkmb):
                 # forward
                 # batch_vtxs = frontiers[0][i].view(-1)
                 torch.cuda.nvtx.range_push("nvtx-extracting")
@@ -828,6 +840,7 @@ def main(args, batches=None):
                     adj_row_select_max = (i + 1) * args.batch_size  * (args.samp_num ** l)
                     adj_row_select_min += adj_select_size * rank_col * rank_n_bulkmb_row
                     adj_row_select_max += adj_select_size * rank_col * rank_n_bulkmb_row
+                    adj_row_select_max = min(adj_row_select_max, adj_matrices_bulk[l].size(0))
 
                     if epoch >= 1:
                         start_time(start_inner_timer)
@@ -853,8 +866,9 @@ def main(args, batches=None):
                                                         (args.batch_size, args.samp_num + args.batch_size))
                     else:
                         adj_sample_row_lens = adj_sample_crows[1:] - adj_sample_crows[:-1]
+                        row_count = adj_row_select_max - adj_row_select_min
                         adj_sample_rows = torch.repeat_interleave(
-                                            torch.arange(0, args.batch_size * (args.samp_num ** l), 
+                                            torch.arange(0, row_count, 
                                                             device=adj_sample_row_lens.device), 
                                             adj_sample_row_lens)
                         adj_sample_indices = torch.stack((adj_sample_rows, adj_sample_cols))
@@ -867,7 +881,7 @@ def main(args, batches=None):
 
                     if epoch >= 1:
                         start_time(start_inner_timer)
-                    g adjs[args.n_layers - l - 1] = adj_matrix_sample.to_sparse_coo()
+                    # adjs[args.n_layers - l - 1] = adj_matrix_sample.to_sparse_coo()
                     adjs[args.n_layers - l - 1] = adj_matrix_sample.coalesce()
                     if epoch >= 1:
                         model.timings["extract-coalesce"].append(stop_time(start_inner_timer, stop_inner_timer))
@@ -890,7 +904,7 @@ def main(args, batches=None):
                     src_vtx_per_proc = src_vtxs_sort.split(tally.tolist())
         
                     output_tally = []
-                    for j in range(size):
+                    for j in range(proc_row):
                         output_tally.append(torch.cuda.IntTensor(1))
                     input_tally = list(torch.split(tally, 1))
 
@@ -918,8 +932,8 @@ def main(args, batches=None):
                 if epoch >= 1:
                     model.timings["selectfeats"].append(stop_time(start_inner_timer, stop_inner_timer))
 
-                # features_batch = torch.cuda.FloatTensor(4000, 128)
-                # adjs[0] = torch.randint(0, 4000, (2, 4000)).cuda().long()
+                # features_batch = torch.cuda.FloatTensor(3500, 128)
+                # adjs[0] = torch.randint(0, 3500, (2, 3500)).cuda().long()
                 # adjs[1] = torch.randint(0, 600, (2, 600)).cuda().long()
 
                 if epoch >= 1:
@@ -933,8 +947,8 @@ def main(args, batches=None):
                 if epoch >= 1:
                     start_time(start_inner_timer)
                 torch.cuda.nvtx.range_push("nvtx-loss")
-                loss = F.nll_loss(logits, data.y[batch_vtxs].long()) # GCNConv
-                # loss = F.nll_loss(logits[:args.batch_size], data.y[batch_vtxs]) # SAGEConv
+                # loss = F.nll_loss(logits, data.y[batch_vtxs].long()) # GCNConv
+                loss = F.nll_loss(logits[:args.batch_size], data.y[batch_vtxs].long()) # SAGEConv
 
                 optimizer.zero_grad()
                 torch.cuda.nvtx.range_pop()
@@ -1002,7 +1016,7 @@ def main(args, batches=None):
                 # print(f"precomp: {np.sum(sf_precomp_dur)} sortdst: {np.sum(sf_sortdst_dur)} tallysplit: {np.sum(sf_tallysplit_dur)} tallya2a: {np.sum(sf_tallya2a_dur)} vtxsa2a: {np.sum(sf_vtxsa2a_dur)} featsa2a: {np.sum(sf_featsa2a_dur)}", flush=True)
                 # print(f"median: {np.median(sf_featsa2a_dur)}", flush=True)
                 print(f"total: {np.sum(dur)}", flush=True)
-            if args.dataset != "Amazon" and ("Protein" not in args.dataset):
+            if False and args.dataset != "Amazon" and ("Protein" not in args.dataset):
                 # out = model.evaluate(g_loc, features_loc)
                 out = model.evaluate(adj_matrix, inputs)
                 datay_cpu = data.y.cpu()

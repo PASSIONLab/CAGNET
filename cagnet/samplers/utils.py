@@ -481,6 +481,8 @@ def dist_saspgemm15D(mata, matb, replication, rank, size, row_groups, col_groups
 
         # Gather nnz column counts on rank q
         start_time(start_timer)
+        # print(f"nnz_cols_count: {nnz_cols_count} q: {q} rank_col: {rank_col}", flush=True)
+        torch.cuda.synchronize()
         if rank == q:
             nnz_cols_count_list = []
             for j in range(size // replication):
@@ -762,6 +764,7 @@ def dist_saspgemm15D(mata, matb, replication, rank, size, row_groups, col_groups
                 # matc_chunk_cols = matc_chunk.col_indices()
                 # matc_chunk_values = matc_chunk.values()
                 matc_row_lens = matc_chunk_crows[1:] - matc_chunk_crows[:-1]
+                lt_zero_mask = matc_row_lens < 0
                 matc_chunk_rows = torch.repeat_interleave(
                                     torch.arange(0, mata_recv.size(0), device=mata_recv.device), 
                                     matc_row_lens)

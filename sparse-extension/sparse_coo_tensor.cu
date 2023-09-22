@@ -57,7 +57,8 @@ using namespace at::sparse;
 #define B_PW_SH_SIZE 2048
 #define IMB_SH_SIZE 1024
 #define B_SH_SIZE 512
-#define HASH_SCAL 107 // Set disjoint number to COMP_SH_SIZE
+// #define HASH_SCAL 107 // Set disjoint number to COMP_SH_SIZE
+#define HASH_SCAL 4 // Set disjoint number to COMP_SH_SIZE
 
 /* Structure for SpGEMM */
 typedef struct {
@@ -89,7 +90,7 @@ void init_bin(sfBIN *bin, int M)
     cudaMalloc((void **)&(bin->d_bin_size), sizeof(int) * BIN_NUM);
     cudaMalloc((void **)&(bin->d_bin_offset), sizeof(int) * BIN_NUM);
 
-    // auto options = torch::TensorOptions().dtype(torch::kInt32).device(torch::kCUDA);
+    auto options = torch::TensorOptions().dtype(torch::kInt32).device(torch::kCUDA);
     // torch::Tensor d_row_perm_tens = torch::empty({M}, torch::TensorOptions()
     //                                                                 .dtype(torch::kInt32)
     //                                                                 .device(torch::kCUDA));
@@ -650,6 +651,7 @@ __global__ void set_row_nz_bin_each_gl(const int *d_arpt, const int *d_acol,
             hash = (bcol * HASH_SCAL) % max_row_nz;
             adr = offset + hash;
             while (1) {
+                // printf("infinite loop key %d adr %d offset: %d hash: %d d_check[adr] %d bcol: %d max_row_nz: %d\n", key, adr, offset, hash, d_check[adr], bcol, max_row_nz);
                 if (d_check[adr] == key) {
                     break;
                 }
@@ -1159,17 +1161,17 @@ void set_row_nnz(int *d_arpt, int *d_acol,
                                      	{
             	    int fail_count;
             	    fail_count = 0;
-            	    // int *d_fail_count, *d_fail_perm;
-            	    // checkCudaErrors(cudaMalloc((void **)&d_fail_count, sizeof(int)));
-            	    // checkCudaErrors(cudaMalloc((void **)&d_fail_perm, sizeof(int) * bin->bin_size[i]));
-                    torch::Tensor d_fail_count_tens = torch::zeros({1}, torch::TensorOptions()
-                                                                                    .dtype(torch::kInt32)
-                                                                                    .device(torch::kCUDA));
-                    torch::Tensor d_fail_perm_tens = torch::zeros({bin->bin_size[i]}, torch::TensorOptions()
-                                                                                    .dtype(torch::kInt32)
-                                                                                    .device(torch::kCUDA));
-                    int *d_fail_count = d_fail_count_tens.data<int>();
-                    int *d_fail_perm = d_fail_perm_tens.data<int>();
+            	    int *d_fail_count, *d_fail_perm;
+            	    checkCudaErrors(cudaMalloc((void **)&d_fail_count, sizeof(int)));
+            	    checkCudaErrors(cudaMalloc((void **)&d_fail_perm, sizeof(int) * bin->bin_size[i]));
+                    // torch::Tensor d_fail_count_tens = torch::zeros({1}, torch::TensorOptions()
+                    //                                                                 .dtype(torch::kInt32)
+                    //                                                                 .device(torch::kCUDA));
+                    // torch::Tensor d_fail_perm_tens = torch::zeros({bin->bin_size[i]}, torch::TensorOptions()
+                    //                                                                 .dtype(torch::kInt32)
+                    //                                                                 .device(torch::kCUDA));
+                    // int *d_fail_count = d_fail_count_tens.data<int>();
+                    // int *d_fail_perm = d_fail_perm_tens.data<int>();
             	    cudaMemcpy(d_fail_count, &fail_count, sizeof(int), cudaMemcpyHostToDevice);
             	    BS = 1024;
             	    GS = bin->bin_size[i];
@@ -1182,13 +1184,13 @@ void set_row_nnz(int *d_arpt, int *d_acol,
             	    if (fail_count > 0) {
               	        int max_row_nz = bin->max_intprod;
             	        size_t table_size = (size_t)max_row_nz * fail_count;
-            	        // int *d_check;
-            	        // checkCudaErrors(cudaMalloc((void **)&(d_check), sizeof(int) * table_size));
+            	        int *d_check;
+            	        checkCudaErrors(cudaMalloc((void **)&(d_check), sizeof(int) * table_size));
 
-                        torch::Tensor d_check_tens = torch::zeros({(long)table_size}, torch::TensorOptions()
-                                                                                        .dtype(torch::kInt32)
-                                                                                        .device(torch::kCUDA));
-                        int *d_check = d_check_tens.data<int>();
+                        // torch::Tensor d_check_tens = torch::zeros({(long)table_size}, torch::TensorOptions()
+                        //                                                                 .dtype(torch::kInt32)
+                        //                                                                 .device(torch::kCUDA));
+                        // int *d_check = d_check_tens.data<int>();
             	        BS = 1024;
             	        GS = div_round_up(table_size, BS);
             	        init_check<<<GS, BS, 0, bin->stream[i]>>>(d_check, table_size);
@@ -1197,10 +1199,10 @@ void set_row_nnz(int *d_arpt, int *d_acol,
                      		  (d_arpt, d_acol, d_brpt, d_bcol,
 		                   d_fail_perm, bin->d_row_nz, d_check,
              		                   max_row_nz, 0, fail_count);
-                                  	                    // cudaFree(d_check);
+                                  	                    cudaFree(d_check);
   	                }
-	            // cudaFree(d_fail_count);
-	            // cudaFree(d_fail_perm);
+	            cudaFree(d_fail_count);
+	            cudaFree(d_fail_perm);
 	        }
 	        break;
 	      default :
