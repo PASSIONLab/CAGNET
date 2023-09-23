@@ -191,7 +191,43 @@ def one5d_partition(rank, size, inputs, adj_matrix, data, features, classes, rep
 
     print(f"rank: {rank} adj_matrix_loc.size: {adj_matrix_loc.size()}", flush=True)
     print(f"rank: {rank} inputs_loc.size: {inputs_loc.size()}", flush=True)
-    return inputs_loc, adj_matrix_loc, am_pbyp
+    # return inputs_loc, adj_matrix_loc, am_pbyp
+    return input_partitions, am_partitions, am_pbyp
+
+def split_am_partition(am_partition, partitions, rank, size, replication, normalize):
+    node_count = am_partition.size(0)
+    if not partitions:
+        n_per_proc = math.ceil(float(node_count) / (size // replication))
+        partitions = [n_per_proc]*(size // replication)
+        partitions[size//replication -1] = node_count - math.ceil(float(node_count) / (size//replication))*((size//replication) - 1)  
+
+    am_pbyp = None
+    print(am_partition.size())
+    proc_node_count = am_partition.size(1) # column count
+    proc_node_count_row = int(math.ceil(node_count / (size // replication)))
+    am_pbyp, _ = split_coo(am_partition._indices(), partitions, 0)
+    rank_c = size // replication
+    rank_col = size % replication
+    for i in range(len(am_pbyp)):
+        vtx_row = proc_node_count_row * i
+        vtx_col = proc_node_count_row * rank_col
+        if i == size // replication - 1:
+            last_node_count = node_count - proc_node_count_row * i
+            am_pbyp[i] = torch.sparse_coo_tensor(am_pbyp[i], torch.ones(am_pbyp[i].size(1)), 
+                                                    size=(last_node_count, proc_node_count),
+                                                    requires_grad=False)
+
+            am_pbyp[i] = scale_elements(am_partition._indices(), am_pbyp[i], node_count, vtx_row, 
+                                            vtx_col, normalize)
+        else:
+            am_pbyp[i] = torch.sparse_coo_tensor(am_pbyp[i], torch.ones(am_pbyp[i].size(1)), 
+                                                    size=(proc_node_count_row, proc_node_count),
+                                                    requires_grad=False)
+
+            am_pbyp[i] = scale_elements(am_partition._indices(), am_pbyp[i], node_count, vtx_row, 
+                                            vtx_col, normalize)
+
+    return am_pbyp
 
 def evaluate(model, graph, features, labels, nid, nid_count, ampbyp, group):
     model.eval()
@@ -462,6 +498,35 @@ def main(args):
         data = data.to(device)
         inputs.requires_grad = True
         data.y = data.y.to(device)
+    elif args.dataset.startswith("ogb"):
+        import ogb
+        data = Data()
+        from ogb.nodeproppred import PygNodePropPredDataset # only import if necessary, takes a long time
+        if ("papers100M" in args.dataset and rank % args.gpu == 0) or "products" in args.dataset:
+            dataset = PygNodePropPredDataset(name=args.dataset, root="../../data")
+            data = dataset[0]
+
+            split_idx = dataset.get_idx_split() 
+            # train_loader = DataLoader(dataset[split_idx["train"]], batch_size=32, shuffle=True)
+            # valid_loader = DataLoader(dataset[split_idx["valid"]], batch_size=32, shuffle=False)
+            # test_loader = DataLoader(dataset[split_idx["test"]], batch_size=32, shuffle=False)
+            # data = data.to(device)
+            # data.x.requires_grad = True
+            # inputs = data.x.to(device)
+            inputs = data.x
+            data.y = data.y.squeeze().to(device)
+            print(f"data.y: {data.y}", flush=True)
+            print(f"data.y.size: {data.y.size()}", flush=True)
+            print(f"data.y.dtype: {data.y.dtype}", flush=True)
+            # inputs.requires_grad = True
+            # data.y = data.y.to(device)
+            num_features = dataset.num_features
+            edge_index = data.edge_index
+            num_classes = dataset.num_classes
+            adj_matrix = edge_index
+            split_idx = dataset.get_idx_split()
+            train_idx = split_idx['train'].to(device)
+            test_idx = split_idx['test'].to(device)
         
     if args.normalize:
         adj_matrix, _ = add_remaining_self_loops(adj_matrix, num_nodes=inputs.size(0))
@@ -473,19 +538,131 @@ def main(args):
     if args.partitions:
         partitions_file = open(args.partitions, "r")
         partitions_data = partitions_file.read().strip()
-        print(partitions_data)
+        # print(partitions_data)
         partitions = [int(x) for x in partitions_data.split("\n")]
 
     row_groups, col_groups = get_proc_groups(rank, size, args.replication)
 
+    proc_row = size // args.replication
     rank_c = rank // args.replication
     rank_col = rank % args.replication
     if rank_c >= (size // args.replication):
         return
 
-    features_loc, g_loc, ampbyp = one5d_partition(rank, size, inputs, adj_matrix, data, \
-                                                      inputs, num_classes, args.replication, args.normalize, \
-                                                      device, partitions)
+    if args.dataset == "ogbn-papers100M":
+        if rank % args.gpu == 0:
+            inputs = inputs.to(torch.device("cpu"))
+            adj_matrix = adj_matrix.to(torch.device("cpu"))
+            # send g_loc.nnz, g_loc, train_idx.len, and train_idx
+            input_partitions, am_partitions, ampbyp = \
+                    one5d_partition(rank, size, inputs, adj_matrix, data, 
+                                        inputs, num_classes, args.replication, \
+                                        args.normalize, device, partitions)
+            features_loc = input_partitions[rank_c]
+            g_loc = am_partitions[rank_c]
+
+            for i in range(1, args.gpu):
+                print(f"iteration i: {i}", flush=True)
+                rank_send_row = (rank + i) // args.replication
+                dst_gpu = rank + i
+                g_send = am_partitions[rank_send_row]
+                print("coalescing", flush=True)
+                g_send = g_send.coalesce()
+                print("normalizing", flush=True)
+                g_send = g_send.to(device)
+                g_send = g_send.double()
+                features_send = input_partitions[rank_send_row].to(device)
+                edge_count = adj_matrix.size(1)
+
+
+                g_send_meta = torch.cuda.LongTensor(6)
+                g_send_meta[0] = g_send._nnz()
+                g_send_meta[1] = g_send.size(0)
+                g_send_meta[2] = g_send.size(1)
+                g_send_meta[3] = adj_matrix.size(1)
+                g_send_meta[4] = num_features
+                g_send_meta[5] = num_classes
+                dist.send(g_send_meta, dst=dst_gpu)
+                dist.send(g_send._indices(), dst=dst_gpu)
+                dist.send(g_send._values(), dst=dst_gpu)
+                dist.send(features_send, dst=dst_gpu)
+                dist.send(data.y.float(), dst=dst_gpu)
+
+                if args.dataset == "ogbn-papers100M":
+                    train_idx_len = torch.cuda.LongTensor(1).fill_(train_idx.size(0))
+                    test_idx_len = torch.cuda.LongTensor(1).fill_(test_idx.size(0))
+                    dist.send(train_idx_len, dst=dst_gpu)
+                    dist.send(test_idx_len, dst=dst_gpu)
+                    dist.send(train_idx, dst=dst_gpu)
+                    dist.send(test_idx, dst=dst_gpu)
+
+            # features_loc, g_loc, _, _ = one5d_partition(rank, size, inputs, adj_matrix, data, inputs, num_classes, \
+            #                                 args.replication, args.normalize)
+            print("coalescing", flush=True)
+            g_loc = g_loc.coalesce().t_()
+            print("normalizing", flush=True)
+            g_loc = g_loc.to(device)
+            features_loc = features_loc.to(device)
+            g_loc = g_loc.double()
+            edge_count = adj_matrix.size(1)
+        else:
+            src_gpu = rank - (rank % args.gpu)
+            g_loc_meta = torch.cuda.LongTensor(6).fill_(0)
+            dist.recv(g_loc_meta, src=src_gpu)
+
+            g_loc_indices = torch.cuda.LongTensor(2, g_loc_meta[0].item())
+            dist.recv(g_loc_indices, src=src_gpu)
+
+            g_loc_values = torch.cuda.DoubleTensor(g_loc_meta[0].item())
+            dist.recv(g_loc_values, src=src_gpu)
+
+            num_features = g_loc_meta[4].item()
+            num_classes = g_loc_meta[5].item()
+            if rank_c < proc_row - 1:
+                inputs = torch.cuda.FloatTensor(g_loc_meta[2].item(), num_features)
+            else:
+                # rows = g_loc_meta[2].item() + (g_loc_meta[1].item() - proc_row * g_loc_meta[2].item())
+                normal_node_count = int(math.ceil(g_loc_meta[1].item() / (size // args.replication)))
+                rows = g_loc_meta[1].item() - (proc_row - 1) * normal_node_count
+                print(f"rows: {rows}", flush=True)
+                inputs = torch.cuda.FloatTensor(rows, num_features)
+            dist.recv(inputs, src=src_gpu)
+
+            # data = Data()
+            data.y = torch.cuda.FloatTensor(g_loc_meta[1].item())
+            dist.recv(data.y, src=src_gpu)
+            data.y = data.y.long()
+
+            g_loc = torch.sparse_coo_tensor(g_loc_indices, g_loc_values, \
+                                                size=torch.Size([g_loc_meta[1], g_loc_meta[2]]))
+            edge_count = g_loc_meta[3].item()
+            if args.dataset == "ogbn-papers100M":
+                train_idx_len = torch.cuda.LongTensor(1).fill_(0)
+                test_idx_len = torch.cuda.LongTensor(1).fill_(0)
+                dist.recv(train_idx_len, src=src_gpu)
+                dist.recv(test_idx_len, src=src_gpu)
+
+                print(f"train_idx_len: {train_idx_len}", flush=True)
+                train_idx = torch.cuda.LongTensor(train_idx_len.item()).fill_(0)
+                test_idx = torch.cuda.LongTensor(test_idx_len.item()).fill_(0)
+                dist.recv(train_idx, src=src_gpu)
+                dist.recv(test_idx, src=src_gpu)
+                print(f"recv train_idx: {train_idx}", flush=True)
+                print(f"recv test_idx: {test_idx}", flush=True)
+            g_loc = g_loc.cpu()
+            ampbyp = split_am_partition(g_loc, partitions, rank, size, args.replication, args.normalize)
+            g_loc = g_loc.cuda().coalesce().t_()
+            features_loc = inputs.to(device)
+            print(f"g_loc.size: {g_loc.size()}", flush=True)
+            print(f"features_loc.size: {features_loc.size()}", flush=True)
+            print(f"ampbyp: {ampbyp}", flush=True)
+
+    else:
+        features_partition, g_loc_partitions, ampbyp = one5d_partition(rank, size, inputs, adj_matrix, data, \
+                                                                  inputs, num_classes, args.replication, \
+                                                                  args.normalize, device, partitions)
+        features_loc = features_partition[rank_c]
+        g_loc = g_loc_partitions[rank_c]
 
     # one5d_partition(rank, size, inputs, adj_matrix, data, features, classes, replication, normalize, device)
 
@@ -553,18 +730,33 @@ def main(args):
     # use optimizer
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
 
-    n_per_proc = math.ceil(float(g_loc.size(0)) / (size / args.replication))
+    print(f"g_loc: {g_loc}", flush=True)
+    n_per_proc = math.ceil(float(g_loc.size(1)) / (size / args.replication))
 
     rank_train_mask = []
     labels_rank = []
 
-    if partitions:
-        rank_train_mask = torch.split(data.train_mask, partitions, dim=0)[rank_c]
-        labels_rank = torch.split(data.y, partitions, dim=0)[rank_c]
+    if "ogb" not in args.dataset:
+        train_nid = data.train_mask.nonzero().squeeze()
+        if partitions:
+            rank_train_mask = torch.split(data.train_mask, partitions, dim=0)[rank_c]
+            labels_rank = torch.split(data.y, partitions, dim=0)[rank_c]
+        else:
+            print(data.train_mask.size())
+            rank_train_mask = torch.split(data.train_mask, n_per_proc, dim=0)[rank_c]
+            labels_rank = torch.split(data.y, n_per_proc, dim=0)[rank_c]
     else:
-        print(data.train_mask.size())
-        rank_train_mask = torch.split(data.train_mask, n_per_proc, dim=0)[rank_c]
-        labels_rank = torch.split(data.y, n_per_proc, dim=0)[rank_c]
+        train_mask = torch.zeros(g_loc.size(1)).cuda()
+        train_mask = train_mask.scatter_(0, train_idx, True)
+        train_nid = train_idx
+        if partitions:
+            rank_train_mask = torch.split(train_mask, partitions, dim=0)[rank_c]
+            labels_rank = torch.split(data.y, partitions, dim=0)[rank_c]
+        else:
+            rank_train_mask = torch.split(train_mask, n_per_proc, dim=0)[rank_c]
+            labels_rank = torch.split(data.y, n_per_proc, dim=0)[rank_c]
+  
+
 
     # rank_train_mask = torch.split(data.train_mask, n_per_proc, dim=0)[rank_c]
     # rank_test_mask = torch.split(data.test_mask, n_per_proc, dim=0)[rank_c]
@@ -572,7 +764,6 @@ def main(args):
     rank_train_nids = rank_train_mask.nonzero().squeeze()
     # rank_test_nids = rank_test_mask.nonzero().squeeze()
 
-    train_nid = data.train_mask.nonzero().squeeze()
     # test_nid = data.test_mask.nonzero().squeeze()
 
     torch.manual_seed(0)
@@ -585,8 +776,8 @@ def main(args):
 
         # forward
         logits = model(g_loc, features_loc, ampbyp, epoch)
-        loss = CAGF.cross_entropy(logits[rank_train_nids], labels_rank[rank_train_nids], train_nid.size(0), \
-                                        num_classes, partitioning, rank_c, col_groups[0], \
+        loss = CAGF.cross_entropy(logits[rank_train_nids], labels_rank[rank_train_nids].long(), \
+                                        train_nid.size(0), num_classes, partitioning, rank_c, col_groups[0], \
                                         size // args.replication)
 
         optimizer.zero_grad()
