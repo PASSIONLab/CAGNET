@@ -31,3 +31,6 @@ examples/cagnet_outputs/
 examples/*.out
 examples/*ncu-rep
 examples/*nsys-rep
+examples/job*
+examples/*.batch
+examples/sp-aware/
