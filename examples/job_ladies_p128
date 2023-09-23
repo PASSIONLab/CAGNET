@@ -1,0 +1,31 @@
+#!/bin/bash
+#SBATCH --qos=regular
+#SBATCH --time=03:00:00
+#SBATCH --nodes=32
+#SBATCH --gpus=128
+#SBATCH --ntasks-per-node=4
+#SBATCH --constraint=gpu
+#SBATCH --account=m1982_g
+
+hostname=$(scontrol show hostnames | head -n 1)
+echo $hostname
+module load nccl/2.11.4
+
+# # Amazon
+# srun -l -n 128 --cpus-per-task 32 --ntasks-per-node 4 --gpus-per-node 4 python gcn_15d.py --dataset Amazon --batch-size 256 --samp-num 256 --n-bulkmb 55662 --replication 1 --sample-method ladies --timing --hostname $hostname --semibulk 128 &> tmp_amazon_ladies_bs256sn256_mb55662_p128c1_semibulk128.out
+# 
+# srun -l -n 128 --cpus-per-task 32 --ntasks-per-node 4 --gpus-per-node 4 python gcn_15d.py --dataset Amazon --batch-size 256 --samp-num 256 --n-bulkmb 55662 --replication 2 --sample-method ladies --timing --hostname $hostname --semibulk 128 &> tmp_amazon_ladies_bs256sn256_mb55662_p128c2_semibulk128.out
+# 
+# srun -l -n 128 --cpus-per-task 32 --ntasks-per-node 4 --gpus-per-node 4 python gcn_15d.py --dataset Amazon --batch-size 256 --samp-num 256 --n-bulkmb 55662 --replication 4 --sample-method ladies --timing --hostname $hostname --semibulk 128 &> tmp_amazon_ladies_bs256sn256_mb55662_p128c4_semibulk128.out
+# 
+# srun -l -n 128 --cpus-per-task 32 --ntasks-per-node 4 --gpus-per-node 4 python gcn_15d.py --dataset Amazon --batch-size 256 --samp-num 256 --n-bulkmb 55662 --replication 8 --sample-method ladies --timing --hostname $hostname --semibulk 128 &> tmp_amazon_ladies_bs256sn256_mb55662_p128c8_semibulk128.out
+
+# Protein
+srun -l -n 128 --cpus-per-task 32 --ntasks-per-node 4 --gpus-per-node 4 python gcn_15d.py --dataset Protein --batch-size 256 --samp-num 256 --n-bulkmb 34162 --replication 8 --sample-method ladies --timing --hostname $hostname --semibulk 64 &> tmp_protein_ladies_bs256sn256_mb34162_p128c8_semibulk64.out
+
+srun -l -n 128 --cpus-per-task 32 --ntasks-per-node 4 --gpus-per-node 4 python gcn_15d.py --dataset Protein --batch-size 256 --samp-num 256 --n-bulkmb 34162 --replication 4 --sample-method ladies --timing --hostname $hostname --semibulk 64 &> tmp_protein_ladies_bs256sn256_mb34162_p128c4_semibulk64.out
+
+# srun -l -n 128 --cpus-per-task 32 --ntasks-per-node 4 --gpus-per-node 4 python gcn_15d.py --dataset Protein --batch-size 256 --samp-num 256 --n-bulkmb 34162 --replication 2 --sample-method ladies --timing --hostname $hostname --semibulk 64 &> tmp_protein_ladies_bs256sn256_mb34162_p128c2_semibulk64.out
+
+srun -l -n 128 --cpus-per-task 32 --ntasks-per-node 4 --gpus-per-node 4 python gcn_15d.py --dataset Protein --batch-size 256 --samp-num 256 --n-bulkmb 34162 --replication 1 --sample-method ladies --timing --hostname $hostname --semibulk 64 &> tmp_protein_ladies_bs256sn256_mb34162_p128c1_semibulk64.out
+

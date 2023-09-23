@@ -1,0 +1,34 @@
+#!/bin/bash
+#SBATCH --qos=regular
+#SBATCH --time=00:30:00
+#SBATCH --nodes=9
+#SBATCH --gpus=36
+#SBATCH --ntasks-per-node=4
+#SBATCH --constraint=gpu
+#SBATCH --account=m1982_g
+
+hostname=$(scontrol show hostnames | head -n 1)
+echo $hostname
+
+module load pytorch/1.13.1
+
+# # Reddit
+# srun -l -n 36 --export=ALL,MASTER_ADDR=$hostname --ntasks-per-node=4 --gpus-per-task=1 --gpu-bind=map_gpu:0,1,2,3 python gcn_distr_15d.py --accperrank 1 --epochs 100 --graphname Reddit --timing=True --midlayer 16 --runcount 1 --replication 1 --activations=True &> slurm_outputs/tmp_gcnmaster_reddit_p36c1.out
+# 
+# srun -l -n 36 --export=ALL,MASTER_ADDR=$hostname --ntasks-per-node=4 --gpus-per-task=1 --gpu-bind=map_gpu:0,1,2,3 python gcn_distr_15d.py --accperrank 1 --epochs 100 --graphname Reddit --timing=True --midlayer 16 --runcount 1 --replication 2 --activations=True &> slurm_outputs/tmp_gcnmaster_reddit_p36c2.out
+# 
+# srun -l -n 36 --export=ALL,MASTER_ADDR=$hostname --ntasks-per-node=4 --gpus-per-task=1 --gpu-bind=map_gpu:0,1,2,3 python gcn_distr_15d.py --accperrank 1 --epochs 100 --graphname Reddit --timing=True --midlayer 16 --runcount 1 --replication 4 --activations=True &> slurm_outputs/tmp_gcnmaster_reddit_p36c4.out
+# 
+# # Amazon
+# srun -l -n 36 --export=ALL,MASTER_ADDR=$hostname --ntasks-per-node=4 --gpus-per-task=1 --gpu-bind=map_gpu:0,1,2,3 python gcn_distr_15d.py --accperrank 1 --epochs 100 --graphname Amazon --timing=True --midlayer 16 --runcount 1 --replication 1 --activations=True &> slurm_outputs/tmp_gcnmaster_amazon_p36c1.out
+# 
+# srun -l -n 36 --export=ALL,MASTER_ADDR=$hostname --ntasks-per-node=4 --gpus-per-task=1 --gpu-bind=map_gpu:0,1,2,3 python gcn_distr_15d.py --accperrank 1 --epochs 100 --graphname Amazon --timing=True --midlayer 16 --runcount 1 --replication 2 --activations=True &> slurm_outputs/tmp_gcnmaster_amazon_p36c2.out
+# 
+# srun -l -n 36 --export=ALL,MASTER_ADDR=$hostname --ntasks-per-node=4 --gpus-per-task=1 --gpu-bind=map_gpu:0,1,2,3 python gcn_distr_15d.py --accperrank 1 --epochs 100 --graphname Amazon --timing=True --midlayer 16 --runcount 1 --replication 4 --activations=True &> slurm_outputs/tmp_gcnmaster_amazon_p36c4.out
+# 
+# # Protein
+# srun -l -n 36 --export=ALL,MASTER_ADDR=$hostname --ntasks-per-node=4 --gpus-per-task=1 --gpu-bind=map_gpu:0,1,2,3 python gcn_distr_15d.py --accperrank 1 --epochs 100 --graphname subgraph3 --timing=True --midlayer 16 --runcount 1 --replication 1 --activations=True &> slurm_outputs/tmp_gcnmaster_protein_p36c1.out
+# 
+# srun -l -n 36 --export=ALL,MASTER_ADDR=$hostname --ntasks-per-node=4 --gpus-per-task=1 --gpu-bind=map_gpu:0,1,2,3 python gcn_distr_15d.py --accperrank 1 --epochs 100 --graphname subgraph3 --timing=True --midlayer 16 --runcount 1 --replication 2 --activations=True &> slurm_outputs/tmp_gcnmaster_protein_p36c2.out
+
+srun -l -n 36 --export=ALL,MASTER_ADDR=$hostname --ntasks-per-node=4 --gpus-per-task=1 --gpu-bind=map_gpu:0,1,2,3 python gcn_distr_15d.py --accperrank 1 --epochs 100 --graphname subgraph3 --timing=True --midlayer 16 --runcount 1 --replication 4 --activations=True &> slurm_outputs/tmp_gcnmaster_protein_p36c4.out

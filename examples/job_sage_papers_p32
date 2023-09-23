@@ -1,0 +1,17 @@
+#!/bin/bash
+#SBATCH --qos=regular
+#SBATCH --time=00:30:00
+#SBATCH --nodes=8
+#SBATCH --gpus=32
+#SBATCH --ntasks-per-node=4
+#SBATCH --constraint=gpu
+#SBATCH --account=m1982_g
+
+hostname=$(scontrol show hostnames | head -n 1)
+echo $hostname
+# ogbn-papers100M
+srun -l -n 32 --cpus-per-task 32 --ntasks-per-node 4 --gpus-per-node 4 python gcn_15d.py --dataset ogbn-papers100M --batch-size 256 --samp-num 10 --n-bulkmb 4715 --replication 1 --sample-method sage --timing --baseline --hostname $hostname &> tmp_papers_sage_bs256sn10_mb4715_p32c1_noselect_noloops.out
+
+srun -l -n 32 --cpus-per-task 32 --ntasks-per-node 4 --gpus-per-node 4 python gcn_15d.py --dataset ogbn-papers100M --batch-size 256 --samp-num 10 --n-bulkmb 4715 --replication 2 --sample-method sage --timing --baseline --hostname $hostname &> tmp_papers_sage_bs256sn10_mb4715_p32c2_noselect_noloops.out
+
+srun -l -n 32 --cpus-per-task 32 --ntasks-per-node 4 --gpus-per-node 4 python gcn_15d.py --dataset ogbn-papers100M --batch-size 256 --samp-num 10 --n-bulkmb 4715 --replication 4 --sample-method sage --timing --baseline --hostname $hostname &> tmp_papers_sage_bs256sn10_mb4715_p32c4_noselect_noloops.out

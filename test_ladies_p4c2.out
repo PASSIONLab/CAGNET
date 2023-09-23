@@ -1,0 +1,9 @@
+srun: interrupt (one more within 1 sec to abort)
+srun: StepId=5977995.0 tasks 0-3: unknown
+srun: sending Ctrl-C to StepId=5977995.0
+srun: forcing job termination
+srun: Job step aborted: Waiting up to 32 seconds for job step to finish.
+0: slurmstepd: error: *** STEP 5977995.0 ON nid003785 CANCELLED AT 2023-03-08T08:03:40 ***
+srun: sending Ctrl-C to StepId=5977995.0
+srun: job abort in progress
+srun: launch/slurm: _step_signal: Terminating StepId=5977995.0

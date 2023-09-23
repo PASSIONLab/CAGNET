@@ -1,0 +1,58 @@
+#!/bin/bash
+#SBATCH -A m1982_g
+#SBATCH -C gpu
+#SBATCH --job-name="job-15d-Amazon-Large"
+#SBATCH -q regular
+#SBATCH -t 40:00
+#SBATCH -n 32
+#SBATCH -N 8
+
+
+export MASTER_ADDR=$(scontrol show hostnames | head -n 1)
+
+export PYTHONPATH="/global/u2/j/jinimukh/CAGNET/sparse-extension/build/lib/python3.9/site-packages":$PYTHONPATH
+export PYTHONPATH="/global/u2/j/jinimukh/CAGNET/sparse-extension/build/lib/python3.9/site-packages/sparse_coo_tensor_cpp-0.0.0-py3.9-linux-x86_64.egg":$PYTHONPATH
+
+export CFLAGS="-I$CUDA_HOME/include"
+module load pytorch/1.11
+
+
+
+#srun -l -n 16 --cpus-per-task 32 --ntasks-per-node 4 --gpus-per-node 4 python3 gcn_15d.py --dataset Amazon_Large --n-epochs 100 --n-hidden 16 --weight-decay 0 --timers --hostname=$MASTER_ADDR --replication=2 &> sp_amazonl_p16_c2.out
+
+#srun -l -n 16 --cpus-per-task 32 --ntasks-per-node 4 --gpus-per-node 4 python3 gcn_15d.py --dataset Amazon_Large --n-epochs 100 --n-hidden 16 --weight-decay 0 --timers --hostname=$MASTER_ADDR  --replication=4 &> sp_amazonl_p16_c4.out
+
+
+
+srun -l -n 32 --cpus-per-task 32 --ntasks-per-node 4 --gpus-per-node 4 python3 gcn_15d.py --dataset Amazon_Large --n-epochs 100 --n-hidden 16 --weight-decay 0 --timers --hostname=$MASTER_ADDR --replication=2 &> sp_amazonl_p32_c2.out
+
+srun -l -n 32 --cpus-per-task 32 --ntasks-per-node 4 --gpus-per-node 4 python3 gcn_15d.py --dataset Amazon_Large --n-epochs 100 --n-hidden 16 --weight-decay 0 --timers --hostname=$MASTER_ADDR  --replication=4 &> sp_amazonl_p32_c4.out
+
+
+
+#srun -l -n 64 --cpus-per-task 32 --ntasks-per-node 4 --gpus-per-node 4 python3 gcn_15d.py --dataset Amazon_Large --n-epochs 100 --n-hidden 16 --weight-decay 0 --timers --hostname=$MASTER_ADDR --replication=2 &> sp_amazonl_p64_c2.out
+
+#srun -l -n 64 --cpus-per-task 32 --ntasks-per-node 4 --gpus-per-node 4 python3 gcn_15d.py --dataset Amazon_Large --n-epochs 100 --n-hidden 16 --weight-decay 0 --timers --hostname=$MASTER_ADDR  --replication=4 &> sp_amazonl_p64_c4.out
+
+
+
+
+
+#srun -l -n 16 --cpus-per-task 32 --ntasks-per-node 4 --gpus-per-node 4 python3 gcn_15d.py --dataset Amazon_Large_8 --n-epochs 100 --n-hidden 16 --weight-decay 0 --timers --hostname=$MASTER_ADDR --replication=2 --partitions=/pscratch/sd/j/jinimukh/Amazon_Large_8/processed/partitions.txt &> sp_amazonl_p16_c2_gvb.out
+
+#srun -l -n 16 --cpus-per-task 32 --ntasks-per-node 4 --gpus-per-node 4 python3 gcn_15d.py --dataset Amazon_Large_4 --n-epochs 100 --n-hidden 16 --weight-decay 0 --timers --hostname=$MASTER_ADDR  --replication=4 --partitions=/pscratch/sd/j/jinimukh/Amazon_Large_4/processed/partitions.txt&> sp_amazonl_p64_c4_gvb.out
+
+
+
+#srun -l -n 32 --cpus-per-task 32 --ntasks-per-node 4 --gpus-per-node 4 python3 gcn_15d.py --dataset Amazon_Large_16 --n-epochs 100 --n-hidden 16 --weight-decay 0 --timers --hostname=$MASTER_ADDR --replication=2 --partitions=/pscratch/sd/j/jinimukh/Amazon_Large_16/processed/partitions.txt &> sp_amazonl_p32_c2_gvb.out
+
+#srun -l -n 32 --cpus-per-task 32 --ntasks-per-node 4 --gpus-per-node 4 python3 gcn_15d.py --dataset Amazon_Large_8 --n-epochs 100 --n-hidden 16 --weight-decay 0 --timers --hostname=$MASTER_ADDR  --replication=4  --partitions=/pscratch/sd/j/jinimukh/Amazon_Large_8/processed/partitions.txt&> sp_amazonl_p32_c4_gvb.out
+
+
+
+
+#srun -l -n 64 --cpus-per-task 32 --ntasks-per-node 4 --gpus-per-node 4 python3 gcn_15d.py --dataset Amazon_Large_32 --n-epochs 100 --n-hidden 16 --weight-decay 0 --timers --hostname=$MASTER_ADDR --replication=2 --partitions=/pscratch/sd/j/jinimukh/Amazon_Large_32/processed/partitions.txt &> sp_amazonl_p16_c2_gvb.out
+
+#srun -l -n 64 --cpus-per-task 32 --ntasks-per-node 4 --gpus-per-node 4 python3 gcn_15d.py --dataset Amazon_Large_16 --n-epochs 100 --n-hidden 16 --weight-decay 0 --timers --hostname=$MASTER_ADDR  --replication=4 --partitions=/pscratch/sd/j/jinimukh/Amazon_Large_16/processed/partitions.txt &> sp_amazonl_p16_c4_gvb.out
+
+

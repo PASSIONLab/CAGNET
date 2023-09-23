@@ -1,0 +1,6689 @@
+srun: Warning: can't honor --ntasks-per-node set to 4 which doesn't match the requested tasks 32 with the number of requested nodes 16. Ignoring --ntasks-per-node.
+ 0: Namespace(dataset='Reddit_32_graph_vb', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid002164', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Reddit_32_graph_vb/processed/partitions.txt')
+ 0: hostname: nid002164 rank: 0 size: 32
+26: Namespace(dataset='Reddit_32_graph_vb', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid002164', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Reddit_32_graph_vb/processed/partitions.txt')
+26: hostname: nid002189 rank: 26 size: 32
+27: Namespace(dataset='Reddit_32_graph_vb', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid002164', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Reddit_32_graph_vb/processed/partitions.txt')
+27: hostname: nid002189 rank: 27 size: 32
+29: Namespace(dataset='Reddit_32_graph_vb', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid002164', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Reddit_32_graph_vb/processed/partitions.txt')
+29: hostname: nid002192 rank: 29 size: 32
+28: Namespace(dataset='Reddit_32_graph_vb', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid002164', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Reddit_32_graph_vb/processed/partitions.txt')
+28: hostname: nid002192 rank: 28 size: 32
+ 3: Namespace(dataset='Reddit_32_graph_vb', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid002164', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Reddit_32_graph_vb/processed/partitions.txt')
+ 3: hostname: nid002165 rank: 3 size: 32
+ 1: Namespace(dataset='Reddit_32_graph_vb', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid002164', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Reddit_32_graph_vb/processed/partitions.txt')
+ 1: hostname: nid002164 rank: 1 size: 32
+17: Namespace(dataset='Reddit_32_graph_vb', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid002164', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Reddit_32_graph_vb/processed/partitions.txt')
+17: hostname: nid002180 rank: 17 size: 32
+16: Namespace(dataset='Reddit_32_graph_vb', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid002164', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Reddit_32_graph_vb/processed/partitions.txt')
+16: hostname: nid002180 rank: 16 size: 32
+12: Namespace(dataset='Reddit_32_graph_vb', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid002164', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Reddit_32_graph_vb/processed/partitions.txt')
+12: hostname: nid002176 rank: 12 size: 32
+13: Namespace(dataset='Reddit_32_graph_vb', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid002164', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Reddit_32_graph_vb/processed/partitions.txt')
+13: hostname: nid002176 rank: 13 size: 32
+ 2: Namespace(dataset='Reddit_32_graph_vb', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid002164', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Reddit_32_graph_vb/processed/partitions.txt')
+ 2: hostname: nid002165 rank: 2 size: 32
+30: Namespace(dataset='Reddit_32_graph_vb', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid002164', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Reddit_32_graph_vb/processed/partitions.txt')
+30: hostname: nid002193 rank: 30 size: 32
+ 6: Namespace(dataset='Reddit_32_graph_vb', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid002164', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Reddit_32_graph_vb/processed/partitions.txt')
+ 6: hostname: nid002169 rank: 6 size: 32
+20: Namespace(dataset='Reddit_32_graph_vb', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid002164', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Reddit_32_graph_vb/processed/partitions.txt')
+20: hostname: nid002184 rank: 20 size: 32
+21: Namespace(dataset='Reddit_32_graph_vb', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid002164', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Reddit_32_graph_vb/processed/partitions.txt')
+21: hostname: nid002184 rank: 21 size: 32
+10: Namespace(dataset='Reddit_32_graph_vb', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid002164', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Reddit_32_graph_vb/processed/partitions.txt')
+10: hostname: nid002173 rank: 10 size: 32
+ 5: Namespace(dataset='Reddit_32_graph_vb', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid002164', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Reddit_32_graph_vb/processed/partitions.txt')
+ 5: hostname: nid002168 rank: 5 size: 32
+14: Namespace(dataset='Reddit_32_graph_vb', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid002164', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Reddit_32_graph_vb/processed/partitions.txt')
+14: hostname: nid002177 rank: 14 size: 32
+ 8: Namespace(dataset='Reddit_32_graph_vb', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid002164', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Reddit_32_graph_vb/processed/partitions.txt')
+ 8: hostname: nid002172 rank: 8 size: 32
+22: Namespace(dataset='Reddit_32_graph_vb', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid002164', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Reddit_32_graph_vb/processed/partitions.txt')
+22: hostname: nid002185 rank: 22 size: 32
+ 4: Namespace(dataset='Reddit_32_graph_vb', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid002164', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Reddit_32_graph_vb/processed/partitions.txt')
+ 4: hostname: nid002168 rank: 4 size: 32
+11: Namespace(dataset='Reddit_32_graph_vb', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid002164', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Reddit_32_graph_vb/processed/partitions.txt')
+11: hostname: nid002173 rank: 11 size: 32
+ 9: Namespace(dataset='Reddit_32_graph_vb', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid002164', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Reddit_32_graph_vb/processed/partitions.txt')
+ 9: hostname: nid002172 rank: 9 size: 32
+24: Namespace(dataset='Reddit_32_graph_vb', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid002164', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Reddit_32_graph_vb/processed/partitions.txt')
+24: hostname: nid002188 rank: 24 size: 32
+ 7: Namespace(dataset='Reddit_32_graph_vb', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid002164', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Reddit_32_graph_vb/processed/partitions.txt')
+ 7: hostname: nid002169 rank: 7 size: 32
+18: Namespace(dataset='Reddit_32_graph_vb', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid002164', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Reddit_32_graph_vb/processed/partitions.txt')
+18: hostname: nid002181 rank: 18 size: 32
+31: Namespace(dataset='Reddit_32_graph_vb', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid002164', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Reddit_32_graph_vb/processed/partitions.txt')
+31: hostname: nid002193 rank: 31 size: 32
+19: Namespace(dataset='Reddit_32_graph_vb', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid002164', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Reddit_32_graph_vb/processed/partitions.txt')
+19: hostname: nid002181 rank: 19 size: 32
+15: Namespace(dataset='Reddit_32_graph_vb', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid002164', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Reddit_32_graph_vb/processed/partitions.txt')
+15: hostname: nid002177 rank: 15 size: 32
+25: Namespace(dataset='Reddit_32_graph_vb', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid002164', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Reddit_32_graph_vb/processed/partitions.txt')
+25: hostname: nid002188 rank: 25 size: 32
+23: Namespace(dataset='Reddit_32_graph_vb', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid002164', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Reddit_32_graph_vb/processed/partitions.txt')
+23: hostname: nid002185 rank: 23 size: 32
+29: 1
+29: Loading coo...
+26: 2
+26: Loading coo...
+ 3: 3
+ 3: Loading coo...
+27: 3
+27: Loading coo...
+28: 0
+28: Loading coo...
+12: 0
+12: Loading coo...
+10: 2
+10: Loading coo...
+ 5: 1
+ 5: Loading coo...
+20: 0
+20: Loading coo...
+13: 1
+13: Loading coo...
+ 2: 2
+ 2: Loading coo...
+30: 2
+30: Loading coo...
+ 6: 2
+ 6: Loading coo...
+ 8: 0
+ 8: Loading coo...
+14: 2
+14: Loading coo...
+24: 0
+24: Loading coo...
+22: 2
+22: Loading coo...
+21: 1
+21: Loading coo...
+31: 3
+31: Loading coo...
+ 9: 1
+ 9: Loading coo...
+11: 3
+11: Loading coo...
+15: 3
+15: Loading coo...
+ 7: 3
+ 7: Loading coo...
+18: 2
+18: Loading coo...
+25: 1
+25: Loading coo...
+23: 3
+23: Loading coo...
+ 4: 0
+ 4: Loading coo...
+19: 3
+19: Loading coo...
+ 0: 0
+ 0: Loading coo...
+ 1: 1
+ 1: Loading coo...
+17: 1
+17: Loading coo...
+16: 0
+16: Loading coo...
+29: Done loading coo
+28: Done loading coo
+12: Done loading coo
+13: Done loading coo
+ 5: Done loading coo
+ 4: Done loading coo
+ 2: Done loading coo
+ 3: Done loading coo
+27: Done loading coo
+26: Done loading coo
+14: Done loading coo
+15: Done loading coo
+10: Done loading coo
+11: Done loading coo
+21: Done loading coo
+20: Done loading coo
+23: Done loading coo
+22: Done loading coo
+ 7: Done loading coo
+30: Done loading coo
+ 6: Done loading coo
+31: Done loading coo
+ 9: Done loading coo
+ 8: Done loading coo
+19: Done loading coo
+18: Done loading coo
+25: Done loading coo
+24: Done loading coo
+ 0: Done loading coo
+ 1: Done loading coo
+17: Done loading coo
+16: Done loading coo
+28: 7276
+28: 7006
+28: 7496
+28: 7341
+28: 7002
+28: 6738
+28: 7120
+28: 7158
+28: 7288
+28: 7014
+28: 7576
+28: 7289
+28: 7328
+28: 7614
+28: 7474
+28: 7763
+28: 7851
+28: 7567
+28: 7311
+28: 7526
+28: 7447
+28: 7165
+28: 7389
+28: 7109
+28: 7008
+28: 7271
+28: 7272
+28: 7557
+28: 7000
+28: 7274
+28: 6735
+28: 7000
+28: partitioning...
+29: 7276
+29: 7006
+29: 7496
+29: 7341
+29: 7002
+29: 6738
+29: 7120
+29: 7158
+29: 7288
+29: 7014
+29: 7576
+29: 7289
+29: 7328
+29: 7614
+29: 7474
+29: 7763
+29: 7851
+29: 7567
+29: 7311
+29: 7526
+29: 7447
+29: 7165
+29: 7389
+29: 7109
+29: 7008
+29: 7271
+29: 7272
+29: 7557
+29: 7000
+29: 7274
+29: 6735
+29: 7000
+29: partitioning...
+10: 7276
+10: 7006
+10: 7496
+10: 7341
+10: 7002
+10: 6738
+10: 7120
+10: 7158
+10: 7288
+10: 7014
+10: 7576
+10: 7289
+10: 7328
+10: 7614
+10: 7474
+10: 7763
+10: 7851
+10: 7567
+10: 7311
+10: 7526
+10: 7447
+10: 7165
+10: 7389
+10: 7109
+10: 7008
+10: 7271
+10: 7272
+10: 7557
+10: 7000
+10: 7274
+10: 6735
+10: 7000
+10: partitioning...
+11: 7276
+11: 7006
+11: 7496
+11: 7341
+11: 7002
+11: 6738
+11: 7120
+11: 7158
+11: 7288
+11: 7014
+11: 7576
+11: 7289
+11: 7328
+11: 7614
+11: 7474
+11: 7763
+11: 7851
+11: 7567
+11: 7311
+11: 7526
+11: 7447
+11: 7165
+11: 7389
+11: 7109
+11: 7008
+11: 7271
+11: 7272
+11: 7557
+11: 7000
+11: 7274
+11: 6735
+11: 7000
+11: partitioning...
+15: 7276
+15: 7006
+15: 7496
+15: 7341
+15: 7002
+15: 6738
+15: 7120
+15: 7158
+15: 7288
+15: 7014
+15: 7576
+15: 7289
+15: 7328
+15: 7614
+15: 7474
+15: 7763
+15: 7851
+15: 7567
+15: 7311
+15: 7526
+15: 7447
+15: 7165
+15: 7389
+15: 7109
+15: 7008
+15: 7271
+15: 7272
+15: 7557
+15: 7000
+15: 7274
+15: 6735
+15: 7000
+15: partitioning...
+14: 7276
+14: 7006
+14: 7496
+14: 7341
+14: 7002
+14: 6738
+14: 7120
+14: 7158
+14: 7288
+14: 7014
+14: 7576
+14: 7289
+14: 7328
+14: 7614
+14: 7474
+14: 7763
+14: 7851
+14: 7567
+14: 7311
+14: 7526
+14: 7447
+14: 7165
+14: 7389
+14: 7109
+14: 7008
+14: 7271
+14: 7272
+14: 7557
+14: 7000
+14: 7274
+14: 6735
+14: 7000
+14: partitioning...
+ 3: 7276
+ 3: 7006
+ 3: 7496
+ 3: 7341
+ 3: 7002
+ 3: 6738
+ 3: 7120
+ 3: 7158
+ 3: 7288
+ 3: 7014
+ 3: 7576
+ 3: 7289
+ 3: 7328
+ 3: 7614
+ 3: 7474
+ 3: 7763
+ 3: 7851
+ 3: 7567
+ 3: 7311
+ 3: 7526
+ 3: 7447
+ 3: 7165
+ 3: 7389
+ 3: 7109
+ 3: 7008
+ 3: 7271
+ 3: 7272
+ 3: 7557
+ 3: 7000
+ 3: 7274
+ 3: 6735
+ 3: 7000
+ 3: partitioning...
+22: 7276
+22: 7006
+22: 7496
+22: 7341
+22: 7002
+22: 6738
+22: 7120
+22: 7158
+22: 7288
+22: 7014
+22: 7576
+22: 7289
+22: 7328
+22: 7614
+22: 7474
+22: 7763
+22: 7851
+22: 7567
+22: 7311
+22: 7526
+22: 7447
+22: 7165
+22: 7389
+22: 7109
+22: 7008
+22: 7271
+22: 7272
+22: 7557
+22: 7000
+22: 7274
+22: 6735
+22: 7000
+22: partitioning...
+23: 7276
+23: 7006
+23: 7496
+23: 7341
+23: 7002
+23: 6738
+23: 7120
+23: 7158
+23: 7288
+23: 7014
+23: 7576
+23: 7289
+23: 7328
+23: 7614
+23: 7474
+23: 7763
+23: 7851
+23: 7567
+23: 7311
+23: 7526
+23: 7447
+23: 7165
+23: 7389
+23: 7109
+23: 7008
+23: 7271
+23: 7272
+23: 7557
+23: 7000
+23: 7274
+23: 6735
+23: 7000
+23: partitioning...
+ 2: 7276
+ 2: 7006
+ 2: 7496
+ 2: 7341
+ 2: 7002
+ 2: 6738
+ 2: 7120
+ 2: 7158
+ 2: 7288
+ 2: 7014
+ 2: 7576
+ 2: 7289
+ 2: 7328
+ 2: 7614
+ 2: 7474
+ 2: 7763
+ 2: 7851
+ 2: 7567
+ 2: 7311
+ 2: 7526
+ 2: 7447
+ 2: 7165
+ 2: 7389
+ 2: 7109
+ 2: 7008
+ 2: 7271
+ 2: 7272
+ 2: 7557
+ 2: 7000
+ 2: 7274
+ 2: 6735
+ 2: 7000
+ 2: partitioning...
+26: 7276
+26: 7006
+26: 7496
+26: 7341
+26: 7002
+26: 6738
+26: 7120
+26: 7158
+26: 7288
+26: 7014
+26: 7576
+26: 7289
+26: 7328
+26: 7614
+26: 7474
+26: 7763
+26: 7851
+26: 7567
+26: 7311
+26: 7526
+26: 7447
+26: 7165
+26: 7389
+26: 7109
+26: 7008
+26: 7271
+26: 7272
+26: 7557
+26: 7000
+26: 7274
+26: 6735
+26: 7000
+26: partitioning...
+27: 7276
+27: 7006
+27: 7496
+27: 7341
+27: 7002
+27: 6738
+27: 7120
+27: 7158
+27: 7288
+27: 7014
+27: 7576
+27: 7289
+27: 7328
+27: 7614
+27: 7474
+27: 7763
+27: 7851
+27: 7567
+27: 7311
+27: 7526
+27: 7447
+27: 7165
+27: 7389
+27: 7109
+27: 7008
+27: 7271
+27: 7272
+27: 7557
+27: 7000
+27: 7274
+27: 6735
+27: 7000
+27: partitioning...
+12: 7276
+12: 7006
+12: 7496
+12: 7341
+12: 7002
+12: 6738
+12: 7120
+12: 7158
+12: 7288
+12: 7014
+12: 7576
+12: 7289
+12: 7328
+12: 7614
+12: 7474
+12: 7763
+12: 7851
+12: 7567
+12: 7311
+12: 7526
+12: 7447
+12: 7165
+12: 7389
+12: 7109
+12: 7008
+12: 7271
+12: 7272
+12: 7557
+12: 7000
+12: 7274
+12: 6735
+12: 7000
+12: partitioning...
+18: 7276
+18: 7006
+18: 7496
+18: 7341
+18: 7002
+18: 6738
+18: 7120
+18: 7158
+18: 7288
+18: 7014
+18: 7576
+18: 7289
+18: 7328
+18: 7614
+18: 7474
+18: 7763
+18: 7851
+18: 7567
+18: 7311
+18: 7526
+18: 7447
+18: 7165
+18: 7389
+18: 7109
+18: 7008
+18: 7271
+18: 7272
+18: 7557
+18: 7000
+18: 7274
+18: 6735
+18: 7000
+18: partitioning...
+19: 7276
+19: 7006
+19: 7496
+19: 7341
+19: 7002
+19: 6738
+19: 7120
+19: 7158
+19: 7288
+19: 7014
+19: 7576
+19: 7289
+19: 7328
+19: 7614
+19: 7474
+19: 7763
+19: 7851
+19: 7567
+19: 7311
+19: 7526
+19: 7447
+19: 7165
+19: 7389
+19: 7109
+19: 7008
+19: 7271
+19: 7272
+19: 7557
+19: 7000
+19: 7274
+19: 6735
+19: 7000
+19: partitioning...
+20: 7276
+20: 7006
+20: 7496
+20: 7341
+20: 7002
+20: 6738
+20: 7120
+20: 7158
+20: 7288
+20: 7014
+20: 7576
+20: 7289
+20: 7328
+20: 7614
+20: 7474
+20: 7763
+20: 7851
+20: 7567
+20: 7311
+20: 7526
+20: 7447
+20: 7165
+20: 7389
+20: 7109
+20: 7008
+20: 7271
+20: 7272
+20: 7557
+20: 7000
+20: 7274
+20: 6735
+20: 7000
+20: partitioning...
+21: 7276
+21: 7006
+21: 7496
+21: 7341
+21: 7002
+21: 6738
+21: 7120
+21: 7158
+21: 7288
+21: 7014
+21: 7576
+21: 7289
+21: 7328
+21: 7614
+21: 7474
+21: 7763
+21: 7851
+21: 7567
+21: 7311
+21: 7526
+21: 7447
+21: 7165
+21: 7389
+21: 7109
+21: 7008
+21: 7271
+21: 7272
+21: 7557
+21: 7000
+21: 7274
+21: 6735
+21: 7000
+21: partitioning...
+ 5: 7276
+ 5: 7006
+ 5: 7496
+ 5: 7341
+ 5: 7002
+ 5: 6738
+ 5: 7120
+ 5: 7158
+ 5: 7288
+ 5: 7014
+ 5: 7576
+ 5: 7289
+ 5: 7328
+ 5: 7614
+ 5: 7474
+ 5: 7763
+ 5: 7851
+ 5: 7567
+ 5: 7311
+ 5: 7526
+ 5: 7447
+ 5: 7165
+ 5: 7389
+ 5: 7109
+ 5: 7008
+ 5: 7271
+ 5: 7272
+ 5: 7557
+ 5: 7000
+ 5: 7274
+ 5: 6735
+ 5: 7000
+ 5: partitioning...
+ 4: 7276
+ 4: 7006
+ 4: 7496
+ 4: 7341
+ 4: 7002
+ 4: 6738
+ 4: 7120
+ 4: 7158
+ 4: 7288
+ 4: 7014
+ 4: 7576
+ 4: 7289
+ 4: 7328
+ 4: 7614
+ 4: 7474
+ 4: 7763
+ 4: 7851
+ 4: 7567
+ 4: 7311
+ 4: 7526
+ 4: 7447
+ 4: 7165
+ 4: 7389
+ 4: 7109
+ 4: 7008
+ 4: 7271
+ 4: 7272
+ 4: 7557
+ 4: 7000
+ 4: 7274
+ 4: 6735
+ 4: 7000
+ 4: partitioning...
+31: 7276
+31: 7006
+31: 7496
+31: 7341
+31: 7002
+31: 6738
+31: 7120
+31: 7158
+31: 7288
+31: 7014
+31: 7576
+31: 7289
+31: 7328
+31: 7614
+31: 7474
+31: 7763
+31: 7851
+31: 7567
+31: 7311
+31: 7526
+31: 7447
+31: 7165
+31: 7389
+31: 7109
+31: 7008
+31: 7271
+31: 7272
+31: 7557
+31: 7000
+31: 7274
+31: 6735
+31: 7000
+31: partitioning...
+24: 7276
+24: 7006
+24: 7496
+24: 7341
+24: 7002
+24: 6738
+24: 7120
+24: 7158
+24: 7288
+24: 7014
+24: 7576
+24: 7289
+24: 7328
+24: 7614
+24: 7474
+24: 7763
+24: 7851
+24: 7567
+24: 7311
+24: 7526
+24: 7447
+24: 7165
+24: 7389
+24: 7109
+24: 7008
+24: 7271
+24: 7272
+24: 7557
+24: 7000
+24: 7274
+24: 6735
+24: 7000
+24: partitioning...
+30: 7276
+30: 7006
+30: 7496
+30: 7341
+30: 7002
+30: 6738
+30: 7120
+30: 7158
+30: 7288
+30: 7014
+30: 7576
+30: 7289
+30: 7328
+30: 7614
+30: 7474
+30: 7763
+30: 7851
+30: 7567
+30: 7311
+30: 7526
+30: 7447
+30: 7165
+30: 7389
+30: 7109
+30: 7008
+30: 7271
+30: 7272
+30: 7557
+30: 7000
+30: 7274
+30: 6735
+30: 7000
+30: partitioning...
+25: 7276
+25: 7006
+25: 7496
+25: 7341
+25: 7002
+25: 6738
+25: 7120
+25: 7158
+25: 7288
+25: 7014
+25: 7576
+25: 7289
+25: 7328
+25: 7614
+25: 7474
+25: 7763
+25: 7851
+25: 7567
+25: 7311
+25: 7526
+25: 7447
+25: 7165
+25: 7389
+25: 7109
+25: 7008
+25: 7271
+25: 7272
+25: 7557
+25: 7000
+25: 7274
+25: 6735
+25: 7000
+25: partitioning...
+ 6: 7276
+ 6: 7006
+ 6: 7496
+ 6: 7341
+ 6: 7002
+ 6: 6738
+ 6: 7120
+ 6: 7158
+ 6: 7288
+ 6: 7014
+ 6: 7576
+ 6: 7289
+ 6: 7328
+ 6: 7614
+ 6: 7474
+ 6: 7763
+ 6: 7851
+ 6: 7567
+ 6: 7311
+ 6: 7526
+ 6: 7447
+ 6: 7165
+ 6: 7389
+ 6: 7109
+ 6: 7008
+ 6: 7271
+ 6: 7272
+ 6: 7557
+ 6: 7000
+ 6: 7274
+ 6: 6735
+ 6: 7000
+ 6: partitioning...
+ 7: 7276
+ 7: 7006
+ 7: 7496
+ 7: 7341
+ 7: 7002
+ 7: 6738
+ 7: 7120
+ 7: 7158
+ 7: 7288
+ 7: 7014
+ 7: 7576
+ 7: 7289
+ 7: 7328
+ 7: 7614
+ 7: 7474
+ 7: 7763
+ 7: 7851
+ 7: 7567
+ 7: 7311
+ 7: 7526
+ 7: 7447
+ 7: 7165
+ 7: 7389
+ 7: 7109
+ 7: 7008
+ 7: 7271
+ 7: 7272
+ 7: 7557
+ 7: 7000
+ 7: 7274
+ 7: 6735
+ 7: 7000
+ 7: partitioning...
+ 8: 7276
+ 8: 7006
+ 8: 7496
+ 8: 7341
+ 8: 7002
+ 8: 6738
+ 8: 7120
+ 8: 7158
+ 8: 7288
+ 8: 7014
+ 8: 7576
+ 8: 7289
+ 8: 7328
+ 8: 7614
+ 8: 7474
+ 8: 7763
+ 8: 7851
+ 8: 7567
+ 8: 7311
+ 8: 7526
+ 8: 7447
+ 8: 7165
+ 8: 7389
+ 8: 7109
+ 8: 7008
+ 8: 7271
+ 8: 7272
+ 8: 7557
+ 8: 7000
+ 8: 7274
+ 8: 6735
+ 8: 7000
+ 8: partitioning...
+ 9: 7276
+ 9: 7006
+ 9: 7496
+ 9: 7341
+ 9: 7002
+ 9: 6738
+ 9: 7120
+ 9: 7158
+ 9: 7288
+ 9: 7014
+ 9: 7576
+ 9: 7289
+ 9: 7328
+ 9: 7614
+ 9: 7474
+ 9: 7763
+ 9: 7851
+ 9: 7567
+ 9: 7311
+ 9: 7526
+ 9: 7447
+ 9: 7165
+ 9: 7389
+ 9: 7109
+ 9: 7008
+ 9: 7271
+ 9: 7272
+ 9: 7557
+ 9: 7000
+ 9: 7274
+ 9: 6735
+ 9: 7000
+ 9: partitioning...
+13: 7276
+13: 7006
+13: 7496
+13: 7341
+13: 7002
+13: 6738
+13: 7120
+13: 7158
+13: 7288
+13: 7014
+13: 7576
+13: 7289
+13: 7328
+13: 7614
+13: 7474
+13: 7763
+13: 7851
+13: 7567
+13: 7311
+13: 7526
+13: 7447
+13: 7165
+13: 7389
+13: 7109
+13: 7008
+13: 7271
+13: 7272
+13: 7557
+13: 7000
+13: 7274
+13: 6735
+13: 7000
+13: partitioning...
+16: 7276
+16: 7006
+16: 7496
+16: 7341
+16: 7002
+16: 6738
+16: 7120
+16: 7158
+16: 7288
+16: 7014
+16: 7576
+16: 7289
+16: 7328
+16: 7614
+16: 7474
+16: 7763
+16: 7851
+16: 7567
+16: 7311
+16: 7526
+16: 7447
+16: 7165
+16: 7389
+16: 7109
+16: 7008
+16: 7271
+16: 7272
+16: 7557
+16: 7000
+16: 7274
+16: 6735
+16: 7000
+16: partitioning...
+ 1: 7276
+ 1: 7006
+ 1: 7496
+ 1: 7341
+ 1: 7002
+ 1: 6738
+ 1: 7120
+ 1: 7158
+ 1: 7288
+ 1: 7014
+ 1: 7576
+ 1: 7289
+ 1: 7328
+ 1: 7614
+ 1: 7474
+ 1: 7763
+ 1: 7851
+ 1: 7567
+ 1: 7311
+ 1: 7526
+ 1: 7447
+ 1: 7165
+ 1: 7389
+ 1: 7109
+ 1: 7008
+ 1: 7271
+ 1: 7272
+ 1: 7557
+ 1: 7000
+ 1: 7274
+ 1: 6735
+ 1: 7000
+ 1: partitioning...
+ 0: 7276
+ 0: 7006
+ 0: 7496
+ 0: 7341
+ 0: 7002
+ 0: 6738
+ 0: 7120
+ 0: 7158
+ 0: 7288
+ 0: 7014
+ 0: 7576
+ 0: 7289
+ 0: 7328
+ 0: 7614
+ 0: 7474
+ 0: 7763
+ 0: 7851
+ 0: 7567
+ 0: 7311
+ 0: 7526
+ 0: 7447
+ 0: 7165
+ 0: 7389
+ 0: 7109
+ 0: 7008
+ 0: 7271
+ 0: 7272
+ 0: 7557
+ 0: 7000
+ 0: 7274
+ 0: 6735
+ 0: 7000
+ 0: partitioning...
+17: 7276
+17: 7006
+17: 7496
+17: 7341
+17: 7002
+17: 6738
+17: 7120
+17: 7158
+17: 7288
+17: 7014
+17: 7576
+17: 7289
+17: 7328
+17: 7614
+17: 7474
+17: 7763
+17: 7851
+17: 7567
+17: 7311
+17: 7526
+17: 7447
+17: 7165
+17: 7389
+17: 7109
+17: 7008
+17: 7271
+17: 7272
+17: 7557
+17: 7000
+17: 7274
+17: 6735
+17: 7000
+17: partitioning...
+ 6: rank: 6 adj_matrix_loc.size: torch.Size([232965, 7120])
+ 6: rank: 6 inputs.size: torch.Size([232965, 602])
+ 6: done partitioning
+ 0: rank: 0 adj_matrix_loc.size: torch.Size([232965, 7276])
+ 0: rank: 0 inputs.size: torch.Size([232965, 602])
+ 0: done partitioning
+24: rank: 24 adj_matrix_loc.size: torch.Size([232965, 7008])
+24: rank: 24 inputs.size: torch.Size([232965, 602])
+ 4: rank: 4 adj_matrix_loc.size: torch.Size([232965, 7002])
+ 4: rank: 4 inputs.size: torch.Size([232965, 602])
+23: rank: 23 adj_matrix_loc.size: torch.Size([232965, 7109])
+23: rank: 23 inputs.size: torch.Size([232965, 602])
+24: done partitioning
+ 4: done partitioning
+23: done partitioning
+20: rank: 20 adj_matrix_loc.size: torch.Size([232965, 7447])
+20: rank: 20 inputs.size: torch.Size([232965, 602])
+ 5: rank: 5 adj_matrix_loc.size: torch.Size([232965, 6738])
+ 5: rank: 5 inputs.size: torch.Size([232965, 602])
+29: rank: 29 adj_matrix_loc.size: torch.Size([232965, 7274])
+29: rank: 29 inputs.size: torch.Size([232965, 602])
+20: done partitioning
+ 5: done partitioning
+16: rank: 16 adj_matrix_loc.size: torch.Size([232965, 7851])
+16: rank: 16 inputs.size: torch.Size([232965, 602])
+29: done partitioning
+31: rank: 31 adj_matrix_loc.size: torch.Size([232965, 7000])
+31: rank: 31 inputs.size: torch.Size([232965, 602])
+16: done partitioning
+31: done partitioning
+ 2: rank: 2 adj_matrix_loc.size: torch.Size([232965, 7496])
+ 2: rank: 2 inputs.size: torch.Size([232965, 602])
+26: rank: 26 adj_matrix_loc.size: torch.Size([232965, 7272])
+26: rank: 26 inputs.size: torch.Size([232965, 602])
+ 2: done partitioning
+26: done partitioning
+ 3: rank: 3 adj_matrix_loc.size: torch.Size([232965, 7341])
+ 3: rank: 3 inputs.size: torch.Size([232965, 602])
+ 3: done partitioning
+ 7: rank: 7 adj_matrix_loc.size: torch.Size([232965, 7158])
+ 7: rank: 7 inputs.size: torch.Size([232965, 602])
+ 7: done partitioning
+14: rank: 14 adj_matrix_loc.size: torch.Size([232965, 7474])
+14: rank: 14 inputs.size: torch.Size([232965, 602])
+14: done partitioning
+30: rank: 30 adj_matrix_loc.size: torch.Size([232965, 6735])
+30: rank: 30 inputs.size: torch.Size([232965, 602])
+30: done partitioning
+27: rank: 27 adj_matrix_loc.size: torch.Size([232965, 7557])
+27: rank: 27 inputs.size: torch.Size([232965, 602])
+22: rank: 22 adj_matrix_loc.size: torch.Size([232965, 7389])
+22: rank: 22 inputs.size: torch.Size([232965, 602])
+27: done partitioning
+ 9: rank: 9 adj_matrix_loc.size: torch.Size([232965, 7014])
+ 9: rank: 9 inputs.size: torch.Size([232965, 602])
+22: done partitioning
+ 9: done partitioning
+11: rank: 11 adj_matrix_loc.size: torch.Size([232965, 7289])
+11: rank: 11 inputs.size: torch.Size([232965, 602])
+11: done partitioning
+ 1: rank: 1 adj_matrix_loc.size: torch.Size([232965, 7006])
+ 1: rank: 1 inputs.size: torch.Size([232965, 602])
+ 1: done partitioning
+19: rank: 19 adj_matrix_loc.size: torch.Size([232965, 7526])
+19: rank: 19 inputs.size: torch.Size([232965, 602])
+19: done partitioning
+17: rank: 17 adj_matrix_loc.size: torch.Size([232965, 7567])
+17: rank: 17 inputs.size: torch.Size([232965, 602])
+21: rank: 21 adj_matrix_loc.size: torch.Size([232965, 7165])
+21: rank: 21 inputs.size: torch.Size([232965, 602])
+21: done partitioning
+17: done partitioning
+13: rank: 13 adj_matrix_loc.size: torch.Size([232965, 7614])
+13: rank: 13 inputs.size: torch.Size([232965, 602])
+15: rank: 15 adj_matrix_loc.size: torch.Size([232965, 7763])
+15: rank: 15 inputs.size: torch.Size([232965, 602])
+13: done partitioning
+15: done partitioning
+ 8: rank: 8 adj_matrix_loc.size: torch.Size([232965, 7288])
+ 8: rank: 8 inputs.size: torch.Size([232965, 602])
+18: rank: 18 adj_matrix_loc.size: torch.Size([232965, 7311])
+18: rank: 18 inputs.size: torch.Size([232965, 602])
+12: rank: 12 adj_matrix_loc.size: torch.Size([232965, 7328])
+12: rank: 12 inputs.size: torch.Size([232965, 602])
+ 8: done partitioning
+18: done partitioning
+25: rank: 25 adj_matrix_loc.size: torch.Size([232965, 7271])
+25: rank: 25 inputs.size: torch.Size([232965, 602])
+12: done partitioning
+25: done partitioning
+10: rank: 10 adj_matrix_loc.size: torch.Size([232965, 7576])
+10: rank: 10 inputs.size: torch.Size([232965, 602])
+10: done partitioning
+28: rank: 28 adj_matrix_loc.size: torch.Size([232965, 7000])
+28: rank: 28 inputs.size: torch.Size([232965, 602])
+28: done partitioning
+ 0: tensor(7275, device='cuda:0')
+ 0: torch.Size([7276, 7276])
+ 0: tensor(7005, device='cuda:0')
+ 0: torch.Size([7276, 7006])
+ 0: tensor(7495, device='cuda:0')
+ 0: torch.Size([7276, 7496])
+ 0: tensor(7340, device='cuda:0')
+ 0: torch.Size([7276, 7341])
+ 0: tensor(7001, device='cuda:0')
+ 0: torch.Size([7276, 7002])
+ 0: tensor(6735, device='cuda:0')
+ 0: torch.Size([7276, 6738])
+ 0: tensor(7109, device='cuda:0')
+ 0: torch.Size([7276, 7120])
+ 0: tensor(7145, device='cuda:0')
+ 0: torch.Size([7276, 7158])
+ 0: tensor(7284, device='cuda:0')
+ 0: torch.Size([7276, 7288])
+ 0: tensor(7010, device='cuda:0')
+ 0: torch.Size([7276, 7014])
+ 0: tensor(7574, device='cuda:0')
+ 0: torch.Size([7276, 7576])
+ 0: tensor(7288, device='cuda:0')
+ 0: torch.Size([7276, 7289])
+ 0: tensor(7326, device='cuda:0')
+ 0: torch.Size([7276, 7328])
+ 0: tensor(7611, device='cuda:0')
+ 0: torch.Size([7276, 7614])
+ 0: tensor(7470, device='cuda:0')
+ 0: torch.Size([7276, 7474])
+ 0: tensor(7756, device='cuda:0')
+ 0: torch.Size([7276, 7763])
+ 0: tensor(7807, device='cuda:0')
+ 0: torch.Size([7276, 7851])
+ 0: tensor(7564, device='cuda:0')
+ 0: torch.Size([7276, 7567])
+ 0: tensor(7288, device='cuda:0')
+ 0: torch.Size([7276, 7311])
+ 0: tensor(7508, device='cuda:0')
+ 0: torch.Size([7276, 7526])
+ 0: tensor(7439, device='cuda:0')
+ 0: torch.Size([7276, 7447])
+ 0: tensor(7159, device='cuda:0')
+ 0: torch.Size([7276, 7165])
+ 0: tensor(7383, device='cuda:0')
+ 0: torch.Size([7276, 7389])
+ 0: tensor(7096, device='cuda:0')
+ 0: torch.Size([7276, 7109])
+ 0: tensor(6997, device='cuda:0')
+ 0: torch.Size([7276, 7008])
+ 0: tensor(7270, device='cuda:0')
+ 0: torch.Size([7276, 7271])
+ 0: tensor(7242, device='cuda:0')
+ 0: torch.Size([7276, 7272])
+ 0: tensor(7548, device='cuda:0')
+ 0: torch.Size([7276, 7557])
+ 0: tensor(6994, device='cuda:0')
+ 0: torch.Size([7276, 7000])
+ 0: tensor(7263, device='cuda:0')
+ 0: torch.Size([7276, 7274])
+ 0: tensor(6734, device='cuda:0')
+ 0: torch.Size([7276, 6735])
+ 0: tensor(6997, device='cuda:0')
+ 0: torch.Size([7276, 7000])
+ 0: Epoch: 0
+ 5: tensor(7275, device='cuda:1')
+ 5: torch.Size([6738, 7276])
+ 5: tensor(7003, device='cuda:1')
+ 5: torch.Size([6738, 7006])
+ 5: tensor(7492, device='cuda:1')
+ 5: torch.Size([6738, 7496])
+ 5: tensor(7338, device='cuda:1')
+ 5: torch.Size([6738, 7341])
+ 5: tensor(6996, device='cuda:1')
+ 5: torch.Size([6738, 7002])
+ 5: tensor(6737, device='cuda:1')
+ 5: torch.Size([6738, 6738])
+ 5: tensor(7119, device='cuda:1')
+ 5: torch.Size([6738, 7120])
+ 5: tensor(7157, device='cuda:1')
+ 5: torch.Size([6738, 7158])
+ 5: tensor(7287, device='cuda:1')
+ 5: torch.Size([6738, 7288])
+ 5: tensor(7013, device='cuda:1')
+ 5: torch.Size([6738, 7014])
+ 5: tensor(7565, device='cuda:1')
+ 5: torch.Size([6738, 7576])
+ 5: tensor(7283, device='cuda:1')
+ 5: torch.Size([6738, 7289])
+ 5: tensor(7322, device='cuda:1')
+ 5: torch.Size([6738, 7328])
+ 5: tensor(7613, device='cuda:1')
+ 5: torch.Size([6738, 7614])
+ 5: tensor(7473, device='cuda:1')
+ 5: torch.Size([6738, 7474])
+ 5: tensor(7762, device='cuda:1')
+ 5: torch.Size([6738, 7763])
+ 5: tensor(7848, device='cuda:1')
+ 5: torch.Size([6738, 7851])
+ 5: tensor(7556, device='cuda:1')
+ 5: torch.Size([6738, 7567])
+ 5: tensor(7305, device='cuda:1')
+ 1: tensor(7275, device='cuda:1')
+ 1: torch.Size([7006, 7276])
+ 1: tensor(7005, device='cuda:1')
+ 1: torch.Size([7006, 7006])
+ 1: tensor(7495, device='cuda:1')
+ 1: torch.Size([7006, 7496])
+ 1: tensor(7340, device='cuda:1')
+ 1: torch.Size([7006, 7341])
+ 1: tensor(7001, device='cuda:1')
+ 1: torch.Size([7006, 7002])
+ 1: tensor(6735, device='cuda:1')
+ 1: torch.Size([7006, 6738])
+ 1: tensor(7109, device='cuda:1')
+ 1: torch.Size([7006, 7120])
+ 1: tensor(7138, device='cuda:1')
+ 1: torch.Size([7006, 7158])
+ 1: tensor(7284, device='cuda:1')
+ 1: torch.Size([7006, 7288])
+ 1: tensor(7010, device='cuda:1')
+ 1: torch.Size([7006, 7014])
+ 1: tensor(7571, device='cuda:1')
+ 1: torch.Size([7006, 7576])
+ 1: tensor(7283, device='cuda:1')
+ 1: torch.Size([7006, 7289])
+ 1: tensor(7322, device='cuda:1')
+ 1: torch.Size([7006, 7328])
+ 1: tensor(7611, device='cuda:1')
+ 1: torch.Size([7006, 7614])
+ 1: tensor(7473, device='cuda:1')
+ 1: torch.Size([7006, 7474])
+ 1: tensor(7761, device='cuda:1')
+ 1: torch.Size([7006, 7763])
+ 1: tensor(7845, device='cuda:1')
+ 1: torch.Size([7006, 7851])
+ 1: tensor(7532, device='cuda:1')
+ 1: torch.Size([7006, 7567])
+ 1: tensor(7301, device='cuda:1')
+ 5: torch.Size([6738, 7311])
+ 5: tensor(7521, device='cuda:1')
+ 5: torch.Size([6738, 7526])
+ 5: tensor(7441, device='cuda:1')
+ 5: torch.Size([6738, 7447])
+ 5: tensor(7154, device='cuda:1')
+ 5: torch.Size([6738, 7165])
+ 5: tensor(7387, device='cuda:1')
+ 5: torch.Size([6738, 7389])
+ 5: tensor(7106, device='cuda:1')
+ 5: torch.Size([6738, 7109])
+ 5: tensor(6997, device='cuda:1')
+ 5: torch.Size([6738, 7008])
+ 5: tensor(7270, device='cuda:1')
+ 5: torch.Size([6738, 7271])
+ 5: tensor(7271, device='cuda:1')
+ 5: torch.Size([6738, 7272])
+ 5: tensor(7551, device='cuda:1')
+ 5: torch.Size([6738, 7557])
+ 5: tensor(6994, device='cuda:1')
+ 5: torch.Size([6738, 7000])
+ 5: tensor(7268, device='cuda:1')
+ 5: torch.Size([6738, 7274])
+ 5: tensor(6730, device='cuda:1')
+ 5: torch.Size([6738, 6735])
+ 5: tensor(6999, device='cuda:1')
+ 5: torch.Size([6738, 7000])
+ 5: Epoch: 0
+ 6: tensor(7273, device='cuda:2')
+ 6: torch.Size([7120, 7276])
+ 6: tensor(7003, device='cuda:2')
+ 6: torch.Size([7120, 7006])
+ 6: tensor(7489, device='cuda:2')
+ 6: torch.Size([7120, 7496])
+ 6: tensor(7337, device='cuda:2')
+ 6: torch.Size([7120, 7341])
+ 6: tensor(6995, device='cuda:2')
+ 6: torch.Size([7120, 7002])
+ 6: tensor(6737, device='cuda:2')
+ 6: torch.Size([7120, 6738])
+ 6: tensor(7119, device='cuda:2')
+ 6: torch.Size([7120, 7120])
+ 6: tensor(7157, device='cuda:2')
+ 6: torch.Size([7120, 7158])
+ 6: tensor(7283, device='cuda:2')
+ 6: torch.Size([7120, 7288])
+ 6: tensor(7010, device='cuda:2')
+ 6: torch.Size([7120, 7014])
+ 6: tensor(7565, device='cuda:2')
+ 6: torch.Size([7120, 7576])
+ 6: tensor(7283, device='cuda:2')
+ 6: torch.Size([7120, 7289])
+ 6: tensor(7326, device='cuda:2')
+ 6: torch.Size([7120, 7328])
+ 6: tensor(7611, device='cuda:2')
+ 6: torch.Size([7120, 7614])
+ 6: tensor(7473, device='cuda:2')
+ 6: torch.Size([7120, 7474])
+ 6: tensor(7746, device='cuda:2')
+ 6: torch.Size([7120, 7763])
+ 6: tensor(7848, device='cuda:2')
+ 6: torch.Size([7120, 7851])
+ 6: tensor(7556, device='cuda:2')
+ 6: torch.Size([7120, 7567])
+ 6: tensor(7309, device='cuda:2')
+ 1: torch.Size([7006, 7311])
+ 1: tensor(7519, device='cuda:1')
+ 1: torch.Size([7006, 7526])
+ 1: tensor(7437, device='cuda:1')
+ 1: torch.Size([7006, 7447])
+ 1: tensor(7164, device='cuda:1')
+ 1: torch.Size([7006, 7165])
+ 1: tensor(7374, device='cuda:1')
+ 1: torch.Size([7006, 7389])
+ 1: tensor(7107, device='cuda:1')
+ 1: torch.Size([7006, 7109])
+ 1: tensor(6975, device='cuda:1')
+ 1: torch.Size([7006, 7008])
+ 1: tensor(7270, device='cuda:1')
+ 1: torch.Size([7006, 7271])
+ 1: tensor(7260, device='cuda:1')
+ 1: torch.Size([7006, 7272])
+ 1: tensor(7547, device='cuda:1')
+ 1: torch.Size([7006, 7557])
+ 1: tensor(6997, device='cuda:1')
+ 1: torch.Size([7006, 7000])
+ 1: tensor(7268, device='cuda:1')
+ 1: torch.Size([7006, 7274])
+ 1: tensor(6732, device='cuda:1')
+ 1: torch.Size([7006, 6735])
+ 1: tensor(6997, device='cuda:1')
+ 1: torch.Size([7006, 7000])
+ 1: Epoch: 0
+ 4: tensor(7275, device='cuda:0')
+ 4: torch.Size([7002, 7276])
+ 4: tensor(7005, device='cuda:0')
+ 4: torch.Size([7002, 7006])
+ 4: tensor(7495, device='cuda:0')
+ 4: torch.Size([7002, 7496])
+ 4: tensor(7340, device='cuda:0')
+ 4: torch.Size([7002, 7341])
+ 4: tensor(7001, device='cuda:0')
+ 4: torch.Size([7002, 7002])
+ 4: tensor(6737, device='cuda:0')
+ 4: torch.Size([7002, 6738])
+ 4: tensor(7119, device='cuda:0')
+ 4: torch.Size([7002, 7120])
+ 4: tensor(7157, device='cuda:0')
+ 4: torch.Size([7002, 7158])
+ 4: tensor(7284, device='cuda:0')
+ 4: torch.Size([7002, 7288])
+ 4: tensor(7013, device='cuda:0')
+ 4: torch.Size([7002, 7014])
+ 4: tensor(7572, device='cuda:0')
+ 4: torch.Size([7002, 7576])
+ 4: tensor(7283, device='cuda:0')
+ 4: torch.Size([7002, 7289])
+ 4: tensor(7326, device='cuda:0')
+ 4: torch.Size([7002, 7328])
+ 4: tensor(7611, device='cuda:0')
+ 4: torch.Size([7002, 7614])
+ 4: tensor(7473, device='cuda:0')
+ 4: torch.Size([7002, 7474])
+ 4: tensor(7756, device='cuda:0')
+ 4: torch.Size([7002, 7763])
+ 4: tensor(7847, device='cuda:0')
+ 4: torch.Size([7002, 7851])
+ 4: tensor(7562, device='cuda:0')
+ 4: torch.Size([7002, 7567])
+ 4: tensor(7302, device='cuda:0')
+ 6: torch.Size([7120, 7311])
+ 6: tensor(7512, device='cuda:2')
+ 6: torch.Size([7120, 7526])
+ 6: tensor(7431, device='cuda:2')
+ 6: torch.Size([7120, 7447])
+ 6: tensor(7154, device='cuda:2')
+ 6: torch.Size([7120, 7165])
+ 6: tensor(7376, device='cuda:2')
+ 6: torch.Size([7120, 7389])
+ 6: tensor(7103, device='cuda:2')
+ 6: torch.Size([7120, 7109])
+ 6: tensor(6978, device='cuda:2')
+ 6: torch.Size([7120, 7008])
+ 6: tensor(7270, device='cuda:2')
+ 6: torch.Size([7120, 7271])
+ 6: tensor(7261, device='cuda:2')
+ 6: torch.Size([7120, 7272])
+ 6: tensor(7551, device='cuda:2')
+ 6: torch.Size([7120, 7557])
+ 6: tensor(6994, device='cuda:2')
+ 6: torch.Size([7120, 7000])
+ 6: tensor(7258, device='cuda:2')
+ 6: torch.Size([7120, 7274])
+ 6: tensor(6727, device='cuda:2')
+ 6: torch.Size([7120, 6735])
+ 6: tensor(6999, device='cuda:2')
+ 6: torch.Size([7120, 7000])
+ 6: Epoch: 0
+ 2: tensor(7275, device='cuda:2')
+ 2: torch.Size([7496, 7276])
+ 2: tensor(7005, device='cuda:2')
+ 2: torch.Size([7496, 7006])
+ 2: tensor(7495, device='cuda:2')
+ 2: torch.Size([7496, 7496])
+ 2: tensor(7340, device='cuda:2')
+ 2: torch.Size([7496, 7341])
+ 2: tensor(7001, device='cuda:2')
+ 2: torch.Size([7496, 7002])
+ 2: tensor(6733, device='cuda:2')
+ 2: torch.Size([7496, 6738])
+ 2: tensor(7109, device='cuda:2')
+ 2: torch.Size([7496, 7120])
+ 2: tensor(7156, device='cuda:2')
+ 2: torch.Size([7496, 7158])
+ 2: tensor(7284, device='cuda:2')
+ 2: torch.Size([7496, 7288])
+ 2: tensor(7011, device='cuda:2')
+ 2: torch.Size([7496, 7014])
+ 2: tensor(7573, device='cuda:2')
+ 2: torch.Size([7496, 7576])
+ 2: tensor(7285, device='cuda:2')
+ 2: torch.Size([7496, 7289])
+ 2: tensor(7326, device='cuda:2')
+ 2: torch.Size([7496, 7328])
+ 2: tensor(7611, device='cuda:2')
+ 2: torch.Size([7496, 7614])
+ 2: tensor(7473, device='cuda:2')
+ 2: torch.Size([7496, 7474])
+ 2: tensor(7756, device='cuda:2')
+ 2: torch.Size([7496, 7763])
+ 2: tensor(7801, device='cuda:2')
+ 2: torch.Size([7496, 7851])
+ 2: tensor(7498, device='cuda:2')
+ 2: torch.Size([7496, 7567])
+ 2: tensor(7302, device='cuda:2')
+ 4: torch.Size([7002, 7311])
+ 4: tensor(7504, device='cuda:0')
+ 4: torch.Size([7002, 7526])
+ 4: tensor(7445, device='cuda:0')
+ 4: torch.Size([7002, 7447])
+ 4: tensor(7159, device='cuda:0')
+ 4: torch.Size([7002, 7165])
+ 4: tensor(7376, device='cuda:0')
+ 4: torch.Size([7002, 7389])
+ 4: tensor(7107, device='cuda:0')
+ 4: torch.Size([7002, 7109])
+ 4: tensor(7005, device='cuda:0')
+ 4: torch.Size([7002, 7008])
+ 4: tensor(7269, device='cuda:0')
+ 4: torch.Size([7002, 7271])
+ 4: tensor(7271, device='cuda:0')
+ 4: torch.Size([7002, 7272])
+ 4: tensor(7542, device='cuda:0')
+ 4: torch.Size([7002, 7557])
+ 4: tensor(6994, device='cuda:0')
+ 4: torch.Size([7002, 7000])
+ 4: tensor(7269, device='cuda:0')
+ 4: torch.Size([7002, 7274])
+ 4: tensor(6732, device='cuda:0')
+ 4: torch.Size([7002, 6735])
+ 4: tensor(6999, device='cuda:0')
+ 4: torch.Size([7002, 7000])
+ 4: Epoch: 0
+ 7: tensor(7275, device='cuda:3')
+ 7: torch.Size([7158, 7276])
+ 7: tensor(7003, device='cuda:3')
+ 7: torch.Size([7158, 7006])
+ 7: tensor(7492, device='cuda:3')
+ 7: torch.Size([7158, 7496])
+ 7: tensor(7338, device='cuda:3')
+ 7: torch.Size([7158, 7341])
+ 7: tensor(6995, device='cuda:3')
+ 7: torch.Size([7158, 7002])
+ 7: tensor(6737, device='cuda:3')
+ 7: torch.Size([7158, 6738])
+ 7: tensor(7119, device='cuda:3')
+ 7: torch.Size([7158, 7120])
+ 7: tensor(7157, device='cuda:3')
+ 7: torch.Size([7158, 7158])
+ 7: tensor(7284, device='cuda:3')
+ 7: torch.Size([7158, 7288])
+ 7: tensor(7013, device='cuda:3')
+ 7: torch.Size([7158, 7014])
+ 7: tensor(7557, device='cuda:3')
+ 7: torch.Size([7158, 7576])
+ 7: tensor(7277, device='cuda:3')
+ 7: torch.Size([7158, 7289])
+ 7: tensor(7322, device='cuda:3')
+ 7: torch.Size([7158, 7328])
+ 7: tensor(7611, device='cuda:3')
+ 7: torch.Size([7158, 7614])
+ 7: tensor(7473, device='cuda:3')
+ 7: torch.Size([7158, 7474])
+ 7: tensor(7756, device='cuda:3')
+ 7: torch.Size([7158, 7763])
+ 7: tensor(7847, device='cuda:3')
+ 7: torch.Size([7158, 7851])
+ 7: tensor(7562, device='cuda:3')
+ 7: torch.Size([7158, 7567])
+ 7: tensor(7309, device='cuda:3')
+ 2: torch.Size([7496, 7311])
+ 2: tensor(7521, device='cuda:2')
+ 2: torch.Size([7496, 7526])
+ 2: tensor(7437, device='cuda:2')
+ 2: torch.Size([7496, 7447])
+ 2: tensor(7159, device='cuda:2')
+ 2: torch.Size([7496, 7165])
+ 2: tensor(7387, device='cuda:2')
+ 2: torch.Size([7496, 7389])
+ 2: tensor(7103, device='cuda:2')
+ 2: torch.Size([7496, 7109])
+ 2: tensor(7005, device='cuda:2')
+ 2: torch.Size([7496, 7008])
+ 2: tensor(7270, device='cuda:2')
+ 2: torch.Size([7496, 7271])
+ 2: tensor(7154, device='cuda:2')
+ 2: torch.Size([7496, 7272])
+ 2: tensor(7534, device='cuda:2')
+ 2: torch.Size([7496, 7557])
+ 2: tensor(6994, device='cuda:2')
+ 2: torch.Size([7496, 7000])
+ 2: tensor(7272, device='cuda:2')
+ 2: torch.Size([7496, 7274])
+ 2: tensor(6730, device='cuda:2')
+ 2: torch.Size([7496, 6735])
+ 2: tensor(6997, device='cuda:2')
+ 2: torch.Size([7496, 7000])
+ 2: Epoch: 0
+ 7: torch.Size([7158, 7311])
+ 7: tensor(7521, device='cuda:3')
+ 7: torch.Size([7158, 7526])
+ 7: tensor(7437, device='cuda:3')
+ 7: torch.Size([7158, 7447])
+ 7: tensor(7154, device='cuda:3')
+ 7: torch.Size([7158, 7165])
+ 7: tensor(7376, device='cuda:3')
+ 7: torch.Size([7158, 7389])
+ 7: tensor(7107, device='cuda:3')
+ 7: torch.Size([7158, 7109])
+ 7: tensor(6975, device='cuda:3')
+ 7: torch.Size([7158, 7008])
+ 7: tensor(7270, device='cuda:3')
+ 7: torch.Size([7158, 7271])
+ 7: tensor(7234, device='cuda:3')
+ 7: torch.Size([7158, 7272])
+ 7: tensor(7551, device='cuda:3')
+ 7: torch.Size([7158, 7557])
+ 7: tensor(6994, device='cuda:3')
+ 7: torch.Size([7158, 7000])
+ 7: tensor(7267, device='cuda:3')
+ 7: torch.Size([7158, 7274])
+ 7: tensor(6730, device='cuda:3')
+ 7: torch.Size([7158, 6735])
+ 7: tensor(6999, device='cuda:3')
+ 7: torch.Size([7158, 7000])
+ 7: Epoch: 0
+ 3: tensor(7275, device='cuda:3')
+ 3: torch.Size([7341, 7276])
+ 3: tensor(7005, device='cuda:3')
+ 3: torch.Size([7341, 7006])
+ 3: tensor(7495, device='cuda:3')
+ 3: torch.Size([7341, 7496])
+ 3: tensor(7340, device='cuda:3')
+ 3: torch.Size([7341, 7341])
+ 3: tensor(7001, device='cuda:3')
+ 3: torch.Size([7341, 7002])
+ 3: tensor(6737, device='cuda:3')
+ 3: torch.Size([7341, 6738])
+ 3: tensor(7110, device='cuda:3')
+ 3: torch.Size([7341, 7120])
+ 3: tensor(7143, device='cuda:3')
+ 3: torch.Size([7341, 7158])
+ 3: tensor(7283, device='cuda:3')
+ 3: torch.Size([7341, 7288])
+ 3: tensor(7010, device='cuda:3')
+ 3: torch.Size([7341, 7014])
+ 3: tensor(7574, device='cuda:3')
+ 3: torch.Size([7341, 7576])
+ 3: tensor(7283, device='cuda:3')
+ 3: torch.Size([7341, 7289])
+ 3: tensor(7326, device='cuda:3')
+ 3: torch.Size([7341, 7328])
+ 3: tensor(7611, device='cuda:3')
+ 3: torch.Size([7341, 7614])
+ 3: tensor(7473, device='cuda:3')
+ 3: torch.Size([7341, 7474])
+ 3: tensor(7756, device='cuda:3')
+ 3: torch.Size([7341, 7763])
+ 3: tensor(7848, device='cuda:3')
+ 3: torch.Size([7341, 7851])
+ 3: tensor(7551, device='cuda:3')
+ 3: torch.Size([7341, 7567])
+ 3: tensor(7290, device='cuda:3')
+ 3: torch.Size([7341, 7311])
+ 3: tensor(7521, device='cuda:3')
+ 3: torch.Size([7341, 7526])
+ 3: tensor(7437, device='cuda:3')
+ 3: torch.Size([7341, 7447])
+ 3: tensor(7160, device='cuda:3')
+ 3: torch.Size([7341, 7165])
+ 3: tensor(7383, device='cuda:3')
+ 3: torch.Size([7341, 7389])
+ 3: tensor(7096, device='cuda:3')
+ 3: torch.Size([7341, 7109])
+ 3: tensor(7005, device='cuda:3')
+ 3: torch.Size([7341, 7008])
+ 3: tensor(7270, device='cuda:3')
+ 3: torch.Size([7341, 7271])
+ 3: tensor(7240, device='cuda:3')
+ 3: torch.Size([7341, 7272])
+ 3: tensor(7554, device='cuda:3')
+ 3: torch.Size([7341, 7557])
+ 3: tensor(6994, device='cuda:3')
+ 3: torch.Size([7341, 7000])
+ 3: tensor(7272, device='cuda:3')
+ 3: torch.Size([7341, 7274])
+ 3: tensor(6730, device='cuda:3')
+ 3: torch.Size([7341, 6735])
+ 3: tensor(6997, device='cuda:3')
+ 3: torch.Size([7341, 7000])
+ 3: Epoch: 0
+24: tensor(7265, device='cuda:0')
+24: torch.Size([7008, 7276])
+24: tensor(7003, device='cuda:0')
+24: torch.Size([7008, 7006])
+24: tensor(7495, device='cuda:0')
+24: torch.Size([7008, 7496])
+24: tensor(7338, device='cuda:0')
+24: torch.Size([7008, 7341])
+24: tensor(6995, device='cuda:0')
+24: torch.Size([7008, 7002])
+24: tensor(6737, device='cuda:0')
+24: torch.Size([7008, 6738])
+24: tensor(7109, device='cuda:0')
+24: torch.Size([7008, 7120])
+24: tensor(7156, device='cuda:0')
+24: torch.Size([7008, 7158])
+24: tensor(7286, device='cuda:0')
+24: torch.Size([7008, 7288])
+24: tensor(7013, device='cuda:0')
+24: torch.Size([7008, 7014])
+24: tensor(7570, device='cuda:0')
+24: torch.Size([7008, 7576])
+24: tensor(7283, device='cuda:0')
+24: torch.Size([7008, 7289])
+24: tensor(7322, device='cuda:0')
+24: torch.Size([7008, 7328])
+24: tensor(7611, device='cuda:0')
+24: torch.Size([7008, 7614])
+24: tensor(7473, device='cuda:0')
+24: torch.Size([7008, 7474])
+24: tensor(7759, device='cuda:0')
+24: torch.Size([7008, 7763])
+24: tensor(7848, device='cuda:0')
+24: torch.Size([7008, 7851])
+24: tensor(7532, device='cuda:0')
+24: torch.Size([7008, 7567])
+24: tensor(7298, device='cuda:0')
+24: torch.Size([7008, 7311])
+24: tensor(7521, device='cuda:0')
+24: torch.Size([7008, 7526])
+24: tensor(7441, device='cuda:0')
+24: torch.Size([7008, 7447])
+24: tensor(7161, device='cuda:0')
+24: torch.Size([7008, 7165])
+24: tensor(7358, device='cuda:0')
+24: torch.Size([7008, 7389])
+24: tensor(7107, device='cuda:0')
+24: torch.Size([7008, 7109])
+24: tensor(7007, device='cuda:0')
+24: torch.Size([7008, 7008])
+24: tensor(7270, device='cuda:0')
+24: torch.Size([7008, 7271])
+24: tensor(7271, device='cuda:0')
+24: torch.Size([7008, 7272])
+24: tensor(7556, device='cuda:0')
+24: torch.Size([7008, 7557])
+24: tensor(6998, device='cuda:0')
+24: torch.Size([7008, 7000])
+24: tensor(7273, device='cuda:0')
+24: torch.Size([7008, 7274])
+24: tensor(6731, device='cuda:0')
+24: torch.Size([7008, 6735])
+24: tensor(6997, device='cuda:0')
+24: torch.Size([7008, 7000])
+24: Epoch: 0
+25: tensor(7265, device='cuda:1')
+25: torch.Size([7271, 7276])
+25: tensor(7003, device='cuda:1')
+25: torch.Size([7271, 7006])
+25: tensor(7484, device='cuda:1')
+25: torch.Size([7271, 7496])
+25: tensor(7338, device='cuda:1')
+25: torch.Size([7271, 7341])
+25: tensor(6962, device='cuda:1')
+25: torch.Size([7271, 7002])
+25: tensor(6735, device='cuda:1')
+25: torch.Size([7271, 6738])
+25: tensor(7115, device='cuda:1')
+25: torch.Size([7271, 7120])
+25: tensor(7156, device='cuda:1')
+25: torch.Size([7271, 7158])
+25: tensor(7286, device='cuda:1')
+25: torch.Size([7271, 7288])
+25: tensor(7013, device='cuda:1')
+25: torch.Size([7271, 7014])
+25: tensor(7572, device='cuda:1')
+25: torch.Size([7271, 7576])
+25: tensor(7288, device='cuda:1')
+25: torch.Size([7271, 7289])
+25: tensor(7322, device='cuda:1')
+25: torch.Size([7271, 7328])
+25: tensor(7611, device='cuda:1')
+25: torch.Size([7271, 7614])
+25: tensor(7470, device='cuda:1')
+25: torch.Size([7271, 7474])
+25: tensor(7756, device='cuda:1')
+25: torch.Size([7271, 7763])
+25: tensor(7848, device='cuda:1')
+25: torch.Size([7271, 7851])
+25: tensor(7532, device='cuda:1')
+25: torch.Size([7271, 7567])
+25: tensor(7298, device='cuda:1')
+25: torch.Size([7271, 7311])
+25: tensor(7521, device='cuda:1')
+25: torch.Size([7271, 7526])
+25: tensor(7441, device='cuda:1')
+25: torch.Size([7271, 7447])
+25: tensor(7161, device='cuda:1')
+25: torch.Size([7271, 7165])
+25: tensor(7356, device='cuda:1')
+25: torch.Size([7271, 7389])
+25: tensor(7107, device='cuda:1')
+25: torch.Size([7271, 7109])
+25: tensor(7007, device='cuda:1')
+25: torch.Size([7271, 7008])
+25: tensor(7270, device='cuda:1')
+25: torch.Size([7271, 7271])
+25: tensor(7271, device='cuda:1')
+25: torch.Size([7271, 7272])
+25: tensor(7556, device='cuda:1')
+25: torch.Size([7271, 7557])
+25: tensor(6998, device='cuda:1')
+25: torch.Size([7271, 7000])
+25: tensor(7273, device='cuda:1')
+25: torch.Size([7271, 7274])
+25: tensor(6730, device='cuda:1')
+25: torch.Size([7271, 6735])
+25: tensor(6997, device='cuda:1')
+25: torch.Size([7271, 7000])
+25: Epoch: 0
+14: tensor(7275, device='cuda:2')
+14: torch.Size([7474, 7276])
+14: tensor(7005, device='cuda:2')
+14: torch.Size([7474, 7006])
+14: tensor(7489, device='cuda:2')
+14: torch.Size([7474, 7496])
+14: tensor(7338, device='cuda:2')
+14: torch.Size([7474, 7341])
+14: tensor(6996, device='cuda:2')
+14: torch.Size([7474, 7002])
+14: tensor(6736, device='cuda:2')
+14: torch.Size([7474, 6738])
+14: tensor(7119, device='cuda:2')
+14: torch.Size([7474, 7120])
+14: tensor(7157, device='cuda:2')
+14: torch.Size([7474, 7158])
+14: tensor(7287, device='cuda:2')
+14: torch.Size([7474, 7288])
+14: tensor(7013, device='cuda:2')
+14: torch.Size([7474, 7014])
+14: tensor(7568, device='cuda:2')
+14: torch.Size([7474, 7576])
+14: tensor(7288, device='cuda:2')
+14: torch.Size([7474, 7289])
+14: tensor(7325, device='cuda:2')
+14: torch.Size([7474, 7328])
+14: tensor(7611, device='cuda:2')
+14: torch.Size([7474, 7614])
+14: tensor(7473, device='cuda:2')
+14: torch.Size([7474, 7474])
+14: tensor(7762, device='cuda:2')
+14: torch.Size([7474, 7763])
+14: tensor(7847, device='cuda:2')
+14: torch.Size([7474, 7851])
+14: tensor(7563, device='cuda:2')
+14: torch.Size([7474, 7567])
+14: tensor(7304, device='cuda:2')
+14: torch.Size([7474, 7311])
+14: tensor(7519, device='cuda:2')
+14: torch.Size([7474, 7526])
+14: tensor(7441, device='cuda:2')
+14: torch.Size([7474, 7447])
+14: tensor(7161, device='cuda:2')
+14: torch.Size([7474, 7165])
+14: tensor(7381, device='cuda:2')
+14: torch.Size([7474, 7389])
+14: tensor(7107, device='cuda:2')
+14: torch.Size([7474, 7109])
+14: tensor(7006, device='cuda:2')
+14: torch.Size([7474, 7008])
+14: tensor(7270, device='cuda:2')
+14: torch.Size([7474, 7271])
+14: tensor(7269, device='cuda:2')
+14: torch.Size([7474, 7272])
+14: tensor(7555, device='cuda:2')
+14: torch.Size([7474, 7557])
+14: tensor(6994, device='cuda:2')
+14: torch.Size([7474, 7000])
+14: tensor(7271, device='cuda:2')
+14: torch.Size([7474, 7274])
+14: tensor(6731, device='cuda:2')
+14: torch.Size([7474, 6735])
+14: tensor(6999, device='cuda:2')
+14: torch.Size([7474, 7000])
+14: Epoch: 0
+10: tensor(7265, device='cuda:2')
+10: torch.Size([7576, 7276])
+10: tensor(7003, device='cuda:2')
+10: torch.Size([7576, 7006])
+10: tensor(7495, device='cuda:2')
+10: torch.Size([7576, 7496])
+10: tensor(7338, device='cuda:2')
+10: torch.Size([7576, 7341])
+10: tensor(7000, device='cuda:2')
+10: torch.Size([7576, 7002])
+10: tensor(6736, device='cuda:2')
+10: torch.Size([7576, 6738])
+10: tensor(7114, device='cuda:2')
+10: torch.Size([7576, 7120])
+10: tensor(7149, device='cuda:2')
+10: torch.Size([7576, 7158])
+10: tensor(7287, device='cuda:2')
+10: torch.Size([7576, 7288])
+10: tensor(7012, device='cuda:2')
+10: torch.Size([7576, 7014])
+10: tensor(7575, device='cuda:2')
+10: torch.Size([7576, 7576])
+10: tensor(7287, device='cuda:2')
+10: torch.Size([7576, 7289])
+10: tensor(7323, device='cuda:2')
+10: torch.Size([7576, 7328])
+10: tensor(7611, device='cuda:2')
+10: torch.Size([7576, 7614])
+10: tensor(7473, device='cuda:2')
+10: torch.Size([7576, 7474])
+10: tensor(7761, device='cuda:2')
+10: torch.Size([7576, 7763])
+10: tensor(7847, device='cuda:2')
+10: torch.Size([7576, 7851])
+10: tensor(7554, device='cuda:2')
+10: torch.Size([7576, 7567])
+10: tensor(7309, device='cuda:2')
+15: tensor(7272, device='cuda:3')
+15: torch.Size([7763, 7276])
+15: tensor(7003, device='cuda:3')
+15: torch.Size([7763, 7006])
+15: tensor(7491, device='cuda:3')
+15: torch.Size([7763, 7496])
+15: tensor(7338, device='cuda:3')
+15: torch.Size([7763, 7341])
+15: tensor(7001, device='cuda:3')
+15: torch.Size([7763, 7002])
+15: tensor(6737, device='cuda:3')
+15: torch.Size([7763, 6738])
+15: tensor(7119, device='cuda:3')
+15: torch.Size([7763, 7120])
+15: tensor(7156, device='cuda:3')
+15: torch.Size([7763, 7158])
+15: tensor(7287, device='cuda:3')
+15: torch.Size([7763, 7288])
+15: tensor(7012, device='cuda:3')
+15: torch.Size([7763, 7014])
+15: tensor(7574, device='cuda:3')
+15: torch.Size([7763, 7576])
+15: tensor(7287, device='cuda:3')
+15: torch.Size([7763, 7289])
+15: tensor(7325, device='cuda:3')
+15: torch.Size([7763, 7328])
+15: tensor(7611, device='cuda:3')
+15: torch.Size([7763, 7614])
+15: tensor(7473, device='cuda:3')
+15: torch.Size([7763, 7474])
+15: tensor(7762, device='cuda:3')
+15: torch.Size([7763, 7763])
+15: tensor(7847, device='cuda:3')
+15: torch.Size([7763, 7851])
+15: tensor(7564, device='cuda:3')
+15: torch.Size([7763, 7567])
+15: tensor(7299, device='cuda:3')
+15: torch.Size([7763, 7311])
+15: tensor(7508, device='cuda:3')
+15: torch.Size([7763, 7526])
+15: tensor(7445, device='cuda:3')
+15: torch.Size([7763, 7447])
+15: tensor(7164, device='cuda:3')
+15: torch.Size([7763, 7165])
+15: tensor(7368, device='cuda:3')
+15: torch.Size([7763, 7389])
+15: tensor(7107, device='cuda:3')
+15: torch.Size([7763, 7109])
+15: tensor(7004, device='cuda:3')
+15: torch.Size([7763, 7008])
+15: tensor(7270, device='cuda:3')
+15: torch.Size([7763, 7271])
+15: tensor(7269, device='cuda:3')
+15: torch.Size([7763, 7272])
+15: tensor(7549, device='cuda:3')
+15: torch.Size([7763, 7557])
+15: tensor(6994, device='cuda:3')
+15: torch.Size([7763, 7000])
+15: tensor(7269, device='cuda:3')
+15: torch.Size([7763, 7274])
+15: tensor(6728, device='cuda:3')
+15: torch.Size([7763, 6735])
+15: tensor(6999, device='cuda:3')
+15: torch.Size([7763, 7000])
+15: Epoch: 0
+10: torch.Size([7576, 7311])
+10: tensor(7521, device='cuda:2')
+10: torch.Size([7576, 7526])
+10: tensor(7439, device='cuda:2')
+10: torch.Size([7576, 7447])
+10: tensor(7148, device='cuda:2')
+10: torch.Size([7576, 7165])
+10: tensor(7370, device='cuda:2')
+10: torch.Size([7576, 7389])
+10: tensor(7107, device='cuda:2')
+10: torch.Size([7576, 7109])
+10: tensor(6975, device='cuda:2')
+10: torch.Size([7576, 7008])
+10: tensor(7270, device='cuda:2')
+10: torch.Size([7576, 7271])
+10: tensor(7246, device='cuda:2')
+10: torch.Size([7576, 7272])
+10: tensor(7554, device='cuda:2')
+10: torch.Size([7576, 7557])
+10: tensor(6998, device='cuda:2')
+10: torch.Size([7576, 7000])
+10: tensor(7267, device='cuda:2')
+10: torch.Size([7576, 7274])
+10: tensor(6728, device='cuda:2')
+10: torch.Size([7576, 6735])
+10: tensor(6997, device='cuda:2')
+10: torch.Size([7576, 7000])
+10: Epoch: 0
+11: tensor(7273, device='cuda:3')
+11: torch.Size([7289, 7276])
+11: tensor(7003, device='cuda:3')
+11: torch.Size([7289, 7006])
+11: tensor(7488, device='cuda:3')
+11: torch.Size([7289, 7496])
+11: tensor(7338, device='cuda:3')
+11: torch.Size([7289, 7341])
+11: tensor(7001, device='cuda:3')
+11: torch.Size([7289, 7002])
+11: tensor(6737, device='cuda:3')
+11: torch.Size([7289, 6738])
+11: tensor(7114, device='cuda:3')
+11: torch.Size([7289, 7120])
+11: tensor(7156, device='cuda:3')
+11: torch.Size([7289, 7158])
+11: tensor(7287, device='cuda:3')
+11: torch.Size([7289, 7288])
+11: tensor(7013, device='cuda:3')
+11: torch.Size([7289, 7014])
+11: tensor(7574, device='cuda:3')
+11: torch.Size([7289, 7576])
+11: tensor(7288, device='cuda:3')
+11: torch.Size([7289, 7289])
+11: tensor(7323, device='cuda:3')
+11: torch.Size([7289, 7328])
+11: tensor(7611, device='cuda:3')
+11: torch.Size([7289, 7614])
+11: tensor(7473, device='cuda:3')
+11: torch.Size([7289, 7474])
+11: tensor(7761, device='cuda:3')
+11: torch.Size([7289, 7763])
+11: tensor(7848, device='cuda:3')
+11: torch.Size([7289, 7851])
+11: tensor(7562, device='cuda:3')
+11: torch.Size([7289, 7567])
+11: tensor(7290, device='cuda:3')
+20: tensor(7271, device='cuda:0')
+20: torch.Size([7447, 7276])
+20: tensor(7003, device='cuda:0')
+20: torch.Size([7447, 7006])
+20: tensor(7495, device='cuda:0')
+20: torch.Size([7447, 7496])
+20: tensor(7338, device='cuda:0')
+20: torch.Size([7447, 7341])
+20: tensor(6999, device='cuda:0')
+20: torch.Size([7447, 7002])
+20: tensor(6726, device='cuda:0')
+20: torch.Size([7447, 6738])
+20: tensor(7109, device='cuda:0')
+20: torch.Size([7447, 7120])
+20: tensor(7157, device='cuda:0')
+20: torch.Size([7447, 7158])
+20: tensor(7286, device='cuda:0')
+20: torch.Size([7447, 7288])
+20: tensor(7007, device='cuda:0')
+20: torch.Size([7447, 7014])
+20: tensor(7565, device='cuda:0')
+20: torch.Size([7447, 7576])
+20: tensor(7283, device='cuda:0')
+20: torch.Size([7447, 7289])
+20: tensor(7322, device='cuda:0')
+20: torch.Size([7447, 7328])
+20: tensor(7611, device='cuda:0')
+20: torch.Size([7447, 7614])
+20: tensor(7472, device='cuda:0')
+20: torch.Size([7447, 7474])
+20: tensor(7759, device='cuda:0')
+20: torch.Size([7447, 7763])
+20: tensor(7850, device='cuda:0')
+20: torch.Size([7447, 7851])
+20: tensor(7566, device='cuda:0')
+20: torch.Size([7447, 7567])
+20: tensor(7310, device='cuda:0')
+11: torch.Size([7289, 7311])
+11: tensor(7519, device='cuda:3')
+11: torch.Size([7289, 7526])
+11: tensor(7442, device='cuda:3')
+11: torch.Size([7289, 7447])
+11: tensor(7152, device='cuda:3')
+11: torch.Size([7289, 7165])
+11: tensor(7373, device='cuda:3')
+11: torch.Size([7289, 7389])
+11: tensor(7107, device='cuda:3')
+11: torch.Size([7289, 7109])
+11: tensor(7007, device='cuda:3')
+11: torch.Size([7289, 7008])
+11: tensor(7270, device='cuda:3')
+11: torch.Size([7289, 7271])
+11: tensor(7271, device='cuda:3')
+11: torch.Size([7289, 7272])
+11: tensor(7549, device='cuda:3')
+11: torch.Size([7289, 7557])
+11: tensor(6994, device='cuda:3')
+11: torch.Size([7289, 7000])
+11: tensor(7263, device='cuda:3')
+11: torch.Size([7289, 7274])
+11: tensor(6730, device='cuda:3')
+11: torch.Size([7289, 6735])
+11: tensor(6999, device='cuda:3')
+11: torch.Size([7289, 7000])
+11: Epoch: 0
+12: tensor(7273, device='cuda:0')
+12: torch.Size([7328, 7276])
+12: tensor(7003, device='cuda:0')
+12: torch.Size([7328, 7006])
+12: tensor(7495, device='cuda:0')
+12: torch.Size([7328, 7496])
+12: tensor(7339, device='cuda:0')
+12: torch.Size([7328, 7341])
+12: tensor(6999, device='cuda:0')
+12: torch.Size([7328, 7002])
+12: tensor(6737, device='cuda:0')
+12: torch.Size([7328, 6738])
+12: tensor(7119, device='cuda:0')
+12: torch.Size([7328, 7120])
+12: tensor(7157, device='cuda:0')
+12: torch.Size([7328, 7158])
+12: tensor(7287, device='cuda:0')
+12: torch.Size([7328, 7288])
+12: tensor(7013, device='cuda:0')
+12: torch.Size([7328, 7014])
+12: tensor(7573, device='cuda:0')
+12: torch.Size([7328, 7576])
+12: tensor(7288, device='cuda:0')
+12: torch.Size([7328, 7289])
+12: tensor(7327, device='cuda:0')
+12: torch.Size([7328, 7328])
+12: tensor(7613, device='cuda:0')
+12: torch.Size([7328, 7614])
+12: tensor(7473, device='cuda:0')
+12: torch.Size([7328, 7474])
+12: tensor(7761, device='cuda:0')
+12: torch.Size([7328, 7763])
+12: tensor(7848, device='cuda:0')
+12: torch.Size([7328, 7851])
+12: tensor(7564, device='cuda:0')
+12: torch.Size([7328, 7567])
+12: tensor(7309, device='cuda:0')
+20: torch.Size([7447, 7311])
+20: tensor(7523, device='cuda:0')
+20: torch.Size([7447, 7526])
+20: tensor(7446, device='cuda:0')
+20: torch.Size([7447, 7447])
+20: tensor(7164, device='cuda:0')
+20: torch.Size([7447, 7165])
+20: tensor(7385, device='cuda:0')
+20: torch.Size([7447, 7389])
+20: tensor(7108, device='cuda:0')
+20: torch.Size([7447, 7109])
+20: tensor(7005, device='cuda:0')
+20: torch.Size([7447, 7008])
+20: tensor(7270, device='cuda:0')
+20: torch.Size([7447, 7271])
+20: tensor(7255, device='cuda:0')
+20: torch.Size([7447, 7272])
+20: tensor(7547, device='cuda:0')
+20: torch.Size([7447, 7557])
+20: tensor(6994, device='cuda:0')
+20: torch.Size([7447, 7000])
+20: tensor(7267, device='cuda:0')
+20: torch.Size([7447, 7274])
+20: tensor(6732, device='cuda:0')
+20: torch.Size([7447, 6735])
+20: tensor(6997, device='cuda:0')
+20: torch.Size([7447, 7000])
+20: Epoch: 0
+12: torch.Size([7328, 7311])
+12: tensor(7521, device='cuda:0')
+12: torch.Size([7328, 7526])
+12: tensor(7441, device='cuda:0')
+12: torch.Size([7328, 7447])
+12: tensor(7164, device='cuda:0')
+12: torch.Size([7328, 7165])
+12: tensor(7387, device='cuda:0')
+12: torch.Size([7328, 7389])
+12: tensor(7107, device='cuda:0')
+12: torch.Size([7328, 7109])
+12: tensor(7006, device='cuda:0')
+12: torch.Size([7328, 7008])
+12: tensor(7270, device='cuda:0')
+12: torch.Size([7328, 7271])
+12: tensor(7271, device='cuda:0')
+12: torch.Size([7328, 7272])
+12: tensor(7556, device='cuda:0')
+12: torch.Size([7328, 7557])
+12: tensor(6999, device='cuda:0')
+12: torch.Size([7328, 7000])
+12: tensor(7271, device='cuda:0')
+12: torch.Size([7328, 7274])
+12: tensor(6732, device='cuda:0')
+12: torch.Size([7328, 6735])
+12: tensor(6999, device='cuda:0')
+12: torch.Size([7328, 7000])
+12: Epoch: 0
+21: tensor(7270, device='cuda:1')
+21: torch.Size([7165, 7276])
+21: tensor(7003, device='cuda:1')
+21: torch.Size([7165, 7006])
+21: tensor(7480, device='cuda:1')
+21: torch.Size([7165, 7496])
+21: tensor(7338, device='cuda:1')
+21: torch.Size([7165, 7341])
+21: tensor(6957, device='cuda:1')
+21: torch.Size([7165, 7002])
+21: tensor(6737, device='cuda:1')
+21: torch.Size([7165, 6738])
+21: tensor(7114, device='cuda:1')
+21: torch.Size([7165, 7120])
+21: tensor(7156, device='cuda:1')
+21: torch.Size([7165, 7158])
+21: tensor(7283, device='cuda:1')
+21: torch.Size([7165, 7288])
+21: tensor(7013, device='cuda:1')
+21: torch.Size([7165, 7014])
+21: tensor(7571, device='cuda:1')
+21: torch.Size([7165, 7576])
+21: tensor(7288, device='cuda:1')
+21: torch.Size([7165, 7289])
+21: tensor(7322, device='cuda:1')
+21: torch.Size([7165, 7328])
+21: tensor(7611, device='cuda:1')
+21: torch.Size([7165, 7614])
+21: tensor(7473, device='cuda:1')
+21: torch.Size([7165, 7474])
+21: tensor(7760, device='cuda:1')
+21: torch.Size([7165, 7763])
+21: tensor(7850, device='cuda:1')
+21: torch.Size([7165, 7851])
+21: tensor(7557, device='cuda:1')
+21: torch.Size([7165, 7567])
+21: tensor(7310, device='cuda:1')
+13: tensor(7275, device='cuda:1')
+13: torch.Size([7614, 7276])
+13: tensor(7003, device='cuda:1')
+13: torch.Size([7614, 7006])
+13: tensor(7488, device='cuda:1')
+13: torch.Size([7614, 7496])
+13: tensor(7338, device='cuda:1')
+13: torch.Size([7614, 7341])
+13: tensor(7001, device='cuda:1')
+13: torch.Size([7614, 7002])
+13: tensor(6737, device='cuda:1')
+13: torch.Size([7614, 6738])
+13: tensor(7119, device='cuda:1')
+13: torch.Size([7614, 7120])
+13: tensor(7157, device='cuda:1')
+13: torch.Size([7614, 7158])
+13: tensor(7287, device='cuda:1')
+13: torch.Size([7614, 7288])
+13: tensor(7013, device='cuda:1')
+13: torch.Size([7614, 7014])
+13: tensor(7574, device='cuda:1')
+13: torch.Size([7614, 7576])
+13: tensor(7288, device='cuda:1')
+13: torch.Size([7614, 7289])
+13: tensor(7326, device='cuda:1')
+13: torch.Size([7614, 7328])
+13: tensor(7613, device='cuda:1')
+13: torch.Size([7614, 7614])
+13: tensor(7473, device='cuda:1')
+13: torch.Size([7614, 7474])
+13: tensor(7761, device='cuda:1')
+13: torch.Size([7614, 7763])
+13: tensor(7848, device='cuda:1')
+13: torch.Size([7614, 7851])
+13: tensor(7563, device='cuda:1')
+13: torch.Size([7614, 7567])
+13: tensor(7309, device='cuda:1')
+21: torch.Size([7165, 7311])
+21: tensor(7519, device='cuda:1')
+21: torch.Size([7165, 7526])
+21: tensor(7444, device='cuda:1')
+21: torch.Size([7165, 7447])
+21: tensor(7164, device='cuda:1')
+21: torch.Size([7165, 7165])
+21: tensor(7376, device='cuda:1')
+21: torch.Size([7165, 7389])
+21: tensor(7107, device='cuda:1')
+21: torch.Size([7165, 7109])
+21: tensor(7000, device='cuda:1')
+21: torch.Size([7165, 7008])
+21: tensor(7270, device='cuda:1')
+21: torch.Size([7165, 7271])
+21: tensor(7255, device='cuda:1')
+21: torch.Size([7165, 7272])
+21: tensor(7487, device='cuda:1')
+21: torch.Size([7165, 7557])
+21: tensor(6998, device='cuda:1')
+21: torch.Size([7165, 7000])
+21: tensor(7268, device='cuda:1')
+21: torch.Size([7165, 7274])
+21: tensor(6682, device='cuda:1')
+21: torch.Size([7165, 6735])
+21: tensor(6995, device='cuda:1')
+21: torch.Size([7165, 7000])
+21: Epoch: 0
+13: torch.Size([7614, 7311])
+13: tensor(7523, device='cuda:1')
+13: torch.Size([7614, 7526])
+13: tensor(7441, device='cuda:1')
+13: torch.Size([7614, 7447])
+13: tensor(7159, device='cuda:1')
+13: torch.Size([7614, 7165])
+13: tensor(7387, device='cuda:1')
+13: torch.Size([7614, 7389])
+13: tensor(7107, device='cuda:1')
+13: torch.Size([7614, 7109])
+13: tensor(7007, device='cuda:1')
+13: torch.Size([7614, 7008])
+13: tensor(7270, device='cuda:1')
+13: torch.Size([7614, 7271])
+13: tensor(7271, device='cuda:1')
+13: torch.Size([7614, 7272])
+13: tensor(7555, device='cuda:1')
+13: torch.Size([7614, 7557])
+13: tensor(6994, device='cuda:1')
+13: torch.Size([7614, 7000])
+13: tensor(7271, device='cuda:1')
+13: torch.Size([7614, 7274])
+13: tensor(6732, device='cuda:1')
+13: torch.Size([7614, 6735])
+13: tensor(6997, device='cuda:1')
+13: torch.Size([7614, 7000])
+13: Epoch: 0
+28: tensor(7275, device='cuda:0')
+28: torch.Size([7000, 7276])
+28: tensor(7003, device='cuda:0')
+28: torch.Size([7000, 7006])
+28: tensor(7495, device='cuda:0')
+28: torch.Size([7000, 7496])
+28: tensor(7338, device='cuda:0')
+28: torch.Size([7000, 7341])
+28: tensor(6981, device='cuda:0')
+28: torch.Size([7000, 7002])
+28: tensor(6736, device='cuda:0')
+28: torch.Size([7000, 6738])
+28: tensor(7109, device='cuda:0')
+28: torch.Size([7000, 7120])
+28: tensor(7064, device='cuda:0')
+28: torch.Size([7000, 7158])
+28: tensor(7276, device='cuda:0')
+28: torch.Size([7000, 7288])
+28: tensor(7006, device='cuda:0')
+28: torch.Size([7000, 7014])
+28: tensor(7567, device='cuda:0')
+28: torch.Size([7000, 7576])
+28: tensor(7283, device='cuda:0')
+28: torch.Size([7000, 7289])
+28: tensor(7322, device='cuda:0')
+28: torch.Size([7000, 7328])
+28: tensor(7611, device='cuda:0')
+28: torch.Size([7000, 7614])
+28: tensor(7473, device='cuda:0')
+28: torch.Size([7000, 7474])
+28: tensor(7761, device='cuda:0')
+28: torch.Size([7000, 7763])
+28: tensor(7848, device='cuda:0')
+28: torch.Size([7000, 7851])
+28: tensor(7516, device='cuda:0')
+28: torch.Size([7000, 7567])
+28: tensor(7298, device='cuda:0')
+28: torch.Size([7000, 7311])
+28: tensor(7519, device='cuda:0')
+28: torch.Size([7000, 7526])
+28: tensor(7431, device='cuda:0')
+28: torch.Size([7000, 7447])
+28: tensor(7130, device='cuda:0')
+28: torch.Size([7000, 7165])
+28: tensor(7358, device='cuda:0')
+28: torch.Size([7000, 7389])
+28: tensor(7041, device='cuda:0')
+28: torch.Size([7000, 7109])
+28: tensor(7005, device='cuda:0')
+28: torch.Size([7000, 7008])
+28: tensor(7270, device='cuda:0')
+28: torch.Size([7000, 7271])
+28: tensor(7245, device='cuda:0')
+28: torch.Size([7000, 7272])
+28: tensor(7548, device='cuda:0')
+28: torch.Size([7000, 7557])
+28: tensor(6999, device='cuda:0')
+28: torch.Size([7000, 7000])
+28: tensor(7273, device='cuda:0')
+28: torch.Size([7000, 7274])
+28: tensor(6734, device='cuda:0')
+28: torch.Size([7000, 6735])
+28: tensor(6997, device='cuda:0')
+28: torch.Size([7000, 7000])
+28: Epoch: 0
+22: tensor(7271, device='cuda:2')
+22: torch.Size([7389, 7276])
+22: tensor(7003, device='cuda:2')
+22: torch.Size([7389, 7006])
+22: tensor(7485, device='cuda:2')
+22: torch.Size([7389, 7496])
+22: tensor(7335, device='cuda:2')
+22: torch.Size([7389, 7341])
+22: tensor(6972, device='cuda:2')
+22: torch.Size([7389, 7002])
+22: tensor(6735, device='cuda:2')
+22: torch.Size([7389, 6738])
+22: tensor(7109, device='cuda:2')
+22: torch.Size([7389, 7120])
+22: tensor(7147, device='cuda:2')
+22: torch.Size([7389, 7158])
+22: tensor(7286, device='cuda:2')
+22: torch.Size([7389, 7288])
+22: tensor(7004, device='cuda:2')
+22: torch.Size([7389, 7014])
+22: tensor(7572, device='cuda:2')
+22: torch.Size([7389, 7576])
+22: tensor(7283, device='cuda:2')
+22: torch.Size([7389, 7289])
+22: tensor(7322, device='cuda:2')
+22: torch.Size([7389, 7328])
+22: tensor(7611, device='cuda:2')
+22: torch.Size([7389, 7614])
+22: tensor(7448, device='cuda:2')
+22: torch.Size([7389, 7474])
+22: tensor(7756, device='cuda:2')
+22: torch.Size([7389, 7763])
+22: tensor(7845, device='cuda:2')
+22: torch.Size([7389, 7851])
+22: tensor(7557, device='cuda:2')
+22: torch.Size([7389, 7567])
+22: tensor(7307, device='cuda:2')
+29: tensor(7275, device='cuda:1')
+29: torch.Size([7274, 7276])
+29: tensor(7003, device='cuda:1')
+29: torch.Size([7274, 7006])
+29: tensor(7463, device='cuda:1')
+29: torch.Size([7274, 7496])
+29: tensor(7338, device='cuda:1')
+29: torch.Size([7274, 7341])
+29: tensor(6983, device='cuda:1')
+29: torch.Size([7274, 7002])
+29: tensor(6726, device='cuda:1')
+29: torch.Size([7274, 6738])
+29: tensor(7106, device='cuda:1')
+29: torch.Size([7274, 7120])
+29: tensor(7157, device='cuda:1')
+29: torch.Size([7274, 7158])
+29: tensor(7283, device='cuda:1')
+29: torch.Size([7274, 7288])
+29: tensor(6997, device='cuda:1')
+29: torch.Size([7274, 7014])
+29: tensor(7557, device='cuda:1')
+29: torch.Size([7274, 7576])
+29: tensor(7282, device='cuda:1')
+29: torch.Size([7274, 7289])
+29: tensor(7322, device='cuda:1')
+29: torch.Size([7274, 7328])
+29: tensor(7611, device='cuda:1')
+29: torch.Size([7274, 7614])
+29: tensor(7470, device='cuda:1')
+29: torch.Size([7274, 7474])
+29: tensor(7760, device='cuda:1')
+29: torch.Size([7274, 7763])
+29: tensor(7794, device='cuda:1')
+29: torch.Size([7274, 7851])
+29: tensor(7563, device='cuda:1')
+29: torch.Size([7274, 7567])
+29: tensor(7305, device='cuda:1')
+22: torch.Size([7389, 7311])
+22: tensor(7508, device='cuda:2')
+22: torch.Size([7389, 7526])
+22: tensor(7444, device='cuda:2')
+22: torch.Size([7389, 7447])
+22: tensor(7164, device='cuda:2')
+22: torch.Size([7389, 7165])
+22: tensor(7388, device='cuda:2')
+22: torch.Size([7389, 7389])
+22: tensor(7108, device='cuda:2')
+22: torch.Size([7389, 7109])
+22: tensor(6990, device='cuda:2')
+22: torch.Size([7389, 7008])
+22: tensor(7270, device='cuda:2')
+22: torch.Size([7389, 7271])
+22: tensor(7261, device='cuda:2')
+22: torch.Size([7389, 7272])
+22: tensor(7542, device='cuda:2')
+22: torch.Size([7389, 7557])
+22: tensor(6994, device='cuda:2')
+22: torch.Size([7389, 7000])
+22: tensor(7270, device='cuda:2')
+22: torch.Size([7389, 7274])
+22: tensor(6730, device='cuda:2')
+22: torch.Size([7389, 6735])
+22: tensor(6997, device='cuda:2')
+22: torch.Size([7389, 7000])
+22: Epoch: 0
+29: torch.Size([7274, 7311])
+29: tensor(7521, device='cuda:1')
+29: torch.Size([7274, 7526])
+29: tensor(7441, device='cuda:1')
+29: torch.Size([7274, 7447])
+29: tensor(7159, device='cuda:1')
+29: torch.Size([7274, 7165])
+29: tensor(7359, device='cuda:1')
+29: torch.Size([7274, 7389])
+29: tensor(7074, device='cuda:1')
+29: torch.Size([7274, 7109])
+29: tensor(7005, device='cuda:1')
+29: torch.Size([7274, 7008])
+29: tensor(7270, device='cuda:1')
+29: torch.Size([7274, 7271])
+29: tensor(7261, device='cuda:1')
+29: torch.Size([7274, 7272])
+29: tensor(7554, device='cuda:1')
+29: torch.Size([7274, 7557])
+29: tensor(6999, device='cuda:1')
+29: torch.Size([7274, 7000])
+29: tensor(7273, device='cuda:1')
+29: torch.Size([7274, 7274])
+29: tensor(6734, device='cuda:1')
+29: torch.Size([7274, 6735])
+29: tensor(6997, device='cuda:1')
+29: torch.Size([7274, 7000])
+29: Epoch: 0
+23: tensor(7265, device='cuda:3')
+23: torch.Size([7109, 7276])
+23: tensor(7003, device='cuda:3')
+23: torch.Size([7109, 7006])
+23: tensor(7480, device='cuda:3')
+23: torch.Size([7109, 7496])
+23: tensor(7340, device='cuda:3')
+23: torch.Size([7109, 7341])
+23: tensor(6999, device='cuda:3')
+23: torch.Size([7109, 7002])
+23: tensor(6737, device='cuda:3')
+23: torch.Size([7109, 6738])
+23: tensor(7114, device='cuda:3')
+23: torch.Size([7109, 7120])
+23: tensor(7153, device='cuda:3')
+23: torch.Size([7109, 7158])
+23: tensor(7287, device='cuda:3')
+23: torch.Size([7109, 7288])
+23: tensor(7013, device='cuda:3')
+23: torch.Size([7109, 7014])
+23: tensor(7557, device='cuda:3')
+23: torch.Size([7109, 7576])
+23: tensor(7288, device='cuda:3')
+23: torch.Size([7109, 7289])
+23: tensor(7326, device='cuda:3')
+23: torch.Size([7109, 7328])
+23: tensor(7611, device='cuda:3')
+23: torch.Size([7109, 7614])
+23: tensor(7473, device='cuda:3')
+23: torch.Size([7109, 7474])
+23: tensor(7761, device='cuda:3')
+23: torch.Size([7109, 7763])
+23: tensor(7848, device='cuda:3')
+23: torch.Size([7109, 7851])
+23: tensor(7566, device='cuda:3')
+23: torch.Size([7109, 7567])
+23: tensor(7309, device='cuda:3')
+23: torch.Size([7109, 7311])
+23: tensor(7519, device='cuda:3')
+23: torch.Size([7109, 7526])
+23: tensor(7445, device='cuda:3')
+23: torch.Size([7109, 7447])
+23: tensor(7161, device='cuda:3')
+23: torch.Size([7109, 7165])
+23: tensor(7386, device='cuda:3')
+23: torch.Size([7109, 7389])
+23: tensor(7108, device='cuda:3')
+23: torch.Size([7109, 7109])
+23: tensor(7005, device='cuda:3')
+23: torch.Size([7109, 7008])
+23: tensor(7270, device='cuda:3')
+23: torch.Size([7109, 7271])
+23: tensor(7269, device='cuda:3')
+23: torch.Size([7109, 7272])
+23: tensor(7549, device='cuda:3')
+23: torch.Size([7109, 7557])
+23: tensor(6994, device='cuda:3')
+23: torch.Size([7109, 7000])
+23: tensor(7269, device='cuda:3')
+23: torch.Size([7109, 7274])
+23: tensor(6732, device='cuda:3')
+23: torch.Size([7109, 6735])
+23: tensor(6997, device='cuda:3')
+23: torch.Size([7109, 7000])
+23: Epoch: 0
+ 8: tensor(7275, device='cuda:0')
+ 8: torch.Size([7288, 7276])
+ 8: tensor(7005, device='cuda:0')
+ 8: torch.Size([7288, 7006])
+ 8: tensor(7495, device='cuda:0')
+ 8: torch.Size([7288, 7496])
+ 8: tensor(7337, device='cuda:0')
+ 8: torch.Size([7288, 7341])
+ 8: tensor(7000, device='cuda:0')
+ 8: torch.Size([7288, 7002])
+ 8: tensor(6737, device='cuda:0')
+ 8: torch.Size([7288, 6738])
+ 8: tensor(7114, device='cuda:0')
+ 8: torch.Size([7288, 7120])
+ 8: tensor(7157, device='cuda:0')
+ 8: torch.Size([7288, 7158])
+ 8: tensor(7287, device='cuda:0')
+ 8: torch.Size([7288, 7288])
+ 8: tensor(7012, device='cuda:0')
+ 8: torch.Size([7288, 7014])
+ 8: tensor(7575, device='cuda:0')
+ 8: torch.Size([7288, 7576])
+ 8: tensor(7288, device='cuda:0')
+ 8: torch.Size([7288, 7289])
+ 8: tensor(7325, device='cuda:0')
+ 8: torch.Size([7288, 7328])
+ 8: tensor(7611, device='cuda:0')
+ 8: torch.Size([7288, 7614])
+ 8: tensor(7473, device='cuda:0')
+ 8: torch.Size([7288, 7474])
+ 8: tensor(7762, device='cuda:0')
+ 8: torch.Size([7288, 7763])
+ 8: tensor(7841, device='cuda:0')
+ 8: torch.Size([7288, 7851])
+ 8: tensor(7558, device='cuda:0')
+ 8: torch.Size([7288, 7567])
+ 8: tensor(7299, device='cuda:0')
+ 8: torch.Size([7288, 7311])
+ 8: tensor(7519, device='cuda:0')
+ 8: torch.Size([7288, 7526])
+ 8: tensor(7440, device='cuda:0')
+ 8: torch.Size([7288, 7447])
+ 8: tensor(7164, device='cuda:0')
+ 8: torch.Size([7288, 7165])
+ 8: tensor(7387, device='cuda:0')
+ 8: torch.Size([7288, 7389])
+ 8: tensor(7106, device='cuda:0')
+ 8: torch.Size([7288, 7109])
+ 8: tensor(7005, device='cuda:0')
+ 8: torch.Size([7288, 7008])
+ 8: tensor(7270, device='cuda:0')
+ 8: torch.Size([7288, 7271])
+ 8: tensor(7271, device='cuda:0')
+ 8: torch.Size([7288, 7272])
+ 8: tensor(7556, device='cuda:0')
+ 8: torch.Size([7288, 7557])
+ 8: tensor(6994, device='cuda:0')
+ 8: torch.Size([7288, 7000])
+ 8: tensor(7260, device='cuda:0')
+ 8: torch.Size([7288, 7274])
+ 8: tensor(6731, device='cuda:0')
+ 8: torch.Size([7288, 6735])
+ 8: tensor(6997, device='cuda:0')
+ 8: torch.Size([7288, 7000])
+ 8: Epoch: 0
+18: tensor(7243, device='cuda:2')
+18: torch.Size([7311, 7276])
+18: tensor(7003, device='cuda:2')
+18: torch.Size([7311, 7006])
+18: tensor(7463, device='cuda:2')
+18: torch.Size([7311, 7496])
+18: tensor(7338, device='cuda:2')
+18: torch.Size([7311, 7341])
+18: tensor(6999, device='cuda:2')
+18: torch.Size([7311, 7002])
+18: tensor(6737, device='cuda:2')
+18: torch.Size([7311, 6738])
+18: tensor(7114, device='cuda:2')
+18: torch.Size([7311, 7120])
+18: tensor(7157, device='cuda:2')
+18: torch.Size([7311, 7158])
+18: tensor(7283, device='cuda:2')
+18: torch.Size([7311, 7288])
+18: tensor(7004, device='cuda:2')
+18: torch.Size([7311, 7014])
+18: tensor(7554, device='cuda:2')
+18: torch.Size([7311, 7576])
+18: tensor(7276, device='cuda:2')
+18: torch.Size([7311, 7289])
+18: tensor(7322, device='cuda:2')
+18: torch.Size([7311, 7328])
+18: tensor(7611, device='cuda:2')
+18: torch.Size([7311, 7614])
+18: tensor(7473, device='cuda:2')
+18: torch.Size([7311, 7474])
+18: tensor(7757, device='cuda:2')
+18: torch.Size([7311, 7763])
+18: tensor(7850, device='cuda:2')
+18: torch.Size([7311, 7851])
+18: tensor(7566, device='cuda:2')
+18: torch.Size([7311, 7567])
+18: tensor(7310, device='cuda:2')
+ 9: tensor(7272, device='cuda:1')
+ 9: torch.Size([7014, 7276])
+ 9: tensor(7003, device='cuda:1')
+ 9: torch.Size([7014, 7006])
+ 9: tensor(7480, device='cuda:1')
+ 9: torch.Size([7014, 7496])
+ 9: tensor(7338, device='cuda:1')
+ 9: torch.Size([7014, 7341])
+ 9: tensor(7000, device='cuda:1')
+ 9: torch.Size([7014, 7002])
+ 9: tensor(6737, device='cuda:1')
+ 9: torch.Size([7014, 6738])
+ 9: tensor(7119, device='cuda:1')
+ 9: torch.Size([7014, 7120])
+ 9: tensor(7156, device='cuda:1')
+ 9: torch.Size([7014, 7158])
+ 9: tensor(7287, device='cuda:1')
+ 9: torch.Size([7014, 7288])
+ 9: tensor(7013, device='cuda:1')
+ 9: torch.Size([7014, 7014])
+ 9: tensor(7574, device='cuda:1')
+ 9: torch.Size([7014, 7576])
+ 9: tensor(7285, device='cuda:1')
+ 9: torch.Size([7014, 7289])
+ 9: tensor(7323, device='cuda:1')
+ 9: torch.Size([7014, 7328])
+ 9: tensor(7611, device='cuda:1')
+ 9: torch.Size([7014, 7614])
+ 9: tensor(7473, device='cuda:1')
+ 9: torch.Size([7014, 7474])
+ 9: tensor(7762, device='cuda:1')
+ 9: torch.Size([7014, 7763])
+ 9: tensor(7848, device='cuda:1')
+ 9: torch.Size([7014, 7851])
+ 9: tensor(7563, device='cuda:1')
+ 9: torch.Size([7014, 7567])
+ 9: tensor(7309, device='cuda:1')
+18: torch.Size([7311, 7311])
+18: tensor(7525, device='cuda:2')
+18: torch.Size([7311, 7526])
+18: tensor(7444, device='cuda:2')
+18: torch.Size([7311, 7447])
+18: tensor(7160, device='cuda:2')
+18: torch.Size([7311, 7165])
+18: tensor(7387, device='cuda:2')
+18: torch.Size([7311, 7389])
+18: tensor(7104, device='cuda:2')
+18: torch.Size([7311, 7109])
+18: tensor(7007, device='cuda:2')
+18: torch.Size([7311, 7008])
+18: tensor(7270, device='cuda:2')
+18: torch.Size([7311, 7271])
+18: tensor(7271, device='cuda:2')
+18: torch.Size([7311, 7272])
+18: tensor(7551, device='cuda:2')
+18: torch.Size([7311, 7557])
+18: tensor(6994, device='cuda:2')
+18: torch.Size([7311, 7000])
+18: tensor(7258, device='cuda:2')
+18: torch.Size([7311, 7274])
+18: tensor(6719, device='cuda:2')
+18: torch.Size([7311, 6735])
+18: tensor(6997, device='cuda:2')
+18: torch.Size([7311, 7000])
+18: Epoch: 0
+ 9: torch.Size([7014, 7311])
+ 9: tensor(7519, device='cuda:1')
+ 9: torch.Size([7014, 7526])
+ 9: tensor(7439, device='cuda:1')
+ 9: torch.Size([7014, 7447])
+ 9: tensor(7160, device='cuda:1')
+ 9: torch.Size([7014, 7165])
+ 9: tensor(7385, device='cuda:1')
+ 9: torch.Size([7014, 7389])
+ 9: tensor(7107, device='cuda:1')
+ 9: torch.Size([7014, 7109])
+ 9: tensor(7005, device='cuda:1')
+ 9: torch.Size([7014, 7008])
+ 9: tensor(7270, device='cuda:1')
+ 9: torch.Size([7014, 7271])
+ 9: tensor(7271, device='cuda:1')
+ 9: torch.Size([7014, 7272])
+ 9: tensor(7551, device='cuda:1')
+ 9: torch.Size([7014, 7557])
+ 9: tensor(6999, device='cuda:1')
+ 9: torch.Size([7014, 7000])
+ 9: tensor(7271, device='cuda:1')
+ 9: torch.Size([7014, 7274])
+ 9: tensor(6730, device='cuda:1')
+ 9: torch.Size([7014, 6735])
+ 9: tensor(6997, device='cuda:1')
+ 9: torch.Size([7014, 7000])
+ 9: Epoch: 0
+19: tensor(7273, device='cuda:3')
+19: torch.Size([7526, 7276])
+19: tensor(7003, device='cuda:3')
+19: torch.Size([7526, 7006])
+19: tensor(7488, device='cuda:3')
+19: torch.Size([7526, 7496])
+19: tensor(7331, device='cuda:3')
+19: torch.Size([7526, 7341])
+19: tensor(6999, device='cuda:3')
+19: torch.Size([7526, 7002])
+19: tensor(6735, device='cuda:3')
+19: torch.Size([7526, 6738])
+19: tensor(7114, device='cuda:3')
+19: torch.Size([7526, 7120])
+19: tensor(7132, device='cuda:3')
+19: torch.Size([7526, 7158])
+19: tensor(7283, device='cuda:3')
+19: torch.Size([7526, 7288])
+19: tensor(7013, device='cuda:3')
+19: torch.Size([7526, 7014])
+19: tensor(7557, device='cuda:3')
+19: torch.Size([7526, 7576])
+19: tensor(7283, device='cuda:3')
+19: torch.Size([7526, 7289])
+19: tensor(7322, device='cuda:3')
+19: torch.Size([7526, 7328])
+19: tensor(7611, device='cuda:3')
+19: torch.Size([7526, 7614])
+19: tensor(7448, device='cuda:3')
+19: torch.Size([7526, 7474])
+19: tensor(7761, device='cuda:3')
+19: torch.Size([7526, 7763])
+19: tensor(7825, device='cuda:3')
+19: torch.Size([7526, 7851])
+19: tensor(7531, device='cuda:3')
+19: torch.Size([7526, 7567])
+19: tensor(7308, device='cuda:3')
+16: tensor(7255, device='cuda:0')
+16: torch.Size([7851, 7276])
+16: tensor(7003, device='cuda:0')
+16: torch.Size([7851, 7006])
+16: tensor(7437, device='cuda:0')
+16: torch.Size([7851, 7496])
+16: tensor(7338, device='cuda:0')
+16: torch.Size([7851, 7341])
+16: tensor(6999, device='cuda:0')
+16: torch.Size([7851, 7002])
+16: tensor(6737, device='cuda:0')
+16: torch.Size([7851, 6738])
+16: tensor(7109, device='cuda:0')
+16: torch.Size([7851, 7120])
+16: tensor(7156, device='cuda:0')
+16: torch.Size([7851, 7158])
+16: tensor(7284, device='cuda:0')
+16: torch.Size([7851, 7288])
+16: tensor(7010, device='cuda:0')
+16: torch.Size([7851, 7014])
+16: tensor(7568, device='cuda:0')
+16: torch.Size([7851, 7576])
+16: tensor(7283, device='cuda:0')
+16: torch.Size([7851, 7289])
+16: tensor(7322, device='cuda:0')
+16: torch.Size([7851, 7328])
+16: tensor(7611, device='cuda:0')
+16: torch.Size([7851, 7614])
+16: tensor(7473, device='cuda:0')
+16: torch.Size([7851, 7474])
+16: tensor(7761, device='cuda:0')
+16: torch.Size([7851, 7763])
+16: tensor(7850, device='cuda:0')
+16: torch.Size([7851, 7851])
+16: tensor(7566, device='cuda:0')
+16: torch.Size([7851, 7567])
+16: tensor(7310, device='cuda:0')
+26: tensor(7265, device='cuda:2')
+26: torch.Size([7272, 7276])
+26: tensor(7003, device='cuda:2')
+26: torch.Size([7272, 7006])
+26: tensor(7484, device='cuda:2')
+26: torch.Size([7272, 7496])
+26: tensor(7338, device='cuda:2')
+26: torch.Size([7272, 7341])
+26: tensor(6995, device='cuda:2')
+26: torch.Size([7272, 7002])
+26: tensor(6737, device='cuda:2')
+26: torch.Size([7272, 6738])
+26: tensor(7114, device='cuda:2')
+26: torch.Size([7272, 7120])
+26: tensor(7156, device='cuda:2')
+26: torch.Size([7272, 7158])
+26: tensor(7283, device='cuda:2')
+26: torch.Size([7272, 7288])
+26: tensor(7013, device='cuda:2')
+26: torch.Size([7272, 7014])
+26: tensor(7557, device='cuda:2')
+26: torch.Size([7272, 7576])
+26: tensor(7282, device='cuda:2')
+26: torch.Size([7272, 7289])
+26: tensor(7322, device='cuda:2')
+26: torch.Size([7272, 7328])
+26: tensor(7611, device='cuda:2')
+26: torch.Size([7272, 7614])
+26: tensor(7468, device='cuda:2')
+26: torch.Size([7272, 7474])
+26: tensor(7746, device='cuda:2')
+26: torch.Size([7272, 7763])
+26: tensor(7848, device='cuda:2')
+26: torch.Size([7272, 7851])
+26: tensor(7564, device='cuda:2')
+26: torch.Size([7272, 7567])
+26: tensor(7308, device='cuda:2')
+30: tensor(7275, device='cuda:2')
+30: torch.Size([6735, 7276])
+30: tensor(7004, device='cuda:2')
+30: torch.Size([6735, 7006])
+30: tensor(7482, device='cuda:2')
+30: torch.Size([6735, 7496])
+30: tensor(7335, device='cuda:2')
+30: torch.Size([6735, 7341])
+30: tensor(6989, device='cuda:2')
+30: torch.Size([6735, 7002])
+30: tensor(6737, device='cuda:2')
+30: torch.Size([6735, 6738])
+30: tensor(7119, device='cuda:2')
+30: torch.Size([6735, 7120])
+30: tensor(7143, device='cuda:2')
+30: torch.Size([6735, 7158])
+30: tensor(7283, device='cuda:2')
+30: torch.Size([6735, 7288])
+30: tensor(7009, device='cuda:2')
+30: torch.Size([6735, 7014])
+30: tensor(7565, device='cuda:2')
+30: torch.Size([6735, 7576])
+30: tensor(7282, device='cuda:2')
+30: torch.Size([6735, 7289])
+30: tensor(7322, device='cuda:2')
+30: torch.Size([6735, 7328])
+30: tensor(7611, device='cuda:2')
+30: torch.Size([6735, 7614])
+30: tensor(7473, device='cuda:2')
+30: torch.Size([6735, 7474])
+30: tensor(7756, device='cuda:2')
+30: torch.Size([6735, 7763])
+30: tensor(7841, device='cuda:2')
+30: torch.Size([6735, 7851])
+30: tensor(7556, device='cuda:2')
+30: torch.Size([6735, 7567])
+30: tensor(7306, device='cuda:2')
+19: torch.Size([7526, 7311])
+19: tensor(7525, device='cuda:3')
+19: torch.Size([7526, 7526])
+19: tensor(7437, device='cuda:3')
+19: torch.Size([7526, 7447])
+19: tensor(7131, device='cuda:3')
+19: torch.Size([7526, 7165])
+19: tensor(7358, device='cuda:3')
+19: torch.Size([7526, 7389])
+19: tensor(7105, device='cuda:3')
+19: torch.Size([7526, 7109])
+19: tensor(7007, device='cuda:3')
+19: torch.Size([7526, 7008])
+19: tensor(7270, device='cuda:3')
+19: torch.Size([7526, 7271])
+19: tensor(7268, device='cuda:3')
+19: torch.Size([7526, 7272])
+19: tensor(7548, device='cuda:3')
+19: torch.Size([7526, 7557])
+19: tensor(6994, device='cuda:3')
+19: torch.Size([7526, 7000])
+19: tensor(7219, device='cuda:3')
+19: torch.Size([7526, 7274])
+19: tensor(6718, device='cuda:3')
+19: torch.Size([7526, 6735])
+19: tensor(6997, device='cuda:3')
+19: torch.Size([7526, 7000])
+19: Epoch: 0
+16: torch.Size([7851, 7311])
+16: tensor(7510, device='cuda:0')
+16: torch.Size([7851, 7526])
+16: tensor(7444, device='cuda:0')
+16: torch.Size([7851, 7447])
+16: tensor(7163, device='cuda:0')
+16: torch.Size([7851, 7165])
+16: tensor(7387, device='cuda:0')
+16: torch.Size([7851, 7389])
+16: tensor(7107, device='cuda:0')
+16: torch.Size([7851, 7109])
+16: tensor(6997, device='cuda:0')
+16: torch.Size([7851, 7008])
+16: tensor(7270, device='cuda:0')
+16: torch.Size([7851, 7271])
+16: tensor(7271, device='cuda:0')
+16: torch.Size([7851, 7272])
+16: tensor(7545, device='cuda:0')
+16: torch.Size([7851, 7557])
+16: tensor(6998, device='cuda:0')
+16: torch.Size([7851, 7000])
+16: tensor(7258, device='cuda:0')
+16: torch.Size([7851, 7274])
+16: tensor(6732, device='cuda:0')
+16: torch.Size([7851, 6735])
+16: tensor(6999, device='cuda:0')
+16: torch.Size([7851, 7000])
+16: Epoch: 0
+26: torch.Size([7272, 7311])
+26: tensor(7510, device='cuda:2')
+26: torch.Size([7272, 7526])
+26: tensor(7446, device='cuda:2')
+26: torch.Size([7272, 7447])
+26: tensor(7159, device='cuda:2')
+26: torch.Size([7272, 7165])
+26: tensor(7376, device='cuda:2')
+26: torch.Size([7272, 7389])
+26: tensor(7107, device='cuda:2')
+26: torch.Size([7272, 7109])
+26: tensor(7006, device='cuda:2')
+26: torch.Size([7272, 7008])
+26: tensor(7270, device='cuda:2')
+26: torch.Size([7272, 7271])
+26: tensor(7271, device='cuda:2')
+26: torch.Size([7272, 7272])
+26: tensor(7556, device='cuda:2')
+26: torch.Size([7272, 7557])
+26: tensor(6998, device='cuda:2')
+26: torch.Size([7272, 7000])
+26: tensor(7271, device='cuda:2')
+26: torch.Size([7272, 7274])
+26: tensor(6730, device='cuda:2')
+26: torch.Size([7272, 6735])
+26: tensor(6997, device='cuda:2')
+26: torch.Size([7272, 7000])
+26: Epoch: 0
+30: torch.Size([6735, 7311])
+30: tensor(7521, device='cuda:2')
+30: torch.Size([6735, 7526])
+30: tensor(7437, device='cuda:2')
+30: torch.Size([6735, 7447])
+30: tensor(7130, device='cuda:2')
+30: torch.Size([6735, 7165])
+30: tensor(7387, device='cuda:2')
+30: torch.Size([6735, 7389])
+30: tensor(7105, device='cuda:2')
+30: torch.Size([6735, 7109])
+30: tensor(6975, device='cuda:2')
+30: torch.Size([6735, 7008])
+30: tensor(7270, device='cuda:2')
+30: torch.Size([6735, 7271])
+30: tensor(7267, device='cuda:2')
+30: torch.Size([6735, 7272])
+30: tensor(7554, device='cuda:2')
+30: torch.Size([6735, 7557])
+30: tensor(6998, device='cuda:2')
+30: torch.Size([6735, 7000])
+30: tensor(7269, device='cuda:2')
+30: torch.Size([6735, 7274])
+30: tensor(6734, device='cuda:2')
+30: torch.Size([6735, 6735])
+30: tensor(6997, device='cuda:2')
+30: torch.Size([6735, 7000])
+30: Epoch: 0
+17: tensor(7273, device='cuda:1')
+17: torch.Size([7567, 7276])
+17: tensor(7003, device='cuda:1')
+17: torch.Size([7567, 7006])
+17: tensor(7460, device='cuda:1')
+17: torch.Size([7567, 7496])
+17: tensor(7339, device='cuda:1')
+17: torch.Size([7567, 7341])
+17: tensor(7001, device='cuda:1')
+17: torch.Size([7567, 7002])
+17: tensor(6737, device='cuda:1')
+17: torch.Size([7567, 6738])
+17: tensor(7119, device='cuda:1')
+17: torch.Size([7567, 7120])
+17: tensor(7157, device='cuda:1')
+17: torch.Size([7567, 7158])
+17: tensor(7284, device='cuda:1')
+17: torch.Size([7567, 7288])
+17: tensor(7013, device='cuda:1')
+17: torch.Size([7567, 7014])
+17: tensor(7564, device='cuda:1')
+17: torch.Size([7567, 7576])
+17: tensor(7281, device='cuda:1')
+17: torch.Size([7567, 7289])
+17: tensor(7322, device='cuda:1')
+17: torch.Size([7567, 7328])
+17: tensor(7611, device='cuda:1')
+17: torch.Size([7567, 7614])
+17: tensor(7468, device='cuda:1')
+17: torch.Size([7567, 7474])
+17: tensor(7761, device='cuda:1')
+17: torch.Size([7567, 7763])
+17: tensor(7850, device='cuda:1')
+17: torch.Size([7567, 7851])
+17: tensor(7566, device='cuda:1')
+17: torch.Size([7567, 7567])
+17: tensor(7309, device='cuda:1')
+27: tensor(7265, device='cuda:3')
+27: torch.Size([7557, 7276])
+27: tensor(7003, device='cuda:3')
+27: torch.Size([7557, 7006])
+27: tensor(7495, device='cuda:3')
+27: torch.Size([7557, 7496])
+27: tensor(7338, device='cuda:3')
+27: torch.Size([7557, 7341])
+27: tensor(6995, device='cuda:3')
+27: torch.Size([7557, 7002])
+27: tensor(6726, device='cuda:3')
+27: torch.Size([7557, 6738])
+27: tensor(7109, device='cuda:3')
+27: torch.Size([7557, 7120])
+27: tensor(7146, device='cuda:3')
+27: torch.Size([7557, 7158])
+27: tensor(7283, device='cuda:3')
+27: torch.Size([7557, 7288])
+27: tensor(7013, device='cuda:3')
+27: torch.Size([7557, 7014])
+27: tensor(7557, device='cuda:3')
+27: torch.Size([7557, 7576])
+27: tensor(7283, device='cuda:3')
+27: torch.Size([7557, 7289])
+27: tensor(7322, device='cuda:3')
+27: torch.Size([7557, 7328])
+27: tensor(7611, device='cuda:3')
+27: torch.Size([7557, 7614])
+27: tensor(7470, device='cuda:3')
+27: torch.Size([7557, 7474])
+27: tensor(7751, device='cuda:3')
+27: torch.Size([7557, 7763])
+27: tensor(7848, device='cuda:3')
+27: torch.Size([7557, 7851])
+27: tensor(7563, device='cuda:3')
+27: torch.Size([7557, 7567])
+27: tensor(7298, device='cuda:3')
+31: tensor(7270, device='cuda:3')
+31: torch.Size([7000, 7276])
+31: tensor(7003, device='cuda:3')
+31: torch.Size([7000, 7006])
+31: tensor(7466, device='cuda:3')
+31: torch.Size([7000, 7496])
+31: tensor(7340, device='cuda:3')
+31: torch.Size([7000, 7341])
+31: tensor(6991, device='cuda:3')
+31: torch.Size([7000, 7002])
+31: tensor(6737, device='cuda:3')
+31: torch.Size([7000, 6738])
+31: tensor(7109, device='cuda:3')
+31: torch.Size([7000, 7120])
+31: tensor(7157, device='cuda:3')
+31: torch.Size([7000, 7158])
+31: tensor(7284, device='cuda:3')
+31: torch.Size([7000, 7288])
+31: tensor(7004, device='cuda:3')
+31: torch.Size([7000, 7014])
+31: tensor(7572, device='cuda:3')
+31: torch.Size([7000, 7576])
+31: tensor(7283, device='cuda:3')
+31: torch.Size([7000, 7289])
+31: tensor(7322, device='cuda:3')
+31: torch.Size([7000, 7328])
+31: tensor(7611, device='cuda:3')
+31: torch.Size([7000, 7614])
+31: tensor(7470, device='cuda:3')
+31: torch.Size([7000, 7474])
+31: tensor(7761, device='cuda:3')
+31: torch.Size([7000, 7763])
+31: tensor(7848, device='cuda:3')
+31: torch.Size([7000, 7851])
+31: tensor(7562, device='cuda:3')
+31: torch.Size([7000, 7567])
+31: tensor(7307, device='cuda:3')
+17: torch.Size([7567, 7311])
+17: tensor(7525, device='cuda:1')
+17: torch.Size([7567, 7526])
+17: tensor(7444, device='cuda:1')
+17: torch.Size([7567, 7447])
+17: tensor(7158, device='cuda:1')
+17: torch.Size([7567, 7165])
+17: tensor(7385, device='cuda:1')
+17: torch.Size([7567, 7389])
+17: tensor(7106, device='cuda:1')
+17: torch.Size([7567, 7109])
+17: tensor(6997, device='cuda:1')
+17: torch.Size([7567, 7008])
+17: tensor(7270, device='cuda:1')
+17: torch.Size([7567, 7271])
+17: tensor(7271, device='cuda:1')
+17: torch.Size([7567, 7272])
+17: tensor(7551, device='cuda:1')
+17: torch.Size([7567, 7557])
+17: tensor(6999, device='cuda:1')
+17: torch.Size([7567, 7000])
+17: tensor(7269, device='cuda:1')
+17: torch.Size([7567, 7274])
+17: tensor(6732, device='cuda:1')
+17: torch.Size([7567, 6735])
+17: tensor(6997, device='cuda:1')
+17: torch.Size([7567, 7000])
+17: Epoch: 0
+27: torch.Size([7557, 7311])
+27: tensor(7519, device='cuda:3')
+27: torch.Size([7557, 7526])
+27: tensor(7437, device='cuda:3')
+27: torch.Size([7557, 7447])
+27: tensor(7146, device='cuda:3')
+27: torch.Size([7557, 7165])
+27: tensor(7358, device='cuda:3')
+27: torch.Size([7557, 7389])
+27: tensor(7107, device='cuda:3')
+27: torch.Size([7557, 7109])
+27: tensor(7006, device='cuda:3')
+27: torch.Size([7557, 7008])
+27: tensor(7270, device='cuda:3')
+27: torch.Size([7557, 7271])
+27: tensor(7271, device='cuda:3')
+27: torch.Size([7557, 7272])
+27: tensor(7556, device='cuda:3')
+27: torch.Size([7557, 7557])
+27: tensor(6998, device='cuda:3')
+27: torch.Size([7557, 7000])
+27: tensor(7271, device='cuda:3')
+27: torch.Size([7557, 7274])
+27: tensor(6732, device='cuda:3')
+27: torch.Size([7557, 6735])
+27: tensor(6997, device='cuda:3')
+27: torch.Size([7557, 7000])
+27: Epoch: 0
+31: torch.Size([7000, 7311])
+31: tensor(7508, device='cuda:3')
+31: torch.Size([7000, 7526])
+31: tensor(7442, device='cuda:3')
+31: torch.Size([7000, 7447])
+31: tensor(7161, device='cuda:3')
+31: torch.Size([7000, 7165])
+31: tensor(7381, device='cuda:3')
+31: torch.Size([7000, 7389])
+31: tensor(7106, device='cuda:3')
+31: torch.Size([7000, 7109])
+31: tensor(7006, device='cuda:3')
+31: torch.Size([7000, 7008])
+31: tensor(7270, device='cuda:3')
+31: torch.Size([7000, 7271])
+31: tensor(7271, device='cuda:3')
+31: torch.Size([7000, 7272])
+31: tensor(7547, device='cuda:3')
+31: torch.Size([7000, 7557])
+31: tensor(6998, device='cuda:3')
+31: torch.Size([7000, 7000])
+31: tensor(7271, device='cuda:3')
+31: torch.Size([7000, 7274])
+31: tensor(6730, device='cuda:3')
+31: torch.Size([7000, 6735])
+31: tensor(6999, device='cuda:3')
+31: torch.Size([7000, 7000])
+31: Epoch: 0
+ 4: /global/common/software/nersc/pm-2022q4/sw/pytorch/1.13.1/lib/python3.9/site-packages/torch/distributed/distributed_c10d.py:262: UserWarning: torch.distributed.reduce_op is deprecated, please use torch.distributed.ReduceOp instead
+ 4:   warnings.warn(
+ 7: /global/common/software/nersc/pm-2022q4/sw/pytorch/1.13.1/lib/python3.9/site-packages/torch/distributed/distributed_c10d.py:262: UserWarning: torch.distributed.reduce_op is deprecated, please use torch.distributed.ReduceOp instead
+ 7:   warnings.warn(
+ 0: /global/common/software/nersc/pm-2022q4/sw/pytorch/1.13.1/lib/python3.9/site-packages/torch/distributed/distributed_c10d.py:262: UserWarning: torch.distributed.reduce_op is deprecated, please use torch.distributed.ReduceOp instead
+ 0:   warnings.warn(
+ 5: /global/common/software/nersc/pm-2022q4/sw/pytorch/1.13.1/lib/python3.9/site-packages/torch/distributed/distributed_c10d.py:262: UserWarning: torch.distributed.reduce_op is deprecated, please use torch.distributed.ReduceOp instead
+ 5:   warnings.warn(
+ 6: /global/common/software/nersc/pm-2022q4/sw/pytorch/1.13.1/lib/python3.9/site-packages/torch/distributed/distributed_c10d.py:262: UserWarning: torch.distributed.reduce_op is deprecated, please use torch.distributed.ReduceOp instead
+ 6:   warnings.warn(
+ 2: /global/common/software/nersc/pm-2022q4/sw/pytorch/1.13.1/lib/python3.9/site-packages/torch/distributed/distributed_c10d.py:262: UserWarning: torch.distributed.reduce_op is deprecated, please use torch.distributed.ReduceOp instead
+ 2:   warnings.warn(
+ 1: /global/common/software/nersc/pm-2022q4/sw/pytorch/1.13.1/lib/python3.9/site-packages/torch/distributed/distributed_c10d.py:262: UserWarning: torch.distributed.reduce_op is deprecated, please use torch.distributed.ReduceOp instead
+ 1:   warnings.warn(
+ 3: /global/common/software/nersc/pm-2022q4/sw/pytorch/1.13.1/lib/python3.9/site-packages/torch/distributed/distributed_c10d.py:262: UserWarning: torch.distributed.reduce_op is deprecated, please use torch.distributed.ReduceOp instead
+ 3:   warnings.warn(
+20: /global/common/software/nersc/pm-2022q4/sw/pytorch/1.13.1/lib/python3.9/site-packages/torch/distributed/distributed_c10d.py:262: UserWarning: torch.distributed.reduce_op is deprecated, please use torch.distributed.ReduceOp instead
+20:   warnings.warn(
+21: /global/common/software/nersc/pm-2022q4/sw/pytorch/1.13.1/lib/python3.9/site-packages/torch/distributed/distributed_c10d.py:262: UserWarning: torch.distributed.reduce_op is deprecated, please use torch.distributed.ReduceOp instead
+21:   warnings.warn(
+30: /global/common/software/nersc/pm-2022q4/sw/pytorch/1.13.1/lib/python3.9/site-packages/torch/distributed/distributed_c10d.py:262: UserWarning: torch.distributed.reduce_op is deprecated, please use torch.distributed.ReduceOp instead
+30:   warnings.warn(
+31: /global/common/software/nersc/pm-2022q4/sw/pytorch/1.13.1/lib/python3.9/site-packages/torch/distributed/distributed_c10d.py:262: UserWarning: torch.distributed.reduce_op is deprecated, please use torch.distributed.ReduceOp instead
+31:   warnings.warn(
+18: /global/common/software/nersc/pm-2022q4/sw/pytorch/1.13.1/lib/python3.9/site-packages/torch/distributed/distributed_c10d.py:262: UserWarning: torch.distributed.reduce_op is deprecated, please use torch.distributed.ReduceOp instead
+18:   warnings.warn(
+19: /global/common/software/nersc/pm-2022q4/sw/pytorch/1.13.1/lib/python3.9/site-packages/torch/distributed/distributed_c10d.py:262: UserWarning: torch.distributed.reduce_op is deprecated, please use torch.distributed.ReduceOp instead
+19:   warnings.warn(
+26: /global/common/software/nersc/pm-2022q4/sw/pytorch/1.13.1/lib/python3.9/site-packages/torch/distributed/distributed_c10d.py:262: UserWarning: torch.distributed.reduce_op is deprecated, please use torch.distributed.ReduceOp instead
+26:   warnings.warn(
+27: /global/common/software/nersc/pm-2022q4/sw/pytorch/1.13.1/lib/python3.9/site-packages/torch/distributed/distributed_c10d.py:262: UserWarning: torch.distributed.reduce_op is deprecated, please use torch.distributed.ReduceOp instead
+27:   warnings.warn(
+16: /global/common/software/nersc/pm-2022q4/sw/pytorch/1.13.1/lib/python3.9/site-packages/torch/distributed/distributed_c10d.py:262: UserWarning: torch.distributed.reduce_op is deprecated, please use torch.distributed.ReduceOp instead
+16:   warnings.warn(
+17: /global/common/software/nersc/pm-2022q4/sw/pytorch/1.13.1/lib/python3.9/site-packages/torch/distributed/distributed_c10d.py:262: UserWarning: torch.distributed.reduce_op is deprecated, please use torch.distributed.ReduceOp instead
+17:   warnings.warn(
+23: /global/common/software/nersc/pm-2022q4/sw/pytorch/1.13.1/lib/python3.9/site-packages/torch/distributed/distributed_c10d.py:262: UserWarning: torch.distributed.reduce_op is deprecated, please use torch.distributed.ReduceOp instead
+23:   warnings.warn(
+22: /global/common/software/nersc/pm-2022q4/sw/pytorch/1.13.1/lib/python3.9/site-packages/torch/distributed/distributed_c10d.py:262: UserWarning: torch.distributed.reduce_op is deprecated, please use torch.distributed.ReduceOp instead
+22:   warnings.warn(
+24: /global/common/software/nersc/pm-2022q4/sw/pytorch/1.13.1/lib/python3.9/site-packages/torch/distributed/distributed_c10d.py:262: UserWarning: torch.distributed.reduce_op is deprecated, please use torch.distributed.ReduceOp instead
+24:   warnings.warn(
+25: /global/common/software/nersc/pm-2022q4/sw/pytorch/1.13.1/lib/python3.9/site-packages/torch/distributed/distributed_c10d.py:262: UserWarning: torch.distributed.reduce_op is deprecated, please use torch.distributed.ReduceOp instead
+25:   warnings.warn(
+12: /global/common/software/nersc/pm-2022q4/sw/pytorch/1.13.1/lib/python3.9/site-packages/torch/distributed/distributed_c10d.py:262: UserWarning: torch.distributed.reduce_op is deprecated, please use torch.distributed.ReduceOp instead
+12:   warnings.warn(
+13: /global/common/software/nersc/pm-2022q4/sw/pytorch/1.13.1/lib/python3.9/site-packages/torch/distributed/distributed_c10d.py:262: UserWarning: torch.distributed.reduce_op is deprecated, please use torch.distributed.ReduceOp instead
+13:   warnings.warn(
+29: /global/common/software/nersc/pm-2022q4/sw/pytorch/1.13.1/lib/python3.9/site-packages/torch/distributed/distributed_c10d.py:262: UserWarning: torch.distributed.reduce_op is deprecated, please use torch.distributed.ReduceOp instead
+29:   warnings.warn(
+28: /global/common/software/nersc/pm-2022q4/sw/pytorch/1.13.1/lib/python3.9/site-packages/torch/distributed/distributed_c10d.py:262: UserWarning: torch.distributed.reduce_op is deprecated, please use torch.distributed.ReduceOp instead
+28:   warnings.warn(
+14: /global/common/software/nersc/pm-2022q4/sw/pytorch/1.13.1/lib/python3.9/site-packages/torch/distributed/distributed_c10d.py:262: UserWarning: torch.distributed.reduce_op is deprecated, please use torch.distributed.ReduceOp instead
+14:   warnings.warn(
+15: /global/common/software/nersc/pm-2022q4/sw/pytorch/1.13.1/lib/python3.9/site-packages/torch/distributed/distributed_c10d.py:262: UserWarning: torch.distributed.reduce_op is deprecated, please use torch.distributed.ReduceOp instead
+15:   warnings.warn(
+ 8: /global/common/software/nersc/pm-2022q4/sw/pytorch/1.13.1/lib/python3.9/site-packages/torch/distributed/distributed_c10d.py:262: UserWarning: torch.distributed.reduce_op is deprecated, please use torch.distributed.ReduceOp instead
+ 8:   warnings.warn(
+ 9: /global/common/software/nersc/pm-2022q4/sw/pytorch/1.13.1/lib/python3.9/site-packages/torch/distributed/distributed_c10d.py:262: UserWarning: torch.distributed.reduce_op is deprecated, please use torch.distributed.ReduceOp instead
+ 9:   warnings.warn(
+10: /global/common/software/nersc/pm-2022q4/sw/pytorch/1.13.1/lib/python3.9/site-packages/torch/distributed/distributed_c10d.py:262: UserWarning: torch.distributed.reduce_op is deprecated, please use torch.distributed.ReduceOp instead
+10:   warnings.warn(
+11: /global/common/software/nersc/pm-2022q4/sw/pytorch/1.13.1/lib/python3.9/site-packages/torch/distributed/distributed_c10d.py:262: UserWarning: torch.distributed.reduce_op is deprecated, please use torch.distributed.ReduceOp instead
+11:   warnings.warn(
+ 4: Epoch: 1
+ 7: Epoch: 1
+ 0: Epoch: 1
+ 6: Epoch: 1
+ 2: Epoch: 1
+ 5: Epoch: 1
+ 1: Epoch: 1
+ 3: Epoch: 1
+23: Epoch: 1
+22: Epoch: 1
+10: Epoch: 1
+11: Epoch: 1
+18: Epoch: 1
+19: Epoch: 1
+ 9: Epoch: 1
+ 8: Epoch: 1
+20: Epoch: 1
+21: Epoch: 1
+29: Epoch: 1
+28: Epoch: 1
+24: Epoch: 1
+30: Epoch: 1
+25: Epoch: 1
+31: Epoch: 1
+12: Epoch: 1
+13: Epoch: 1
+16: Epoch: 1
+17: Epoch: 1
+26: Epoch: 1
+27: Epoch: 1
+14: Epoch: 1
+15: Epoch: 1
+ 4: Epoch: 2
+30: Epoch: 2
+ 7: Epoch: 2
+21: Epoch: 2
+ 5: Epoch: 2
+24: Epoch: 2
+31: Epoch: 2
+19: Epoch: 2
+14: Epoch: 2
+20: Epoch: 2
+29: Epoch: 2
+ 9: Epoch: 2
+ 6: Epoch: 2
+23: Epoch: 2
+17: Epoch: 2
+26: Epoch: 2
+ 2: Epoch: 2
+ 0: Epoch: 2
+25: Epoch: 2
+18: Epoch: 2
+22: Epoch: 2
+16: Epoch: 2
+27: Epoch: 2
+13: Epoch: 2
+ 1: Epoch: 2
+11: Epoch: 2
+ 3: Epoch: 2
+28: Epoch: 2
+15: Epoch: 2
+12: Epoch: 2
+ 8: Epoch: 2
+10: Epoch: 2
+19: Epoch: 3
+29: Epoch: 3
+ 4: Epoch: 3
+24: Epoch: 3
+31: Epoch: 3
+18: Epoch: 3
+14: Epoch: 3
+21: Epoch: 3
+11: Epoch: 3
+28: Epoch: 3
+ 9: Epoch: 3
+ 7: Epoch: 3
+23: Epoch: 3
+17: Epoch: 3
+26: Epoch: 3
+13: Epoch: 3
+ 2: Epoch: 3
+ 0: Epoch: 3
+ 5: Epoch: 3
+25: Epoch: 3
+30: Epoch: 3
+20: Epoch: 3
+ 6: Epoch: 3
+22: Epoch: 3
+16: Epoch: 3
+27: Epoch: 3
+12: Epoch: 3
+ 3: Epoch: 3
+ 1: Epoch: 3
+ 8: Epoch: 3
+15: Epoch: 3
+10: Epoch: 3
+19: Epoch: 4
+ 6: Epoch: 4
+ 4: Epoch: 4
+24: Epoch: 4
+31: Epoch: 4
+18: Epoch: 4
+14: Epoch: 4
+21: Epoch: 4
+29: Epoch: 4
+ 9: Epoch: 4
+ 7: Epoch: 4
+23: Epoch: 4
+17: Epoch: 4
+13: Epoch: 4
+ 2: Epoch: 4
+ 0: Epoch: 4
+25: Epoch: 4
+11: Epoch: 4
+30: Epoch: 4
+20: Epoch: 4
+22: Epoch: 4
+16: Epoch: 4
+ 5: Epoch: 4
+26: Epoch: 4
+ 8: Epoch: 4
+28: Epoch: 4
+27: Epoch: 4
+12: Epoch: 4
+ 1: Epoch: 4
+ 3: Epoch: 4
+10: Epoch: 4
+15: Epoch: 4
+ 4: Epoch: 5
+31: Epoch: 5
+19: Epoch: 5
+ 7: Epoch: 5
+17: Epoch: 5
+ 0: Epoch: 5
+24: Epoch: 5
+29: Epoch: 5
+ 5: Epoch: 5
+30: Epoch: 5
+23: Epoch: 5
+ 6: Epoch: 5
+16: Epoch: 5
+25: Epoch: 5
+18: Epoch: 5
+21: Epoch: 5
+26: Epoch: 5
+14: Epoch: 5
+20: Epoch: 5
+27: Epoch: 5
+ 2: Epoch: 5
+22: Epoch: 5
+13: Epoch: 5
+ 9: Epoch: 5
+11: Epoch: 5
+ 1: Epoch: 5
+28: Epoch: 5
+12: Epoch: 5
+ 3: Epoch: 5
+10: Epoch: 5
+ 8: Epoch: 5
+15: Epoch: 5
+19: Epoch: 6
+17: Epoch: 6
+ 4: Epoch: 6
+24: Epoch: 6
+30: Epoch: 6
+18: Epoch: 6
+29: Epoch: 6
+ 6: Epoch: 6
+23: Epoch: 6
+16: Epoch: 6
+27: Epoch: 6
+ 0: Epoch: 6
+14: Epoch: 6
+ 9: Epoch: 6
+ 2: Epoch: 6
+ 5: Epoch: 6
+25: Epoch: 6
+31: Epoch: 6
+ 7: Epoch: 6
+22: Epoch: 6
+13: Epoch: 6
+11: Epoch: 6
+20: Epoch: 6
+28: Epoch: 6
+21: Epoch: 6
+12: Epoch: 6
+ 8: Epoch: 6
+ 1: Epoch: 6
+10: Epoch: 6
+26: Epoch: 6
+15: Epoch: 6
+ 3: Epoch: 6
+ 4: Epoch: 7
+30: Epoch: 7
+ 5: Epoch: 7
+24: Epoch: 7
+31: Epoch: 7
+19: Epoch: 7
+14: Epoch: 7
+21: Epoch: 7
+29: Epoch: 7
+ 9: Epoch: 7
+ 7: Epoch: 7
+23: Epoch: 7
+17: Epoch: 7
+27: Epoch: 7
+13: Epoch: 7
+ 2: Epoch: 7
+ 0: Epoch: 7
+25: Epoch: 7
+18: Epoch: 7
+20: Epoch: 7
+11: Epoch: 7
+28: Epoch: 7
+ 6: Epoch: 7
+22: Epoch: 7
+16: Epoch: 7
+26: Epoch: 7
+ 1: Epoch: 7
+ 8: Epoch: 7
+12: Epoch: 7
+ 3: Epoch: 7
+10: Epoch: 7
+15: Epoch: 7
+ 4: Epoch: 8
+19: Epoch: 8
+ 0: Epoch: 8
+ 5: Epoch: 8
+24: Epoch: 8
+31: Epoch: 8
+18: Epoch: 8
+14: Epoch: 8
+21: Epoch: 8
+29: Epoch: 8
+ 6: Epoch: 8
+23: Epoch: 8
+17: Epoch: 8
+27: Epoch: 8
+25: Epoch: 8
+30: Epoch: 8
+ 2: Epoch: 8
+ 7: Epoch: 8
+22: Epoch: 8
+16: Epoch: 8
+26: Epoch: 8
+13: Epoch: 8
+ 9: Epoch: 8
+28: Epoch: 8
+ 1: Epoch: 8
+11: Epoch: 8
+20: Epoch: 8
+12: Epoch: 8
+ 3: Epoch: 8
+15: Epoch: 8
+10: Epoch: 8
+ 8: Epoch: 8
+19: Epoch: 9
+18: Epoch: 9
+16: Epoch: 9
+17: Epoch: 9
+ 4: Epoch: 9
+24: Epoch: 9
+30: Epoch: 9
+14: Epoch: 9
+21: Epoch: 9
+29: Epoch: 9
+ 9: Epoch: 9
+ 6: Epoch: 9
+23: Epoch: 9
+27: Epoch: 9
+13: Epoch: 9
+ 2: Epoch: 9
+ 0: Epoch: 9
+ 5: Epoch: 9
+25: Epoch: 9
+31: Epoch: 9
+20: Epoch: 9
+11: Epoch: 9
+ 1: Epoch: 9
+28: Epoch: 9
+ 7: Epoch: 9
+22: Epoch: 9
+26: Epoch: 9
+12: Epoch: 9
+ 3: Epoch: 9
+ 8: Epoch: 9
+10: Epoch: 9
+15: Epoch: 9
+19: Epoch: 10
+ 4: Epoch: 10
+21: Epoch: 10
+31: Epoch: 10
+24: Epoch: 10
+ 5: Epoch: 10
+25: Epoch: 10
+30: Epoch: 10
+18: Epoch: 10
+14: Epoch: 10
+20: Epoch: 10
+11: Epoch: 10
+29: Epoch: 10
+ 9: Epoch: 10
+ 6: Epoch: 10
+23: Epoch: 10
+16: Epoch: 10
+26: Epoch: 10
+13: Epoch: 10
+ 0: Epoch: 10
+ 1: Epoch: 10
+28: Epoch: 10
+ 7: Epoch: 10
+22: Epoch: 10
+17: Epoch: 10
+12: Epoch: 10
+27: Epoch: 10
+ 2: Epoch: 10
+ 8: Epoch: 10
+15: Epoch: 10
+10: Epoch: 10
+ 3: Epoch: 10
+ 0: Epoch: 11
+ 4: Epoch: 11
+24: Epoch: 11
+18: Epoch: 11
+14: Epoch: 11
+21: Epoch: 11
+29: Epoch: 11
+ 7: Epoch: 11
+23: Epoch: 11
+16: Epoch: 11
+27: Epoch: 11
+31: Epoch: 11
+ 5: Epoch: 11
+25: Epoch: 11
+11: Epoch: 11
+ 9: Epoch: 11
+13: Epoch: 11
+19: Epoch: 11
+ 6: Epoch: 11
+22: Epoch: 11
+17: Epoch: 11
+26: Epoch: 11
+30: Epoch: 11
+20: Epoch: 11
+28: Epoch: 11
+12: Epoch: 11
+ 2: Epoch: 11
+ 1: Epoch: 11
+ 8: Epoch: 11
+10: Epoch: 11
+ 3: Epoch: 11
+15: Epoch: 11
+ 4: Epoch: 12
+24: Epoch: 12
+30: Epoch: 12
+18: Epoch: 12
+14: Epoch: 12
+21: Epoch: 12
+29: Epoch: 12
+ 6: Epoch: 12
+23: Epoch: 12
+16: Epoch: 12
+27: Epoch: 12
+ 2: Epoch: 12
+ 0: Epoch: 12
+ 5: Epoch: 12
+25: Epoch: 12
+ 9: Epoch: 12
+ 1: Epoch: 12
+31: Epoch: 12
+19: Epoch: 12
+20: Epoch: 12
+11: Epoch: 12
+ 7: Epoch: 12
+22: Epoch: 12
+17: Epoch: 12
+26: Epoch: 12
+28: Epoch: 12
+13: Epoch: 12
+ 3: Epoch: 12
+ 8: Epoch: 12
+12: Epoch: 12
+10: Epoch: 12
+15: Epoch: 12
+ 4: Epoch: 13
+21: Epoch: 13
+18: Epoch: 13
+29: Epoch: 13
+23: Epoch: 13
+16: Epoch: 13
+ 0: Epoch: 13
+30: Epoch: 13
+ 7: Epoch: 13
+19: Epoch: 13
+24: Epoch: 13
+17: Epoch: 13
+31: Epoch: 13
+ 6: Epoch: 13
+ 5: Epoch: 13
+20: Epoch: 13
+ 1: Epoch: 13
+25: Epoch: 13
+ 9: Epoch: 13
+ 2: Epoch: 13
+13: Epoch: 13
+26: Epoch: 13
+11: Epoch: 13
+12: Epoch: 13
+27: Epoch: 13
+28: Epoch: 13
+14: Epoch: 13
+22: Epoch: 13
+15: Epoch: 13
+ 3: Epoch: 13
+ 8: Epoch: 13
+10: Epoch: 13
+ 4: Epoch: 14
+31: Epoch: 14
+19: Epoch: 14
+21: Epoch: 14
+29: Epoch: 14
+16: Epoch: 14
+ 6: Epoch: 14
+23: Epoch: 14
+24: Epoch: 14
+30: Epoch: 14
+18: Epoch: 14
+17: Epoch: 14
+ 0: Epoch: 14
+27: Epoch: 14
+22: Epoch: 14
+14: Epoch: 14
+ 5: Epoch: 14
+25: Epoch: 14
+20: Epoch: 14
+ 2: Epoch: 14
+13: Epoch: 14
+26: Epoch: 14
+11: Epoch: 14
+ 1: Epoch: 14
+ 7: Epoch: 14
+28: Epoch: 14
+ 9: Epoch: 14
+12: Epoch: 14
+ 3: Epoch: 14
+10: Epoch: 14
+ 8: Epoch: 14
+15: Epoch: 14
+ 4: Epoch: 15
+18: Epoch: 15
+29: Epoch: 15
+ 5: Epoch: 15
+24: Epoch: 15
+19: Epoch: 15
+14: Epoch: 15
+21: Epoch: 15
+ 6: Epoch: 15
+23: Epoch: 15
+16: Epoch: 15
+26: Epoch: 15
+ 0: Epoch: 15
+ 1: Epoch: 15
+25: Epoch: 15
+ 9: Epoch: 15
+27: Epoch: 15
+22: Epoch: 15
+31: Epoch: 15
+ 2: Epoch: 15
+ 7: Epoch: 15
+17: Epoch: 15
+13: Epoch: 15
+11: Epoch: 15
+28: Epoch: 15
+20: Epoch: 15
+30: Epoch: 15
+12: Epoch: 15
+ 3: Epoch: 15
+ 8: Epoch: 15
+10: Epoch: 15
+15: Epoch: 15
+ 4: Epoch: 16
+21: Epoch: 16
+18: Epoch: 16
+19: Epoch: 16
+ 5: Epoch: 16
+24: Epoch: 16
+31: Epoch: 16
+14: Epoch: 16
+20: Epoch: 16
+29: Epoch: 16
+ 6: Epoch: 16
+23: Epoch: 16
+16: Epoch: 16
+26: Epoch: 16
+ 0: Epoch: 16
+ 9: Epoch: 16
+ 2: Epoch: 16
+ 1: Epoch: 16
+25: Epoch: 16
+30: Epoch: 16
+22: Epoch: 16
+11: Epoch: 16
+ 7: Epoch: 16
+27: Epoch: 16
+13: Epoch: 16
+17: Epoch: 16
+28: Epoch: 16
+12: Epoch: 16
+ 3: Epoch: 16
+ 8: Epoch: 16
+15: Epoch: 16
+10: Epoch: 16
+ 4: Epoch: 17
+24: Epoch: 17
+31: Epoch: 17
+19: Epoch: 17
+14: Epoch: 17
+21: Epoch: 17
+29: Epoch: 17
+ 7: Epoch: 17
+23: Epoch: 17
+16: Epoch: 17
+26: Epoch: 17
+ 0: Epoch: 17
+18: Epoch: 17
+ 9: Epoch: 17
+ 2: Epoch: 17
+ 1: Epoch: 17
+ 5: Epoch: 17
+25: Epoch: 17
+30: Epoch: 17
+ 6: Epoch: 17
+22: Epoch: 17
+17: Epoch: 17
+27: Epoch: 17
+13: Epoch: 17
+20: Epoch: 17
+28: Epoch: 17
+11: Epoch: 17
+12: Epoch: 17
+ 3: Epoch: 17
+ 8: Epoch: 17
+15: Epoch: 17
+10: Epoch: 17
+ 4: Epoch: 18
+31: Epoch: 18
+18: Epoch: 18
+14: Epoch: 18
+21: Epoch: 18
+29: Epoch: 18
+ 6: Epoch: 18
+23: Epoch: 18
+16: Epoch: 18
+27: Epoch: 18
+ 2: Epoch: 18
+ 9: Epoch: 18
+ 0: Epoch: 18
+ 5: Epoch: 18
+24: Epoch: 18
+30: Epoch: 18
+20: Epoch: 18
+ 1: Epoch: 18
+19: Epoch: 18
+ 7: Epoch: 18
+22: Epoch: 18
+17: Epoch: 18
+26: Epoch: 18
+13: Epoch: 18
+11: Epoch: 18
+28: Epoch: 18
+25: Epoch: 18
+12: Epoch: 18
+ 3: Epoch: 18
+ 8: Epoch: 18
+15: Epoch: 18
+10: Epoch: 18
+ 4: Epoch: 19
+24: Epoch: 19
+31: Epoch: 19
+18: Epoch: 19
+21: Epoch: 19
+29: Epoch: 19
+ 6: Epoch: 19
+23: Epoch: 19
+16: Epoch: 19
+27: Epoch: 19
+14: Epoch: 19
+ 0: Epoch: 19
+25: Epoch: 19
+19: Epoch: 19
+17: Epoch: 19
+30: Epoch: 19
+ 7: Epoch: 19
+22: Epoch: 19
+ 1: Epoch: 19
+26: Epoch: 19
+ 5: Epoch: 19
+ 2: Epoch: 19
+ 9: Epoch: 19
+13: Epoch: 19
+11: Epoch: 19
+20: Epoch: 19
+28: Epoch: 19
+12: Epoch: 19
+ 3: Epoch: 19
+ 8: Epoch: 19
+15: Epoch: 19
+10: Epoch: 19
+ 4: Epoch: 20
+30: Epoch: 20
+16: Epoch: 20
+18: Epoch: 20
+17: Epoch: 20
+19: Epoch: 20
+ 0: Epoch: 20
+24: Epoch: 20
+21: Epoch: 20
+ 7: Epoch: 20
+20: Epoch: 20
+29: Epoch: 20
+23: Epoch: 20
+31: Epoch: 20
+26: Epoch: 20
+ 5: Epoch: 20
+25: Epoch: 20
+27: Epoch: 20
+14: Epoch: 20
+22: Epoch: 20
+ 1: Epoch: 20
+ 9: Epoch: 20
+ 2: Epoch: 20
+ 6: Epoch: 20
+13: Epoch: 20
+11: Epoch: 20
+28: Epoch: 20
+15: Epoch: 20
+ 8: Epoch: 20
+ 3: Epoch: 20
+10: Epoch: 20
+12: Epoch: 20
+ 4: Epoch: 21
+18: Epoch: 21
+21: Epoch: 21
+16: Epoch: 21
+ 5: Epoch: 21
+24: Epoch: 21
+31: Epoch: 21
+19: Epoch: 21
+14: Epoch: 21
+20: Epoch: 21
+29: Epoch: 21
+ 9: Epoch: 21
+ 6: Epoch: 21
+23: Epoch: 21
+17: Epoch: 21
+26: Epoch: 21
+ 0: Epoch: 21
+25: Epoch: 21
+30: Epoch: 21
+11: Epoch: 21
+13: Epoch: 21
+ 1: Epoch: 21
+ 7: Epoch: 21
+22: Epoch: 21
+27: Epoch: 21
+28: Epoch: 21
+ 2: Epoch: 21
+12: Epoch: 21
+10: Epoch: 21
+ 8: Epoch: 21
+15: Epoch: 21
+ 3: Epoch: 21
+ 4: Epoch: 22
+30: Epoch: 22
+21: Epoch: 22
+ 6: Epoch: 22
+16: Epoch: 22
+29: Epoch: 22
+ 5: Epoch: 22
+24: Epoch: 22
+31: Epoch: 22
+18: Epoch: 22
+14: Epoch: 22
+20: Epoch: 22
+ 7: Epoch: 22
+23: Epoch: 22
+17: Epoch: 22
+27: Epoch: 22
+ 0: Epoch: 22
+ 9: Epoch: 22
+ 1: Epoch: 22
+25: Epoch: 22
+19: Epoch: 22
+11: Epoch: 22
+22: Epoch: 22
+26: Epoch: 22
+ 2: Epoch: 22
+28: Epoch: 22
+10: Epoch: 22
+ 8: Epoch: 22
+12: Epoch: 22
+15: Epoch: 22
+ 3: Epoch: 22
+13: Epoch: 22
+ 4: Epoch: 23
+24: Epoch: 23
+30: Epoch: 23
+19: Epoch: 23
+21: Epoch: 23
+29: Epoch: 23
+ 6: Epoch: 23
+23: Epoch: 23
+16: Epoch: 23
+27: Epoch: 23
+14: Epoch: 23
+ 0: Epoch: 23
+ 5: Epoch: 23
+25: Epoch: 23
+31: Epoch: 23
+18: Epoch: 23
+20: Epoch: 23
+22: Epoch: 23
+17: Epoch: 23
+ 2: Epoch: 23
+ 1: Epoch: 23
+ 7: Epoch: 23
+26: Epoch: 23
+11: Epoch: 23
+ 9: Epoch: 23
+28: Epoch: 23
+12: Epoch: 23
+10: Epoch: 23
+ 8: Epoch: 23
+ 3: Epoch: 23
+15: Epoch: 23
+13: Epoch: 23
+18: Epoch: 24
+21: Epoch: 24
+16: Epoch: 24
+ 4: Epoch: 24
+ 6: Epoch: 24
+23: Epoch: 24
+19: Epoch: 24
+29: Epoch: 24
+31: Epoch: 24
+ 0: Epoch: 24
+17: Epoch: 24
+24: Epoch: 24
+ 7: Epoch: 24
+27: Epoch: 24
+ 5: Epoch: 24
+30: Epoch: 24
+22: Epoch: 24
+26: Epoch: 24
+25: Epoch: 24
+14: Epoch: 24
+20: Epoch: 24
+ 2: Epoch: 24
+11: Epoch: 24
+ 9: Epoch: 24
+ 1: Epoch: 24
+13: Epoch: 24
+28: Epoch: 24
+10: Epoch: 24
+12: Epoch: 24
+ 3: Epoch: 24
+ 8: Epoch: 24
+15: Epoch: 24
+ 4: Epoch: 25
+19: Epoch: 25
+30: Epoch: 25
+16: Epoch: 25
+ 7: Epoch: 25
+18: Epoch: 25
+21: Epoch: 25
+ 6: Epoch: 25
+17: Epoch: 25
+24: Epoch: 25
+29: Epoch: 25
+27: Epoch: 25
+20: Epoch: 25
+31: Epoch: 25
+23: Epoch: 25
+ 0: Epoch: 25
+14: Epoch: 25
+ 5: Epoch: 25
+26: Epoch: 25
+ 1: Epoch: 25
+25: Epoch: 25
+22: Epoch: 25
+ 2: Epoch: 25
+11: Epoch: 25
+ 9: Epoch: 25
+28: Epoch: 25
+12: Epoch: 25
+10: Epoch: 25
+ 8: Epoch: 25
+15: Epoch: 25
+ 3: Epoch: 25
+13: Epoch: 25
+ 4: Epoch: 26
+19: Epoch: 26
+16: Epoch: 26
+21: Epoch: 26
+18: Epoch: 26
+ 6: Epoch: 26
+31: Epoch: 26
+29: Epoch: 26
+24: Epoch: 26
+ 0: Epoch: 26
+17: Epoch: 26
+23: Epoch: 26
+ 7: Epoch: 26
+30: Epoch: 26
+ 5: Epoch: 26
+26: Epoch: 26
+25: Epoch: 26
+20: Epoch: 26
+27: Epoch: 26
+14: Epoch: 26
+ 1: Epoch: 26
+22: Epoch: 26
+ 9: Epoch: 26
+ 2: Epoch: 26
+11: Epoch: 26
+13: Epoch: 26
+28: Epoch: 26
+10: Epoch: 26
+12: Epoch: 26
+ 3: Epoch: 26
+ 8: Epoch: 26
+15: Epoch: 26
+ 4: Epoch: 27
+24: Epoch: 27
+31: Epoch: 27
+18: Epoch: 27
+14: Epoch: 27
+21: Epoch: 27
+29: Epoch: 27
+ 6: Epoch: 27
+23: Epoch: 27
+16: Epoch: 27
+26: Epoch: 27
+ 0: Epoch: 27
+ 5: Epoch: 27
+30: Epoch: 27
+20: Epoch: 27
+ 1: Epoch: 27
+25: Epoch: 27
+19: Epoch: 27
+22: Epoch: 27
+17: Epoch: 27
+27: Epoch: 27
+ 7: Epoch: 27
+ 2: Epoch: 27
+13: Epoch: 27
+11: Epoch: 27
+ 9: Epoch: 27
+28: Epoch: 27
+12: Epoch: 27
+10: Epoch: 27
+ 3: Epoch: 27
+15: Epoch: 27
+ 8: Epoch: 27
+18: Epoch: 28
+ 4: Epoch: 28
+24: Epoch: 28
+31: Epoch: 28
+19: Epoch: 28
+14: Epoch: 28
+21: Epoch: 28
+11: Epoch: 28
+29: Epoch: 28
+ 9: Epoch: 28
+ 6: Epoch: 28
+23: Epoch: 28
+16: Epoch: 28
+27: Epoch: 28
+13: Epoch: 28
+ 2: Epoch: 28
+ 0: Epoch: 28
+ 5: Epoch: 28
+25: Epoch: 28
+30: Epoch: 28
+ 1: Epoch: 28
+20: Epoch: 28
+10: Epoch: 28
+28: Epoch: 28
+ 8: Epoch: 28
+ 7: Epoch: 28
+22: Epoch: 28
+17: Epoch: 28
+26: Epoch: 28
+12: Epoch: 28
+ 3: Epoch: 28
+15: Epoch: 28
+ 4: Epoch: 29
+24: Epoch: 29
+31: Epoch: 29
+18: Epoch: 29
+14: Epoch: 29
+21: Epoch: 29
+29: Epoch: 29
+ 6: Epoch: 29
+23: Epoch: 29
+16: Epoch: 29
+27: Epoch: 29
+ 2: Epoch: 29
+ 0: Epoch: 29
+ 9: Epoch: 29
+ 1: Epoch: 29
+ 5: Epoch: 29
+25: Epoch: 29
+30: Epoch: 29
+19: Epoch: 29
+20: Epoch: 29
+ 7: Epoch: 29
+17: Epoch: 29
+26: Epoch: 29
+13: Epoch: 29
+22: Epoch: 29
+28: Epoch: 29
+11: Epoch: 29
+10: Epoch: 29
+12: Epoch: 29
+15: Epoch: 29
+ 3: Epoch: 29
+ 8: Epoch: 29
+ 4: Epoch: 30
+24: Epoch: 30
+30: Epoch: 30
+18: Epoch: 30
+14: Epoch: 30
+21: Epoch: 30
+29: Epoch: 30
+ 6: Epoch: 30
+23: Epoch: 30
+16: Epoch: 30
+27: Epoch: 30
+ 2: Epoch: 30
+ 0: Epoch: 30
+ 5: Epoch: 30
+25: Epoch: 30
+31: Epoch: 30
+19: Epoch: 30
+11: Epoch: 30
+ 9: Epoch: 30
+ 7: Epoch: 30
+22: Epoch: 30
+17: Epoch: 30
+13: Epoch: 30
+ 1: Epoch: 30
+20: Epoch: 30
+26: Epoch: 30
+28: Epoch: 30
+12: Epoch: 30
+ 8: Epoch: 30
+ 3: Epoch: 30
+10: Epoch: 30
+15: Epoch: 30
+ 4: Epoch: 31
+21: Epoch: 31
+30: Epoch: 31
+18: Epoch: 31
+19: Epoch: 31
+16: Epoch: 31
+17: Epoch: 31
+ 5: Epoch: 31
+31: Epoch: 31
+14: Epoch: 31
+20: Epoch: 31
+29: Epoch: 31
+ 6: Epoch: 31
+23: Epoch: 31
+27: Epoch: 31
+ 0: Epoch: 31
+11: Epoch: 31
+ 9: Epoch: 31
+ 1: Epoch: 31
+ 7: Epoch: 31
+22: Epoch: 31
+13: Epoch: 31
+24: Epoch: 31
+26: Epoch: 31
+ 2: Epoch: 31
+28: Epoch: 31
+25: Epoch: 31
+12: Epoch: 31
+ 8: Epoch: 31
+10: Epoch: 31
+15: Epoch: 31
+ 3: Epoch: 31
+18: Epoch: 32
+ 4: Epoch: 32
+21: Epoch: 32
+27: Epoch: 32
+19: Epoch: 32
+16: Epoch: 32
+26: Epoch: 32
+30: Epoch: 32
+24: Epoch: 32
+29: Epoch: 32
+ 6: Epoch: 32
+17: Epoch: 32
+23: Epoch: 32
+ 0: Epoch: 32
+ 5: Epoch: 32
+14: Epoch: 32
+ 7: Epoch: 32
+ 1: Epoch: 32
+20: Epoch: 32
+11: Epoch: 32
+22: Epoch: 32
+25: Epoch: 32
+12: Epoch: 32
+31: Epoch: 32
+13: Epoch: 32
+28: Epoch: 32
+ 9: Epoch: 32
+10: Epoch: 32
+15: Epoch: 32
+ 8: Epoch: 32
+ 2: Epoch: 32
+ 3: Epoch: 32
+ 4: Epoch: 33
+24: Epoch: 33
+31: Epoch: 33
+18: Epoch: 33
+21: Epoch: 33
+29: Epoch: 33
+ 6: Epoch: 33
+23: Epoch: 33
+16: Epoch: 33
+27: Epoch: 33
+ 0: Epoch: 33
+ 5: Epoch: 33
+20: Epoch: 33
+ 1: Epoch: 33
+30: Epoch: 33
+19: Epoch: 33
+14: Epoch: 33
+22: Epoch: 33
+17: Epoch: 33
+25: Epoch: 33
+ 7: Epoch: 33
+26: Epoch: 33
+13: Epoch: 33
+11: Epoch: 33
+28: Epoch: 33
+ 9: Epoch: 33
+12: Epoch: 33
+ 2: Epoch: 33
+10: Epoch: 33
+15: Epoch: 33
+ 8: Epoch: 33
+ 3: Epoch: 33
+ 4: Epoch: 34
+21: Epoch: 34
+ 5: Epoch: 34
+24: Epoch: 34
+31: Epoch: 34
+18: Epoch: 34
+14: Epoch: 34
+20: Epoch: 34
+29: Epoch: 34
+ 9: Epoch: 34
+ 6: Epoch: 34
+23: Epoch: 34
+16: Epoch: 34
+26: Epoch: 34
+13: Epoch: 34
+ 0: Epoch: 34
+25: Epoch: 34
+30: Epoch: 34
+11: Epoch: 34
+ 2: Epoch: 34
+ 1: Epoch: 34
+19: Epoch: 34
+28: Epoch: 34
+ 7: Epoch: 34
+22: Epoch: 34
+17: Epoch: 34
+27: Epoch: 34
+10: Epoch: 34
+12: Epoch: 34
+ 3: Epoch: 34
+15: Epoch: 34
+ 8: Epoch: 34
+ 4: Epoch: 35
+24: Epoch: 35
+31: Epoch: 35
+18: Epoch: 35
+14: Epoch: 35
+21: Epoch: 35
+29: Epoch: 35
+ 6: Epoch: 35
+23: Epoch: 35
+16: Epoch: 35
+27: Epoch: 35
+ 0: Epoch: 35
+ 1: Epoch: 35
+25: Epoch: 35
+30: Epoch: 35
+17: Epoch: 35
+26: Epoch: 35
+ 2: Epoch: 35
+ 5: Epoch: 35
+19: Epoch: 35
+ 7: Epoch: 35
+22: Epoch: 35
+13: Epoch: 35
+20: Epoch: 35
+28: Epoch: 35
+11: Epoch: 35
+ 9: Epoch: 35
+12: Epoch: 35
+10: Epoch: 35
+ 3: Epoch: 35
+ 8: Epoch: 35
+15: Epoch: 35
+18: Epoch: 36
+16: Epoch: 36
+19: Epoch: 36
+ 4: Epoch: 36
+24: Epoch: 36
+31: Epoch: 36
+14: Epoch: 36
+21: Epoch: 36
+11: Epoch: 36
+29: Epoch: 36
+ 6: Epoch: 36
+23: Epoch: 36
+17: Epoch: 36
+26: Epoch: 36
+ 2: Epoch: 36
+ 0: Epoch: 36
+ 9: Epoch: 36
+13: Epoch: 36
+ 1: Epoch: 36
+ 5: Epoch: 36
+25: Epoch: 36
+30: Epoch: 36
+ 7: Epoch: 36
+22: Epoch: 36
+27: Epoch: 36
+20: Epoch: 36
+28: Epoch: 36
+12: Epoch: 36
+10: Epoch: 36
+ 3: Epoch: 36
+ 8: Epoch: 36
+15: Epoch: 36
+18: Epoch: 37
+ 4: Epoch: 37
+21: Epoch: 37
+19: Epoch: 37
+31: Epoch: 37
+17: Epoch: 37
+27: Epoch: 37
+ 5: Epoch: 37
+24: Epoch: 37
+30: Epoch: 37
+14: Epoch: 37
+20: Epoch: 37
+29: Epoch: 37
+ 7: Epoch: 37
+23: Epoch: 37
+16: Epoch: 37
+26: Epoch: 37
+ 0: Epoch: 37
+11: Epoch: 37
+ 9: Epoch: 37
+ 2: Epoch: 37
+ 1: Epoch: 37
+25: Epoch: 37
+ 6: Epoch: 37
+22: Epoch: 37
+13: Epoch: 37
+28: Epoch: 37
+10: Epoch: 37
+12: Epoch: 37
+ 8: Epoch: 37
+ 3: Epoch: 37
+15: Epoch: 37
+18: Epoch: 38
+21: Epoch: 38
+16: Epoch: 38
+ 4: Epoch: 38
+24: Epoch: 38
+31: Epoch: 38
+19: Epoch: 38
+14: Epoch: 38
+20: Epoch: 38
+29: Epoch: 38
+ 6: Epoch: 38
+23: Epoch: 38
+17: Epoch: 38
+26: Epoch: 38
+ 0: Epoch: 38
+ 5: Epoch: 38
+25: Epoch: 38
+30: Epoch: 38
+ 9: Epoch: 38
+13: Epoch: 38
+ 2: Epoch: 38
+ 1: Epoch: 38
+11: Epoch: 38
+ 7: Epoch: 38
+22: Epoch: 38
+27: Epoch: 38
+12: Epoch: 38
+28: Epoch: 38
+10: Epoch: 38
+ 3: Epoch: 38
+15: Epoch: 38
+ 8: Epoch: 38
+21: Epoch: 39
+ 4: Epoch: 39
+ 5: Epoch: 39
+24: Epoch: 39
+30: Epoch: 39
+18: Epoch: 39
+14: Epoch: 39
+20: Epoch: 39
+29: Epoch: 39
+ 6: Epoch: 39
+23: Epoch: 39
+16: Epoch: 39
+26: Epoch: 39
+ 2: Epoch: 39
+ 0: Epoch: 39
+11: Epoch: 39
+ 9: Epoch: 39
+13: Epoch: 39
+ 1: Epoch: 39
+25: Epoch: 39
+31: Epoch: 39
+19: Epoch: 39
+ 7: Epoch: 39
+22: Epoch: 39
+17: Epoch: 39
+27: Epoch: 39
+28: Epoch: 39
+10: Epoch: 39
+12: Epoch: 39
+ 8: Epoch: 39
+ 3: Epoch: 39
+15: Epoch: 39
+ 4: Epoch: 40
+19: Epoch: 40
+16: Epoch: 40
+21: Epoch: 40
+24: Epoch: 40
+31: Epoch: 40
+18: Epoch: 40
+14: Epoch: 40
+29: Epoch: 40
+ 6: Epoch: 40
+23: Epoch: 40
+17: Epoch: 40
+27: Epoch: 40
+ 0: Epoch: 40
+20: Epoch: 40
+ 1: Epoch: 40
+30: Epoch: 40
+ 7: Epoch: 40
+ 5: Epoch: 40
+25: Epoch: 40
+ 9: Epoch: 40
+22: Epoch: 40
+ 2: Epoch: 40
+11: Epoch: 40
+28: Epoch: 40
+12: Epoch: 40
+10: Epoch: 40
+26: Epoch: 40
+ 8: Epoch: 40
+15: Epoch: 40
+ 3: Epoch: 40
+13: Epoch: 40
+ 4: Epoch: 41
+24: Epoch: 41
+30: Epoch: 41
+18: Epoch: 41
+14: Epoch: 41
+21: Epoch: 41
+29: Epoch: 41
+ 7: Epoch: 41
+23: Epoch: 41
+16: Epoch: 41
+27: Epoch: 41
+ 0: Epoch: 41
+19: Epoch: 41
+ 1: Epoch: 41
+31: Epoch: 41
+ 9: Epoch: 41
+22: Epoch: 41
+17: Epoch: 41
+ 6: Epoch: 41
+ 2: Epoch: 41
+20: Epoch: 41
+ 5: Epoch: 41
+11: Epoch: 41
+25: Epoch: 41
+13: Epoch: 41
+28: Epoch: 41
+26: Epoch: 41
+12: Epoch: 41
+10: Epoch: 41
+ 8: Epoch: 41
+ 3: Epoch: 41
+15: Epoch: 41
+18: Epoch: 42
+16: Epoch: 42
+19: Epoch: 42
+ 4: Epoch: 42
+24: Epoch: 42
+31: Epoch: 42
+14: Epoch: 42
+21: Epoch: 42
+29: Epoch: 42
+ 9: Epoch: 42
+ 6: Epoch: 42
+23: Epoch: 42
+17: Epoch: 42
+27: Epoch: 42
+ 2: Epoch: 42
+ 0: Epoch: 42
+11: Epoch: 42
+13: Epoch: 42
+ 1: Epoch: 42
+ 5: Epoch: 42
+25: Epoch: 42
+30: Epoch: 42
+ 7: Epoch: 42
+22: Epoch: 42
+26: Epoch: 42
+20: Epoch: 42
+12: Epoch: 42
+28: Epoch: 42
+10: Epoch: 42
+ 3: Epoch: 42
+ 8: Epoch: 42
+15: Epoch: 42
+18: Epoch: 43
+16: Epoch: 43
+ 4: Epoch: 43
+ 7: Epoch: 43
+21: Epoch: 43
+24: Epoch: 43
+31: Epoch: 43
+26: Epoch: 43
+19: Epoch: 43
+29: Epoch: 43
+23: Epoch: 43
+17: Epoch: 43
+ 0: Epoch: 43
+ 5: Epoch: 43
+30: Epoch: 43
+25: Epoch: 43
+14: Epoch: 43
+20: Epoch: 43
+27: Epoch: 43
+22: Epoch: 43
+ 9: Epoch: 43
+11: Epoch: 43
+ 6: Epoch: 43
+13: Epoch: 43
+ 1: Epoch: 43
+ 2: Epoch: 43
+28: Epoch: 43
+12: Epoch: 43
+10: Epoch: 43
+ 8: Epoch: 43
+ 3: Epoch: 43
+15: Epoch: 43
+30: Epoch: 44
+21: Epoch: 44
+ 4: Epoch: 44
+31: Epoch: 44
+20: Epoch: 44
+ 5: Epoch: 44
+24: Epoch: 44
+18: Epoch: 44
+14: Epoch: 44
+29: Epoch: 44
+ 6: Epoch: 44
+23: Epoch: 44
+16: Epoch: 44
+27: Epoch: 44
+ 2: Epoch: 44
+ 0: Epoch: 44
+ 1: Epoch: 44
+25: Epoch: 44
+11: Epoch: 44
+ 7: Epoch: 44
+13: Epoch: 44
+19: Epoch: 44
+ 9: Epoch: 44
+22: Epoch: 44
+17: Epoch: 44
+26: Epoch: 44
+28: Epoch: 44
+10: Epoch: 44
+ 3: Epoch: 44
+15: Epoch: 44
+12: Epoch: 44
+ 8: Epoch: 44
+ 4: Epoch: 45
+31: Epoch: 45
+18: Epoch: 45
+16: Epoch: 45
+21: Epoch: 45
+24: Epoch: 45
+ 5: Epoch: 45
+25: Epoch: 45
+30: Epoch: 45
+19: Epoch: 45
+14: Epoch: 45
+20: Epoch: 45
+29: Epoch: 45
+ 9: Epoch: 45
+ 6: Epoch: 45
+23: Epoch: 45
+17: Epoch: 45
+26: Epoch: 45
+ 2: Epoch: 45
+ 0: Epoch: 45
+ 1: Epoch: 45
+11: Epoch: 45
+ 7: Epoch: 45
+13: Epoch: 45
+22: Epoch: 45
+27: Epoch: 45
+12: Epoch: 45
+28: Epoch: 45
+10: Epoch: 45
+ 3: Epoch: 45
+ 8: Epoch: 45
+15: Epoch: 45
+ 4: Epoch: 46
+30: Epoch: 46
+18: Epoch: 46
+21: Epoch: 46
+16: Epoch: 46
+24: Epoch: 46
+31: Epoch: 46
+20: Epoch: 46
+27: Epoch: 46
+ 5: Epoch: 46
+25: Epoch: 46
+19: Epoch: 46
+14: Epoch: 46
+29: Epoch: 46
+ 9: Epoch: 46
+ 6: Epoch: 46
+23: Epoch: 46
+17: Epoch: 46
+26: Epoch: 46
+ 2: Epoch: 46
+ 0: Epoch: 46
+11: Epoch: 46
+13: Epoch: 46
+ 1: Epoch: 46
+ 7: Epoch: 46
+22: Epoch: 46
+12: Epoch: 46
+ 3: Epoch: 46
+10: Epoch: 46
+ 8: Epoch: 46
+28: Epoch: 46
+15: Epoch: 46
+ 4: Epoch: 47
+24: Epoch: 47
+31: Epoch: 47
+18: Epoch: 47
+21: Epoch: 47
+29: Epoch: 47
+ 6: Epoch: 47
+23: Epoch: 47
+ 0: Epoch: 47
+ 5: Epoch: 47
+14: Epoch: 47
+26: Epoch: 47
+30: Epoch: 47
+19: Epoch: 47
+22: Epoch: 47
+16: Epoch: 47
+ 7: Epoch: 47
+ 1: Epoch: 47
+17: Epoch: 47
+20: Epoch: 47
+27: Epoch: 47
+ 2: Epoch: 47
+ 9: Epoch: 47
+25: Epoch: 47
+11: Epoch: 47
+13: Epoch: 47
+ 3: Epoch: 47
+28: Epoch: 47
+10: Epoch: 47
+12: Epoch: 47
+ 8: Epoch: 47
+15: Epoch: 47
+18: Epoch: 48
+16: Epoch: 48
+ 4: Epoch: 48
+21: Epoch: 48
+19: Epoch: 48
+31: Epoch: 48
+27: Epoch: 48
+24: Epoch: 48
+26: Epoch: 48
+30: Epoch: 48
+29: Epoch: 48
+23: Epoch: 48
+ 5: Epoch: 48
+25: Epoch: 48
+14: Epoch: 48
+20: Epoch: 48
+ 7: Epoch: 48
+17: Epoch: 48
+11: Epoch: 48
+ 2: Epoch: 48
+ 0: Epoch: 48
+ 1: Epoch: 48
+22: Epoch: 48
+13: Epoch: 48
+ 6: Epoch: 48
+28: Epoch: 48
+ 9: Epoch: 48
+12: Epoch: 48
+10: Epoch: 48
+ 3: Epoch: 48
+ 8: Epoch: 48
+15: Epoch: 48
+ 4: Epoch: 49
+24: Epoch: 49
+31: Epoch: 49
+18: Epoch: 49
+21: Epoch: 49
+29: Epoch: 49
+ 7: Epoch: 49
+23: Epoch: 49
+16: Epoch: 49
+27: Epoch: 49
+ 0: Epoch: 49
+14: Epoch: 49
+ 1: Epoch: 49
+ 5: Epoch: 49
+30: Epoch: 49
+20: Epoch: 49
+22: Epoch: 49
+25: Epoch: 49
+19: Epoch: 49
+ 6: Epoch: 49
+17: Epoch: 49
+26: Epoch: 49
+ 2: Epoch: 49
+11: Epoch: 49
+13: Epoch: 49
+28: Epoch: 49
+ 9: Epoch: 49
+12: Epoch: 49
+ 3: Epoch: 49
+10: Epoch: 49
+15: Epoch: 49
+ 8: Epoch: 49
+18: Epoch: 50
+21: Epoch: 50
+16: Epoch: 50
+ 4: Epoch: 50
+24: Epoch: 50
+31: Epoch: 50
+19: Epoch: 50
+29: Epoch: 50
+ 6: Epoch: 50
+23: Epoch: 50
+17: Epoch: 50
+26: Epoch: 50
+ 0: Epoch: 50
+14: Epoch: 50
+20: Epoch: 50
+ 2: Epoch: 50
+ 1: Epoch: 50
+25: Epoch: 50
+30: Epoch: 50
+ 9: Epoch: 50
+22: Epoch: 50
+ 7: Epoch: 50
+27: Epoch: 50
+ 5: Epoch: 50
+11: Epoch: 50
+28: Epoch: 50
+13: Epoch: 50
+ 3: Epoch: 50
+10: Epoch: 50
+12: Epoch: 50
+ 8: Epoch: 50
+15: Epoch: 50
+ 4: Epoch: 51
+30: Epoch: 51
+18: Epoch: 51
+21: Epoch: 51
+16: Epoch: 51
+ 5: Epoch: 51
+24: Epoch: 51
+31: Epoch: 51
+19: Epoch: 51
+14: Epoch: 51
+20: Epoch: 51
+29: Epoch: 51
+ 6: Epoch: 51
+23: Epoch: 51
+17: Epoch: 51
+27: Epoch: 51
+ 0: Epoch: 51
+ 1: Epoch: 51
+25: Epoch: 51
+ 9: Epoch: 51
+22: Epoch: 51
+ 2: Epoch: 51
+ 7: Epoch: 51
+26: Epoch: 51
+13: Epoch: 51
+11: Epoch: 51
+28: Epoch: 51
+12: Epoch: 51
+ 3: Epoch: 51
+10: Epoch: 51
+ 8: Epoch: 51
+15: Epoch: 51
+ 4: Epoch: 52
+18: Epoch: 52
+21: Epoch: 52
+16: Epoch: 52
+ 5: Epoch: 52
+24: Epoch: 52
+31: Epoch: 52
+19: Epoch: 52
+14: Epoch: 52
+29: Epoch: 52
+ 6: Epoch: 52
+23: Epoch: 52
+17: Epoch: 52
+27: Epoch: 52
+ 0: Epoch: 52
+20: Epoch: 52
+ 1: Epoch: 52
+25: Epoch: 52
+ 2: Epoch: 52
+30: Epoch: 52
+ 9: Epoch: 52
+ 7: Epoch: 52
+26: Epoch: 52
+11: Epoch: 52
+13: Epoch: 52
+22: Epoch: 52
+28: Epoch: 52
+12: Epoch: 52
+10: Epoch: 52
+ 8: Epoch: 52
+ 3: Epoch: 52
+15: Epoch: 52
+ 4: Epoch: 53
+30: Epoch: 53
+18: Epoch: 53
+16: Epoch: 53
+21: Epoch: 53
+ 5: Epoch: 53
+24: Epoch: 53
+31: Epoch: 53
+19: Epoch: 53
+14: Epoch: 53
+20: Epoch: 53
+29: Epoch: 53
+ 7: Epoch: 53
+23: Epoch: 53
+17: Epoch: 53
+27: Epoch: 53
+ 0: Epoch: 53
+ 9: Epoch: 53
+ 2: Epoch: 53
+ 1: Epoch: 53
+25: Epoch: 53
+22: Epoch: 53
+26: Epoch: 53
+ 6: Epoch: 53
+13: Epoch: 53
+11: Epoch: 53
+28: Epoch: 53
+12: Epoch: 53
+ 3: Epoch: 53
+10: Epoch: 53
+ 8: Epoch: 53
+15: Epoch: 53
+ 4: Epoch: 54
+24: Epoch: 54
+31: Epoch: 54
+19: Epoch: 54
+14: Epoch: 54
+21: Epoch: 54
+29: Epoch: 54
+ 6: Epoch: 54
+23: Epoch: 54
+16: Epoch: 54
+27: Epoch: 54
+ 0: Epoch: 54
+ 9: Epoch: 54
+ 2: Epoch: 54
+ 1: Epoch: 54
+ 5: Epoch: 54
+25: Epoch: 54
+30: Epoch: 54
+18: Epoch: 54
+20: Epoch: 54
+ 7: Epoch: 54
+22: Epoch: 54
+17: Epoch: 54
+26: Epoch: 54
+11: Epoch: 54
+13: Epoch: 54
+28: Epoch: 54
+10: Epoch: 54
+ 8: Epoch: 54
+12: Epoch: 54
+ 3: Epoch: 54
+15: Epoch: 54
+ 5: Epoch: 55
+24: Epoch: 55
+31: Epoch: 55
+18: Epoch: 55
+14: Epoch: 55
+21: Epoch: 55
+29: Epoch: 55
+ 6: Epoch: 55
+23: Epoch: 55
+16: Epoch: 55
+26: Epoch: 55
+ 0: Epoch: 55
+ 4: Epoch: 55
+25: Epoch: 55
+30: Epoch: 55
+ 9: Epoch: 55
+ 7: Epoch: 55
+22: Epoch: 55
+13: Epoch: 55
+19: Epoch: 55
+17: Epoch: 55
+27: Epoch: 55
+ 2: Epoch: 55
+28: Epoch: 55
+ 1: Epoch: 55
+20: Epoch: 55
+11: Epoch: 55
+12: Epoch: 55
+15: Epoch: 55
+10: Epoch: 55
+ 3: Epoch: 55
+ 8: Epoch: 55
+18: Epoch: 56
+21: Epoch: 56
+16: Epoch: 56
+ 4: Epoch: 56
+24: Epoch: 56
+31: Epoch: 56
+19: Epoch: 56
+14: Epoch: 56
+20: Epoch: 56
+29: Epoch: 56
+ 9: Epoch: 56
+ 6: Epoch: 56
+23: Epoch: 56
+17: Epoch: 56
+27: Epoch: 56
+ 2: Epoch: 56
+ 0: Epoch: 56
+13: Epoch: 56
+25: Epoch: 56
+11: Epoch: 56
+ 7: Epoch: 56
+22: Epoch: 56
+30: Epoch: 56
+ 1: Epoch: 56
+26: Epoch: 56
+28: Epoch: 56
+ 5: Epoch: 56
+10: Epoch: 56
+ 8: Epoch: 56
+12: Epoch: 56
+ 3: Epoch: 56
+15: Epoch: 56
+ 4: Epoch: 57
+18: Epoch: 57
+21: Epoch: 57
+29: Epoch: 57
+16: Epoch: 57
+ 6: Epoch: 57
+ 0: Epoch: 57
+ 5: Epoch: 57
+24: Epoch: 57
+31: Epoch: 57
+19: Epoch: 57
+14: Epoch: 57
+20: Epoch: 57
+ 7: Epoch: 57
+23: Epoch: 57
+17: Epoch: 57
+27: Epoch: 57
+ 1: Epoch: 57
+ 9: Epoch: 57
+25: Epoch: 57
+ 2: Epoch: 57
+30: Epoch: 57
+22: Epoch: 57
+26: Epoch: 57
+11: Epoch: 57
+13: Epoch: 57
+28: Epoch: 57
+12: Epoch: 57
+ 3: Epoch: 57
+10: Epoch: 57
+ 8: Epoch: 57
+15: Epoch: 57
+ 4: Epoch: 58
+18: Epoch: 58
+21: Epoch: 58
+29: Epoch: 58
+16: Epoch: 58
+30: Epoch: 58
+19: Epoch: 58
+ 6: Epoch: 58
+17: Epoch: 58
+ 5: Epoch: 58
+24: Epoch: 58
+31: Epoch: 58
+14: Epoch: 58
+20: Epoch: 58
+ 7: Epoch: 58
+23: Epoch: 58
+27: Epoch: 58
+ 2: Epoch: 58
+ 0: Epoch: 58
+11: Epoch: 58
+13: Epoch: 58
+ 1: Epoch: 58
+25: Epoch: 58
+28: Epoch: 58
+26: Epoch: 58
+ 9: Epoch: 58
+22: Epoch: 58
+10: Epoch: 58
+12: Epoch: 58
+ 3: Epoch: 58
+ 8: Epoch: 58
+15: Epoch: 58
+ 4: Epoch: 59
+24: Epoch: 59
+31: Epoch: 59
+18: Epoch: 59
+14: Epoch: 59
+21: Epoch: 59
+29: Epoch: 59
+ 9: Epoch: 59
+ 6: Epoch: 59
+23: Epoch: 59
+16: Epoch: 59
+26: Epoch: 59
+ 0: Epoch: 59
+ 1: Epoch: 59
+ 5: Epoch: 59
+25: Epoch: 59
+30: Epoch: 59
+19: Epoch: 59
+20: Epoch: 59
+11: Epoch: 59
+22: Epoch: 59
+17: Epoch: 59
+ 7: Epoch: 59
+27: Epoch: 59
+13: Epoch: 59
+ 2: Epoch: 59
+28: Epoch: 59
+12: Epoch: 59
+10: Epoch: 59
+ 8: Epoch: 59
+ 3: Epoch: 59
+15: Epoch: 59
+24: Epoch: 60
+31: Epoch: 60
+18: Epoch: 60
+14: Epoch: 60
+21: Epoch: 60
+29: Epoch: 60
+ 6: Epoch: 60
+23: Epoch: 60
+16: Epoch: 60
+26: Epoch: 60
+ 0: Epoch: 60
+ 1: Epoch: 60
+25: Epoch: 60
+30: Epoch: 60
+19: Epoch: 60
+ 9: Epoch: 60
+ 7: Epoch: 60
+22: Epoch: 60
+17: Epoch: 60
+27: Epoch: 60
+ 2: Epoch: 60
+ 4: Epoch: 60
+20: Epoch: 60
+ 5: Epoch: 60
+11: Epoch: 60
+13: Epoch: 60
+28: Epoch: 60
+10: Epoch: 60
+12: Epoch: 60
+ 3: Epoch: 60
+ 8: Epoch: 60
+15: Epoch: 60
+19: Epoch: 61
+16: Epoch: 61
+ 4: Epoch: 61
+24: Epoch: 61
+31: Epoch: 61
+18: Epoch: 61
+14: Epoch: 61
+21: Epoch: 61
+29: Epoch: 61
+ 9: Epoch: 61
+ 6: Epoch: 61
+23: Epoch: 61
+17: Epoch: 61
+27: Epoch: 61
+ 0: Epoch: 61
+11: Epoch: 61
+ 1: Epoch: 61
+ 5: Epoch: 61
+25: Epoch: 61
+30: Epoch: 61
+ 7: Epoch: 61
+22: Epoch: 61
+26: Epoch: 61
+13: Epoch: 61
+ 2: Epoch: 61
+20: Epoch: 61
+28: Epoch: 61
+10: Epoch: 61
+12: Epoch: 61
+ 8: Epoch: 61
+ 3: Epoch: 61
+15: Epoch: 61
+18: Epoch: 62
+16: Epoch: 62
+19: Epoch: 62
+17: Epoch: 62
+ 4: Epoch: 62
+24: Epoch: 62
+31: Epoch: 62
+14: Epoch: 62
+21: Epoch: 62
+29: Epoch: 62
+ 6: Epoch: 62
+23: Epoch: 62
+27: Epoch: 62
+ 0: Epoch: 62
+ 1: Epoch: 62
+ 5: Epoch: 62
+25: Epoch: 62
+30: Epoch: 62
+20: Epoch: 62
+11: Epoch: 62
+ 9: Epoch: 62
+22: Epoch: 62
+ 2: Epoch: 62
+ 7: Epoch: 62
+26: Epoch: 62
+13: Epoch: 62
+28: Epoch: 62
+12: Epoch: 62
+10: Epoch: 62
+ 3: Epoch: 62
+ 8: Epoch: 62
+15: Epoch: 62
+19: Epoch: 63
+16: Epoch: 63
+18: Epoch: 63
+ 4: Epoch: 63
+24: Epoch: 63
+30: Epoch: 63
+14: Epoch: 63
+21: Epoch: 63
+11: Epoch: 63
+29: Epoch: 63
+ 9: Epoch: 63
+ 6: Epoch: 63
+23: Epoch: 63
+17: Epoch: 63
+27: Epoch: 63
+13: Epoch: 63
+ 2: Epoch: 63
+ 0: Epoch: 63
+ 5: Epoch: 63
+25: Epoch: 63
+31: Epoch: 63
+20: Epoch: 63
+ 1: Epoch: 63
+28: Epoch: 63
+22: Epoch: 63
+ 7: Epoch: 63
+26: Epoch: 63
+10: Epoch: 63
+ 8: Epoch: 63
+12: Epoch: 63
+ 3: Epoch: 63
+15: Epoch: 63
+ 4: Epoch: 64
+18: Epoch: 64
+21: Epoch: 64
+29: Epoch: 64
+16: Epoch: 64
+23: Epoch: 64
+ 5: Epoch: 64
+24: Epoch: 64
+31: Epoch: 64
+19: Epoch: 64
+14: Epoch: 64
+20: Epoch: 64
+ 9: Epoch: 64
+ 6: Epoch: 64
+22: Epoch: 64
+17: Epoch: 64
+27: Epoch: 64
+ 2: Epoch: 64
+ 0: Epoch: 64
+ 1: Epoch: 64
+25: Epoch: 64
+30: Epoch: 64
+11: Epoch: 64
+26: Epoch: 64
+ 7: Epoch: 64
+13: Epoch: 64
+28: Epoch: 64
+12: Epoch: 64
+ 3: Epoch: 64
+10: Epoch: 64
+ 8: Epoch: 64
+15: Epoch: 64
+ 4: Epoch: 65
+24: Epoch: 65
+31: Epoch: 65
+18: Epoch: 65
+14: Epoch: 65
+21: Epoch: 65
+29: Epoch: 65
+ 6: Epoch: 65
+23: Epoch: 65
+16: Epoch: 65
+27: Epoch: 65
+ 9: Epoch: 65
+ 2: Epoch: 65
+ 0: Epoch: 65
+ 1: Epoch: 65
+ 5: Epoch: 65
+25: Epoch: 65
+30: Epoch: 65
+19: Epoch: 65
+22: Epoch: 65
+17: Epoch: 65
+11: Epoch: 65
+ 7: Epoch: 65
+26: Epoch: 65
+13: Epoch: 65
+20: Epoch: 65
+28: Epoch: 65
+12: Epoch: 65
+ 3: Epoch: 65
+10: Epoch: 65
+ 8: Epoch: 65
+15: Epoch: 65
+ 4: Epoch: 66
+24: Epoch: 66
+30: Epoch: 66
+18: Epoch: 66
+14: Epoch: 66
+21: Epoch: 66
+29: Epoch: 66
+ 6: Epoch: 66
+23: Epoch: 66
+16: Epoch: 66
+26: Epoch: 66
+ 0: Epoch: 66
+ 5: Epoch: 66
+25: Epoch: 66
+31: Epoch: 66
+19: Epoch: 66
+17: Epoch: 66
+ 2: Epoch: 66
+ 7: Epoch: 66
+22: Epoch: 66
+27: Epoch: 66
+20: Epoch: 66
+ 9: Epoch: 66
+11: Epoch: 66
+28: Epoch: 66
+13: Epoch: 66
+ 1: Epoch: 66
+ 8: Epoch: 66
+10: Epoch: 66
+ 3: Epoch: 66
+12: Epoch: 66
+15: Epoch: 66
+ 4: Epoch: 67
+18: Epoch: 67
+21: Epoch: 67
+16: Epoch: 67
+ 0: Epoch: 67
+ 5: Epoch: 67
+24: Epoch: 67
+31: Epoch: 67
+19: Epoch: 67
+14: Epoch: 67
+29: Epoch: 67
+ 9: Epoch: 67
+ 6: Epoch: 67
+23: Epoch: 67
+17: Epoch: 67
+27: Epoch: 67
+ 2: Epoch: 67
+ 1: Epoch: 67
+20: Epoch: 67
+25: Epoch: 67
+11: Epoch: 67
+30: Epoch: 67
+22: Epoch: 67
+26: Epoch: 67
+ 7: Epoch: 67
+28: Epoch: 67
+13: Epoch: 67
+15: Epoch: 67
+10: Epoch: 67
+ 3: Epoch: 67
+ 8: Epoch: 67
+12: Epoch: 67
+ 4: Epoch: 68
+30: Epoch: 68
+18: Epoch: 68
+21: Epoch: 68
+19: Epoch: 68
+16: Epoch: 68
+17: Epoch: 68
+29: Epoch: 68
+ 9: Epoch: 68
+23: Epoch: 68
+ 5: Epoch: 68
+24: Epoch: 68
+31: Epoch: 68
+14: Epoch: 68
+20: Epoch: 68
+11: Epoch: 68
+ 6: Epoch: 68
+27: Epoch: 68
+13: Epoch: 68
+ 0: Epoch: 68
+22: Epoch: 68
+ 2: Epoch: 68
+ 1: Epoch: 68
+25: Epoch: 68
+26: Epoch: 68
+28: Epoch: 68
+ 7: Epoch: 68
+12: Epoch: 68
+10: Epoch: 68
+ 3: Epoch: 68
+ 8: Epoch: 68
+15: Epoch: 68
+ 4: Epoch: 69
+18: Epoch: 69
+21: Epoch: 69
+16: Epoch: 69
+ 0: Epoch: 69
+ 5: Epoch: 69
+24: Epoch: 69
+31: Epoch: 69
+19: Epoch: 69
+14: Epoch: 69
+20: Epoch: 69
+29: Epoch: 69
+ 6: Epoch: 69
+23: Epoch: 69
+17: Epoch: 69
+26: Epoch: 69
+ 1: Epoch: 69
+ 2: Epoch: 69
+25: Epoch: 69
+30: Epoch: 69
+ 9: Epoch: 69
+22: Epoch: 69
+11: Epoch: 69
+27: Epoch: 69
+13: Epoch: 69
+28: Epoch: 69
+ 7: Epoch: 69
+12: Epoch: 69
+ 3: Epoch: 69
+10: Epoch: 69
+15: Epoch: 69
+ 8: Epoch: 69
+ 4: Epoch: 70
+18: Epoch: 70
+21: Epoch: 70
+16: Epoch: 70
+31: Epoch: 70
+27: Epoch: 70
+ 5: Epoch: 70
+24: Epoch: 70
+30: Epoch: 70
+19: Epoch: 70
+14: Epoch: 70
+29: Epoch: 70
+ 6: Epoch: 70
+17: Epoch: 70
+26: Epoch: 70
+ 2: Epoch: 70
+ 0: Epoch: 70
+20: Epoch: 70
+ 1: Epoch: 70
+25: Epoch: 70
+11: Epoch: 70
+ 9: Epoch: 70
+23: Epoch: 70
+28: Epoch: 70
+ 7: Epoch: 70
+22: Epoch: 70
+13: Epoch: 70
+10: Epoch: 70
+12: Epoch: 70
+ 3: Epoch: 70
+ 8: Epoch: 70
+15: Epoch: 70
+ 4: Epoch: 71
+30: Epoch: 71
+18: Epoch: 71
+16: Epoch: 71
+24: Epoch: 71
+31: Epoch: 71
+21: Epoch: 71
+27: Epoch: 71
+26: Epoch: 71
+14: Epoch: 71
+19: Epoch: 71
+29: Epoch: 71
+ 6: Epoch: 71
+23: Epoch: 71
+17: Epoch: 71
+ 5: Epoch: 71
+ 0: Epoch: 71
+ 1: Epoch: 71
+25: Epoch: 71
+22: Epoch: 71
+ 7: Epoch: 71
+ 2: Epoch: 71
+ 9: Epoch: 71
+11: Epoch: 71
+13: Epoch: 71
+28: Epoch: 71
+20: Epoch: 71
+12: Epoch: 71
+ 8: Epoch: 71
+ 3: Epoch: 71
+10: Epoch: 71
+15: Epoch: 71
+ 4: Epoch: 72
+24: Epoch: 72
+30: Epoch: 72
+18: Epoch: 72
+21: Epoch: 72
+29: Epoch: 72
+ 2: Epoch: 72
+ 0: Epoch: 72
+19: Epoch: 72
+16: Epoch: 72
+ 5: Epoch: 72
+25: Epoch: 72
+31: Epoch: 72
+11: Epoch: 72
+17: Epoch: 72
+ 1: Epoch: 72
+14: Epoch: 72
+20: Epoch: 72
+ 6: Epoch: 72
+ 3: Epoch: 72
+28: Epoch: 72
+ 9: Epoch: 72
+26: Epoch: 72
+ 7: Epoch: 72
+27: Epoch: 72
+10: Epoch: 72
+22: Epoch: 72
+13: Epoch: 72
+23: Epoch: 72
+ 8: Epoch: 72
+15: Epoch: 72
+12: Epoch: 72
+30: Epoch: 73
+18: Epoch: 73
+16: Epoch: 73
+21: Epoch: 73
+19: Epoch: 73
+26: Epoch: 73
+31: Epoch: 73
+ 4: Epoch: 73
+24: Epoch: 73
+14: Epoch: 73
+20: Epoch: 73
+ 6: Epoch: 73
+23: Epoch: 73
+17: Epoch: 73
+27: Epoch: 73
+ 0: Epoch: 73
+29: Epoch: 73
+ 2: Epoch: 73
+ 1: Epoch: 73
+25: Epoch: 73
+ 9: Epoch: 73
+22: Epoch: 73
+ 7: Epoch: 73
+13: Epoch: 73
+11: Epoch: 73
+ 5: Epoch: 73
+12: Epoch: 73
+ 3: Epoch: 73
+10: Epoch: 73
+ 8: Epoch: 73
+28: Epoch: 73
+15: Epoch: 73
+18: Epoch: 74
+30: Epoch: 74
+21: Epoch: 74
+16: Epoch: 74
+19: Epoch: 74
+27: Epoch: 74
+17: Epoch: 74
+ 4: Epoch: 74
+26: Epoch: 74
+ 5: Epoch: 74
+24: Epoch: 74
+31: Epoch: 74
+14: Epoch: 74
+20: Epoch: 74
+29: Epoch: 74
+ 6: Epoch: 74
+23: Epoch: 74
+ 2: Epoch: 74
+ 0: Epoch: 74
+ 1: Epoch: 74
+25: Epoch: 74
+11: Epoch: 74
+22: Epoch: 74
+ 7: Epoch: 74
+ 9: Epoch: 74
+13: Epoch: 74
+28: Epoch: 74
+10: Epoch: 74
+ 3: Epoch: 74
+12: Epoch: 74
+ 8: Epoch: 74
+15: Epoch: 74
+ 4: Epoch: 75
+30: Epoch: 75
+18: Epoch: 75
+21: Epoch: 75
+16: Epoch: 75
+ 5: Epoch: 75
+24: Epoch: 75
+31: Epoch: 75
+19: Epoch: 75
+14: Epoch: 75
+20: Epoch: 75
+29: Epoch: 75
+ 6: Epoch: 75
+23: Epoch: 75
+17: Epoch: 75
+26: Epoch: 75
+ 0: Epoch: 75
+ 9: Epoch: 75
+ 2: Epoch: 75
+ 1: Epoch: 75
+25: Epoch: 75
+11: Epoch: 75
+ 7: Epoch: 75
+22: Epoch: 75
+27: Epoch: 75
+13: Epoch: 75
+28: Epoch: 75
+12: Epoch: 75
+10: Epoch: 75
+ 3: Epoch: 75
+ 8: Epoch: 75
+15: Epoch: 75
+30: Epoch: 76
+19: Epoch: 76
+16: Epoch: 76
+ 4: Epoch: 76
+18: Epoch: 76
+21: Epoch: 76
+17: Epoch: 76
+ 6: Epoch: 76
+27: Epoch: 76
+31: Epoch: 76
+ 7: Epoch: 76
+ 0: Epoch: 76
+24: Epoch: 76
+23: Epoch: 76
+26: Epoch: 76
+29: Epoch: 76
+22: Epoch: 76
+ 1: Epoch: 76
+ 5: Epoch: 76
+14: Epoch: 76
+20: Epoch: 76
+ 2: Epoch: 76
+25: Epoch: 76
+11: Epoch: 76
+ 9: Epoch: 76
+12: Epoch: 76
+28: Epoch: 76
+10: Epoch: 76
+ 8: Epoch: 76
+15: Epoch: 76
+ 3: Epoch: 76
+13: Epoch: 76
+ 4: Epoch: 77
+24: Epoch: 77
+30: Epoch: 77
+18: Epoch: 77
+14: Epoch: 77
+21: Epoch: 77
+29: Epoch: 77
+ 6: Epoch: 77
+23: Epoch: 77
+16: Epoch: 77
+26: Epoch: 77
+ 2: Epoch: 77
+ 0: Epoch: 77
+ 5: Epoch: 77
+25: Epoch: 77
+31: Epoch: 77
+19: Epoch: 77
+11: Epoch: 77
+ 9: Epoch: 77
+ 7: Epoch: 77
+22: Epoch: 77
+17: Epoch: 77
+13: Epoch: 77
+ 1: Epoch: 77
+20: Epoch: 77
+27: Epoch: 77
+28: Epoch: 77
+12: Epoch: 77
+ 3: Epoch: 77
+10: Epoch: 77
+ 8: Epoch: 77
+15: Epoch: 77
+ 4: Epoch: 78
+30: Epoch: 78
+19: Epoch: 78
+16: Epoch: 78
+24: Epoch: 78
+31: Epoch: 78
+21: Epoch: 78
+ 6: Epoch: 78
+17: Epoch: 78
+27: Epoch: 78
+29: Epoch: 78
+ 7: Epoch: 78
+23: Epoch: 78
+ 0: Epoch: 78
+ 5: Epoch: 78
+26: Epoch: 78
+ 1: Epoch: 78
+12: Epoch: 78
+14: Epoch: 78
+25: Epoch: 78
+20: Epoch: 78
+22: Epoch: 78
+18: Epoch: 78
+ 2: Epoch: 78
+11: Epoch: 78
+28: Epoch: 78
+ 9: Epoch: 78
+10: Epoch: 78
+ 8: Epoch: 78
+15: Epoch: 78
+ 3: Epoch: 78
+13: Epoch: 78
+30: Epoch: 79
+16: Epoch: 79
+21: Epoch: 79
+ 4: Epoch: 79
+18: Epoch: 79
+19: Epoch: 79
+ 5: Epoch: 79
+24: Epoch: 79
+31: Epoch: 79
+14: Epoch: 79
+20: Epoch: 79
+29: Epoch: 79
+ 9: Epoch: 79
+ 6: Epoch: 79
+23: Epoch: 79
+17: Epoch: 79
+26: Epoch: 79
+ 0: Epoch: 79
+ 1: Epoch: 79
+11: Epoch: 79
+ 2: Epoch: 79
+25: Epoch: 79
+ 7: Epoch: 79
+22: Epoch: 79
+27: Epoch: 79
+28: Epoch: 79
+13: Epoch: 79
+12: Epoch: 79
+10: Epoch: 79
+ 8: Epoch: 79
+ 3: Epoch: 79
+15: Epoch: 79
+ 4: Epoch: 80
+30: Epoch: 80
+19: Epoch: 80
+21: Epoch: 80
+16: Epoch: 80
+ 5: Epoch: 80
+24: Epoch: 80
+31: Epoch: 80
+18: Epoch: 80
+14: Epoch: 80
+20: Epoch: 80
+29: Epoch: 80
+ 9: Epoch: 80
+ 6: Epoch: 80
+23: Epoch: 80
+17: Epoch: 80
+26: Epoch: 80
+ 2: Epoch: 80
+ 0: Epoch: 80
+13: Epoch: 80
+ 1: Epoch: 80
+25: Epoch: 80
+11: Epoch: 80
+ 7: Epoch: 80
+22: Epoch: 80
+27: Epoch: 80
+28: Epoch: 80
+12: Epoch: 80
+ 3: Epoch: 80
+10: Epoch: 80
+ 8: Epoch: 80
+15: Epoch: 80
+ 4: Epoch: 81
+24: Epoch: 81
+30: Epoch: 81
+18: Epoch: 81
+21: Epoch: 81
+29: Epoch: 81
+ 6: Epoch: 81
+23: Epoch: 81
+16: Epoch: 81
+26: Epoch: 81
+14: Epoch: 81
+ 0: Epoch: 81
+25: Epoch: 81
+31: Epoch: 81
+20: Epoch: 81
+ 1: Epoch: 81
+19: Epoch: 81
+ 9: Epoch: 81
+22: Epoch: 81
+17: Epoch: 81
+27: Epoch: 81
+ 7: Epoch: 81
+ 2: Epoch: 81
+ 5: Epoch: 81
+11: Epoch: 81
+28: Epoch: 81
+13: Epoch: 81
+ 3: Epoch: 81
+10: Epoch: 81
+ 8: Epoch: 81
+15: Epoch: 81
+12: Epoch: 81
+ 4: Epoch: 82
+30: Epoch: 82
+18: Epoch: 82
+21: Epoch: 82
+16: Epoch: 82
+26: Epoch: 82
+31: Epoch: 82
+20: Epoch: 82
+24: Epoch: 82
+27: Epoch: 82
+ 5: Epoch: 82
+19: Epoch: 82
+14: Epoch: 82
+29: Epoch: 82
+ 6: Epoch: 82
+23: Epoch: 82
+17: Epoch: 82
+ 0: Epoch: 82
+25: Epoch: 82
+ 9: Epoch: 82
+ 2: Epoch: 82
+ 1: Epoch: 82
+22: Epoch: 82
+ 7: Epoch: 82
+11: Epoch: 82
+28: Epoch: 82
+ 3: Epoch: 82
+13: Epoch: 82
+10: Epoch: 82
+ 8: Epoch: 82
+12: Epoch: 82
+15: Epoch: 82
+30: Epoch: 83
+18: Epoch: 83
+21: Epoch: 83
+ 6: Epoch: 83
+31: Epoch: 83
+ 4: Epoch: 83
+24: Epoch: 83
+19: Epoch: 83
+26: Epoch: 83
+ 5: Epoch: 83
+25: Epoch: 83
+14: Epoch: 83
+20: Epoch: 83
+11: Epoch: 83
+29: Epoch: 83
+ 9: Epoch: 83
+ 7: Epoch: 83
+23: Epoch: 83
+16: Epoch: 83
+27: Epoch: 83
+13: Epoch: 83
+ 2: Epoch: 83
+ 0: Epoch: 83
+ 1: Epoch: 83
+10: Epoch: 83
+28: Epoch: 83
+22: Epoch: 83
+17: Epoch: 83
+12: Epoch: 83
+ 8: Epoch: 83
+15: Epoch: 83
+ 3: Epoch: 83
+30: Epoch: 84
+18: Epoch: 84
+21: Epoch: 84
+26: Epoch: 84
+ 4: Epoch: 84
+31: Epoch: 84
+20: Epoch: 84
+24: Epoch: 84
+27: Epoch: 84
+19: Epoch: 84
+14: Epoch: 84
+29: Epoch: 84
+ 6: Epoch: 84
+23: Epoch: 84
+16: Epoch: 84
+ 5: Epoch: 84
+ 0: Epoch: 84
+25: Epoch: 84
+17: Epoch: 84
+22: Epoch: 84
+ 7: Epoch: 84
+13: Epoch: 84
+11: Epoch: 84
+ 2: Epoch: 84
+ 1: Epoch: 84
+28: Epoch: 84
+ 9: Epoch: 84
+12: Epoch: 84
+10: Epoch: 84
+15: Epoch: 84
+ 3: Epoch: 84
+ 8: Epoch: 84
+ 4: Epoch: 85
+18: Epoch: 85
+21: Epoch: 85
+16: Epoch: 85
+ 5: Epoch: 85
+24: Epoch: 85
+30: Epoch: 85
+19: Epoch: 85
+14: Epoch: 85
+20: Epoch: 85
+11: Epoch: 85
+29: Epoch: 85
+ 9: Epoch: 85
+23: Epoch: 85
+17: Epoch: 85
+26: Epoch: 85
+13: Epoch: 85
+ 2: Epoch: 85
+ 0: Epoch: 85
+ 1: Epoch: 85
+25: Epoch: 85
+31: Epoch: 85
+10: Epoch: 85
+28: Epoch: 85
+22: Epoch: 85
+27: Epoch: 85
+12: Epoch: 85
+ 6: Epoch: 85
+ 7: Epoch: 85
+ 3: Epoch: 85
+15: Epoch: 85
+ 8: Epoch: 85
+ 4: Epoch: 86
+30: Epoch: 86
+19: Epoch: 86
+21: Epoch: 86
+16: Epoch: 86
+ 5: Epoch: 86
+24: Epoch: 86
+31: Epoch: 86
+18: Epoch: 86
+14: Epoch: 86
+20: Epoch: 86
+11: Epoch: 86
+29: Epoch: 86
+ 9: Epoch: 86
+ 6: Epoch: 86
+23: Epoch: 86
+17: Epoch: 86
+26: Epoch: 86
+13: Epoch: 86
+ 2: Epoch: 86
+ 0: Epoch: 86
+25: Epoch: 86
+ 1: Epoch: 86
+28: Epoch: 86
+22: Epoch: 86
+10: Epoch: 86
+ 7: Epoch: 86
+27: Epoch: 86
+12: Epoch: 86
+ 3: Epoch: 86
+ 8: Epoch: 86
+15: Epoch: 86
+18: Epoch: 87
+16: Epoch: 87
+ 4: Epoch: 87
+24: Epoch: 87
+30: Epoch: 87
+19: Epoch: 87
+14: Epoch: 87
+21: Epoch: 87
+29: Epoch: 87
+23: Epoch: 87
+17: Epoch: 87
+27: Epoch: 87
+ 0: Epoch: 87
+31: Epoch: 87
+26: Epoch: 87
+22: Epoch: 87
+ 1: Epoch: 87
+ 2: Epoch: 87
+25: Epoch: 87
+20: Epoch: 87
+ 6: Epoch: 87
+ 5: Epoch: 87
+ 9: Epoch: 87
+ 7: Epoch: 87
+11: Epoch: 87
+13: Epoch: 87
+28: Epoch: 87
+12: Epoch: 87
+10: Epoch: 87
+ 3: Epoch: 87
+ 8: Epoch: 87
+15: Epoch: 87
+ 4: Epoch: 88
+30: Epoch: 88
+18: Epoch: 88
+16: Epoch: 88
+19: Epoch: 88
+ 5: Epoch: 88
+24: Epoch: 88
+31: Epoch: 88
+14: Epoch: 88
+21: Epoch: 88
+29: Epoch: 88
+ 9: Epoch: 88
+ 6: Epoch: 88
+23: Epoch: 88
+17: Epoch: 88
+26: Epoch: 88
+13: Epoch: 88
+ 2: Epoch: 88
+ 0: Epoch: 88
+11: Epoch: 88
+ 1: Epoch: 88
+25: Epoch: 88
+ 7: Epoch: 88
+22: Epoch: 88
+27: Epoch: 88
+28: Epoch: 88
+ 3: Epoch: 88
+12: Epoch: 88
+10: Epoch: 88
+15: Epoch: 88
+ 8: Epoch: 88
+20: Epoch: 88
+30: Epoch: 89
+18: Epoch: 89
+21: Epoch: 89
+16: Epoch: 89
+19: Epoch: 89
+ 4: Epoch: 89
+24: Epoch: 89
+31: Epoch: 89
+14: Epoch: 89
+20: Epoch: 89
+29: Epoch: 89
+ 6: Epoch: 89
+23: Epoch: 89
+17: Epoch: 89
+26: Epoch: 89
+ 0: Epoch: 89
+ 5: Epoch: 89
+25: Epoch: 89
+ 2: Epoch: 89
+ 9: Epoch: 89
+22: Epoch: 89
+27: Epoch: 89
+ 7: Epoch: 89
+11: Epoch: 89
+13: Epoch: 89
+ 1: Epoch: 89
+28: Epoch: 89
+10: Epoch: 89
+12: Epoch: 89
+ 8: Epoch: 89
+15: Epoch: 89
+ 3: Epoch: 89
+ 4: Epoch: 90
+24: Epoch: 90
+30: Epoch: 90
+18: Epoch: 90
+14: Epoch: 90
+21: Epoch: 90
+11: Epoch: 90
+29: Epoch: 90
+ 9: Epoch: 90
+ 6: Epoch: 90
+23: Epoch: 90
+16: Epoch: 90
+26: Epoch: 90
+13: Epoch: 90
+ 2: Epoch: 90
+ 0: Epoch: 90
+ 5: Epoch: 90
+25: Epoch: 90
+31: Epoch: 90
+19: Epoch: 90
+20: Epoch: 90
+17: Epoch: 90
+ 1: Epoch: 90
+28: Epoch: 90
+ 7: Epoch: 90
+22: Epoch: 90
+27: Epoch: 90
+12: Epoch: 90
+10: Epoch: 90
+ 3: Epoch: 90
+ 8: Epoch: 90
+15: Epoch: 90
+ 4: Epoch: 91
+24: Epoch: 91
+30: Epoch: 91
+18: Epoch: 91
+14: Epoch: 91
+21: Epoch: 91
+29: Epoch: 91
+ 6: Epoch: 91
+23: Epoch: 91
+16: Epoch: 91
+26: Epoch: 91
+11: Epoch: 91
+ 9: Epoch: 91
+ 2: Epoch: 91
+ 0: Epoch: 91
+ 5: Epoch: 91
+25: Epoch: 91
+31: Epoch: 91
+19: Epoch: 91
+20: Epoch: 91
+22: Epoch: 91
+17: Epoch: 91
+27: Epoch: 91
+13: Epoch: 91
+ 1: Epoch: 91
+ 7: Epoch: 91
+28: Epoch: 91
+12: Epoch: 91
+10: Epoch: 91
+ 3: Epoch: 91
+ 8: Epoch: 91
+15: Epoch: 91
+30: Epoch: 92
+18: Epoch: 92
+21: Epoch: 92
+16: Epoch: 92
+19: Epoch: 92
+29: Epoch: 92
+17: Epoch: 92
+31: Epoch: 92
+20: Epoch: 92
+ 6: Epoch: 92
+ 4: Epoch: 92
+24: Epoch: 92
+26: Epoch: 92
+23: Epoch: 92
+ 7: Epoch: 92
+22: Epoch: 92
+27: Epoch: 92
+ 0: Epoch: 92
+14: Epoch: 92
+25: Epoch: 92
+ 5: Epoch: 92
+ 1: Epoch: 92
+ 9: Epoch: 92
+ 2: Epoch: 92
+11: Epoch: 92
+13: Epoch: 92
+28: Epoch: 92
+15: Epoch: 92
+ 8: Epoch: 92
+12: Epoch: 92
+10: Epoch: 92
+ 3: Epoch: 92
+ 4: Epoch: 93
+24: Epoch: 93
+30: Epoch: 93
+18: Epoch: 93
+14: Epoch: 93
+21: Epoch: 93
+29: Epoch: 93
+ 6: Epoch: 93
+23: Epoch: 93
+16: Epoch: 93
+26: Epoch: 93
+ 2: Epoch: 93
+ 0: Epoch: 93
+ 5: Epoch: 93
+25: Epoch: 93
+31: Epoch: 93
+19: Epoch: 93
+17: Epoch: 93
+ 1: Epoch: 93
+ 9: Epoch: 93
+ 7: Epoch: 93
+22: Epoch: 93
+27: Epoch: 93
+20: Epoch: 93
+11: Epoch: 93
+28: Epoch: 93
+13: Epoch: 93
+10: Epoch: 93
+ 3: Epoch: 93
+12: Epoch: 93
+ 8: Epoch: 93
+15: Epoch: 93
+30: Epoch: 94
+ 4: Epoch: 94
+21: Epoch: 94
+ 5: Epoch: 94
+24: Epoch: 94
+31: Epoch: 94
+18: Epoch: 94
+14: Epoch: 94
+20: Epoch: 94
+29: Epoch: 94
+ 6: Epoch: 94
+23: Epoch: 94
+16: Epoch: 94
+26: Epoch: 94
+ 2: Epoch: 94
+ 0: Epoch: 94
+25: Epoch: 94
+19: Epoch: 94
+11: Epoch: 94
+ 9: Epoch: 94
+17: Epoch: 94
+ 1: Epoch: 94
+ 7: Epoch: 94
+22: Epoch: 94
+27: Epoch: 94
+13: Epoch: 94
+28: Epoch: 94
+12: Epoch: 94
+ 3: Epoch: 94
+10: Epoch: 94
+ 8: Epoch: 94
+15: Epoch: 94
+30: Epoch: 95
+18: Epoch: 95
+21: Epoch: 95
+16: Epoch: 95
+ 4: Epoch: 95
+24: Epoch: 95
+31: Epoch: 95
+19: Epoch: 95
+14: Epoch: 95
+20: Epoch: 95
+11: Epoch: 95
+29: Epoch: 95
+ 9: Epoch: 95
+ 7: Epoch: 95
+23: Epoch: 95
+17: Epoch: 95
+26: Epoch: 95
+13: Epoch: 95
+ 2: Epoch: 95
+ 0: Epoch: 95
+ 1: Epoch: 95
+ 5: Epoch: 95
+25: Epoch: 95
+22: Epoch: 95
+28: Epoch: 95
+ 6: Epoch: 95
+27: Epoch: 95
+12: Epoch: 95
+10: Epoch: 95
+ 3: Epoch: 95
+ 8: Epoch: 95
+15: Epoch: 95
+21: Epoch: 96
+16: Epoch: 96
+30: Epoch: 96
+17: Epoch: 96
+18: Epoch: 96
+ 6: Epoch: 96
+19: Epoch: 96
+29: Epoch: 96
+ 4: Epoch: 96
+31: Epoch: 96
+23: Epoch: 96
+26: Epoch: 96
+24: Epoch: 96
+22: Epoch: 96
+27: Epoch: 96
+ 5: Epoch: 96
+25: Epoch: 96
+14: Epoch: 96
+20: Epoch: 96
+13: Epoch: 96
+ 0: Epoch: 96
+11: Epoch: 96
+28: Epoch: 96
+ 2: Epoch: 96
+ 9: Epoch: 96
+ 1: Epoch: 96
+ 7: Epoch: 96
+10: Epoch: 96
+15: Epoch: 96
+ 8: Epoch: 96
+12: Epoch: 96
+ 3: Epoch: 96
+ 4: Epoch: 97
+24: Epoch: 97
+30: Epoch: 97
+18: Epoch: 97
+14: Epoch: 97
+21: Epoch: 97
+29: Epoch: 97
+ 9: Epoch: 97
+ 6: Epoch: 97
+23: Epoch: 97
+16: Epoch: 97
+26: Epoch: 97
+13: Epoch: 97
+ 2: Epoch: 97
+ 0: Epoch: 97
+ 5: Epoch: 97
+25: Epoch: 97
+31: Epoch: 97
+19: Epoch: 97
+11: Epoch: 97
+28: Epoch: 97
+ 7: Epoch: 97
+22: Epoch: 97
+17: Epoch: 97
+27: Epoch: 97
+20: Epoch: 97
+ 1: Epoch: 97
+10: Epoch: 97
+ 8: Epoch: 97
+ 3: Epoch: 97
+15: Epoch: 97
+12: Epoch: 97
+ 4: Epoch: 98
+30: Epoch: 98
+21: Epoch: 98
+ 5: Epoch: 98
+24: Epoch: 98
+31: Epoch: 98
+18: Epoch: 98
+14: Epoch: 98
+20: Epoch: 98
+29: Epoch: 98
+ 6: Epoch: 98
+23: Epoch: 98
+16: Epoch: 98
+26: Epoch: 98
+ 2: Epoch: 98
+ 0: Epoch: 98
+25: Epoch: 98
+ 1: Epoch: 98
+19: Epoch: 98
+ 9: Epoch: 98
+22: Epoch: 98
+17: Epoch: 98
+27: Epoch: 98
+11: Epoch: 98
+13: Epoch: 98
+28: Epoch: 98
+ 7: Epoch: 98
+10: Epoch: 98
+ 3: Epoch: 98
+ 8: Epoch: 98
+12: Epoch: 98
+15: Epoch: 98
+ 4: Epoch: 99
+24: Epoch: 99
+30: Epoch: 99
+18: Epoch: 99
+14: Epoch: 99
+21: Epoch: 99
+29: Epoch: 99
+ 6: Epoch: 99
+23: Epoch: 99
+16: Epoch: 99
+26: Epoch: 99
+ 9: Epoch: 99
+ 2: Epoch: 99
+ 0: Epoch: 99
+ 5: Epoch: 99
+25: Epoch: 99
+31: Epoch: 99
+19: Epoch: 99
+20: Epoch: 99
+11: Epoch: 99
+ 7: Epoch: 99
+22: Epoch: 99
+17: Epoch: 99
+27: Epoch: 99
+13: Epoch: 99
+ 1: Epoch: 99
+28: Epoch: 99
+10: Epoch: 99
+12: Epoch: 99
+ 3: Epoch: 99
+ 8: Epoch: 99
+15: Epoch: 99
+19: rank: 19 total_time: 6.914221286773682
+19: rank: 19 timings: defaultdict(<class 'float'>, {'a2a2': 0.0016469955444335938, 'gather_row_data': 0.17000770568847656, 'a2a3': 1.7481811046600342, 'spmm_gpu': 2.4003357887268066})
+ 2: rank: 2 total_time: 6.926326036453247
+ 2: rank: 2 timings: defaultdict(<class 'float'>, {'a2a2': 0.0010461807250976562, 'gather_row_data': 0.18509554862976074, 'a2a3': 1.785001516342163, 'spmm_gpu': 3.335179090499878})
+25: rank: 25 total_time: 6.913073301315308
+25: rank: 25 timings: defaultdict(<class 'float'>, {'a2a2': 0.0011668205261230469, 'gather_row_data': 0.16957998275756836, 'a2a3': 1.6541829109191895, 'spmm_gpu': 3.4304234981536865})
+ 5: rank: 5 total_time: 6.926306486129761
+ 5: rank: 5 timings: defaultdict(<class 'float'>, {'a2a2': 0.0015919208526611328, 'gather_row_data': 0.17436003684997559, 'a2a3': 1.7182128429412842, 'spmm_gpu': 2.9234445095062256})
+ 0: rank: 0 total_time: 6.926437616348267
+ 0: rank: 0 timings: defaultdict(<class 'float'>, {'a2a2': 0.0013573169708251953, 'gather_row_data': 0.1751246452331543, 'a2a3': 1.6677556037902832, 'spmm_gpu': 2.8247995376586914})
+ 6: rank: 6 total_time: 6.9264349937438965
+ 6: rank: 6 timings: defaultdict(<class 'float'>, {'a2a2': 0.0014519691467285156, 'gather_row_data': 0.17269206047058105, 'a2a3': 1.7662301063537598, 'spmm_gpu': 2.6283199787139893})
+ 4: rank: 4 total_time: 6.926700830459595
+ 4: rank: 4 timings: defaultdict(<class 'float'>, {'a2a2': 0.002273082733154297, 'gather_row_data': 0.16514039039611816, 'a2a3': 1.2276570796966553, 'spmm_gpu': 2.2195770740509033})
+18: rank: 18 total_time: 6.91421914100647
+18: rank: 18 timings: defaultdict(<class 'float'>, {'a2a2': 0.0017948150634765625, 'gather_row_data': 0.16834616661071777, 'a2a3': 1.592576503753662, 'spmm_gpu': 2.2593276500701904})
+16: rank: 16 total_time: 6.912931203842163
+16: rank: 16 timings: defaultdict(<class 'float'>, {'a2a2': 0.0017578601837158203, 'gather_row_data': 0.17412400245666504, 'a2a3': 1.347381353378296, 'spmm_gpu': 2.603623628616333})
+ 1: rank: 1 total_time: 6.926064968109131
+ 1: rank: 1 timings: defaultdict(<class 'float'>, {'a2a2': 0.0010745525360107422, 'gather_row_data': 0.17680001258850098, 'a2a3': 1.649125099182129, 'spmm_gpu': 3.4015254974365234})
+13: rank: 13 total_time: 6.912995338439941
+13: rank: 13 timings: defaultdict(<class 'float'>, {'a2a2': 0.0011165142059326172, 'gather_row_data': 0.18674540519714355, 'a2a3': 1.4054410457611084, 'spmm_gpu': 3.71785831451416})
+24: rank: 24 total_time: 6.913071870803833
+24: rank: 24 timings: defaultdict(<class 'float'>, {'a2a2': 0.001461029052734375, 'gather_row_data': 0.1684422492980957, 'a2a3': 1.687206745147705, 'spmm_gpu': 2.9801290035247803})
+31: rank: 31 total_time: 6.9130823612213135
+31: rank: 31 timings: defaultdict(<class 'float'>, {'a2a2': 0.0017452239990234375, 'gather_row_data': 0.17018413543701172, 'a2a3': 1.5215277671813965, 'spmm_gpu': 2.610074758529663})
+20: rank: 20 total_time: 6.9137489795684814
+20: rank: 20 timings: defaultdict(<class 'float'>, {'a2a2': 0.002160787582397461, 'gather_row_data': 0.17024636268615723, 'a2a3': 1.1620230674743652, 'spmm_gpu': 2.564079523086548})
+ 7: rank: 7 total_time: 6.9266321659088135
+ 7: rank: 7 timings: defaultdict(<class 'float'>, {'a2a2': 0.0015578269958496094, 'gather_row_data': 0.17084050178527832, 'a2a3': 1.8136603832244873, 'spmm_gpu': 2.229126214981079})
+28: rank: 28 total_time: 6.913480758666992
+28: rank: 28 timings: defaultdict(<class 'float'>, {'a2a2': 0.001085519790649414, 'gather_row_data': 0.17209339141845703, 'a2a3': 1.457334041595459, 'spmm_gpu': 4.1393444538116455})
+22: rank: 22 total_time: 6.915206432342529
+22: rank: 22 timings: defaultdict(<class 'float'>, {'a2a2': 0.0014264583587646484, 'gather_row_data': 0.1703038215637207, 'a2a3': 1.5731005668640137, 'spmm_gpu': 3.0523979663848877})
+21: rank: 21 total_time: 6.913752794265747
+21: rank: 21 timings: defaultdict(<class 'float'>, {'a2a2': 0.0018677711486816406, 'gather_row_data': 0.1780409812927246, 'a2a3': 1.4848511219024658, 'spmm_gpu': 2.4360339641571045})
+17: rank: 17 total_time: 6.91293740272522
+17: rank: 17 timings: defaultdict(<class 'float'>, {'a2a2': 0.0014972686767578125, 'gather_row_data': 0.172088623046875, 'a2a3': 1.6317451000213623, 'spmm_gpu': 2.633944034576416})
+11: rank: 11 total_time: 6.91437840461731
+11: rank: 11 timings: defaultdict(<class 'float'>, {'a2a2': 0.0009822845458984375, 'gather_row_data': 0.17413616180419922, 'a2a3': 1.853935956954956, 'spmm_gpu': 3.499241590499878})
+15: rank: 15 total_time: 6.91130256652832
+15: rank: 15 timings: defaultdict(<class 'float'>, {'a2a2': 0.00040030479431152344, 'gather_row_data': 0.17649292945861816, 'a2a3': 1.8648030757904053, 'spmm_gpu': 3.8733513355255127})
+ 8: rank: 8 total_time: 6.9137797355651855
+ 8: rank: 8 timings: defaultdict(<class 'float'>, {'a2a2': 0.0003364086151123047, 'gather_row_data': 0.184373140335083, 'a2a3': 1.816641092300415, 'spmm_gpu': 4.148247003555298})
+ 3: rank: 3 total_time: 6.925739049911499
+ 3: rank: 3 timings: defaultdict(<class 'float'>, {'a2a2': 0.0007050037384033203, 'gather_row_data': 0.18710541725158691, 'a2a3': 1.7214012145996094, 'spmm_gpu': 3.822533130645752})
+26: rank: 26 total_time: 6.911623239517212
+26: rank: 26 timings: defaultdict(<class 'float'>, {'a2a2': 0.001789093017578125, 'gather_row_data': 0.17592120170593262, 'a2a3': 1.531221866607666, 'spmm_gpu': 2.524221420288086})
+12: rank: 12 total_time: 6.9129931926727295
+12: rank: 12 timings: defaultdict(<class 'float'>, {'a2a2': 0.0007228851318359375, 'gather_row_data': 0.18445086479187012, 'a2a3': 1.8892953395843506, 'spmm_gpu': 3.7945287227630615})
+30: rank: 30 total_time: 6.91307520866394
+30: rank: 30 timings: defaultdict(<class 'float'>, {'a2a2': 0.0019373893737792969, 'gather_row_data': 0.17105412483215332, 'a2a3': 1.420823097229004, 'spmm_gpu': 2.3705241680145264})
+29: rank: 29 total_time: 6.913496017456055
+29: rank: 29 timings: defaultdict(<class 'float'>, {'a2a2': 0.0017697811126708984, 'gather_row_data': 0.17205286026000977, 'a2a3': 1.5735936164855957, 'spmm_gpu': 2.664560556411743})
+23: rank: 23 total_time: 6.915213108062744
+23: rank: 23 timings: defaultdict(<class 'float'>, {'a2a2': 0.0015077590942382812, 'gather_row_data': 0.17077207565307617, 'a2a3': 1.8111915588378906, 'spmm_gpu': 2.8003594875335693})
+10: rank: 10 total_time: 6.914379596710205
+10: rank: 10 timings: defaultdict(<class 'float'>, {'a2a2': 0.00039649009704589844, 'gather_row_data': 0.1794285774230957, 'a2a3': 1.8249781131744385, 'spmm_gpu': 4.417352914810181})
+ 9: rank: 9 total_time: 6.91380763053894
+ 9: rank: 9 timings: defaultdict(<class 'float'>, {'a2a2': 0.0007233619689941406, 'gather_row_data': 0.1831042766571045, 'a2a3': 1.8024110794067383, 'spmm_gpu': 3.3846988677978516})
+14: rank: 14 total_time: 6.9113006591796875
+14: rank: 14 timings: defaultdict(<class 'float'>, {'a2a2': 0.0009548664093017578, 'gather_row_data': 0.17676115036010742, 'a2a3': 1.8468801975250244, 'spmm_gpu': 3.194455623626709})
+27: rank: 27 total_time: 6.911621809005737
+27: rank: 27 timings: defaultdict(<class 'float'>, {'a2a2': 0.001314401626586914, 'gather_row_data': 0.1778862476348877, 'a2a3': 1.7259407043457031, 'spmm_gpu': 2.902773857116699})

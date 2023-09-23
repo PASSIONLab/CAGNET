@@ -1,0 +1,2221 @@
+ 0: Namespace(local_rank=None, accperrank=1, epochs=100, graphname='Amazon', timing='True', midlayer=16, runcount=1, replication=1, normalization=None, activations='True', accuracy=None, download=None)
+ 0: Arguments: epochs: 100 graph: Amazon timing: True mid: 16 norm: False act: True acc: False runs: 1 rep: 1
+ 0: nid001044
+ 0: Processes: 16
+ 0: Loading coo...
+ 4: Namespace(local_rank=None, accperrank=1, epochs=100, graphname='Amazon', timing='True', midlayer=16, runcount=1, replication=1, normalization=None, activations='True', accuracy=None, download=None)
+ 4: Arguments: epochs: 100 graph: Amazon timing: True mid: 16 norm: False act: True acc: False runs: 1 rep: 1
+ 4: nid001576
+ 4: Processes: 16
+ 4: Loading coo...
+ 3: Namespace(local_rank=None, accperrank=1, epochs=100, graphname='Amazon', timing='True', midlayer=16, runcount=1, replication=1, normalization=None, activations='True', accuracy=None, download=None)
+ 3: Arguments: epochs: 100 graph: Amazon timing: True mid: 16 norm: False act: True acc: False runs: 1 rep: 1
+ 3: nid001044
+ 3: Processes: 16
+ 3: Loading coo...
+ 7: Namespace(local_rank=None, accperrank=1, epochs=100, graphname='Amazon', timing='True', midlayer=16, runcount=1, replication=1, normalization=None, activations='True', accuracy=None, download=None)
+ 7: Arguments: epochs: 100 graph: Amazon timing: True mid: 16 norm: False act: True acc: False runs: 1 rep: 1
+ 7: nid001576
+ 7: Processes: 16
+ 7: Loading coo...
+14: Namespace(local_rank=None, accperrank=1, epochs=100, graphname='Amazon', timing='True', midlayer=16, runcount=1, replication=1, normalization=None, activations='True', accuracy=None, download=None)
+14: Arguments: epochs: 100 graph: Amazon timing: True mid: 16 norm: False act: True acc: False runs: 1 rep: 1
+14: nid001580
+14: Processes: 16
+14: Loading coo...
+ 1: Namespace(local_rank=None, accperrank=1, epochs=100, graphname='Amazon', timing='True', midlayer=16, runcount=1, replication=1, normalization=None, activations='True', accuracy=None, download=None)
+ 1: Arguments: epochs: 100 graph: Amazon timing: True mid: 16 norm: False act: True acc: False runs: 1 rep: 1
+ 1: nid001044
+ 1: Processes: 16
+ 1: Loading coo...
+ 5: Namespace(local_rank=None, accperrank=1, epochs=100, graphname='Amazon', timing='True', midlayer=16, runcount=1, replication=1, normalization=None, activations='True', accuracy=None, download=None)
+ 5: Arguments: epochs: 100 graph: Amazon timing: True mid: 16 norm: False act: True acc: False runs: 1 rep: 1
+ 5: nid001576
+ 5: Processes: 16
+ 5: Loading coo...
+13: Namespace(local_rank=None, accperrank=1, epochs=100, graphname='Amazon', timing='True', midlayer=16, runcount=1, replication=1, normalization=None, activations='True', accuracy=None, download=None)
+13: Arguments: epochs: 100 graph: Amazon timing: True mid: 16 norm: False act: True acc: False runs: 1 rep: 1
+13: nid001580
+13: Processes: 16
+13: Loading coo...
+ 6: Namespace(local_rank=None, accperrank=1, epochs=100, graphname='Amazon', timing='True', midlayer=16, runcount=1, replication=1, normalization=None, activations='True', accuracy=None, download=None)
+ 6: Arguments: epochs: 100 graph: Amazon timing: True mid: 16 norm: False act: True acc: False runs: 1 rep: 1
+ 6: nid001576
+ 6: Processes: 16
+ 6: Loading coo...
+ 2: Namespace(local_rank=None, accperrank=1, epochs=100, graphname='Amazon', timing='True', midlayer=16, runcount=1, replication=1, normalization=None, activations='True', accuracy=None, download=None)
+ 2: Arguments: epochs: 100 graph: Amazon timing: True mid: 16 norm: False act: True acc: False runs: 1 rep: 1
+ 2: nid001044
+ 2: Processes: 16
+ 2: Loading coo...
+11: Namespace(local_rank=None, accperrank=1, epochs=100, graphname='Amazon', timing='True', midlayer=16, runcount=1, replication=1, normalization=None, activations='True', accuracy=None, download=None)
+11: Arguments: epochs: 100 graph: Amazon timing: True mid: 16 norm: False act: True acc: False runs: 1 rep: 1
+11: nid001577
+11: Processes: 16
+11: Loading coo...
+15: Namespace(local_rank=None, accperrank=1, epochs=100, graphname='Amazon', timing='True', midlayer=16, runcount=1, replication=1, normalization=None, activations='True', accuracy=None, download=None)
+15: Arguments: epochs: 100 graph: Amazon timing: True mid: 16 norm: False act: True acc: False runs: 1 rep: 1
+15: nid001580
+15: Processes: 16
+15: Loading coo...
+ 8: Namespace(local_rank=None, accperrank=1, epochs=100, graphname='Amazon', timing='True', midlayer=16, runcount=1, replication=1, normalization=None, activations='True', accuracy=None, download=None)
+ 8: Arguments: epochs: 100 graph: Amazon timing: True mid: 16 norm: False act: True acc: False runs: 1 rep: 1
+ 8: nid001577
+ 8: Processes: 16
+ 8: Loading coo...
+10: Namespace(local_rank=None, accperrank=1, epochs=100, graphname='Amazon', timing='True', midlayer=16, runcount=1, replication=1, normalization=None, activations='True', accuracy=None, download=None)
+10: Arguments: epochs: 100 graph: Amazon timing: True mid: 16 norm: False act: True acc: False runs: 1 rep: 1
+10: nid001577
+10: Processes: 16
+10: Loading coo...
+12: Namespace(local_rank=None, accperrank=1, epochs=100, graphname='Amazon', timing='True', midlayer=16, runcount=1, replication=1, normalization=None, activations='True', accuracy=None, download=None)
+12: Arguments: epochs: 100 graph: Amazon timing: True mid: 16 norm: False act: True acc: False runs: 1 rep: 1
+12: nid001580
+12: Processes: 16
+12: Loading coo...
+ 9: Namespace(local_rank=None, accperrank=1, epochs=100, graphname='Amazon', timing='True', midlayer=16, runcount=1, replication=1, normalization=None, activations='True', accuracy=None, download=None)
+ 9: Arguments: epochs: 100 graph: Amazon timing: True mid: 16 norm: False act: True acc: False runs: 1 rep: 1
+ 9: nid001577
+ 9: Processes: 16
+ 9: Loading coo...
+12: Done loading coo
+14: Done loading coo
+13: Done loading coo
+15: Done loading coo
+ 9: Done loading coo
+ 8: Done loading coo
+10: Done loading coo
+11: Done loading coo
+ 0: Done loading coo
+ 4: Done loading coo
+ 6: Done loading coo
+ 5: Done loading coo
+ 7: Done loading coo
+ 1: Done loading coo
+ 2: Done loading coo
+ 3: Done loading coo
+12: edge_index.size: torch.Size([2, 115797155])
+12: edge_index: tensor([[1.0000e+00, 4.5425e+06, 1.0000e+00,  ..., 7.9543e+06, 9.4301e+06,
+12:          3.0141e+06],
+12:         [4.5425e+06, 1.0000e+00, 2.8790e+06,  ..., 9.4301e+06, 3.0141e+06,
+12:          9.4301e+06]], dtype=torch.float64)
+14: edge_index.size: torch.Size([2, 115797155])
+14: edge_index: tensor([[1.0000e+00, 4.5425e+06, 1.0000e+00,  ..., 7.9543e+06, 9.4301e+06,
+14:          3.0141e+06],
+14:         [4.5425e+06, 1.0000e+00, 2.8790e+06,  ..., 9.4301e+06, 3.0141e+06,
+14:          9.4301e+06]], dtype=torch.float64)
+15: edge_index.size: torch.Size([2, 115797155])
+15: edge_index: tensor([[1.0000e+00, 4.5425e+06, 1.0000e+00,  ..., 7.9543e+06, 9.4301e+06,
+15:          3.0141e+06],
+15:         [4.5425e+06, 1.0000e+00, 2.8790e+06,  ..., 9.4301e+06, 3.0141e+06,
+15:          9.4301e+06]], dtype=torch.float64)
+ 6: edge_index.size: torch.Size([2, 115797155])
+ 6: edge_index: tensor([[1.0000e+00, 4.5425e+06, 1.0000e+00,  ..., 7.9543e+06, 9.4301e+06,
+ 6:          3.0141e+06],
+ 6:         [4.5425e+06, 1.0000e+00, 2.8790e+06,  ..., 9.4301e+06, 3.0141e+06,
+ 6:          9.4301e+06]], dtype=torch.float64)
+13: edge_index.size: torch.Size([2, 115797155])
+13: edge_index: tensor([[1.0000e+00, 4.5425e+06, 1.0000e+00,  ..., 7.9543e+06, 9.4301e+06,
+13:          3.0141e+06],
+13:         [4.5425e+06, 1.0000e+00, 2.8790e+06,  ..., 9.4301e+06, 3.0141e+06,
+13:          9.4301e+06]], dtype=torch.float64)
+ 4: edge_index.size: torch.Size([2, 115797155])
+ 4: edge_index: tensor([[1.0000e+00, 4.5425e+06, 1.0000e+00,  ..., 7.9543e+06, 9.4301e+06,
+ 4:          3.0141e+06],
+ 4:         [4.5425e+06, 1.0000e+00, 2.8790e+06,  ..., 9.4301e+06, 3.0141e+06,
+ 4:          9.4301e+06]], dtype=torch.float64)
+ 5: edge_index.size: torch.Size([2, 115797155])
+ 5: edge_index: tensor([[1.0000e+00, 4.5425e+06, 1.0000e+00,  ..., 7.9543e+06, 9.4301e+06,
+ 5:          3.0141e+06],
+ 5:         [4.5425e+06, 1.0000e+00, 2.8790e+06,  ..., 9.4301e+06, 3.0141e+06,
+ 5:          9.4301e+06]], dtype=torch.float64)
+ 7: edge_index.size: torch.Size([2, 115797155])
+ 7: edge_index: tensor([[1.0000e+00, 4.5425e+06, 1.0000e+00,  ..., 7.9543e+06, 9.4301e+06,
+ 7:          3.0141e+06],
+ 7:         [4.5425e+06, 1.0000e+00, 2.8790e+06,  ..., 9.4301e+06, 3.0141e+06,
+ 7:          9.4301e+06]], dtype=torch.float64)
+ 0: edge_index.size: torch.Size([2, 115797155])
+ 0: edge_index: tensor([[1.0000e+00, 4.5425e+06, 1.0000e+00,  ..., 7.9543e+06, 9.4301e+06,
+ 0:          3.0141e+06],
+ 0:         [4.5425e+06, 1.0000e+00, 2.8790e+06,  ..., 9.4301e+06, 3.0141e+06,
+ 0:          9.4301e+06]], dtype=torch.float64)
+ 9: edge_index.size: torch.Size([2, 115797155])
+ 9: edge_index: tensor([[1.0000e+00, 4.5425e+06, 1.0000e+00,  ..., 7.9543e+06, 9.4301e+06,
+ 9:          3.0141e+06],
+ 9:         [4.5425e+06, 1.0000e+00, 2.8790e+06,  ..., 9.4301e+06, 3.0141e+06,
+ 9:          9.4301e+06]], dtype=torch.float64)
+11: edge_index.size: torch.Size([2, 115797155])
+11: edge_index: tensor([[1.0000e+00, 4.5425e+06, 1.0000e+00,  ..., 7.9543e+06, 9.4301e+06,
+11:          3.0141e+06],
+11:         [4.5425e+06, 1.0000e+00, 2.8790e+06,  ..., 9.4301e+06, 3.0141e+06,
+11:          9.4301e+06]], dtype=torch.float64)
+ 8: edge_index.size: torch.Size([2, 115797155])
+ 8: edge_index: tensor([[1.0000e+00, 4.5425e+06, 1.0000e+00,  ..., 7.9543e+06, 9.4301e+06,
+ 8:          3.0141e+06],
+ 8:         [4.5425e+06, 1.0000e+00, 2.8790e+06,  ..., 9.4301e+06, 3.0141e+06,
+ 8:          9.4301e+06]], dtype=torch.float64)
+10: edge_index.size: torch.Size([2, 115797155])
+10: edge_index: tensor([[1.0000e+00, 4.5425e+06, 1.0000e+00,  ..., 7.9543e+06, 9.4301e+06,
+10:          3.0141e+06],
+10:         [4.5425e+06, 1.0000e+00, 2.8790e+06,  ..., 9.4301e+06, 3.0141e+06,
+10:          9.4301e+06]], dtype=torch.float64)
+ 3: edge_index.size: torch.Size([2, 115797155])
+ 3: edge_index: tensor([[1.0000e+00, 4.5425e+06, 1.0000e+00,  ..., 7.9543e+06, 9.4301e+06,
+ 3:          3.0141e+06],
+ 3:         [4.5425e+06, 1.0000e+00, 2.8790e+06,  ..., 9.4301e+06, 3.0141e+06,
+ 3:          9.4301e+06]], dtype=torch.float64)
+ 2: edge_index.size: torch.Size([2, 115797155])
+ 2: edge_index: tensor([[1.0000e+00, 4.5425e+06, 1.0000e+00,  ..., 7.9543e+06, 9.4301e+06,
+ 2:          3.0141e+06],
+ 2:         [4.5425e+06, 1.0000e+00, 2.8790e+06,  ..., 9.4301e+06, 3.0141e+06,
+ 2:          9.4301e+06]], dtype=torch.float64)
+ 1: edge_index.size: torch.Size([2, 115797155])
+ 1: edge_index: tensor([[1.0000e+00, 4.5425e+06, 1.0000e+00,  ..., 7.9543e+06, 9.4301e+06,
+ 1:          3.0141e+06],
+ 1:         [4.5425e+06, 1.0000e+00, 2.8790e+06,  ..., 9.4301e+06, 3.0141e+06,
+ 1:          9.4301e+06]], dtype=torch.float64)
+11: rank: 11 adj_matrix_loc.size: torch.Size([14249639, 890603])
+11: rank: 11 inputs_loc.size: torch.Size([890603, 300])
+14: rank: 14 adj_matrix_loc.size: torch.Size([14249639, 890603])
+14: rank: 14 inputs_loc.size: torch.Size([890603, 300])
+13: rank: 13 adj_matrix_loc.size: torch.Size([14249639, 890603])
+13: rank: 13 inputs_loc.size: torch.Size([890603, 300])
+15: rank: 15 adj_matrix_loc.size: torch.Size([14249639, 890594])
+15: rank: 15 inputs_loc.size: torch.Size([890594, 300])
+12: rank: 12 adj_matrix_loc.size: torch.Size([14249639, 890603])
+12: rank: 12 inputs_loc.size: torch.Size([890603, 300])
+ 0: rank: 0 adj_matrix_loc.size: torch.Size([14249639, 890603])
+ 0: rank: 0 inputs_loc.size: torch.Size([890603, 300])
+ 8: rank: 8 adj_matrix_loc.size: torch.Size([14249639, 890603])
+ 8: rank: 8 inputs_loc.size: torch.Size([890603, 300])
+10: rank: 10 adj_matrix_loc.size: torch.Size([14249639, 890603])
+10: rank: 10 inputs_loc.size: torch.Size([890603, 300])
+ 9: rank: 9 adj_matrix_loc.size: torch.Size([14249639, 890603])
+ 9: rank: 9 inputs_loc.size: torch.Size([890603, 300])
+ 1: rank: 1 adj_matrix_loc.size: torch.Size([14249639, 890603])
+ 1: rank: 1 inputs_loc.size: torch.Size([890603, 300])
+ 2: rank: 2 adj_matrix_loc.size: torch.Size([14249639, 890603])
+ 2: rank: 2 inputs_loc.size: torch.Size([890603, 300])
+ 3: rank: 3 adj_matrix_loc.size: torch.Size([14249639, 890603])
+ 3: rank: 3 inputs_loc.size: torch.Size([890603, 300])
+ 7: rank: 7 adj_matrix_loc.size: torch.Size([14249639, 890603])
+ 7: rank: 7 inputs_loc.size: torch.Size([890603, 300])
+ 6: rank: 6 adj_matrix_loc.size: torch.Size([14249639, 890603])
+ 6: rank: 6 inputs_loc.size: torch.Size([890603, 300])
+ 4: rank: 4 adj_matrix_loc.size: torch.Size([14249639, 890603])
+ 4: rank: 4 inputs_loc.size: torch.Size([890603, 300])
+ 5: rank: 5 adj_matrix_loc.size: torch.Size([14249639, 890603])
+ 5: rank: 5 inputs_loc.size: torch.Size([890603, 300])
+15: /global/common/software/nersc/pm-2022q4/sw/pytorch/1.13.1/lib/python3.9/site-packages/torch/distributed/distributed_c10d.py:262: UserWarning: torch.distributed.reduce_op is deprecated, please use torch.distributed.ReduceOp instead
+15:   warnings.warn(
+ 0: /global/common/software/nersc/pm-2022q4/sw/pytorch/1.13.1/lib/python3.9/site-packages/torch/distributed/distributed_c10d.py:262: UserWarning: torch.distributed.reduce_op is deprecated, please use torch.distributed.ReduceOp instead
+ 0:   warnings.warn(
+ 1: /global/common/software/nersc/pm-2022q4/sw/pytorch/1.13.1/lib/python3.9/site-packages/torch/distributed/distributed_c10d.py:262: UserWarning: torch.distributed.reduce_op is deprecated, please use torch.distributed.ReduceOp instead
+ 1:   warnings.warn(
+ 2: /global/common/software/nersc/pm-2022q4/sw/pytorch/1.13.1/lib/python3.9/site-packages/torch/distributed/distributed_c10d.py:262: UserWarning: torch.distributed.reduce_op is deprecated, please use torch.distributed.ReduceOp instead
+ 2:   warnings.warn(
+ 3: /global/common/software/nersc/pm-2022q4/sw/pytorch/1.13.1/lib/python3.9/site-packages/torch/distributed/distributed_c10d.py:262: UserWarning: torch.distributed.reduce_op is deprecated, please use torch.distributed.ReduceOp instead
+ 3:   warnings.warn(
+ 4: /global/common/software/nersc/pm-2022q4/sw/pytorch/1.13.1/lib/python3.9/site-packages/torch/distributed/distributed_c10d.py:262: UserWarning: torch.distributed.reduce_op is deprecated, please use torch.distributed.ReduceOp instead
+ 4:   warnings.warn(
+ 5: /global/common/software/nersc/pm-2022q4/sw/pytorch/1.13.1/lib/python3.9/site-packages/torch/distributed/distributed_c10d.py:262: UserWarning: torch.distributed.reduce_op is deprecated, please use torch.distributed.ReduceOp instead
+ 5:   warnings.warn(
+ 6: /global/common/software/nersc/pm-2022q4/sw/pytorch/1.13.1/lib/python3.9/site-packages/torch/distributed/distributed_c10d.py:262: UserWarning: torch.distributed.reduce_op is deprecated, please use torch.distributed.ReduceOp instead
+ 6:   warnings.warn(
+ 7: /global/common/software/nersc/pm-2022q4/sw/pytorch/1.13.1/lib/python3.9/site-packages/torch/distributed/distributed_c10d.py:262: UserWarning: torch.distributed.reduce_op is deprecated, please use torch.distributed.ReduceOp instead
+ 7:   warnings.warn(
+ 8: /global/common/software/nersc/pm-2022q4/sw/pytorch/1.13.1/lib/python3.9/site-packages/torch/distributed/distributed_c10d.py:262: UserWarning: torch.distributed.reduce_op is deprecated, please use torch.distributed.ReduceOp instead
+ 8:   warnings.warn(
+ 9: /global/common/software/nersc/pm-2022q4/sw/pytorch/1.13.1/lib/python3.9/site-packages/torch/distributed/distributed_c10d.py:262: UserWarning: torch.distributed.reduce_op is deprecated, please use torch.distributed.ReduceOp instead
+ 9:   warnings.warn(
+10: /global/common/software/nersc/pm-2022q4/sw/pytorch/1.13.1/lib/python3.9/site-packages/torch/distributed/distributed_c10d.py:262: UserWarning: torch.distributed.reduce_op is deprecated, please use torch.distributed.ReduceOp instead
+10:   warnings.warn(
+11: /global/common/software/nersc/pm-2022q4/sw/pytorch/1.13.1/lib/python3.9/site-packages/torch/distributed/distributed_c10d.py:262: UserWarning: torch.distributed.reduce_op is deprecated, please use torch.distributed.ReduceOp instead
+11:   warnings.warn(
+12: /global/common/software/nersc/pm-2022q4/sw/pytorch/1.13.1/lib/python3.9/site-packages/torch/distributed/distributed_c10d.py:262: UserWarning: torch.distributed.reduce_op is deprecated, please use torch.distributed.ReduceOp instead
+12:   warnings.warn(
+13: /global/common/software/nersc/pm-2022q4/sw/pytorch/1.13.1/lib/python3.9/site-packages/torch/distributed/distributed_c10d.py:262: UserWarning: torch.distributed.reduce_op is deprecated, please use torch.distributed.ReduceOp instead
+13:   warnings.warn(
+14: /global/common/software/nersc/pm-2022q4/sw/pytorch/1.13.1/lib/python3.9/site-packages/torch/distributed/distributed_c10d.py:262: UserWarning: torch.distributed.reduce_op is deprecated, please use torch.distributed.ReduceOp instead
+14:   warnings.warn(
+ 0: Starting training... rank 0 run 0
+ 1: Starting training... rank 1 run 0
+ 2: Starting training... rank 2 run 0
+ 4: Starting training... rank 4 run 0
+ 8: Starting training... rank 8 run 0
+12: Starting training... rank 12 run 0
+ 3: Starting training... rank 3 run 0
+ 5: Starting training... rank 5 run 0
+ 9: Starting training... rank 9 run 0
+13: Starting training... rank 13 run 0
+ 6: Starting training... rank 6 run 0
+10: Starting training... rank 10 run 0
+14: Starting training... rank 14 run 0
+ 7: Starting training... rank 7 run 0
+11: Starting training... rank 11 run 0
+15: Starting training... rank 15 run 0
+ 5: Epoch: 001
+11: Epoch: 001
+14: Epoch: 001
+15: Epoch: 001
+ 8: Epoch: 001
+12: Epoch: 001
+10: Epoch: 001
+13: Epoch: 001
+ 0: Epoch: 001
+ 4: Epoch: 001
+ 6: Epoch: 001
+ 1: Epoch: 001
+ 7: Epoch: 001
+ 9: Epoch: 001
+ 3: Epoch: 001
+ 2: Epoch: 001
+11: Epoch: 002
+ 7: Epoch: 002
+14: Epoch: 002
+ 5: Epoch: 002
+15: Epoch: 002
+ 6: Epoch: 002
+ 4: Epoch: 002
+ 0: Epoch: 002
+ 9: Epoch: 002
+13: Epoch: 002
+ 2: Epoch: 002
+ 3: Epoch: 002
+ 1: Epoch: 002
+ 8: Epoch: 002
+10: Epoch: 002
+12: Epoch: 002
+11: Epoch: 003
+ 5: Epoch: 003
+ 8: Epoch: 003
+15: Epoch: 003
+10: Epoch: 003
+14: Epoch: 003
+ 0: Epoch: 003
+ 7: Epoch: 003
+ 6: Epoch: 003
+ 9: Epoch: 003
+13: Epoch: 003
+ 4: Epoch: 003
+ 3: Epoch: 003
+12: Epoch: 003
+ 1: Epoch: 003
+ 2: Epoch: 003
+ 7: Epoch: 004
+11: Epoch: 004
+15: Epoch: 004
+13: Epoch: 004
+ 5: Epoch: 004
+12: Epoch: 004
+ 6: Epoch: 004
+14: Epoch: 004
+ 0: Epoch: 004
+ 4: Epoch: 004
+ 9: Epoch: 004
+ 1: Epoch: 004
+ 2: Epoch: 004
+ 8: Epoch: 004
+ 3: Epoch: 004
+10: Epoch: 004
+15: Epoch: 005
+ 7: Epoch: 005
+11: Epoch: 005
+ 5: Epoch: 005
+12: Epoch: 005
+ 6: Epoch: 005
+14: Epoch: 005
+ 2: Epoch: 005
+ 4: Epoch: 005
+ 0: Epoch: 005
+ 3: Epoch: 005
+13: Epoch: 005
+ 1: Epoch: 005
+ 8: Epoch: 005
+10: Epoch: 005
+ 9: Epoch: 005
+11: Epoch: 006
+15: Epoch: 006
+ 7: Epoch: 006
+ 8: Epoch: 006
+12: Epoch: 006
+ 6: Epoch: 006
+10: Epoch: 006
+14: Epoch: 006
+ 3: Epoch: 006
+ 0: Epoch: 006
+ 4: Epoch: 006
+ 2: Epoch: 006
+ 5: Epoch: 006
+ 1: Epoch: 006
+ 9: Epoch: 006
+13: Epoch: 006
+ 7: Epoch: 007
+ 9: Epoch: 007
+12: Epoch: 007
+15: Epoch: 007
+ 4: Epoch: 007
+ 2: Epoch: 007
+ 3: Epoch: 007
+ 6: Epoch: 007
+14: Epoch: 007
+ 0: Epoch: 007
+ 5: Epoch: 007
+13: Epoch: 007
+11: Epoch: 007
+ 8: Epoch: 007
+10: Epoch: 007
+ 1: Epoch: 007
+ 4: Epoch: 008
+12: Epoch: 008
+ 2: Epoch: 008
+15: Epoch: 008
+ 0: Epoch: 008
+ 6: Epoch: 008
+14: Epoch: 008
+ 7: Epoch: 008
+ 5: Epoch: 008
+ 1: Epoch: 008
+ 3: Epoch: 008
+13: Epoch: 008
+11: Epoch: 008
+ 9: Epoch: 008
+ 8: Epoch: 008
+10: Epoch: 008
+ 8: Epoch: 009
+15: Epoch: 009
+ 2: Epoch: 009
+ 4: Epoch: 009
+12: Epoch: 009
+14: Epoch: 009
+ 7: Epoch: 009
+ 5: Epoch: 009
+ 6: Epoch: 009
+ 0: Epoch: 009
+ 1: Epoch: 009
+ 3: Epoch: 009
+ 9: Epoch: 009
+11: Epoch: 009
+13: Epoch: 009
+10: Epoch: 009
+ 8: Epoch: 010
+12: Epoch: 010
+ 2: Epoch: 010
+ 4: Epoch: 010
+ 0: Epoch: 010
+15: Epoch: 010
+ 5: Epoch: 010
+14: Epoch: 010
+ 6: Epoch: 010
+13: Epoch: 010
+ 7: Epoch: 010
+ 1: Epoch: 010
+ 3: Epoch: 010
+ 9: Epoch: 010
+11: Epoch: 010
+10: Epoch: 010
+ 4: Epoch: 011
+ 8: Epoch: 011
+ 3: Epoch: 011
+ 5: Epoch: 011
+ 6: Epoch: 011
+ 7: Epoch: 011
+13: Epoch: 011
+ 0: Epoch: 011
+ 2: Epoch: 011
+ 1: Epoch: 011
+14: Epoch: 011
+12: Epoch: 011
+15: Epoch: 011
+ 9: Epoch: 011
+11: Epoch: 011
+10: Epoch: 011
+ 3: Epoch: 012
+ 4: Epoch: 012
+ 9: Epoch: 012
+12: Epoch: 012
+ 6: Epoch: 012
+ 0: Epoch: 012
+ 5: Epoch: 012
+11: Epoch: 012
+15: Epoch: 012
+ 2: Epoch: 012
+ 7: Epoch: 012
+ 8: Epoch: 012
+14: Epoch: 012
+ 1: Epoch: 012
+10: Epoch: 012
+13: Epoch: 012
+ 4: Epoch: 013
+ 9: Epoch: 013
+12: Epoch: 013
+ 0: Epoch: 013
+ 5: Epoch: 013
+11: Epoch: 013
+14: Epoch: 013
+ 2: Epoch: 013
+ 6: Epoch: 013
+ 8: Epoch: 013
+15: Epoch: 013
+ 3: Epoch: 013
+ 7: Epoch: 013
+10: Epoch: 013
+13: Epoch: 013
+ 1: Epoch: 013
+ 4: Epoch: 014
+ 8: Epoch: 014
+12: Epoch: 014
+ 5: Epoch: 014
+15: Epoch: 014
+ 3: Epoch: 014
+ 6: Epoch: 014
+14: Epoch: 014
+13: Epoch: 014
+ 0: Epoch: 014
+ 1: Epoch: 014
+ 2: Epoch: 014
+ 7: Epoch: 014
+ 9: Epoch: 014
+11: Epoch: 014
+10: Epoch: 014
+ 1: Epoch: 015
+ 4: Epoch: 015
+15: Epoch: 015
+13: Epoch: 015
+ 2: Epoch: 015
+ 5: Epoch: 015
+10: Epoch: 015
+12: Epoch: 015
+ 3: Epoch: 015
+ 6: Epoch: 015
+ 9: Epoch: 015
+14: Epoch: 015
+ 0: Epoch: 015
+ 7: Epoch: 015
+11: Epoch: 015
+ 8: Epoch: 015
+ 4: Epoch: 016
+ 8: Epoch: 016
+15: Epoch: 016
+ 1: Epoch: 016
+ 5: Epoch: 016
+ 9: Epoch: 016
+12: Epoch: 016
+ 2: Epoch: 016
+ 6: Epoch: 016
+11: Epoch: 016
+13: Epoch: 016
+ 3: Epoch: 016
+10: Epoch: 016
+ 0: Epoch: 016
+ 7: Epoch: 016
+14: Epoch: 016
+ 4: Epoch: 017
+ 9: Epoch: 017
+15: Epoch: 017
+ 1: Epoch: 017
+ 2: Epoch: 017
+11: Epoch: 017
+13: Epoch: 017
+ 3: Epoch: 017
+ 5: Epoch: 017
+ 8: Epoch: 017
+12: Epoch: 017
+10: Epoch: 017
+ 6: Epoch: 017
+ 7: Epoch: 017
+ 0: Epoch: 017
+14: Epoch: 017
+ 1: Epoch: 018
+ 5: Epoch: 018
+ 8: Epoch: 018
+12: Epoch: 018
+ 3: Epoch: 018
+ 4: Epoch: 018
+ 2: Epoch: 018
+ 6: Epoch: 018
+15: Epoch: 018
+13: Epoch: 018
+ 7: Epoch: 018
+14: Epoch: 018
+ 0: Epoch: 018
+ 9: Epoch: 018
+11: Epoch: 018
+10: Epoch: 018
+ 0: Epoch: 019
+15: Epoch: 019
+ 2: Epoch: 019
+ 1: Epoch: 019
+ 4: Epoch: 019
+ 8: Epoch: 019
+12: Epoch: 019
+13: Epoch: 019
+ 5: Epoch: 019
+ 6: Epoch: 019
+ 3: Epoch: 019
+ 7: Epoch: 019
+14: Epoch: 019
+ 9: Epoch: 019
+11: Epoch: 019
+10: Epoch: 019
+ 2: Epoch: 020
+ 8: Epoch: 020
+15: Epoch: 020
+ 1: Epoch: 020
+ 4: Epoch: 020
+12: Epoch: 020
+ 5: Epoch: 020
+ 6: Epoch: 020
+ 0: Epoch: 020
+ 7: Epoch: 020
+14: Epoch: 020
+ 3: Epoch: 020
+13: Epoch: 020
+ 9: Epoch: 020
+10: Epoch: 020
+11: Epoch: 020
+15: Epoch: 021
+ 1: Epoch: 021
+ 5: Epoch: 021
+10: Epoch: 021
+12: Epoch: 021
+ 2: Epoch: 021
+ 4: Epoch: 021
+13: Epoch: 021
+ 6: Epoch: 021
+ 0: Epoch: 021
+ 7: Epoch: 021
+ 3: Epoch: 021
+ 9: Epoch: 021
+11: Epoch: 021
+ 8: Epoch: 021
+14: Epoch: 021
+ 2: Epoch: 022
+ 4: Epoch: 022
+ 0: Epoch: 022
+15: Epoch: 022
+ 1: Epoch: 022
+ 3: Epoch: 022
+10: Epoch: 022
+ 5: Epoch: 022
+13: Epoch: 022
+12: Epoch: 022
+ 6: Epoch: 022
+ 7: Epoch: 022
+14: Epoch: 022
+ 9: Epoch: 022
+11: Epoch: 022
+ 8: Epoch: 022
+ 2: Epoch: 023
+ 0: Epoch: 023
+ 3: Epoch: 023
+ 4: Epoch: 023
+ 8: Epoch: 023
+15: Epoch: 023
+ 1: Epoch: 023
+ 5: Epoch: 023
+ 9: Epoch: 023
+ 6: Epoch: 023
+11: Epoch: 023
+12: Epoch: 023
+10: Epoch: 023
+13: Epoch: 023
+ 7: Epoch: 023
+14: Epoch: 023
+ 1: Epoch: 024
+ 9: Epoch: 024
+ 2: Epoch: 024
+ 4: Epoch: 024
+ 0: Epoch: 024
+ 5: Epoch: 024
+11: Epoch: 024
+14: Epoch: 024
+ 3: Epoch: 024
+ 6: Epoch: 024
+ 8: Epoch: 024
+15: Epoch: 024
+10: Epoch: 024
+ 7: Epoch: 024
+12: Epoch: 024
+13: Epoch: 024
+ 0: Epoch: 025
+ 4: Epoch: 025
+15: Epoch: 025
+13: Epoch: 025
+ 5: Epoch: 025
+14: Epoch: 025
+ 6: Epoch: 025
+ 7: Epoch: 025
+12: Epoch: 025
+ 1: Epoch: 025
+ 2: Epoch: 025
+ 9: Epoch: 025
+ 3: Epoch: 025
+11: Epoch: 025
+ 8: Epoch: 025
+10: Epoch: 025
+ 0: Epoch: 026
+15: Epoch: 026
+ 2: Epoch: 026
+ 1: Epoch: 026
+ 4: Epoch: 026
+12: Epoch: 026
+ 3: Epoch: 026
+ 5: Epoch: 026
+10: Epoch: 026
+14: Epoch: 026
+13: Epoch: 026
+ 7: Epoch: 026
+ 6: Epoch: 026
+ 9: Epoch: 026
+11: Epoch: 026
+ 8: Epoch: 026
+ 1: Epoch: 027
+ 0: Epoch: 027
+ 8: Epoch: 027
+ 2: Epoch: 027
+ 5: Epoch: 027
+12: Epoch: 027
+ 3: Epoch: 027
+ 4: Epoch: 027
+14: Epoch: 027
+13: Epoch: 027
+ 7: Epoch: 027
+ 6: Epoch: 027
+15: Epoch: 027
+ 9: Epoch: 027
+11: Epoch: 027
+10: Epoch: 027
+ 0: Epoch: 028
+ 9: Epoch: 028
+12: Epoch: 028
+ 4: Epoch: 028
+11: Epoch: 028
+ 8: Epoch: 028
+ 7: Epoch: 028
+10: Epoch: 028
+14: Epoch: 028
+15: Epoch: 028
+13: Epoch: 028
+ 5: Epoch: 028
+ 6: Epoch: 028
+ 1: Epoch: 028
+ 2: Epoch: 028
+ 3: Epoch: 028
+ 1: Epoch: 029
+ 2: Epoch: 029
+14: Epoch: 029
+ 0: Epoch: 029
+ 4: Epoch: 029
+ 3: Epoch: 029
+13: Epoch: 029
+12: Epoch: 029
+ 5: Epoch: 029
+15: Epoch: 029
+ 7: Epoch: 029
+ 9: Epoch: 029
+11: Epoch: 029
+ 8: Epoch: 029
+10: Epoch: 029
+ 6: Epoch: 029
+ 0: Epoch: 030
+ 9: Epoch: 030
+14: Epoch: 030
+ 1: Epoch: 030
+ 4: Epoch: 030
+ 2: Epoch: 030
+ 5: Epoch: 030
+11: Epoch: 030
+12: Epoch: 030
+ 3: Epoch: 030
+ 7: Epoch: 030
+ 8: Epoch: 030
+13: Epoch: 030
+10: Epoch: 030
+15: Epoch: 030
+ 6: Epoch: 030
+ 1: Epoch: 031
+ 2: Epoch: 031
+ 9: Epoch: 031
+ 0: Epoch: 031
+ 3: Epoch: 031
+11: Epoch: 031
+13: Epoch: 031
+ 8: Epoch: 031
+10: Epoch: 031
+ 4: Epoch: 031
+14: Epoch: 031
+12: Epoch: 031
+15: Epoch: 031
+ 5: Epoch: 031
+ 7: Epoch: 031
+ 6: Epoch: 031
+ 2: Epoch: 032
+ 4: Epoch: 032
+ 9: Epoch: 032
+13: Epoch: 032
+11: Epoch: 032
+14: Epoch: 032
+ 8: Epoch: 032
+12: Epoch: 032
+10: Epoch: 032
+15: Epoch: 032
+ 5: Epoch: 032
+ 7: Epoch: 032
+ 6: Epoch: 032
+ 1: Epoch: 032
+ 0: Epoch: 032
+ 3: Epoch: 032
+12: Epoch: 033
+ 4: Epoch: 033
+10: Epoch: 033
+13: Epoch: 033
+14: Epoch: 033
+ 5: Epoch: 033
+15: Epoch: 033
+ 6: Epoch: 033
+ 7: Epoch: 033
+ 1: Epoch: 033
+ 2: Epoch: 033
+ 3: Epoch: 033
+ 9: Epoch: 033
+ 0: Epoch: 033
+11: Epoch: 033
+ 8: Epoch: 033
+ 1: Epoch: 034
+ 9: Epoch: 034
+12: Epoch: 034
+ 2: Epoch: 034
+ 3: Epoch: 034
+ 4: Epoch: 034
+11: Epoch: 034
+13: Epoch: 034
+ 0: Epoch: 034
+ 5: Epoch: 034
+ 8: Epoch: 034
+14: Epoch: 034
+ 7: Epoch: 034
+10: Epoch: 034
+15: Epoch: 034
+ 6: Epoch: 034
+ 3: Epoch: 035
+ 4: Epoch: 035
+ 9: Epoch: 035
+13: Epoch: 035
+11: Epoch: 035
+ 2: Epoch: 035
+ 5: Epoch: 035
+10: Epoch: 035
+14: Epoch: 035
+ 0: Epoch: 035
+ 6: Epoch: 035
+ 8: Epoch: 035
+12: Epoch: 035
+ 1: Epoch: 035
+ 7: Epoch: 035
+15: Epoch: 035
+ 2: Epoch: 036
+12: Epoch: 036
+ 4: Epoch: 036
+11: Epoch: 036
+ 1: Epoch: 036
+ 5: Epoch: 036
+ 8: Epoch: 036
+14: Epoch: 036
+ 3: Epoch: 036
+ 6: Epoch: 036
+ 9: Epoch: 036
+13: Epoch: 036
+ 0: Epoch: 036
+ 7: Epoch: 036
+10: Epoch: 036
+15: Epoch: 036
+ 0: Epoch: 037
+ 4: Epoch: 037
+12: Epoch: 037
+ 1: Epoch: 037
+ 5: Epoch: 037
+ 8: Epoch: 037
+14: Epoch: 037
+ 2: Epoch: 037
+ 6: Epoch: 037
+11: Epoch: 037
+15: Epoch: 037
+ 3: Epoch: 037
+ 7: Epoch: 037
+ 9: Epoch: 037
+13: Epoch: 037
+10: Epoch: 037
+ 4: Epoch: 038
+ 8: Epoch: 038
+12: Epoch: 038
+ 1: Epoch: 038
+ 5: Epoch: 038
+ 9: Epoch: 038
+14: Epoch: 038
+ 2: Epoch: 038
+ 6: Epoch: 038
+11: Epoch: 038
+15: Epoch: 038
+ 3: Epoch: 038
+ 7: Epoch: 038
+10: Epoch: 038
+13: Epoch: 038
+ 0: Epoch: 038
+ 1: Epoch: 039
+12: Epoch: 039
+ 2: Epoch: 039
+ 5: Epoch: 039
+ 3: Epoch: 039
+ 0: Epoch: 039
+14: Epoch: 039
+ 4: Epoch: 039
+ 6: Epoch: 039
+13: Epoch: 039
+ 7: Epoch: 039
+ 8: Epoch: 039
+15: Epoch: 039
+11: Epoch: 039
+ 9: Epoch: 039
+10: Epoch: 039
+ 4: Epoch: 040
+12: Epoch: 040
+ 0: Epoch: 040
+ 1: Epoch: 040
+ 5: Epoch: 040
+ 8: Epoch: 040
+14: Epoch: 040
+ 3: Epoch: 040
+ 6: Epoch: 040
+10: Epoch: 040
+13: Epoch: 040
+ 2: Epoch: 040
+ 7: Epoch: 040
+11: Epoch: 040
+15: Epoch: 040
+ 9: Epoch: 040
+ 1: Epoch: 041
+ 8: Epoch: 041
+ 2: Epoch: 041
+ 5: Epoch: 041
+ 3: Epoch: 041
+ 4: Epoch: 041
+ 9: Epoch: 041
+12: Epoch: 041
+ 0: Epoch: 041
+ 6: Epoch: 041
+10: Epoch: 041
+14: Epoch: 041
+ 7: Epoch: 041
+11: Epoch: 041
+13: Epoch: 041
+15: Epoch: 041
+ 0: Epoch: 042
+ 8: Epoch: 042
+ 1: Epoch: 042
+ 5: Epoch: 042
+ 2: Epoch: 042
+ 4: Epoch: 042
+11: Epoch: 042
+12: Epoch: 042
+ 3: Epoch: 042
+ 6: Epoch: 042
+ 9: Epoch: 042
+14: Epoch: 042
+ 7: Epoch: 042
+10: Epoch: 042
+15: Epoch: 042
+13: Epoch: 042
+ 2: Epoch: 043
+ 3: Epoch: 043
+ 4: Epoch: 043
+ 8: Epoch: 043
+ 0: Epoch: 043
+ 1: Epoch: 043
+ 5: Epoch: 043
+ 9: Epoch: 043
+ 6: Epoch: 043
+10: Epoch: 043
+11: Epoch: 043
+ 7: Epoch: 043
+12: Epoch: 043
+14: Epoch: 043
+15: Epoch: 043
+13: Epoch: 043
+ 1: Epoch: 044
+ 2: Epoch: 044
+ 0: Epoch: 044
+ 6: Epoch: 044
+12: Epoch: 044
+ 3: Epoch: 044
+14: Epoch: 044
+15: Epoch: 044
+13: Epoch: 044
+ 5: Epoch: 044
+ 4: Epoch: 044
+ 7: Epoch: 044
+ 8: Epoch: 044
+10: Epoch: 044
+11: Epoch: 044
+ 9: Epoch: 044
+ 2: Epoch: 045
+ 0: Epoch: 045
+ 1: Epoch: 045
+ 3: Epoch: 045
+12: Epoch: 045
+14: Epoch: 045
+15: Epoch: 045
+13: Epoch: 045
+ 4: Epoch: 045
+ 5: Epoch: 045
+ 8: Epoch: 045
+ 6: Epoch: 045
+10: Epoch: 045
+11: Epoch: 045
+ 7: Epoch: 045
+ 9: Epoch: 045
+ 1: Epoch: 046
+ 8: Epoch: 046
+12: Epoch: 046
+ 2: Epoch: 046
+ 3: Epoch: 046
+ 5: Epoch: 046
+ 0: Epoch: 046
+14: Epoch: 046
+ 6: Epoch: 046
+ 4: Epoch: 046
+15: Epoch: 046
+13: Epoch: 046
+ 7: Epoch: 046
+ 9: Epoch: 046
+10: Epoch: 046
+11: Epoch: 046
+ 0: Epoch: 047
+ 1: Epoch: 047
+ 8: Epoch: 047
+ 2: Epoch: 047
+12: Epoch: 047
+ 3: Epoch: 047
+ 9: Epoch: 047
+10: Epoch: 047
+11: Epoch: 047
+14: Epoch: 047
+15: Epoch: 047
+ 4: Epoch: 047
+ 5: Epoch: 047
+ 6: Epoch: 047
+13: Epoch: 047
+ 7: Epoch: 047
+ 0: Epoch: 048
+ 4: Epoch: 048
+14: Epoch: 048
+12: Epoch: 048
+ 5: Epoch: 048
+13: Epoch: 048
+ 6: Epoch: 048
+15: Epoch: 048
+ 7: Epoch: 048
+ 8: Epoch: 048
+ 9: Epoch: 048
+10: Epoch: 048
+11: Epoch: 048
+ 1: Epoch: 048
+ 2: Epoch: 048
+ 3: Epoch: 048
+ 0: Epoch: 049
+10: Epoch: 049
+12: Epoch: 049
+ 5: Epoch: 049
+14: Epoch: 049
+ 6: Epoch: 049
+ 4: Epoch: 049
+15: Epoch: 049
+13: Epoch: 049
+ 7: Epoch: 049
+ 1: Epoch: 049
+ 2: Epoch: 049
+ 8: Epoch: 049
+ 3: Epoch: 049
+ 9: Epoch: 049
+11: Epoch: 049
+ 2: Epoch: 050
+ 6: Epoch: 050
+ 9: Epoch: 050
+10: Epoch: 050
+11: Epoch: 050
+ 8: Epoch: 050
+ 1: Epoch: 050
+ 3: Epoch: 050
+ 0: Epoch: 050
+ 4: Epoch: 050
+12: Epoch: 050
+14: Epoch: 050
+15: Epoch: 050
+ 5: Epoch: 050
+ 7: Epoch: 050
+13: Epoch: 050
+ 1: Epoch: 051
+10: Epoch: 051
+12: Epoch: 051
+ 2: Epoch: 051
+ 0: Epoch: 051
+ 4: Epoch: 051
+ 3: Epoch: 051
+11: Epoch: 051
+ 9: Epoch: 051
+ 8: Epoch: 051
+ 5: Epoch: 051
+14: Epoch: 051
+ 6: Epoch: 051
+15: Epoch: 051
+13: Epoch: 051
+ 7: Epoch: 051
+ 2: Epoch: 052
+10: Epoch: 052
+12: Epoch: 052
+11: Epoch: 052
+ 9: Epoch: 052
+ 8: Epoch: 052
+ 1: Epoch: 052
+14: Epoch: 052
+ 3: Epoch: 052
+ 0: Epoch: 052
+ 4: Epoch: 052
+15: Epoch: 052
+ 5: Epoch: 052
+ 6: Epoch: 052
+13: Epoch: 052
+ 7: Epoch: 052
+10: Epoch: 053
+ 0: Epoch: 053
+ 4: Epoch: 053
+ 9: Epoch: 053
+12: Epoch: 053
+ 1: Epoch: 053
+ 7: Epoch: 053
+11: Epoch: 053
+ 2: Epoch: 053
+ 5: Epoch: 053
+14: Epoch: 053
+ 3: Epoch: 053
+15: Epoch: 053
+ 6: Epoch: 053
+ 8: Epoch: 053
+13: Epoch: 053
+ 1: Epoch: 054
+10: Epoch: 054
+14: Epoch: 054
+ 2: Epoch: 054
+ 3: Epoch: 054
+ 0: Epoch: 054
+ 5: Epoch: 054
+ 9: Epoch: 054
+11: Epoch: 054
+ 8: Epoch: 054
+12: Epoch: 054
+ 4: Epoch: 054
+ 6: Epoch: 054
+15: Epoch: 054
+13: Epoch: 054
+ 7: Epoch: 054
+ 2: Epoch: 055
+ 4: Epoch: 055
+10: Epoch: 055
+ 8: Epoch: 055
+ 5: Epoch: 055
+ 9: Epoch: 055
+ 6: Epoch: 055
+11: Epoch: 055
+ 7: Epoch: 055
+12: Epoch: 055
+14: Epoch: 055
+ 1: Epoch: 055
+ 3: Epoch: 055
+ 0: Epoch: 055
+13: Epoch: 055
+15: Epoch: 055
+10: Epoch: 056
+ 0: Epoch: 056
+ 9: Epoch: 056
+12: Epoch: 056
+ 1: Epoch: 056
+11: Epoch: 056
+ 2: Epoch: 056
+ 3: Epoch: 056
+14: Epoch: 056
+ 4: Epoch: 056
+13: Epoch: 056
+ 5: Epoch: 056
+15: Epoch: 056
+ 6: Epoch: 056
+ 7: Epoch: 056
+ 8: Epoch: 056
+ 0: Epoch: 057
+10: Epoch: 057
+ 3: Epoch: 057
+ 1: Epoch: 057
+ 9: Epoch: 057
+ 2: Epoch: 057
+ 4: Epoch: 057
+11: Epoch: 057
+ 5: Epoch: 057
+12: Epoch: 057
+ 6: Epoch: 057
+14: Epoch: 057
+ 7: Epoch: 057
+13: Epoch: 057
+ 8: Epoch: 057
+15: Epoch: 057
+10: Epoch: 058
+ 0: Epoch: 058
+ 4: Epoch: 058
+ 9: Epoch: 058
+12: Epoch: 058
+ 1: Epoch: 058
+ 2: Epoch: 058
+ 3: Epoch: 058
+11: Epoch: 058
+14: Epoch: 058
+15: Epoch: 058
+13: Epoch: 058
+ 8: Epoch: 058
+ 5: Epoch: 058
+ 6: Epoch: 058
+ 7: Epoch: 058
+ 0: Epoch: 059
+ 1: Epoch: 059
+ 9: Epoch: 059
+12: Epoch: 059
+ 2: Epoch: 059
+ 3: Epoch: 059
+11: Epoch: 059
+10: Epoch: 059
+14: Epoch: 059
+15: Epoch: 059
+ 4: Epoch: 059
+13: Epoch: 059
+ 5: Epoch: 059
+ 6: Epoch: 059
+ 7: Epoch: 059
+ 8: Epoch: 059
+ 2: Epoch: 060
+ 9: Epoch: 060
+ 3: Epoch: 060
+ 0: Epoch: 060
+ 4: Epoch: 060
+10: Epoch: 060
+ 1: Epoch: 060
+ 5: Epoch: 060
+ 6: Epoch: 060
+14: Epoch: 060
+ 7: Epoch: 060
+ 8: Epoch: 060
+11: Epoch: 060
+12: Epoch: 060
+13: Epoch: 060
+15: Epoch: 060
+ 2: Epoch: 061
+ 0: Epoch: 061
+ 1: Epoch: 061
+ 4: Epoch: 061
+ 9: Epoch: 061
+12: Epoch: 061
+ 3: Epoch: 061
+10: Epoch: 061
+ 7: Epoch: 061
+ 6: Epoch: 061
+14: Epoch: 061
+ 5: Epoch: 061
+13: Epoch: 061
+15: Epoch: 061
+ 8: Epoch: 061
+11: Epoch: 061
+ 2: Epoch: 062
+ 9: Epoch: 062
+14: Epoch: 062
+ 1: Epoch: 062
+ 3: Epoch: 062
+ 4: Epoch: 062
+10: Epoch: 062
+ 0: Epoch: 062
+12: Epoch: 062
+ 6: Epoch: 062
+ 5: Epoch: 062
+11: Epoch: 062
+13: Epoch: 062
+ 7: Epoch: 062
+15: Epoch: 062
+ 8: Epoch: 062
+ 2: Epoch: 063
+ 9: Epoch: 063
+14: Epoch: 063
+ 1: Epoch: 063
+ 3: Epoch: 063
+ 4: Epoch: 063
+10: Epoch: 063
+12: Epoch: 063
+ 0: Epoch: 063
+ 7: Epoch: 063
+ 6: Epoch: 063
+ 5: Epoch: 063
+15: Epoch: 063
+13: Epoch: 063
+ 8: Epoch: 063
+11: Epoch: 063
+ 9: Epoch: 064
+ 8: Epoch: 064
+10: Epoch: 064
+ 6: Epoch: 064
+11: Epoch: 064
+12: Epoch: 064
+ 2: Epoch: 064
+14: Epoch: 064
+ 0: Epoch: 064
+ 1: Epoch: 064
+13: Epoch: 064
+ 3: Epoch: 064
+ 4: Epoch: 064
+15: Epoch: 064
+ 7: Epoch: 064
+ 5: Epoch: 064
+ 0: Epoch: 065
+ 6: Epoch: 065
+ 8: Epoch: 065
+ 9: Epoch: 065
+10: Epoch: 065
+11: Epoch: 065
+ 7: Epoch: 065
+ 4: Epoch: 065
+14: Epoch: 065
+12: Epoch: 065
+ 1: Epoch: 065
+ 5: Epoch: 065
+ 3: Epoch: 065
+13: Epoch: 065
+15: Epoch: 065
+ 2: Epoch: 065
+ 0: Epoch: 066
+ 2: Epoch: 066
+ 1: Epoch: 066
+ 9: Epoch: 066
+ 3: Epoch: 066
+ 6: Epoch: 066
+ 8: Epoch: 066
+10: Epoch: 066
+11: Epoch: 066
+12: Epoch: 066
+ 7: Epoch: 066
+ 4: Epoch: 066
+14: Epoch: 066
+15: Epoch: 066
+13: Epoch: 066
+ 5: Epoch: 066
+ 0: Epoch: 067
+ 1: Epoch: 067
+ 2: Epoch: 067
+ 3: Epoch: 067
+ 7: Epoch: 067
+ 9: Epoch: 067
+12: Epoch: 067
+ 4: Epoch: 067
+ 6: Epoch: 067
+ 8: Epoch: 067
+14: Epoch: 067
+ 5: Epoch: 067
+13: Epoch: 067
+11: Epoch: 067
+15: Epoch: 067
+10: Epoch: 067
+ 0: Epoch: 068
+ 1: Epoch: 068
+ 9: Epoch: 068
+ 3: Epoch: 068
+ 6: Epoch: 068
+ 8: Epoch: 068
+11: Epoch: 068
+ 2: Epoch: 068
+ 7: Epoch: 068
+10: Epoch: 068
+14: Epoch: 068
+ 4: Epoch: 068
+12: Epoch: 068
+ 5: Epoch: 068
+15: Epoch: 068
+13: Epoch: 068
+ 0: Epoch: 069
+ 1: Epoch: 069
+ 3: Epoch: 069
+ 7: Epoch: 069
+ 9: Epoch: 069
+ 2: Epoch: 069
+ 8: Epoch: 069
+ 4: Epoch: 069
+ 6: Epoch: 069
+10: Epoch: 069
+ 5: Epoch: 069
+11: Epoch: 069
+14: Epoch: 069
+12: Epoch: 069
+13: Epoch: 069
+15: Epoch: 069
+ 9: Epoch: 070
+14: Epoch: 070
+ 8: Epoch: 070
+15: Epoch: 070
+13: Epoch: 070
+12: Epoch: 070
+ 0: Epoch: 070
+ 1: Epoch: 070
+ 3: Epoch: 070
+10: Epoch: 070
+ 4: Epoch: 070
+11: Epoch: 070
+ 7: Epoch: 070
+ 6: Epoch: 070
+ 2: Epoch: 070
+ 5: Epoch: 070
+ 0: Epoch: 071
+ 1: Epoch: 071
+ 3: Epoch: 071
+ 8: Epoch: 071
+ 4: Epoch: 071
+ 9: Epoch: 071
+ 7: Epoch: 071
+ 5: Epoch: 071
+ 6: Epoch: 071
+ 2: Epoch: 071
+14: Epoch: 071
+10: Epoch: 071
+12: Epoch: 071
+15: Epoch: 071
+11: Epoch: 071
+13: Epoch: 071
+ 7: Epoch: 072
+ 9: Epoch: 072
+14: Epoch: 072
+ 4: Epoch: 072
+ 0: Epoch: 072
+ 6: Epoch: 072
+ 8: Epoch: 072
+15: Epoch: 072
+ 1: Epoch: 072
+ 5: Epoch: 072
+10: Epoch: 072
+12: Epoch: 072
+ 3: Epoch: 072
+11: Epoch: 072
+13: Epoch: 072
+ 2: Epoch: 072
+ 0: Epoch: 073
+ 9: Epoch: 073
+14: Epoch: 073
+ 1: Epoch: 073
+ 4: Epoch: 073
+ 3: Epoch: 073
+ 7: Epoch: 073
+ 8: Epoch: 073
+12: Epoch: 073
+ 2: Epoch: 073
+ 6: Epoch: 073
+10: Epoch: 073
+15: Epoch: 073
+ 5: Epoch: 073
+11: Epoch: 073
+13: Epoch: 073
+ 9: Epoch: 074
+ 8: Epoch: 074
+ 6: Epoch: 074
+ 2: Epoch: 074
+11: Epoch: 074
+10: Epoch: 074
+14: Epoch: 074
+12: Epoch: 074
+ 1: Epoch: 074
+ 0: Epoch: 074
+ 4: Epoch: 074
+ 3: Epoch: 074
+15: Epoch: 074
+ 7: Epoch: 074
+13: Epoch: 074
+ 5: Epoch: 074
+ 7: Epoch: 075
+ 4: Epoch: 075
+ 8: Epoch: 075
+12: Epoch: 075
+ 6: Epoch: 075
+ 9: Epoch: 075
+15: Epoch: 075
+13: Epoch: 075
+ 2: Epoch: 075
+ 5: Epoch: 075
+ 0: Epoch: 075
+11: Epoch: 075
+ 1: Epoch: 075
+14: Epoch: 075
+ 3: Epoch: 075
+10: Epoch: 075
+ 0: Epoch: 076
+ 9: Epoch: 076
+ 1: Epoch: 076
+12: Epoch: 076
+ 3: Epoch: 076
+ 8: Epoch: 076
+15: Epoch: 076
+ 2: Epoch: 076
+10: Epoch: 076
+13: Epoch: 076
+14: Epoch: 076
+11: Epoch: 076
+ 4: Epoch: 076
+ 7: Epoch: 076
+ 6: Epoch: 076
+ 5: Epoch: 076
+ 2: Epoch: 077
+ 9: Epoch: 077
+12: Epoch: 077
+ 8: Epoch: 077
+11: Epoch: 077
+ 5: Epoch: 077
+14: Epoch: 077
+ 0: Epoch: 077
+ 1: Epoch: 077
+ 7: Epoch: 077
+10: Epoch: 077
+ 3: Epoch: 077
+ 4: Epoch: 077
+ 6: Epoch: 077
+15: Epoch: 077
+13: Epoch: 077
+ 0: Epoch: 078
+ 9: Epoch: 078
+12: Epoch: 078
+ 1: Epoch: 078
+ 3: Epoch: 078
+ 8: Epoch: 078
+10: Epoch: 078
+15: Epoch: 078
+ 2: Epoch: 078
+ 5: Epoch: 078
+11: Epoch: 078
+13: Epoch: 078
+14: Epoch: 078
+ 7: Epoch: 078
+ 4: Epoch: 078
+ 6: Epoch: 078
+ 2: Epoch: 079
+ 7: Epoch: 079
+ 0: Epoch: 079
+ 5: Epoch: 079
+ 8: Epoch: 079
+14: Epoch: 079
+ 1: Epoch: 079
+ 4: Epoch: 079
+ 3: Epoch: 079
+ 6: Epoch: 079
+ 9: Epoch: 079
+12: Epoch: 079
+15: Epoch: 079
+13: Epoch: 079
+10: Epoch: 079
+11: Epoch: 079
+ 2: Epoch: 080
+ 8: Epoch: 080
+12: Epoch: 080
+ 9: Epoch: 080
+ 0: Epoch: 080
+ 1: Epoch: 080
+ 3: Epoch: 080
+10: Epoch: 080
+15: Epoch: 080
+11: Epoch: 080
+13: Epoch: 080
+14: Epoch: 080
+ 7: Epoch: 080
+ 4: Epoch: 080
+ 6: Epoch: 080
+ 5: Epoch: 080
+ 0: Epoch: 081
+ 8: Epoch: 081
+ 2: Epoch: 081
+ 9: Epoch: 081
+10: Epoch: 081
+ 1: Epoch: 081
+11: Epoch: 081
+ 3: Epoch: 081
+ 4: Epoch: 081
+ 7: Epoch: 081
+12: Epoch: 081
+ 6: Epoch: 081
+15: Epoch: 081
+ 5: Epoch: 081
+13: Epoch: 081
+14: Epoch: 081
+ 2: Epoch: 082
+ 4: Epoch: 082
+ 8: Epoch: 082
+ 0: Epoch: 082
+ 9: Epoch: 082
+ 1: Epoch: 082
+ 7: Epoch: 082
+ 3: Epoch: 082
+ 6: Epoch: 082
+ 5: Epoch: 082
+10: Epoch: 082
+11: Epoch: 082
+12: Epoch: 082
+15: Epoch: 082
+13: Epoch: 082
+14: Epoch: 082
+ 4: Epoch: 083
+ 0: Epoch: 083
+ 6: Epoch: 083
+ 8: Epoch: 083
+12: Epoch: 083
+ 3: Epoch: 083
+ 7: Epoch: 083
+ 9: Epoch: 083
+ 2: Epoch: 083
+10: Epoch: 083
+ 5: Epoch: 083
+11: Epoch: 083
+ 1: Epoch: 083
+15: Epoch: 083
+13: Epoch: 083
+14: Epoch: 083
+ 8: Epoch: 084
+ 0: Epoch: 084
+ 3: Epoch: 084
+ 9: Epoch: 084
+ 2: Epoch: 084
+ 1: Epoch: 084
+ 5: Epoch: 084
+10: Epoch: 084
+ 4: Epoch: 084
+ 7: Epoch: 084
+ 6: Epoch: 084
+11: Epoch: 084
+12: Epoch: 084
+15: Epoch: 084
+13: Epoch: 084
+14: Epoch: 084
+ 0: Epoch: 085
+ 3: Epoch: 085
+ 8: Epoch: 085
+ 4: Epoch: 085
+ 9: Epoch: 085
+ 2: Epoch: 085
+10: Epoch: 085
+11: Epoch: 085
+ 7: Epoch: 085
+12: Epoch: 085
+ 6: Epoch: 085
+15: Epoch: 085
+13: Epoch: 085
+ 1: Epoch: 085
+ 5: Epoch: 085
+14: Epoch: 085
+ 0: Epoch: 086
+ 4: Epoch: 086
+ 8: Epoch: 086
+12: Epoch: 086
+ 2: Epoch: 086
+ 3: Epoch: 086
+ 9: Epoch: 086
+ 7: Epoch: 086
+11: Epoch: 086
+ 6: Epoch: 086
+14: Epoch: 086
+ 1: Epoch: 086
+10: Epoch: 086
+15: Epoch: 086
+ 5: Epoch: 086
+13: Epoch: 086
+ 7: Epoch: 087
+ 2: Epoch: 087
+ 8: Epoch: 087
+ 3: Epoch: 087
+ 4: Epoch: 087
+ 0: Epoch: 087
+ 9: Epoch: 087
+12: Epoch: 087
+ 5: Epoch: 087
+ 6: Epoch: 087
+15: Epoch: 087
+ 1: Epoch: 087
+13: Epoch: 087
+10: Epoch: 087
+14: Epoch: 087
+11: Epoch: 087
+ 0: Epoch: 088
+ 8: Epoch: 088
+ 3: Epoch: 088
+ 2: Epoch: 088
+ 9: Epoch: 088
+ 1: Epoch: 088
+ 6: Epoch: 088
+10: Epoch: 088
+12: Epoch: 088
+11: Epoch: 088
+ 4: Epoch: 088
+ 7: Epoch: 088
+ 5: Epoch: 088
+13: Epoch: 088
+15: Epoch: 088
+14: Epoch: 088
+ 0: Epoch: 089
+ 3: Epoch: 089
+ 4: Epoch: 089
+ 8: Epoch: 089
+ 1: Epoch: 089
+ 7: Epoch: 089
+ 9: Epoch: 089
+12: Epoch: 089
+ 6: Epoch: 089
+14: Epoch: 089
+15: Epoch: 089
+ 5: Epoch: 089
+13: Epoch: 089
+ 2: Epoch: 089
+10: Epoch: 089
+11: Epoch: 089
+ 0: Epoch: 090
+ 1: Epoch: 090
+ 4: Epoch: 090
+ 8: Epoch: 090
+12: Epoch: 090
+ 3: Epoch: 090
+ 9: Epoch: 090
+ 2: Epoch: 090
+11: Epoch: 090
+10: Epoch: 090
+13: Epoch: 090
+14: Epoch: 090
+15: Epoch: 090
+ 7: Epoch: 090
+ 6: Epoch: 090
+ 5: Epoch: 090
+ 8: Epoch: 091
+ 0: Epoch: 091
+ 9: Epoch: 091
+ 1: Epoch: 091
+11: Epoch: 091
+ 3: Epoch: 091
+ 2: Epoch: 091
+ 6: Epoch: 091
+10: Epoch: 091
+13: Epoch: 091
+12: Epoch: 091
+14: Epoch: 091
+15: Epoch: 091
+ 4: Epoch: 091
+ 7: Epoch: 091
+ 5: Epoch: 091
+ 0: Epoch: 092
+ 1: Epoch: 092
+ 8: Epoch: 092
+ 3: Epoch: 092
+ 9: Epoch: 092
+12: Epoch: 092
+11: Epoch: 092
+14: Epoch: 092
+ 6: Epoch: 092
+15: Epoch: 092
+ 2: Epoch: 092
+10: Epoch: 092
+13: Epoch: 092
+ 4: Epoch: 092
+ 7: Epoch: 092
+ 5: Epoch: 092
+ 0: Epoch: 093
+ 9: Epoch: 093
+ 1: Epoch: 093
+ 8: Epoch: 093
+ 3: Epoch: 093
+11: Epoch: 093
+ 2: Epoch: 093
+10: Epoch: 093
+ 5: Epoch: 093
+ 4: Epoch: 093
+12: Epoch: 093
+ 7: Epoch: 093
+ 6: Epoch: 093
+15: Epoch: 093
+13: Epoch: 093
+14: Epoch: 093
+ 1: Epoch: 094
+ 4: Epoch: 094
+ 9: Epoch: 094
+12: Epoch: 094
+ 3: Epoch: 094
+ 8: Epoch: 094
+ 0: Epoch: 094
+ 7: Epoch: 094
+11: Epoch: 094
+14: Epoch: 094
+ 2: Epoch: 094
+ 6: Epoch: 094
+15: Epoch: 094
+ 5: Epoch: 094
+13: Epoch: 094
+10: Epoch: 094
+ 0: Epoch: 095
+ 4: Epoch: 095
+11: Epoch: 095
+ 1: Epoch: 095
+12: Epoch: 095
+ 3: Epoch: 095
+ 8: Epoch: 095
+ 9: Epoch: 095
+ 2: Epoch: 095
+ 7: Epoch: 095
+10: Epoch: 095
+14: Epoch: 095
+ 6: Epoch: 095
+15: Epoch: 095
+13: Epoch: 095
+ 5: Epoch: 095
+ 0: Epoch: 096
+ 7: Epoch: 096
+ 8: Epoch: 096
+12: Epoch: 096
+ 1: Epoch: 096
+ 4: Epoch: 096
+ 9: Epoch: 096
+ 3: Epoch: 096
+ 6: Epoch: 096
+11: Epoch: 096
+13: Epoch: 096
+ 2: Epoch: 096
+ 5: Epoch: 096
+14: Epoch: 096
+15: Epoch: 096
+10: Epoch: 096
+ 0: Epoch: 097
+ 1: Epoch: 097
+ 8: Epoch: 097
+ 3: Epoch: 097
+12: Epoch: 097
+ 2: Epoch: 097
+ 9: Epoch: 097
+11: Epoch: 097
+10: Epoch: 097
+15: Epoch: 097
+ 5: Epoch: 097
+13: Epoch: 097
+14: Epoch: 097
+ 4: Epoch: 097
+ 7: Epoch: 097
+ 6: Epoch: 097
+ 0: Epoch: 098
+ 8: Epoch: 098
+12: Epoch: 098
+ 1: Epoch: 098
+ 3: Epoch: 098
+ 4: Epoch: 098
+11: Epoch: 098
+14: Epoch: 098
+ 9: Epoch: 098
+15: Epoch: 098
+ 7: Epoch: 098
+ 6: Epoch: 098
+ 2: Epoch: 098
+13: Epoch: 098
+ 5: Epoch: 098
+10: Epoch: 098
+ 8: Epoch: 099
+ 0: Epoch: 099
+ 1: Epoch: 099
+ 9: Epoch: 099
+12: Epoch: 099
+ 3: Epoch: 099
+11: Epoch: 099
+ 2: Epoch: 099
+15: Epoch: 099
+ 5: Epoch: 099
+13: Epoch: 099
+14: Epoch: 099
+ 4: Epoch: 099
+ 7: Epoch: 099
+ 6: Epoch: 099
+10: Epoch: 099
+ 4: rank: 4 median_run: 0
+ 4: rank: 4 total_time: 200.44754338264465
+ 4: rank: 4 comm_time: 0.0
+ 4: rank: 4 comp_time: 0.0
+ 4: rank: 4 scomp_time: 0.0
+ 4: rank: 4 dcomp_time: 0.0
+ 4: rank: 4 bcast_comm_time: 0.0
+ 4: rank: 4 bcast_words: 507287148400
+ 4: rank: 4 reduce_comm_time: 0.0
+ 4: rank: 4 op_comm_time: 0.0
+ 4: rank: 4 barrier_time: 134.6491596698761
+ 4: rank: 4 tensor([[-3.1781e+00, -3.1781e+00, -3.1781e+00,  ..., -3.1781e+00,
+ 4:          -3.1781e+00, -3.1781e+00],
+ 4:         [-3.1781e+00, -3.1781e+00, -3.1781e+00,  ..., -3.1781e+00,
+ 4:          -3.1781e+00, -3.1781e+00],
+ 4:         [-7.1507e+02, -8.0257e+02, -2.1055e+02,  ..., -1.0864e+03,
+ 4:          -4.0805e+03, -2.5820e+04],
+ 4:         ...,
+ 4:         [-1.0055e+03, -1.1472e+03, -2.2498e+02,  ..., -1.5360e+03,
+ 4:          -5.8638e+03, -3.7390e+04],
+ 4:         [-3.1781e+00, -3.1781e+00, -3.1781e+00,  ..., -3.1781e+00,
+ 4:          -3.1781e+00, -3.1781e+00],
+ 4:         [-1.4585e+04, -1.6017e+04, -4.1742e+03,  ..., -2.1928e+04,
+ 4:          -8.1789e+04, -5.1971e+05]], device='cuda:0',
+ 4:        grad_fn=<GCNFuncBackward>)
+ 4: None
+ 6: rank: 6 median_run: 0
+ 6: rank: 6 total_time: 200.44757628440857
+ 6: rank: 6 comm_time: 0.0
+ 6: rank: 6 comp_time: 0.0
+ 6: rank: 6 scomp_time: 0.0
+ 6: rank: 6 dcomp_time: 0.0
+ 6: rank: 6 bcast_comm_time: 0.0
+ 6: rank: 6 bcast_words: 507287148400
+ 6: rank: 6 reduce_comm_time: 0.0
+ 6: rank: 6 op_comm_time: 0.0
+ 6: rank: 6 barrier_time: 134.66613245010376
+ 6: rank: 6 tensor([[-3.1781e+00, -3.1781e+00, -3.1781e+00,  ..., -3.1781e+00,
+ 6:          -3.1781e+00, -3.1781e+00],
+ 6:         [-1.4827e+04, -1.6135e+04, -4.2475e+03,  ..., -2.1973e+04,
+ 6:          -8.2041e+04, -5.1889e+05],
+ 6:         [-3.1781e+00, -3.1781e+00, -3.1781e+00,  ..., -3.1781e+00,
+ 6:          -3.1781e+00, -3.1781e+00],
+ 6:         ...,
+ 6:         [-3.1781e+00, -3.1781e+00, -3.1781e+00,  ..., -3.1781e+00,
+ 6:          -3.1781e+00, -3.1781e+00],
+ 6:         [-1.6657e+03, -1.7680e+03, -5.3956e+02,  ..., -2.4420e+03,
+ 6:          -8.6622e+03, -5.4448e+04],
+ 6:         [-1.5460e+03, -1.8345e+03, -4.2769e+02,  ..., -2.4708e+03,
+ 6:          -9.3810e+03, -5.9681e+04]], device='cuda:0',
+ 6:        grad_fn=<GCNFuncBackward>)
+ 6: None
+ 3: rank: 3 median_run: 0
+ 3: rank: 3 total_time: 200.44694900512695
+ 3: rank: 3 comm_time: 0.0
+ 3: rank: 3 comp_time: 0.0
+ 3: rank: 3 scomp_time: 0.0
+ 3: rank: 3 dcomp_time: 0.0
+ 3: rank: 3 bcast_comm_time: 0.0
+ 3: rank: 3 bcast_words: 507287148400
+ 3: rank: 3 reduce_comm_time: 0.0
+ 3: rank: 3 op_comm_time: 0.0
+ 3: rank: 3 barrier_time: 135.8650918006897
+ 3: rank: 3 tensor([[-5.1613e+01, -6.1759e+01, -2.0932e+01,  ..., -9.2332e+01,
+ 3:          -3.3498e+02, -2.1575e+03],
+ 3:         [-3.1781e+00, -3.1781e+00, -3.1781e+00,  ..., -3.1781e+00,
+ 3:          -3.1781e+00, -3.1781e+00],
+ 3:         [-2.6051e+04, -2.9351e+04, -7.7735e+03,  ..., -3.9918e+04,
+ 3:          -1.4877e+05, -9.4404e+05],
+ 3:         ...,
+ 3:         [-4.9414e+03, -5.5500e+03, -1.4827e+03,  ..., -7.4664e+03,
+ 3:          -2.8164e+04, -1.7826e+05],
+ 3:         [-3.1781e+00, -3.1781e+00, -3.1781e+00,  ..., -3.1781e+00,
+ 3:          -3.1781e+00, -3.1781e+00],
+ 3:         [-3.1781e+00, -3.1781e+00, -3.1781e+00,  ..., -3.1781e+00,
+ 3:          -3.1781e+00, -3.1781e+00]], device='cuda:0',
+ 3:        grad_fn=<GCNFuncBackward>)
+ 3: None
+13: rank: 13 median_run: 0
+13: rank: 13 total_time: 200.44733357429504
+13: rank: 13 comm_time: 0.0
+13: rank: 13 comp_time: 0.0
+13: rank: 13 scomp_time: 0.0
+13: rank: 13 dcomp_time: 0.0
+13: rank: 13 bcast_comm_time: 0.0
+13: rank: 13 bcast_words: 507287148400
+13: rank: 13 reduce_comm_time: 0.0
+13: rank: 13 op_comm_time: 0.0
+13: rank: 13 barrier_time: 150.70413947105408
+13: rank: 13 tensor([[-3.1781, -3.1781, -3.1781,  ..., -3.1781, -3.1781, -3.1781],
+13:         [-3.1781, -3.1781, -3.1781,  ..., -3.1781, -3.1781, -3.1781],
+13:         [-3.1781, -3.1781, -3.1781,  ..., -3.1781, -3.1781, -3.1781],
+13:         ...,
+13:         [-3.1781, -3.1781, -3.1781,  ..., -3.1781, -3.1781, -3.1781],
+13:         [-3.1781, -3.1781, -3.1781,  ..., -3.1781, -3.1781, -3.1781],
+13:         [-3.1781, -3.1781, -3.1781,  ..., -3.1781, -3.1781, -3.1781]],
+13:        device='cuda:0', grad_fn=<GCNFuncBackward>)
+13: None
+ 8: rank: 8 median_run: 0
+ 8: rank: 8 total_time: 200.446946144104
+ 8: rank: 8 comm_time: 0.0
+ 8: rank: 8 comp_time: 0.0
+ 8: rank: 8 scomp_time: 0.0
+ 8: rank: 8 dcomp_time: 0.0
+ 8: rank: 8 bcast_comm_time: 0.0
+ 8: rank: 8 bcast_words: 507287148400
+ 8: rank: 8 reduce_comm_time: 0.0
+ 8: rank: 8 op_comm_time: 0.0
+ 8: rank: 8 barrier_time: 135.15433073043823
+ 8: rank: 8 tensor([[-3.1781e+00, -3.1781e+00, -3.1781e+00,  ..., -3.1781e+00,
+ 8:          -3.1781e+00, -3.1781e+00],
+ 8:         [-3.1781e+00, -3.1781e+00, -3.1781e+00,  ..., -3.1781e+00,
+ 8:          -3.1781e+00, -3.1781e+00],
+ 8:         [-2.4298e+04, -2.7795e+04, -7.4035e+03,  ..., -3.7948e+04,
+ 8:          -1.3736e+05, -8.6811e+05],
+ 8:         ...,
+ 8:         [-3.1781e+00, -3.1781e+00, -3.1781e+00,  ..., -3.1781e+00,
+ 8:          -3.1781e+00, -3.1781e+00],
+ 8:         [-1.7989e+02, -1.6324e+02, -4.2235e+01,  ..., -2.4527e+02,
+ 8:          -9.3299e+02, -5.7783e+03],
+ 8:         [-1.7643e+04, -1.9861e+04, -4.7598e+03,  ..., -2.6567e+04,
+ 8:          -9.9097e+04, -6.2700e+05]], device='cuda:0',
+ 8:        grad_fn=<GCNFuncBackward>)
+ 8: None
+ 1: rank: 1 median_run: 0
+ 1: rank: 1 total_time: 200.4469449520111
+ 1: rank: 1 comm_time: 0.0
+ 1: rank: 1 comp_time: 0.0
+ 1: rank: 1 scomp_time: 0.0
+ 1: rank: 1 dcomp_time: 0.0
+ 1: rank: 1 bcast_comm_time: 0.0
+ 1: rank: 1 bcast_words: 507287148400
+ 1: rank: 1 reduce_comm_time: 0.0
+ 1: rank: 1 op_comm_time: 0.0
+ 1: rank: 1 barrier_time: 148.61488914489746
+ 1: rank: 1 tensor([[-3.1781, -3.1781, -3.1781,  ..., -3.1781, -3.1781, -3.1781],
+ 1:         [-3.1781, -3.1781, -3.1781,  ..., -3.1781, -3.1781, -3.1781],
+ 1:         [-3.1781, -3.1781, -3.1781,  ..., -3.1781, -3.1781, -3.1781],
+ 1:         ...,
+ 1:         [-3.1781, -3.1781, -3.1781,  ..., -3.1781, -3.1781, -3.1781],
+ 1:         [-3.1781, -3.1781, -3.1781,  ..., -3.1781, -3.1781, -3.1781],
+ 1:         [-3.1781, -3.1781, -3.1781,  ..., -3.1781, -3.1781, -3.1781]],
+ 1:        device='cuda:0', grad_fn=<GCNFuncBackward>)
+ 1: None
+10: rank: 10 median_run: 0
+10: rank: 10 total_time: 200.44772481918335
+10: rank: 10 comm_time: 0.0
+10: rank: 10 comp_time: 0.0
+10: rank: 10 scomp_time: 0.0
+10: rank: 10 dcomp_time: 0.0
+10: rank: 10 bcast_comm_time: 0.0
+10: rank: 10 bcast_words: 507287148400
+10: rank: 10 reduce_comm_time: 0.0
+10: rank: 10 op_comm_time: 0.0
+10: rank: 10 barrier_time: 131.2387626171112
+10: rank: 10 tensor([[-2.5547e+03, -2.9710e+03, -6.7212e+02,  ..., -4.1486e+03,
+10:          -1.5481e+04, -9.7864e+04],
+10:         [-1.8462e+04, -2.0472e+04, -4.9528e+03,  ..., -2.7723e+04,
+10:          -1.0439e+05, -6.6299e+05],
+10:         [-1.4418e+03, -1.6295e+03, -4.1275e+02,  ..., -2.2500e+03,
+10:          -8.3371e+03, -5.2890e+04],
+10:         ...,
+10:         [-3.1781e+00, -3.1781e+00, -3.1781e+00,  ..., -3.1781e+00,
+10:          -3.1781e+00, -3.1781e+00],
+10:         [-3.1781e+00, -3.1781e+00, -3.1781e+00,  ..., -3.1781e+00,
+10:          -3.1781e+00, -3.1781e+00],
+10:         [-3.1781e+00, -3.1781e+00, -3.1781e+00,  ..., -3.1781e+00,
+10:          -3.1781e+00, -3.1781e+00]], device='cuda:0',
+10:        grad_fn=<GCNFuncBackward>)
+10: None
+14: rank: 14 median_run: 0
+14: rank: 14 total_time: 200.44748187065125
+14: rank: 14 comm_time: 0.0
+14: rank: 14 comp_time: 0.0
+14: rank: 14 scomp_time: 0.0
+14: rank: 14 dcomp_time: 0.0
+14: rank: 14 bcast_comm_time: 0.0
+14: rank: 14 bcast_words: 507287148400
+14: rank: 14 reduce_comm_time: 0.0
+14: rank: 14 op_comm_time: 0.0
+14: rank: 14 barrier_time: 150.68843007087708
+14: rank: 14 tensor([[-3.1781, -3.1781, -3.1781,  ..., -3.1781, -3.1781, -3.1781],
+14:         [-3.1781, -3.1781, -3.1781,  ..., -3.1781, -3.1781, -3.1781],
+14:         [-3.1781, -3.1781, -3.1781,  ..., -3.1781, -3.1781, -3.1781],
+14:         ...,
+14:         [-3.1781, -3.1781, -3.1781,  ..., -3.1781, -3.1781, -3.1781],
+14:         [-3.1781, -3.1781, -3.1781,  ..., -3.1781, -3.1781, -3.1781],
+14:         [-3.1781, -3.1781, -3.1781,  ..., -3.1781, -3.1781, -3.1781]],
+14:        device='cuda:0', grad_fn=<GCNFuncBackward>)
+14: None
+ 5: rank: 5 median_run: 0
+ 5: rank: 5 total_time: 200.447124004364
+ 5: rank: 5 comm_time: 0.0
+ 5: rank: 5 comp_time: 0.0
+ 5: rank: 5 scomp_time: 0.0
+ 5: rank: 5 dcomp_time: 0.0
+ 5: rank: 5 bcast_comm_time: 0.0
+ 5: rank: 5 bcast_words: 507287148400
+ 5: rank: 5 reduce_comm_time: 0.0
+ 5: rank: 5 op_comm_time: 0.0
+ 5: rank: 5 barrier_time: 134.15987753868103
+ 5: rank: 5 tensor([[-7.2910e+03, -8.1070e+03, -2.1295e+03,  ..., -1.1225e+04,
+ 5:          -4.1757e+04, -2.6487e+05],
+ 5:         [-3.1781e+00, -3.1781e+00, -3.1781e+00,  ..., -3.1781e+00,
+ 5:          -3.1781e+00, -3.1781e+00],
+ 5:         [-3.1781e+00, -3.1781e+00, -3.1781e+00,  ..., -3.1781e+00,
+ 5:          -3.1781e+00, -3.1781e+00],
+ 5:         ...,
+ 5:         [-2.8242e+04, -3.0077e+04, -7.1162e+03,  ..., -4.2213e+04,
+ 5:          -1.5424e+05, -9.7261e+05],
+ 5:         [-9.2550e+00, -4.2214e+00, -1.8063e+00,  ..., -1.0394e+01,
+ 5:          -4.1993e+01, -2.3675e+02],
+ 5:         [-1.7988e+02, -2.2049e+02, -6.5686e+01,  ..., -2.8196e+02,
+ 5:          -9.8999e+02, -6.0387e+03]], device='cuda:0',
+ 5:        grad_fn=<GCNFuncBackward>)
+ 5: None
+11: rank: 11 median_run: 0
+11: rank: 11 total_time: 200.4469931125641
+11: rank: 11 comm_time: 0.0
+11: rank: 11 comp_time: 0.0
+11: rank: 11 scomp_time: 0.0
+11: rank: 11 dcomp_time: 0.0
+11: rank: 11 bcast_comm_time: 0.0
+11: rank: 11 bcast_words: 507287148400
+11: rank: 11 reduce_comm_time: 0.0
+11: rank: 11 op_comm_time: 0.0
+11: rank: 11 barrier_time: 151.39915204048157
+11: rank: 11 tensor([[-3.1781, -3.1781, -3.1781,  ..., -3.1781, -3.1781, -3.1781],
+11:         [-3.1781, -3.1781, -3.1781,  ..., -3.1781, -3.1781, -3.1781],
+11:         [-3.1781, -3.1781, -3.1781,  ..., -3.1781, -3.1781, -3.1781],
+11:         ...,
+11:         [-3.1781, -3.1781, -3.1781,  ..., -3.1781, -3.1781, -3.1781],
+11:         [-3.1781, -3.1781, -3.1781,  ..., -3.1781, -3.1781, -3.1781],
+11:         [-3.1781, -3.1781, -3.1781,  ..., -3.1781, -3.1781, -3.1781]],
+11:        device='cuda:0', grad_fn=<GCNFuncBackward>)
+11: None
+15: rank: 15 median_run: 0
+15: rank: 15 total_time: 200.4470555782318
+15: rank: 15 comm_time: 0.0
+15: rank: 15 comp_time: 0.0
+15: rank: 15 scomp_time: 0.0
+15: rank: 15 dcomp_time: 0.0
+15: rank: 15 bcast_comm_time: 0.0
+15: rank: 15 bcast_words: 507287148400
+15: rank: 15 reduce_comm_time: 0.0
+15: rank: 15 op_comm_time: 0.0
+15: rank: 15 barrier_time: 150.75358128547668
+15: rank: 15 tensor([[-3.1781, -3.1781, -3.1781,  ..., -3.1781, -3.1781, -3.1781],
+15:         [-3.1781, -3.1781, -3.1781,  ..., -3.1781, -3.1781, -3.1781],
+15:         [-3.1781, -3.1781, -3.1781,  ..., -3.1781, -3.1781, -3.1781],
+15:         ...,
+15:         [-3.1781, -3.1781, -3.1781,  ..., -3.1781, -3.1781, -3.1781],
+15:         [-3.1781, -3.1781, -3.1781,  ..., -3.1781, -3.1781, -3.1781],
+15:         [-3.1781, -3.1781, -3.1781,  ..., -3.1781, -3.1781, -3.1781]],
+15:        device='cuda:0', grad_fn=<GCNFuncBackward>)
+15: None
+ 2: rank: 2 median_run: 0
+ 2: rank: 2 total_time: 200.4470067024231
+ 2: rank: 2 comm_time: 0.0
+ 2: rank: 2 comp_time: 0.0
+ 2: rank: 2 scomp_time: 0.0
+ 2: rank: 2 dcomp_time: 0.0
+ 2: rank: 2 bcast_comm_time: 0.0
+ 2: rank: 2 bcast_words: 507287148400
+ 2: rank: 2 reduce_comm_time: 0.0
+ 2: rank: 2 op_comm_time: 0.0
+ 2: rank: 2 barrier_time: 140.82346987724304
+ 2: rank: 2 tensor([[-3.1781e+00, -3.1781e+00, -3.1781e+00,  ..., -3.1781e+00,
+ 2:          -3.1781e+00, -3.1781e+00],
+ 2:         [-3.1781e+00, -3.1781e+00, -3.1781e+00,  ..., -3.1781e+00,
+ 2:          -3.1781e+00, -3.1781e+00],
+ 2:         [-3.1781e+00, -3.1781e+00, -3.1781e+00,  ..., -3.1781e+00,
+ 2:          -3.1781e+00, -3.1781e+00],
+ 2:         ...,
+ 2:         [-8.4260e+01, -1.0092e+02, -2.5496e+01,  ..., -1.4544e+02,
+ 2:          -5.7565e+02, -3.6098e+03],
+ 2:         [-1.4386e+02, -1.4109e+02, -4.8453e+01,  ..., -2.2232e+02,
+ 2:          -7.6425e+02, -4.7012e+03],
+ 2:         [-3.1781e+00, -3.1781e+00, -3.1781e+00,  ..., -3.1781e+00,
+ 2:          -3.1781e+00, -3.1781e+00]], device='cuda:0',
+ 2:        grad_fn=<GCNFuncBackward>)
+ 2: None
+ 0: total_times_r0: [200.44698071479797]
+ 0: rank: 0 median_run: 0
+ 0: rank: 0 total_time: 200.44698071479797
+ 0: rank: 0 comm_time: 146.61706066131592
+ 0: rank: 0 comp_time: 47.49093699455261
+ 0: rank: 0 scomp_time: 47.109352827072144
+ 0: rank: 0 dcomp_time: 0.38158416748046875
+ 0: rank: 0 bcast_comm_time: 145.76415848731995
+ 0: rank: 0 bcast_words: 507287148400
+ 0: rank: 0 reduce_comm_time: 0.02322101593017578
+ 0: rank: 0 op_comm_time: 0.8296811580657959
+ 0: rank: 0 barrier_time: 148.4958701133728
+ 0: rank: 0 tensor([[-3.1781e+00, -3.1781e+00, -3.1781e+00,  ..., -3.1781e+00,
+ 0:          -3.1781e+00, -3.1781e+00],
+ 0:         [-2.4790e+01, -1.9606e+01, -8.2054e+00,  ..., -5.5326e+01,
+ 0:          -1.3080e+02, -8.4918e+02],
+ 0:         [-2.3971e+03, -2.6909e+03, -7.5697e+02,  ..., -3.5988e+03,
+ 0:          -1.3209e+04, -8.3497e+04],
+ 0:         ...,
+ 0:         [-3.1781e+00, -3.1781e+00, -3.1781e+00,  ..., -3.1781e+00,
+ 0:          -3.1781e+00, -3.1781e+00],
+ 0:         [-3.1781e+00, -3.1781e+00, -3.1781e+00,  ..., -3.1781e+00,
+ 0:          -3.1781e+00, -3.1781e+00],
+ 0:         [-3.1781e+00, -3.1781e+00, -3.1781e+00,  ..., -3.1781e+00,
+ 0:          -3.1781e+00, -3.1781e+00]], device='cuda:0',
+ 0:        grad_fn=<GCNFuncBackward>)
+ 0: None
+ 9: rank: 9 median_run: 0
+ 9: rank: 9 total_time: 200.44697833061218
+ 9: rank: 9 comm_time: 0.0
+ 9: rank: 9 comp_time: 0.0
+ 9: rank: 9 scomp_time: 0.0
+ 9: rank: 9 dcomp_time: 0.0
+ 9: rank: 9 bcast_comm_time: 0.0
+ 9: rank: 9 bcast_words: 507287148400
+ 9: rank: 9 reduce_comm_time: 0.0
+ 9: rank: 9 op_comm_time: 0.0
+ 9: rank: 9 barrier_time: 132.53360152244568
+ 9: rank: 9 tensor([[-2.1173e+04, -2.4947e+04, -5.2900e+03,  ..., -3.2917e+04,
+ 9:          -1.3033e+05, -8.2672e+05],
+ 9:         [-3.1781e+00, -3.1781e+00, -3.1781e+00,  ..., -3.1781e+00,
+ 9:          -3.1781e+00, -3.1781e+00],
+ 9:         [-4.5348e+03, -4.8442e+03, -1.3233e+03,  ..., -6.7261e+03,
+ 9:          -2.4629e+04, -1.5490e+05],
+ 9:         ...,
+ 9:         [-2.0848e+04, -2.3286e+04, -6.0728e+03,  ..., -3.1816e+04,
+ 9:          -1.1760e+05, -7.4201e+05],
+ 9:         [-2.5424e+03, -2.8011e+03, -7.9400e+02,  ..., -3.8390e+03,
+ 9:          -1.4065e+04, -8.8480e+04],
+ 9:         [-3.1781e+00, -3.1781e+00, -3.1781e+00,  ..., -3.1781e+00,
+ 9:          -3.1781e+00, -3.1781e+00]], device='cuda:0',
+ 9:        grad_fn=<GCNFuncBackward>)
+ 9: None
+12: rank: 12 median_run: 0
+12: rank: 12 total_time: 200.44696068763733
+12: rank: 12 comm_time: 0.0
+12: rank: 12 comp_time: 0.0
+12: rank: 12 scomp_time: 0.0
+12: rank: 12 dcomp_time: 0.0
+12: rank: 12 bcast_comm_time: 0.0
+12: rank: 12 bcast_words: 507287148400
+12: rank: 12 reduce_comm_time: 0.0
+12: rank: 12 op_comm_time: 0.0
+12: rank: 12 barrier_time: 150.73653626441956
+12: rank: 12 tensor([[-3.1781, -3.1781, -3.1781,  ..., -3.1781, -3.1781, -3.1781],
+12:         [-3.1781, -3.1781, -3.1781,  ..., -3.1781, -3.1781, -3.1781],
+12:         [-3.1781, -3.1781, -3.1781,  ..., -3.1781, -3.1781, -3.1781],
+12:         ...,
+12:         [-3.1781, -3.1781, -3.1781,  ..., -3.1781, -3.1781, -3.1781],
+12:         [-3.1781, -3.1781, -3.1781,  ..., -3.1781, -3.1781, -3.1781],
+12:         [-3.1781, -3.1781, -3.1781,  ..., -3.1781, -3.1781, -3.1781]],
+12:        device='cuda:0', grad_fn=<GCNFuncBackward>)
+12: None
+ 7: rank: 7 median_run: 0
+ 7: rank: 7 total_time: 200.44753170013428
+ 7: rank: 7 comm_time: 0.0
+ 7: rank: 7 comp_time: 0.0
+ 7: rank: 7 scomp_time: 0.0
+ 7: rank: 7 dcomp_time: 0.0
+ 7: rank: 7 bcast_comm_time: 0.0
+ 7: rank: 7 bcast_words: 507287148400
+ 7: rank: 7 reduce_comm_time: 0.0
+ 7: rank: 7 op_comm_time: 0.0
+ 7: rank: 7 barrier_time: 135.21646094322205
+ 7: rank: 7 tensor([[-3.1781e+00, -3.1781e+00, -3.1781e+00,  ..., -3.1781e+00,
+ 7:          -3.1781e+00, -3.1781e+00],
+ 7:         [-6.8393e+03, -7.5818e+03, -1.9964e+03,  ..., -1.0308e+04,
+ 7:          -3.8865e+04, -2.4578e+05],
+ 7:         [-6.5692e+02, -7.6582e+02, -1.7191e+02,  ..., -1.0943e+03,
+ 7:          -4.0761e+03, -2.5854e+04],
+ 7:         ...,
+ 7:         [-1.7050e+03, -1.9332e+03, -4.9238e+02,  ..., -2.7389e+03,
+ 7:          -9.9825e+03, -6.3432e+04],
+ 7:         [-3.1781e+00, -3.1781e+00, -3.1781e+00,  ..., -3.1781e+00,
+ 7:          -3.1781e+00, -3.1781e+00],
+ 7:         [-6.6335e+04, -7.3266e+04, -2.0336e+04,  ..., -1.0084e+05,
+ 7:          -3.7008e+05, -2.3372e+06]], device='cuda:0',
+ 7:        grad_fn=<GCNFuncBackward>)
+ 7: None

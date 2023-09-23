@@ -1,0 +1,2739 @@
+ 0: Namespace(dataset='Amazon_Large_64', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001149', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_64/processed/partitions.txt')
+ 0: hostname: nid001149 rank: 0 size: 64
+ 7: Namespace(dataset='Amazon_Large_64', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001149', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_64/processed/partitions.txt')
+ 7: hostname: nid001168 rank: 7 size: 64
+22: Namespace(dataset='Amazon_Large_64', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001149', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_64/processed/partitions.txt')
+22: hostname: nid001364 rank: 22 size: 64
+50: Namespace(dataset='Amazon_Large_64', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001149', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_64/processed/partitions.txt')
+50: hostname: nid001936 rank: 50 size: 64
+54: Namespace(dataset='Amazon_Large_64', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001149', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_64/processed/partitions.txt')
+54: hostname: nid001952 rank: 54 size: 64
+14: Namespace(dataset='Amazon_Large_64', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001149', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_64/processed/partitions.txt')
+14: hostname: nid001329 rank: 14 size: 64
+52: Namespace(dataset='Amazon_Large_64', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001149', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_64/processed/partitions.txt')
+52: hostname: nid001952 rank: 52 size: 64
+44: Namespace(dataset='Amazon_Large_64', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001149', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_64/processed/partitions.txt')
+44: hostname: nid001685 rank: 44 size: 64
+ 4: Namespace(dataset='Amazon_Large_64', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001149', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_64/processed/partitions.txt')
+ 4: hostname: nid001168 rank: 4 size: 64
+21: Namespace(dataset='Amazon_Large_64', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001149', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_64/processed/partitions.txt')
+21: hostname: nid001364 rank: 21 size: 64
+13: Namespace(dataset='Amazon_Large_64', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001149', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_64/processed/partitions.txt')
+13: hostname: nid001329 rank: 13 size: 64
+53: Namespace(dataset='Amazon_Large_64', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001149', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_64/processed/partitions.txt')
+53: hostname: nid001952 rank: 53 size: 64
+55: Namespace(dataset='Amazon_Large_64', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001149', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_64/processed/partitions.txt')
+55: hostname: nid001952 rank: 55 size: 64
+43: Namespace(dataset='Amazon_Large_64', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001149', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_64/processed/partitions.txt')
+43: hostname: nid001589 rank: 43 size: 64
+26: Namespace(dataset='Amazon_Large_64', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001149', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_64/processed/partitions.txt')
+26: hostname: nid001453 rank: 26 size: 64
+20: Namespace(dataset='Amazon_Large_64', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001149', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_64/processed/partitions.txt')
+20: hostname: nid001364 rank: 20 size: 64
+45: Namespace(dataset='Amazon_Large_64', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001149', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_64/processed/partitions.txt')
+45: hostname: nid001685 rank: 45 size: 64
+15: Namespace(dataset='Amazon_Large_64', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001149', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_64/processed/partitions.txt')
+15: hostname: nid001329 rank: 15 size: 64
+48: Namespace(dataset='Amazon_Large_64', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001149', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_64/processed/partitions.txt')
+48: hostname: nid001936 rank: 48 size: 64
+51: Namespace(dataset='Amazon_Large_64', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001149', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_64/processed/partitions.txt')
+51: hostname: nid001936 rank: 51 size: 64
+46: Namespace(dataset='Amazon_Large_64', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001149', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_64/processed/partitions.txt')
+46: hostname: nid001685 rank: 46 size: 64
+60: Namespace(dataset='Amazon_Large_64', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001149', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_64/processed/partitions.txt')
+60: hostname: nid003912 rank: 60 size: 64
+32: Namespace(dataset='Amazon_Large_64', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001149', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_64/processed/partitions.txt')
+32: hostname: nid001524 rank: 32 size: 64
+47: Namespace(dataset='Amazon_Large_64', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001149', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_64/processed/partitions.txt')
+47: hostname: nid001685 rank: 47 size: 64
+61: Namespace(dataset='Amazon_Large_64', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001149', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_64/processed/partitions.txt')
+61: hostname: nid003912 rank: 61 size: 64
+33: Namespace(dataset='Amazon_Large_64', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001149', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_64/processed/partitions.txt')
+33: hostname: nid001524 rank: 33 size: 64
+62: Namespace(dataset='Amazon_Large_64', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001149', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_64/processed/partitions.txt')
+62: hostname: nid003912 rank: 62 size: 64
+35: Namespace(dataset='Amazon_Large_64', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001149', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_64/processed/partitions.txt')
+35: hostname: nid001524 rank: 35 size: 64
+24: Namespace(dataset='Amazon_Large_64', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001149', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_64/processed/partitions.txt')
+24: hostname: nid001453 rank: 24 size: 64
+40: Namespace(dataset='Amazon_Large_64', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001149', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_64/processed/partitions.txt')
+40: hostname: nid001589 rank: 40 size: 64
+ 5: Namespace(dataset='Amazon_Large_64', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001149', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_64/processed/partitions.txt')
+ 5: hostname: nid001168 rank: 5 size: 64
+41: Namespace(dataset='Amazon_Large_64', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001149', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_64/processed/partitions.txt')
+41: hostname: nid001589 rank: 41 size: 64
+34: Namespace(dataset='Amazon_Large_64', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001149', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_64/processed/partitions.txt')
+34: hostname: nid001524 rank: 34 size: 64
+ 8: Namespace(dataset='Amazon_Large_64', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001149', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_64/processed/partitions.txt')
+ 8: hostname: nid001193 rank: 8 size: 64
+38: Namespace(dataset='Amazon_Large_64', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001149', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_64/processed/partitions.txt')
+38: hostname: nid001561 rank: 38 size: 64
+23: Namespace(dataset='Amazon_Large_64', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001149', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_64/processed/partitions.txt')
+23: hostname: nid001364 rank: 23 size: 64
+58: Namespace(dataset='Amazon_Large_64', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001149', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_64/processed/partitions.txt')
+58: hostname: nid003909 rank: 58 size: 64
+29: Namespace(dataset='Amazon_Large_64', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001149', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_64/processed/partitions.txt')
+29: hostname: nid001460 rank: 29 size: 64
+30: Namespace(dataset='Amazon_Large_64', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001149', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_64/processed/partitions.txt')
+30: hostname: nid001460 rank: 30 size: 64
+31: Namespace(dataset='Amazon_Large_64', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001149', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_64/processed/partitions.txt')
+31: hostname: nid001460 rank: 31 size: 64
+28: Namespace(dataset='Amazon_Large_64', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001149', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_64/processed/partitions.txt')
+28: hostname: nid001460 rank: 28 size: 64
+ 9: Namespace(dataset='Amazon_Large_64', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001149', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_64/processed/partitions.txt')
+ 9: hostname: nid001193 rank: 9 size: 64
+57: Namespace(dataset='Amazon_Large_64', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001149', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_64/processed/partitions.txt')
+57: hostname: nid003909 rank: 57 size: 64
+59: Namespace(dataset='Amazon_Large_64', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001149', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_64/processed/partitions.txt')
+59: hostname: nid003909 rank: 59 size: 64
+37: Namespace(dataset='Amazon_Large_64', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001149', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_64/processed/partitions.txt')
+37: hostname: nid001561 rank: 37 size: 64
+39: Namespace(dataset='Amazon_Large_64', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001149', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_64/processed/partitions.txt')
+39: hostname: nid001561 rank: 39 size: 64
+56: Namespace(dataset='Amazon_Large_64', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001149', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_64/processed/partitions.txt')
+56: hostname: nid003909 rank: 56 size: 64
+ 1: Namespace(dataset='Amazon_Large_64', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001149', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_64/processed/partitions.txt')
+ 1: hostname: nid001149 rank: 1 size: 64
+36: Namespace(dataset='Amazon_Large_64', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001149', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_64/processed/partitions.txt')
+36: hostname: nid001561 rank: 36 size: 64
+ 6: Namespace(dataset='Amazon_Large_64', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001149', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_64/processed/partitions.txt')
+ 6: hostname: nid001168 rank: 6 size: 64
+11: Namespace(dataset='Amazon_Large_64', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001149', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_64/processed/partitions.txt')
+11: hostname: nid001193 rank: 11 size: 64
+16: Namespace(dataset='Amazon_Large_64', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001149', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_64/processed/partitions.txt')
+16: hostname: nid001341 rank: 16 size: 64
+19: Namespace(dataset='Amazon_Large_64', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001149', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_64/processed/partitions.txt')
+19: hostname: nid001341 rank: 19 size: 64
+42: Namespace(dataset='Amazon_Large_64', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001149', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_64/processed/partitions.txt')
+42: hostname: nid001589 rank: 42 size: 64
+25: Namespace(dataset='Amazon_Large_64', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001149', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_64/processed/partitions.txt')
+25: hostname: nid001453 rank: 25 size: 64
+ 0: 0
+ 0: Loading coo...
+17: Namespace(dataset='Amazon_Large_64', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001149', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_64/processed/partitions.txt')
+17: hostname: nid001341 rank: 17 size: 64
+18: Namespace(dataset='Amazon_Large_64', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001149', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_64/processed/partitions.txt')
+18: hostname: nid001341 rank: 18 size: 64
+63: Namespace(dataset='Amazon_Large_64', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001149', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_64/processed/partitions.txt')
+63: hostname: nid003912 rank: 63 size: 64
+27: Namespace(dataset='Amazon_Large_64', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001149', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_64/processed/partitions.txt')
+27: hostname: nid001453 rank: 27 size: 64
+ 2: Namespace(dataset='Amazon_Large_64', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001149', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_64/processed/partitions.txt')
+ 2: hostname: nid001149 rank: 2 size: 64
+12: Namespace(dataset='Amazon_Large_64', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001149', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_64/processed/partitions.txt')
+12: hostname: nid001329 rank: 12 size: 64
+ 3: Namespace(dataset='Amazon_Large_64', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001149', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_64/processed/partitions.txt')
+ 3: hostname: nid001149 rank: 3 size: 64
+49: Namespace(dataset='Amazon_Large_64', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001149', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_64/processed/partitions.txt')
+49: hostname: nid001936 rank: 49 size: 64
+10: Namespace(dataset='Amazon_Large_64', dropout=0.5, gpu=4, lr=0.01, n_epochs=100, n_hidden=16, n_layers=1, weight_decay=0.0, aggregator_type='gcn', world_size=-1, rank=-1, dist_url='env://', dist_backend='nccl', hostname='nid001149', normalize=False, partitioning='ONED', timers=True, partitions='/pscratch/sd/j/jinimukh/Amazon_Large_64/processed/partitions.txt')
+10: hostname: nid001193 rank: 10 size: 64
+ 1: 1
+ 1: Loading coo...
+26: 2
+26: Loading coo...
+21: 1
+21: Loading coo...
+54: 2
+54: Loading coo...
+14: 2
+14: Loading coo...
+43: 3
+43: Loading coo...
+24: 0
+24: Loading coo...
+ 4: 0
+ 4: Loading coo...
+25: 1
+25: Loading coo...
+ 2: 2
+ 2: Loading coo...
+44: 0
+44: Loading coo...
+27: 3
+27: Loading coo...
+13: 1
+13: Loading coo...
+22: 2
+22: Loading coo...
+ 3: 3
+ 3: Loading coo...
+15: 3
+15: Loading coo...
+20: 0
+20: Loading coo...
+ 7: 3
+ 7: Loading coo...
+32: 0
+32: Loading coo...
+ 9: 1
+ 9: Loading coo...
+60: 0
+60: Loading coo...
+12: 0
+12: Loading coo...
+23: 3
+23: Loading coo...
+52: 0
+52: Loading coo...
+41: 1
+41: Loading coo...
+ 5: 1
+ 5: Loading coo...
+53: 1
+53: Loading coo...
+ 6: 2
+ 6: Loading coo...
+62: 2
+62: Loading coo...
+ 8: 0
+ 8: Loading coo...
+55: 3
+55: Loading coo...
+45: 1
+45: Loading coo...
+38: 2
+38: Loading coo...
+50: 2
+50: Loading coo...
+40: 0
+40: Loading coo...
+42: 2
+42: Loading coo...
+61: 1
+61: Loading coo...
+46: 2
+46: Loading coo...
+63: 3
+63: Loading coo...
+11: 3
+11: Loading coo...
+47: 3
+47: Loading coo...
+10: 2
+10: Loading coo...
+35: 3
+35: Loading coo...
+33: 1
+33: Loading coo...
+57: 1
+57: Loading coo...
+16: 0
+16: Loading coo...
+34: 2
+34: Loading coo...
+51: 3
+51: Loading coo...
+37: 1
+37: Loading coo...
+48: 0
+48: Loading coo...
+39: 3
+39: Loading coo...
+30: 2
+30: Loading coo...
+49: 1
+49: Loading coo...
+36: 0
+36: Loading coo...
+58: 2
+58: Loading coo...
+19: 3
+19: Loading coo...
+59: 3
+59: Loading coo...
+17: 1
+17: Loading coo...
+56: 0
+56: Loading coo...
+18: 2
+18: Loading coo...
+28: 0
+28: Loading coo...
+31: 3
+31: Loading coo...
+29: 1
+29: Loading coo...
+53: Done loading coo
+54: Done loading coo
+55: Done loading coo
+52: Done loading coo
+61: Done loading coo
+62: Done loading coo
+63: Done loading coo
+60: Done loading coo
+27: Done loading coo
+24: Done loading coo
+25: Done loading coo
+26: Done loading coo
+21: Done loading coo
+22: Done loading coo
+20: Done loading coo
+23: Done loading coo
+44: Done loading coo
+45: Done loading coo
+47: Done loading coo
+46: Done loading coo
+ 1: Done loading coo
+ 2: Done loading coo
+ 3: Done loading coo
+ 0: Done loading coo
+49: Done loading coo
+50: Done loading coo
+51: Done loading coo
+48: Done loading coo
+32: Done loading coo
+34: Done loading coo
+35: Done loading coo
+33: Done loading coo
+56: Done loading coo
+58: Done loading coo
+59: Done loading coo
+57: Done loading coo
+ 8: Done loading coo
+ 9: Done loading coo
+10: Done loading coo
+11: Done loading coo
+28: Done loading coo
+29: Done loading coo
+30: Done loading coo
+31: Done loading coo
+40: Done loading coo
+41: Done loading coo
+43: Done loading coo
+42: Done loading coo
+ 4: Done loading coo
+ 6: Done loading coo
+ 7: Done loading coo
+ 5: Done loading coo
+37: Done loading coo
+38: Done loading coo
+39: Done loading coo
+36: Done loading coo
+12: Done loading coo
+13: Done loading coo
+14: Done loading coo
+15: Done loading coo
+19: Done loading coo
+17: Done loading coo
+18: Done loading coo
+16: Done loading coo
+48: 446702
+48: 431334
+48: 439527
+48: 456681
+48: 421122
+48: 437476
+48: 428280
+48: 432710
+48: 441444
+48: 456034
+48: 444362
+48: 438682
+48: 462103
+48: 480240
+48: 453501
+48: 454621
+48: 444392
+48: 461331
+48: 435518
+48: 447733
+48: 436863
+48: 448853
+48: 444245
+48: 437821
+48: 437453
+48: 454597
+48: 422619
+48: 439135
+48: 438687
+48: 455063
+48: 463837
+48: 456673
+48: partitioning...
+21: 446702
+21: 431334
+21: 439527
+21: 456681
+21: 421122
+21: 437476
+21: 428280
+21: 432710
+21: 441444
+21: 456034
+21: 444362
+21: 438682
+21: 462103
+21: 480240
+21: 453501
+21: 454621
+21: 444392
+21: 461331
+21: 435518
+21: 447733
+21: 436863
+21: 448853
+21: 444245
+21: 437821
+21: 437453
+21: 454597
+21: 422619
+21: 439135
+21: 438687
+21: 455063
+21: 463837
+21: 456673
+21: partitioning...
+49: 446702
+49: 431334
+49: 439527
+49: 456681
+49: 421122
+49: 437476
+49: 428280
+49: 432710
+49: 441444
+49: 456034
+49: 444362
+49: 438682
+49: 462103
+49: 480240
+49: 453501
+49: 454621
+49: 444392
+49: 461331
+49: 435518
+49: 447733
+49: 436863
+49: 448853
+49: 444245
+49: 437821
+49: 437453
+49: 454597
+49: 422619
+49: 439135
+49: 438687
+49: 455063
+49: 463837
+49: 456673
+49: partitioning...
+50: 446702
+50: 431334
+50: 439527
+50: 456681
+50: 421122
+50: 437476
+50: 428280
+50: 432710
+50: 441444
+50: 456034
+50: 444362
+50: 438682
+50: 462103
+50: 480240
+50: 453501
+50: 454621
+50: 444392
+50: 461331
+50: 435518
+50: 447733
+50: 436863
+50: 448853
+50: 444245
+50: 437821
+50: 437453
+50: 454597
+50: 422619
+50: 439135
+50: 438687
+50: 455063
+50: 463837
+50: 456673
+50: partitioning...
+46: 446702
+46: 431334
+46: 439527
+46: 456681
+46: 421122
+46: 437476
+46: 428280
+46: 432710
+46: 441444
+46: 456034
+46: 444362
+46: 438682
+46: 462103
+46: 480240
+46: 453501
+46: 454621
+46: 444392
+46: 461331
+46: 435518
+46: 447733
+46: 436863
+46: 448853
+46: 444245
+46: 437821
+46: 437453
+46: 454597
+46: 422619
+46: 439135
+46: 438687
+46: 455063
+46: 463837
+46: 456673
+46: partitioning...
+51: 446702
+51: 431334
+51: 439527
+51: 456681
+51: 421122
+51: 437476
+51: 428280
+51: 432710
+51: 441444
+51: 456034
+51: 444362
+51: 438682
+51: 462103
+51: 480240
+51: 453501
+51: 454621
+51: 444392
+51: 461331
+51: 435518
+51: 447733
+51: 436863
+51: 448853
+51: 444245
+51: 437821
+51: 437453
+51: 454597
+51: 422619
+51: 439135
+51: 438687
+51: 455063
+51: 463837
+51: 456673
+51: partitioning...
+47: 446702
+47: 431334
+47: 439527
+47: 456681
+47: 421122
+47: 437476
+47: 428280
+47: 432710
+47: 441444
+47: 456034
+47: 444362
+47: 438682
+47: 462103
+47: 480240
+47: 453501
+47: 454621
+47: 444392
+47: 461331
+47: 435518
+47: 447733
+47: 436863
+47: 448853
+47: 444245
+47: 437821
+47: 437453
+47: 454597
+47: 422619
+47: 439135
+47: 438687
+47: 455063
+47: 463837
+47: 456673
+47: partitioning...
+45: 446702
+45: 431334
+45: 439527
+45: 456681
+45: 421122
+45: 437476
+45: 428280
+45: 432710
+45: 441444
+45: 456034
+45: 444362
+45: 438682
+45: 462103
+45: 480240
+45: 453501
+45: 454621
+45: 444392
+45: 461331
+45: 435518
+45: 447733
+45: 436863
+45: 448853
+45: 444245
+45: 437821
+45: 437453
+45: 454597
+45: 422619
+45: 439135
+45: 438687
+45: 455063
+45: 463837
+45: 456673
+45: partitioning...
+44: 446702
+44: 431334
+44: 439527
+44: 456681
+44: 421122
+44: 437476
+44: 428280
+44: 432710
+44: 441444
+44: 456034
+44: 444362
+44: 438682
+44: 462103
+44: 480240
+44: 453501
+44: 454621
+44: 444392
+44: 461331
+44: 435518
+44: 447733
+44: 436863
+44: 448853
+44: 444245
+44: 437821
+44: 437453
+44: 454597
+44: 422619
+44: 439135
+44: 438687
+44: 455063
+44: 463837
+44: 456673
+44: partitioning...
+20: 446702
+20: 431334
+20: 439527
+20: 456681
+20: 421122
+20: 437476
+20: 428280
+20: 432710
+20: 441444
+20: 456034
+20: 444362
+20: 438682
+20: 462103
+20: 480240
+20: 453501
+20: 454621
+20: 444392
+20: 461331
+20: 435518
+20: 447733
+20: 436863
+20: 448853
+20: 444245
+20: 437821
+20: 437453
+20: 454597
+20: 422619
+20: 439135
+20: 438687
+20: 455063
+20: 463837
+20: 456673
+20: partitioning...
+52: 446702
+52: 431334
+52: 439527
+52: 456681
+52: 421122
+52: 437476
+52: 428280
+52: 432710
+52: 441444
+52: 456034
+52: 444362
+52: 438682
+52: 462103
+52: 480240
+52: 453501
+52: 454621
+52: 444392
+52: 461331
+52: 435518
+52: 447733
+52: 436863
+52: 448853
+52: 444245
+52: 437821
+52: 437453
+52: 454597
+52: 422619
+52: 439135
+52: 438687
+52: 455063
+52: 463837
+52: 456673
+52: partitioning...
+19: 446702
+19: 431334
+19: 439527
+19: 456681
+19: 421122
+19: 437476
+19: 428280
+19: 432710
+19: 441444
+19: 456034
+19: 444362
+19: 438682
+19: 462103
+19: 480240
+19: 453501
+19: 454621
+19: 444392
+19: 461331
+19: 435518
+19: 447733
+19: 436863
+19: 448853
+19: 444245
+19: 437821
+19: 437453
+19: 454597
+19: 422619
+19: 439135
+19: 438687
+19: 455063
+19: 463837
+19: 456673
+19: partitioning...
+23: 446702
+23: 431334
+23: 439527
+23: 456681
+23: 421122
+23: 437476
+23: 428280
+23: 432710
+23: 441444
+23: 456034
+23: 444362
+23: 438682
+23: 462103
+23: 480240
+23: 453501
+23: 454621
+23: 444392
+23: 461331
+23: 435518
+23: 447733
+23: 436863
+23: 448853
+23: 444245
+23: 437821
+23: 437453
+23: 454597
+23: 422619
+23: 439135
+23: 438687
+23: 455063
+23: 463837
+23: 456673
+23: partitioning...
+54: 446702
+54: 431334
+54: 439527
+54: 456681
+54: 421122
+54: 437476
+54: 428280
+54: 432710
+54: 441444
+54: 456034
+54: 444362
+54: 438682
+54: 462103
+54: 480240
+54: 453501
+54: 454621
+54: 444392
+54: 461331
+54: 435518
+54: 447733
+54: 436863
+54: 448853
+54: 444245
+54: 437821
+54: 437453
+54: 454597
+54: 422619
+54: 439135
+54: 438687
+54: 455063
+54: 463837
+54: 456673
+54: partitioning...
+41: 446702
+41: 431334
+41: 439527
+41: 456681
+41: 421122
+41: 437476
+41: 428280
+41: 432710
+41: 441444
+41: 456034
+41: 444362
+41: 438682
+41: 462103
+41: 480240
+41: 453501
+41: 454621
+41: 444392
+41: 461331
+41: 435518
+41: 447733
+41: 436863
+41: 448853
+41: 444245
+41: 437821
+41: 437453
+41: 454597
+41: 422619
+41: 439135
+41: 438687
+41: 455063
+41: 463837
+41: 456673
+41: partitioning...
+27: 446702
+27: 431334
+27: 439527
+27: 456681
+27: 421122
+27: 437476
+27: 428280
+27: 432710
+27: 441444
+27: 456034
+27: 444362
+27: 438682
+27: 462103
+27: 480240
+27: 453501
+27: 454621
+27: 444392
+27: 461331
+27: 435518
+27: 447733
+27: 436863
+27: 448853
+27: 444245
+27: 437821
+27: 437453
+27: 454597
+27: 422619
+27: 439135
+27: 438687
+27: 455063
+27: 463837
+27: 456673
+27: partitioning...
+40: 446702
+40: 431334
+40: 439527
+40: 456681
+40: 421122
+40: 437476
+40: 428280
+40: 432710
+40: 441444
+40: 456034
+40: 444362
+40: 438682
+40: 462103
+40: 480240
+40: 453501
+40: 454621
+40: 444392
+40: 461331
+40: 435518
+40: 447733
+40: 436863
+40: 448853
+40: 444245
+40: 437821
+40: 437453
+40: 454597
+40: 422619
+40: 439135
+40: 438687
+40: 455063
+40: 463837
+40: 456673
+40: partitioning...
+43: 446702
+43: 431334
+43: 439527
+43: 456681
+43: 421122
+43: 437476
+43: 428280
+43: 432710
+43: 441444
+43: 456034
+43: 444362
+43: 438682
+43: 462103
+43: 480240
+43: 453501
+43: 454621
+43: 444392
+43: 461331
+43: 435518
+43: 447733
+43: 436863
+43: 448853
+43: 444245
+43: 437821
+43: 437453
+43: 454597
+43: 422619
+43: 439135
+43: 438687
+43: 455063
+43: 463837
+43: 456673
+43: partitioning...
+22: 446702
+22: 431334
+22: 439527
+22: 456681
+22: 421122
+22: 437476
+22: 428280
+22: 432710
+22: 441444
+22: 456034
+22: 444362
+22: 438682
+22: 462103
+22: 480240
+22: 453501
+22: 454621
+22: 444392
+22: 461331
+22: 435518
+22: 447733
+22: 436863
+22: 448853
+22: 444245
+22: 437821
+22: 437453
+22: 454597
+22: 422619
+22: 439135
+22: 438687
+22: 455063
+22: 463837
+22: 456673
+22: partitioning...
+55: 446702
+55: 431334
+55: 439527
+55: 456681
+55: 421122
+55: 437476
+55: 428280
+55: 432710
+55: 441444
+55: 456034
+55: 444362
+55: 438682
+55: 462103
+55: 480240
+55: 453501
+55: 454621
+55: 444392
+55: 461331
+55: 435518
+55: 447733
+55: 436863
+55: 448853
+55: 444245
+55: 437821
+55: 437453
+55: 454597
+55: 422619
+55: 439135
+55: 438687
+55: 455063
+55: 463837
+55: 456673
+55: partitioning...
+25: 446702
+25: 431334
+25: 439527
+25: 456681
+25: 421122
+25: 437476
+25: 428280
+25: 432710
+25: 441444
+25: 456034
+25: 444362
+25: 438682
+25: 462103
+25: 480240
+25: 453501
+25: 454621
+25: 444392
+25: 461331
+25: 435518
+25: 447733
+25: 436863
+25: 448853
+25: 444245
+25: 437821
+25: 437453
+25: 454597
+25: 422619
+25: 439135
+25: 438687
+25: 455063
+25: 463837
+25: 456673
+25: partitioning...
+42: 446702
+42: 431334
+42: 439527
+42: 456681
+42: 421122
+42: 437476
+42: 428280
+42: 432710
+42: 441444
+42: 456034
+42: 444362
+42: 438682
+42: 462103
+42: 480240
+42: 453501
+42: 454621
+42: 444392
+42: 461331
+42: 435518
+42: 447733
+42: 436863
+42: 448853
+42: 444245
+42: 437821
+42: 437453
+42: 454597
+42: 422619
+42: 439135
+42: 438687
+42: 455063
+42: 463837
+42: 456673
+42: partitioning...
+16: 446702
+16: 431334
+16: 439527
+16: 456681
+16: 421122
+16: 437476
+16: 428280
+16: 432710
+16: 441444
+16: 456034
+16: 444362
+16: 438682
+16: 462103
+16: 480240
+16: 453501
+16: 454621
+16: 444392
+16: 461331
+16: 435518
+16: 447733
+16: 436863
+16: 448853
+16: 444245
+16: 437821
+16: 437453
+16: 454597
+16: 422619
+16: 439135
+16: 438687
+16: 455063
+16: 463837
+16: 456673
+16: partitioning...
+32: 446702
+32: 431334
+32: 439527
+32: 456681
+32: 421122
+32: 437476
+32: 428280
+32: 432710
+32: 441444
+32: 456034
+32: 444362
+32: 438682
+32: 462103
+32: 480240
+32: 453501
+32: 454621
+32: 444392
+32: 461331
+32: 435518
+32: 447733
+32: 436863
+32: 448853
+32: 444245
+32: 437821
+32: 437453
+32: 454597
+32: 422619
+32: 439135
+32: 438687
+32: 455063
+32: 463837
+32: 456673
+32: partitioning...
+35: 446702
+35: 431334
+35: 439527
+35: 456681
+35: 421122
+35: 437476
+35: 428280
+35: 432710
+35: 441444
+35: 456034
+35: 444362
+35: 438682
+35: 462103
+35: 480240
+35: 453501
+35: 454621
+35: 444392
+35: 461331
+35: 435518
+35: 447733
+35: 436863
+35: 448853
+35: 444245
+35: 437821
+35: 437453
+35: 454597
+35: 422619
+35: 439135
+35: 438687
+35: 455063
+35: 463837
+35: 456673
+35: partitioning...
+24: 446702
+24: 431334
+24: 439527
+24: 456681
+24: 421122
+24: 437476
+24: 428280
+24: 432710
+24: 441444
+24: 456034
+24: 444362
+24: 438682
+24: 462103
+24: 480240
+24: 453501
+24: 454621
+24: 444392
+24: 461331
+24: 435518
+24: 447733
+24: 436863
+24: 448853
+24: 444245
+24: 437821
+24: 437453
+24: 454597
+24: 422619
+24: 439135
+24: 438687
+24: 455063
+24: 463837
+24: 456673
+24: partitioning...
+17: 446702
+17: 431334
+17: 439527
+17: 456681
+17: 421122
+17: 437476
+17: 428280
+17: 432710
+17: 441444
+17: 456034
+17: 444362
+17: 438682
+17: 462103
+17: 480240
+17: 453501
+17: 454621
+17: 444392
+17: 461331
+17: 435518
+17: 447733
+17: 436863
+17: 448853
+17: 444245
+17: 437821
+17: 437453
+17: 454597
+17: 422619
+17: 439135
+17: 438687
+17: 455063
+17: 463837
+17: 456673
+17: partitioning...
+18: 446702
+18: 431334
+18: 439527
+18: 456681
+18: 421122
+18: 437476
+18: 428280
+18: 432710
+18: 441444
+18: 456034
+18: 444362
+18: 438682
+18: 462103
+18: 480240
+18: 453501
+18: 454621
+18: 444392
+18: 461331
+18: 435518
+18: 447733
+18: 436863
+18: 448853
+18: 444245
+18: 437821
+18: 437453
+18: 454597
+18: 422619
+18: 439135
+18: 438687
+18: 455063
+18: 463837
+18: 456673
+18: partitioning...
+53: 446702
+53: 431334
+53: 439527
+53: 456681
+53: 421122
+53: 437476
+53: 428280
+53: 432710
+53: 441444
+53: 456034
+53: 444362
+53: 438682
+53: 462103
+53: 480240
+53: 453501
+53: 454621
+53: 444392
+53: 461331
+53: 435518
+53: 447733
+53: 436863
+53: 448853
+53: 444245
+53: 437821
+53: 437453
+53: 454597
+53: 422619
+53: 439135
+53: 438687
+53: 455063
+53: 463837
+53: 456673
+53: partitioning...
+36: 446702
+36: 431334
+36: 439527
+36: 456681
+36: 421122
+36: 437476
+36: 428280
+36: 432710
+36: 441444
+36: 456034
+36: 444362
+36: 438682
+36: 462103
+36: 480240
+36: 453501
+36: 454621
+36: 444392
+36: 461331
+36: 435518
+36: 447733
+36: 436863
+36: 448853
+36: 444245
+36: 437821
+36: 437453
+36: 454597
+36: 422619
+36: 439135
+36: 438687
+36: 455063
+36: 463837
+36: 456673
+36: partitioning...
+37: 446702
+37: 431334
+37: 439527
+37: 456681
+37: 421122
+37: 437476
+37: 428280
+37: 432710
+37: 441444
+37: 456034
+37: 444362
+37: 438682
+37: 462103
+37: 480240
+37: 453501
+37: 454621
+37: 444392
+37: 461331
+37: 435518
+37: 447733
+37: 436863
+37: 448853
+37: 444245
+37: 437821
+37: 437453
+37: 454597
+37: 422619
+37: 439135
+37: 438687
+37: 455063
+37: 463837
+37: 456673
+37: partitioning...
+33: 446702
+33: 431334
+33: 439527
+33: 456681
+33: 421122
+33: 437476
+33: 428280
+33: 432710
+33: 441444
+33: 456034
+33: 444362
+33: 438682
+33: 462103
+33: 480240
+33: 453501
+33: 454621
+33: 444392
+33: 461331
+33: 435518
+33: 447733
+33: 436863
+33: 448853
+33: 444245
+33: 437821
+33: 437453
+33: 454597
+33: 422619
+33: 439135
+33: 438687
+33: 455063
+33: 463837
+33: 456673
+33: partitioning...
+10: 446702
+10: 431334
+10: 439527
+10: 456681
+10: 421122
+10: 437476
+10: 428280
+10: 432710
+10: 441444
+10: 456034
+10: 444362
+10: 438682
+10: 462103
+10: 480240
+10: 453501
+10: 454621
+10: 444392
+10: 461331
+10: 435518
+10: 447733
+10: 436863
+10: 448853
+10: 444245
+10: 437821
+10: 437453
+10: 454597
+10: 422619
+10: 439135
+10: 438687
+10: 455063
+10: 463837
+10: 456673
+10: partitioning...
+34: 446702
+34: 431334
+34: 439527
+34: 456681
+34: 421122
+34: 437476
+34: 428280
+34: 432710
+34: 441444
+34: 456034
+34: 444362
+34: 438682
+34: 462103
+34: 480240
+34: 453501
+34: 454621
+34: 444392
+34: 461331
+34: 435518
+34: 447733
+34: 436863
+34: 448853
+34: 444245
+34: 437821
+34: 437453
+34: 454597
+34: 422619
+34: 439135
+34: 438687
+34: 455063
+34: 463837
+34: 456673
+34: partitioning...
+11: 446702
+11: 431334
+11: 439527
+11: 456681
+11: 421122
+11: 437476
+11: 428280
+11: 432710
+11: 441444
+11: 456034
+11: 444362
+11: 438682
+11: 462103
+11: 480240
+11: 453501
+11: 454621
+11: 444392
+11: 461331
+11: 435518
+11: 447733
+11: 436863
+11: 448853
+11: 444245
+11: 437821
+11: 437453
+11: 454597
+11: 422619
+11: 439135
+11: 438687
+11: 455063
+11: 463837
+11: 456673
+11: partitioning...
+ 8: 446702
+ 8: 431334
+ 8: 439527
+ 8: 456681
+ 8: 421122
+ 8: 437476
+ 8: 428280
+ 8: 432710
+ 8: 441444
+ 8: 456034
+ 8: 444362
+ 8: 438682
+ 8: 462103
+ 8: 480240
+ 8: 453501
+ 8: 454621
+ 8: 444392
+ 8: 461331
+ 8: 435518
+ 8: 447733
+ 8: 436863
+ 8: 448853
+ 8: 444245
+ 8: 437821
+ 8: 437453
+ 8: 454597
+ 8: 422619
+ 8: 439135
+ 8: 438687
+ 8: 455063
+ 8: 463837
+ 8: 456673
+ 8: partitioning...
+ 1: 446702
+ 1: 431334
+ 1: 439527
+ 1: 456681
+ 1: 421122
+ 1: 437476
+ 1: 428280
+ 1: 432710
+ 1: 441444
+ 1: 456034
+ 1: 444362
+ 1: 438682
+ 1: 462103
+ 1: 480240
+ 1: 453501
+ 1: 454621
+ 1: 444392
+ 1: 461331
+ 1: 435518
+ 1: 447733
+ 1: 436863
+ 1: 448853
+ 1: 444245
+ 1: 437821
+ 1: 437453
+ 1: 454597
+ 1: 422619
+ 1: 439135
+ 1: 438687
+ 1: 455063
+ 1: 463837
+ 1: 456673
+ 1: partitioning...
+56: 446702
+56: 431334
+56: 439527
+56: 456681
+56: 421122
+56: 437476
+56: 428280
+56: 432710
+56: 441444
+56: 456034
+56: 444362
+56: 438682
+56: 462103
+56: 480240
+56: 453501
+56: 454621
+56: 444392
+56: 461331
+56: 435518
+56: 447733
+56: 436863
+56: 448853
+56: 444245
+56: 437821
+56: 437453
+56: 454597
+56: 422619
+56: 439135
+56: 438687
+56: 455063
+56: 463837
+56: 456673
+56: partitioning...
+58: 446702
+58: 431334
+58: 439527
+58: 456681
+58: 421122
+58: 437476
+58: 428280
+58: 432710
+58: 441444
+58: 456034
+58: 444362
+58: 438682
+58: 462103
+58: 480240
+58: 453501
+58: 454621
+58: 444392
+58: 461331
+58: 435518
+58: 447733
+58: 436863
+58: 448853
+58: 444245
+58: 437821
+58: 437453
+58: 454597
+58: 422619
+58: 439135
+58: 438687
+58: 455063
+58: 463837
+58: 456673
+58: partitioning...
+59: 446702
+59: 431334
+59: 439527
+59: 456681
+59: 421122
+59: 437476
+59: 428280
+59: 432710
+59: 441444
+59: 456034
+59: 444362
+59: 438682
+59: 462103
+59: 480240
+59: 453501
+59: 454621
+59: 444392
+59: 461331
+59: 435518
+59: 447733
+59: 436863
+59: 448853
+59: 444245
+59: 437821
+59: 437453
+59: 454597
+59: 422619
+59: 439135
+59: 438687
+59: 455063
+59: 463837
+59: 456673
+59: partitioning...
+26: 446702
+26: 431334
+26: 439527
+26: 456681
+26: 421122
+26: 437476
+26: 428280
+26: 432710
+26: 441444
+26: 456034
+26: 444362
+26: 438682
+26: 462103
+26: 480240
+26: 453501
+26: 454621
+26: 444392
+26: 461331
+26: 435518
+26: 447733
+26: 436863
+26: 448853
+26: 444245
+26: 437821
+26: 437453
+26: 454597
+26: 422619
+26: 439135
+26: 438687
+26: 455063
+26: 463837
+26: 456673
+26: partitioning...
+39: 446702
+39: 431334
+39: 439527
+39: 456681
+39: 421122
+39: 437476
+39: 428280
+39: 432710
+39: 441444
+39: 456034
+39: 444362
+39: 438682
+39: 462103
+39: 480240
+39: 453501
+39: 454621
+39: 444392
+39: 461331
+39: 435518
+39: 447733
+39: 436863
+39: 448853
+39: 444245
+39: 437821
+39: 437453
+39: 454597
+39: 422619
+39: 439135
+39: 438687
+39: 455063
+39: 463837
+39: 456673
+39: partitioning...
+ 2: 446702
+ 2: 431334
+ 2: 439527
+ 2: 456681
+ 2: 421122
+ 2: 437476
+ 2: 428280
+ 2: 432710
+ 2: 441444
+ 2: 456034
+ 2: 444362
+ 2: 438682
+ 2: 462103
+ 2: 480240
+ 2: 453501
+ 2: 454621
+ 2: 444392
+ 2: 461331
+ 2: 435518
+ 2: 447733
+ 2: 436863
+ 2: 448853
+ 2: 444245
+ 2: 437821
+ 2: 437453
+ 2: 454597
+ 2: 422619
+ 2: 439135
+ 2: 438687
+ 2: 455063
+ 2: 463837
+ 2: 456673
+ 2: partitioning...
+57: 446702
+57: 431334
+57: 439527
+57: 456681
+57: 421122
+57: 437476
+57: 428280
+57: 432710
+57: 441444
+57: 456034
+57: 444362
+57: 438682
+57: 462103
+57: 480240
+57: 453501
+57: 454621
+57: 444392
+57: 461331
+57: 435518
+57: 447733
+57: 436863
+57: 448853
+57: 444245
+57: 437821
+57: 437453
+57: 454597
+57: 422619
+57: 439135
+57: 438687
+57: 455063
+57: 463837
+57: 456673
+57: partitioning...
+ 9: 446702
+ 9: 431334
+ 9: 439527
+ 9: 456681
+ 9: 421122
+ 9: 437476
+ 9: 428280
+ 9: 432710
+ 9: 441444
+ 9: 456034
+ 9: 444362
+ 9: 438682
+ 9: 462103
+ 9: 480240
+ 9: 453501
+ 9: 454621
+ 9: 444392
+ 9: 461331
+ 9: 435518
+ 9: 447733
+ 9: 436863
+ 9: 448853
+ 9: 444245
+ 9: 437821
+ 9: 437453
+ 9: 454597
+ 9: 422619
+ 9: 439135
+ 9: 438687
+ 9: 455063
+ 9: 463837
+ 9: 456673
+ 9: partitioning...
+ 0: 446702
+ 0: 431334
+ 0: 439527
+ 0: 456681
+ 0: 421122
+ 0: 437476
+ 0: 428280
+ 0: 432710
+ 0: 441444
+ 0: 456034
+ 0: 444362
+ 0: 438682
+ 0: 462103
+ 0: 480240
+ 0: 453501
+ 0: 454621
+ 0: 444392
+ 0: 461331
+ 0: 435518
+ 0: 447733
+ 0: 436863
+ 0: 448853
+ 0: 444245
+ 0: 437821
+ 0: 437453
+ 0: 454597
+ 0: 422619
+ 0: 439135
+ 0: 438687
+ 0: 455063
+ 0: 463837
+ 0: 456673
+ 0: partitioning...
+12: 446702
+12: 431334
+12: 439527
+12: 456681
+12: 421122
+12: 437476
+12: 428280
+12: 432710
+12: 441444
+12: 456034
+12: 444362
+12: 438682
+12: 462103
+12: 480240
+12: 453501
+12: 454621
+12: 444392
+12: 461331
+12: 435518
+12: 447733
+12: 436863
+12: 448853
+12: 444245
+12: 437821
+12: 437453
+12: 454597
+12: 422619
+12: 439135
+12: 438687
+12: 455063
+12: 463837
+12: 456673
+12: partitioning...
+ 3: 446702
+ 3: 431334
+ 3: 439527
+ 3: 456681
+ 3: 421122
+ 3: 437476
+ 3: 428280
+ 3: 432710
+ 3: 441444
+ 3: 456034
+ 3: 444362
+ 3: 438682
+ 3: 462103
+ 3: 480240
+ 3: 453501
+ 3: 454621
+ 3: 444392
+ 3: 461331
+ 3: 435518
+ 3: 447733
+ 3: 436863
+ 3: 448853
+ 3: 444245
+ 3: 437821
+ 3: 437453
+ 3: 454597
+ 3: 422619
+ 3: 439135
+ 3: 438687
+ 3: 455063
+ 3: 463837
+ 3: 456673
+ 3: partitioning...
+13: 446702
+13: 431334
+13: 439527
+13: 456681
+13: 421122
+13: 437476
+13: 428280
+13: 432710
+13: 441444
+13: 456034
+13: 444362
+13: 438682
+13: 462103
+13: 480240
+13: 453501
+13: 454621
+13: 444392
+13: 461331
+13: 435518
+13: 447733
+13: 436863
+13: 448853
+13: 444245
+13: 437821
+13: 437453
+13: 454597
+13: 422619
+13: 439135
+13: 438687
+13: 455063
+13: 463837
+13: 456673
+13: partitioning...
+14: 446702
+14: 431334
+14: 439527
+14: 456681
+14: 421122
+14: 437476
+14: 428280
+14: 432710
+14: 441444
+14: 456034
+14: 444362
+14: 438682
+14: 462103
+14: 480240
+14: 453501
+14: 454621
+14: 444392
+14: 461331
+14: 435518
+14: 447733
+14: 436863
+14: 448853
+14: 444245
+14: 437821
+14: 437453
+14: 454597
+14: 422619
+14: 439135
+14: 438687
+14: 455063
+14: 463837
+14: 456673
+14: partitioning...
+15: 446702
+15: 431334
+15: 439527
+15: 456681
+15: 421122
+15: 437476
+15: 428280
+15: 432710
+15: 441444
+15: 456034
+15: 444362
+15: 438682
+15: 462103
+15: 480240
+15: 453501
+15: 454621
+15: 444392
+15: 461331
+15: 435518
+15: 447733
+15: 436863
+15: 448853
+15: 444245
+15: 437821
+15: 437453
+15: 454597
+15: 422619
+15: 439135
+15: 438687
+15: 455063
+15: 463837
+15: 456673
+15: partitioning...
+29: 446702
+29: 431334
+29: 439527
+29: 456681
+29: 421122
+29: 437476
+29: 428280
+29: 432710
+29: 441444
+29: 456034
+29: 444362
+29: 438682
+29: 462103
+29: 480240
+29: 453501
+29: 454621
+29: 444392
+29: 461331
+29: 435518
+29: 447733
+29: 436863
+29: 448853
+29: 444245
+29: 437821
+29: 437453
+29: 454597
+29: 422619
+29: 439135
+29: 438687
+29: 455063
+29: 463837
+29: 456673
+29: partitioning...
+28: 446702
+28: 431334
+28: 439527
+28: 456681
+28: 421122
+28: 437476
+28: 428280
+28: 432710
+28: 441444
+28: 456034
+28: 444362
+28: 438682
+28: 462103
+28: 480240
+28: 453501
+28: 454621
+28: 444392
+28: 461331
+28: 435518
+28: 447733
+28: 436863
+28: 448853
+28: 444245
+28: 437821
+28: 437453
+28: 454597
+28: 422619
+28: 439135
+28: 438687
+28: 455063
+28: 463837
+28: 456673
+28: partitioning...
+ 5: 446702
+ 5: 431334
+ 5: 439527
+ 5: 456681
+ 5: 421122
+ 5: 437476
+ 5: 428280
+ 5: 432710
+ 5: 441444
+ 5: 456034
+ 5: 444362
+ 5: 438682
+ 5: 462103
+ 5: 480240
+ 5: 453501
+ 5: 454621
+ 5: 444392
+ 5: 461331
+ 5: 435518
+ 5: 447733
+ 5: 436863
+ 5: 448853
+ 5: 444245
+ 5: 437821
+ 5: 437453
+ 5: 454597
+ 5: 422619
+ 5: 439135
+ 5: 438687
+ 5: 455063
+ 5: 463837
+ 5: 456673
+ 5: partitioning...
+61: 446702
+61: 431334
+61: 439527
+61: 456681
+61: 421122
+61: 437476
+61: 428280
+61: 432710
+61: 441444
+61: 456034
+61: 444362
+61: 438682
+61: 462103
+61: 480240
+61: 453501
+61: 454621
+61: 444392
+61: 461331
+61: 435518
+61: 447733
+61: 436863
+61: 448853
+61: 444245
+61: 437821
+61: 437453
+61: 454597
+61: 422619
+61: 439135
+61: 438687
+61: 455063
+61: 463837
+61: 456673
+61: partitioning...
+30: 446702
+30: 431334
+30: 439527
+30: 456681
+30: 421122
+30: 437476
+30: 428280
+30: 432710
+30: 441444
+30: 456034
+30: 444362
+30: 438682
+30: 462103
+30: 480240
+30: 453501
+30: 454621
+30: 444392
+30: 461331
+30: 435518
+30: 447733
+30: 436863
+30: 448853
+30: 444245
+30: 437821
+30: 437453
+30: 454597
+30: 422619
+30: 439135
+30: 438687
+30: 455063
+30: 463837
+30: 456673
+30: partitioning...
+62: 446702
+62: 431334
+62: 439527
+62: 456681
+62: 421122
+62: 437476
+62: 428280
+62: 432710
+62: 441444
+62: 456034
+62: 444362
+62: 438682
+62: 462103
+62: 480240
+62: 453501
+62: 454621
+62: 444392
+62: 461331
+62: 435518
+62: 447733
+62: 436863
+62: 448853
+62: 444245
+62: 437821
+62: 437453
+62: 454597
+62: 422619
+62: 439135
+62: 438687
+62: 455063
+62: 463837
+62: 456673
+62: partitioning...
+63: 446702
+63: 431334
+63: 439527
+63: 456681
+63: 421122
+63: 437476
+63: 428280
+63: 432710
+63: 441444
+63: 456034
+63: 444362
+63: 438682
+63: 462103
+63: 480240
+63: 453501
+63: 454621
+63: 444392
+63: 461331
+63: 435518
+63: 447733
+63: 436863
+63: 448853
+63: 444245
+63: 437821
+63: 437453
+63: 454597
+63: 422619
+63: 439135
+63: 438687
+63: 455063
+63: 463837
+63: 456673
+63: partitioning...
+ 6: 446702
+ 6: 431334
+ 6: 439527
+ 6: 456681
+ 6: 421122
+ 6: 437476
+ 6: 428280
+ 6: 432710
+ 6: 441444
+ 6: 456034
+ 6: 444362
+ 6: 438682
+ 6: 462103
+ 6: 480240
+ 6: 453501
+ 6: 454621
+ 6: 444392
+ 6: 461331
+ 6: 435518
+ 6: 447733
+ 6: 436863
+ 6: 448853
+ 6: 444245
+ 6: 437821
+ 6: 437453
+ 6: 454597
+ 6: 422619
+ 6: 439135
+ 6: 438687
+ 6: 455063
+ 6: 463837
+ 6: 456673
+ 6: partitioning...
+31: 446702
+31: 431334
+31: 439527
+31: 456681
+31: 421122
+31: 437476
+31: 428280
+31: 432710
+31: 441444
+31: 456034
+31: 444362
+31: 438682
+31: 462103
+31: 480240
+31: 453501
+31: 454621
+31: 444392
+31: 461331
+31: 435518
+31: 447733
+31: 436863
+31: 448853
+31: 444245
+31: 437821
+31: 437453
+31: 454597
+31: 422619
+31: 439135
+31: 438687
+31: 455063
+31: 463837
+31: 456673
+31: partitioning...
+ 7: 446702
+ 7: 431334
+ 7: 439527
+ 7: 456681
+ 7: 421122
+ 7: 437476
+ 7: 428280
+ 7: 432710
+ 7: 441444
+ 7: 456034
+ 7: 444362
+ 7: 438682
+ 7: 462103
+ 7: 480240
+ 7: 453501
+ 7: 454621
+ 7: 444392
+ 7: 461331
+ 7: 435518
+ 7: 447733
+ 7: 436863
+ 7: 448853
+ 7: 444245
+ 7: 437821
+ 7: 437453
+ 7: 454597
+ 7: 422619
+ 7: 439135
+ 7: 438687
+ 7: 455063
+ 7: 463837
+ 7: 456673
+ 7: partitioning...
+60: 446702
+60: 431334
+60: 439527
+60: 456681
+60: 421122
+60: 437476
+60: 428280
+60: 432710
+60: 441444
+60: 456034
+60: 444362
+60: 438682
+60: 462103
+60: 480240
+60: 453501
+60: 454621
+60: 444392
+60: 461331
+60: 435518
+60: 447733
+60: 436863
+60: 448853
+60: 444245
+60: 437821
+60: 437453
+60: 454597
+60: 422619
+60: 439135
+60: 438687
+60: 455063
+60: 463837
+60: 456673
+60: partitioning...
+ 4: 446702
+ 4: 431334
+ 4: 439527
+ 4: 456681
+ 4: 421122
+ 4: 437476
+ 4: 428280
+ 4: 432710
+ 4: 441444
+ 4: 456034
+ 4: 444362
+ 4: 438682
+ 4: 462103
+ 4: 480240
+ 4: 453501
+ 4: 454621
+ 4: 444392
+ 4: 461331
+ 4: 435518
+ 4: 447733
+ 4: 436863
+ 4: 448853
+ 4: 444245
+ 4: 437821
+ 4: 437453
+ 4: 454597
+ 4: 422619
+ 4: 439135
+ 4: 438687
+ 4: 455063
+ 4: 463837
+ 4: 456673
+ 4: partitioning...
+38: 446702
+38: 431334
+38: 439527
+38: 456681
+38: 421122
+38: 437476
+38: 428280
+38: 432710
+38: 441444
+38: 456034
+38: 444362
+38: 438682
+38: 462103
+38: 480240
+38: 453501
+38: 454621
+38: 444392
+38: 461331
+38: 435518
+38: 447733
+38: 436863
+38: 448853
+38: 444245
+38: 437821
+38: 437453
+38: 454597
+38: 422619
+38: 439135
+38: 438687
+38: 455063
+38: 463837
+38: 456673
+38: partitioning...
+54: Traceback (most recent call last):
+54:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 620, in <module>
+54:     main(args)
+54:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 454, in main
+54:     features_loc, g_loc, ampbyp = oned_partition(rank, size, inputs, adj_matrix, data, \
+54:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 135, in oned_partition
+54:     proc_node_count = vtx_indices[rank + 1] - vtx_indices[rank]
+54: IndexError: list index out of range
+45: Traceback (most recent call last):
+45:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 620, in <module>
+45:     main(args)
+45:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 454, in main
+45:     features_loc, g_loc, ampbyp = oned_partition(rank, size, inputs, adj_matrix, data, \
+45:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 135, in oned_partition
+45:     proc_node_count = vtx_indices[rank + 1] - vtx_indices[rank]
+45: IndexError: list index out of range
+53: Traceback (most recent call last):
+53:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 620, in <module>
+53:     main(args)
+53:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 454, in main
+53:     features_loc, g_loc, ampbyp = oned_partition(rank, size, inputs, adj_matrix, data, \
+53:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 135, in oned_partition
+53:     proc_node_count = vtx_indices[rank + 1] - vtx_indices[rank]
+53: IndexError: list index out of range
+59: Traceback (most recent call last):
+59:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 620, in <module>
+59:     main(args)
+59:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 454, in main
+59:     features_loc, g_loc, ampbyp = oned_partition(rank, size, inputs, adj_matrix, data, \
+59:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 135, in oned_partition
+59:     proc_node_count = vtx_indices[rank + 1] - vtx_indices[rank]
+59: IndexError: list index out of range
+43: Traceback (most recent call last):
+43:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 620, in <module>
+43:     main(args)
+43:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 454, in main
+43:     features_loc, g_loc, ampbyp = oned_partition(rank, size, inputs, adj_matrix, data, \
+43:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 135, in oned_partition
+43:     proc_node_count = vtx_indices[rank + 1] - vtx_indices[rank]
+43: IndexError: list index out of range
+58: Traceback (most recent call last):
+58:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 620, in <module>
+58:     main(args)
+58:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 454, in main
+58:     features_loc, g_loc, ampbyp = oned_partition(rank, size, inputs, adj_matrix, data, \
+58:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 135, in oned_partition
+58:     proc_node_count = vtx_indices[rank + 1] - vtx_indices[rank]
+58: IndexError: list index out of range
+35: Traceback (most recent call last):
+35:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 620, in <module>
+35:     main(args)
+35:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 454, in main
+35:     features_loc, g_loc, ampbyp = oned_partition(rank, size, inputs, adj_matrix, data, \
+35:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 135, in oned_partition
+35:     proc_node_count = vtx_indices[rank + 1] - vtx_indices[rank]
+35: IndexError: list index out of range
+55: Traceback (most recent call last):
+55:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 620, in <module>
+33: Traceback (most recent call last):
+55:     main(args)
+55:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 454, in main
+33:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 620, in <module>
+55:     features_loc, g_loc, ampbyp = oned_partition(rank, size, inputs, adj_matrix, data, \
+33:     main(args)
+55:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 135, in oned_partition
+33:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 454, in main
+55:     proc_node_count = vtx_indices[rank + 1] - vtx_indices[rank]
+33:     features_loc, g_loc, ampbyp = oned_partition(rank, size, inputs, adj_matrix, data, \
+55: IndexError: list index out of range
+33:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 135, in oned_partition
+33:     proc_node_count = vtx_indices[rank + 1] - vtx_indices[rank]
+33: IndexError: list index out of range
+51: Traceback (most recent call last):
+51:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 620, in <module>
+51:     main(args)
+51:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 454, in main
+51:     features_loc, g_loc, ampbyp = oned_partition(rank, size, inputs, adj_matrix, data, \
+51:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 135, in oned_partition
+51:     proc_node_count = vtx_indices[rank + 1] - vtx_indices[rank]
+51: IndexError: list index out of range
+32: Traceback (most recent call last):
+32:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 620, in <module>
+32:     main(args)
+32:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 454, in main
+32:     features_loc, g_loc, ampbyp = oned_partition(rank, size, inputs, adj_matrix, data, \
+32:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 135, in oned_partition
+32:     proc_node_count = vtx_indices[rank + 1] - vtx_indices[rank]
+32: IndexError: list index out of range
+46: Traceback (most recent call last):
+46:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 620, in <module>
+46:     main(args)
+46:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 454, in main
+46:     features_loc, g_loc, ampbyp = oned_partition(rank, size, inputs, adj_matrix, data, \
+46:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 135, in oned_partition
+46:     proc_node_count = vtx_indices[rank + 1] - vtx_indices[rank]
+46: IndexError: list index out of range
+56: Traceback (most recent call last):
+56:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 620, in <module>
+56:     main(args)
+56:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 454, in main
+56:     features_loc, g_loc, ampbyp = oned_partition(rank, size, inputs, adj_matrix, data, \
+56:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 135, in oned_partition
+56:     proc_node_count = vtx_indices[rank + 1] - vtx_indices[rank]
+56: IndexError: list index out of range
+60: Traceback (most recent call last):
+60:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 620, in <module>
+60:     main(args)
+60:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 454, in main
+60:     features_loc, g_loc, ampbyp = oned_partition(rank, size, inputs, adj_matrix, data, \
+60:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 135, in oned_partition
+60:     proc_node_count = vtx_indices[rank + 1] - vtx_indices[rank]
+60: IndexError: list index out of range
+62: Traceback (most recent call last):
+62:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 620, in <module>
+62:     main(args)
+62:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 454, in main
+62:     features_loc, g_loc, ampbyp = oned_partition(rank, size, inputs, adj_matrix, data, \
+62:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 135, in oned_partition
+62:     proc_node_count = vtx_indices[rank + 1] - vtx_indices[rank]
+62: IndexError: list index out of range
+34: Traceback (most recent call last):
+34:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 620, in <module>
+34:     main(args)
+34:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 454, in main
+34:     features_loc, g_loc, ampbyp = oned_partition(rank, size, inputs, adj_matrix, data, \
+34:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 135, in oned_partition
+34:     proc_node_count = vtx_indices[rank + 1] - vtx_indices[rank]
+34: IndexError: list index out of range
+52: Traceback (most recent call last):
+52:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 620, in <module>
+52:     main(args)
+52:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 454, in main
+52:     features_loc, g_loc, ampbyp = oned_partition(rank, size, inputs, adj_matrix, data, \
+52:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 135, in oned_partition
+52:     proc_node_count = vtx_indices[rank + 1] - vtx_indices[rank]
+52: IndexError: list index out of range
+48: Traceback (most recent call last):
+48:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 620, in <module>
+48:     main(args)
+48:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 454, in main
+48:     features_loc, g_loc, ampbyp = oned_partition(rank, size, inputs, adj_matrix, data, \
+48:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 135, in oned_partition
+48:     proc_node_count = vtx_indices[rank + 1] - vtx_indices[rank]
+48: IndexError: list index out of range
+38: Traceback (most recent call last):
+38:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 620, in <module>
+38:     main(args)
+38:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 454, in main
+38:     features_loc, g_loc, ampbyp = oned_partition(rank, size, inputs, adj_matrix, data, \
+38:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 135, in oned_partition
+38:     proc_node_count = vtx_indices[rank + 1] - vtx_indices[rank]
+38: IndexError: list index out of range
+39: Traceback (most recent call last):
+39:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 620, in <module>
+39:     main(args)
+39:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 454, in main
+39:     features_loc, g_loc, ampbyp = oned_partition(rank, size, inputs, adj_matrix, data, \
+39:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 135, in oned_partition
+39:     proc_node_count = vtx_indices[rank + 1] - vtx_indices[rank]
+39: IndexError: list index out of range
+49: Traceback (most recent call last):
+49:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 620, in <module>
+49:     main(args)
+49:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 454, in main
+49:     features_loc, g_loc, ampbyp = oned_partition(rank, size, inputs, adj_matrix, data, \
+49:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 135, in oned_partition
+49:     proc_node_count = vtx_indices[rank + 1] - vtx_indices[rank]
+49: IndexError: list index out of range
+40: Traceback (most recent call last):
+40:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 620, in <module>
+40:     main(args)
+40:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 454, in main
+40:     features_loc, g_loc, ampbyp = oned_partition(rank, size, inputs, adj_matrix, data, \
+40:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 135, in oned_partition
+40:     proc_node_count = vtx_indices[rank + 1] - vtx_indices[rank]
+40: IndexError: list index out of range
+42: Traceback (most recent call last):
+42:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 620, in <module>
+42:     main(args)
+42:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 454, in main
+42:     features_loc, g_loc, ampbyp = oned_partition(rank, size, inputs, adj_matrix, data, \
+42:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 135, in oned_partition
+42:     proc_node_count = vtx_indices[rank + 1] - vtx_indices[rank]
+42: IndexError: list index out of range
+36: Traceback (most recent call last):
+36:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 620, in <module>
+36:     main(args)
+36:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 454, in main
+36:     features_loc, g_loc, ampbyp = oned_partition(rank, size, inputs, adj_matrix, data, \
+36:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 135, in oned_partition
+36:     proc_node_count = vtx_indices[rank + 1] - vtx_indices[rank]
+36: IndexError: list index out of range
+50: Traceback (most recent call last):
+50:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 620, in <module>
+50:     main(args)
+50:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 454, in main
+50:     features_loc, g_loc, ampbyp = oned_partition(rank, size, inputs, adj_matrix, data, \
+50:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 135, in oned_partition
+50:     proc_node_count = vtx_indices[rank + 1] - vtx_indices[rank]
+50: IndexError: list index out of range
+63: Traceback (most recent call last):
+57: Traceback (most recent call last):
+63:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 620, in <module>
+57:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 620, in <module>
+63:     main(args)
+57:     main(args)
+63:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 454, in main
+57:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 454, in main
+63:     features_loc, g_loc, ampbyp = oned_partition(rank, size, inputs, adj_matrix, data, \
+63:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 135, in oned_partition
+57:     features_loc, g_loc, ampbyp = oned_partition(rank, size, inputs, adj_matrix, data, \
+63:     proc_node_count = vtx_indices[rank + 1] - vtx_indices[rank]
+57:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 135, in oned_partition
+63: IndexError: list index out of range
+57:     proc_node_count = vtx_indices[rank + 1] - vtx_indices[rank]
+57: IndexError: list index out of range
+47: Traceback (most recent call last):
+47:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 620, in <module>
+47:     main(args)
+47:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 454, in main
+47:     features_loc, g_loc, ampbyp = oned_partition(rank, size, inputs, adj_matrix, data, \
+47:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 135, in oned_partition
+47:     proc_node_count = vtx_indices[rank + 1] - vtx_indices[rank]
+47: IndexError: list index out of range
+61: Traceback (most recent call last):
+61:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 620, in <module>
+61:     main(args)
+61:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 454, in main
+61:     features_loc, g_loc, ampbyp = oned_partition(rank, size, inputs, adj_matrix, data, \
+61:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 135, in oned_partition
+61:     proc_node_count = vtx_indices[rank + 1] - vtx_indices[rank]
+61: IndexError: list index out of range
+37: Traceback (most recent call last):
+37:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 620, in <module>
+37:     main(args)
+37:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 454, in main
+37:     features_loc, g_loc, ampbyp = oned_partition(rank, size, inputs, adj_matrix, data, \
+37:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 135, in oned_partition
+37:     proc_node_count = vtx_indices[rank + 1] - vtx_indices[rank]
+37: IndexError: list index out of range
+44: Traceback (most recent call last):
+44:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 620, in <module>
+44:     main(args)
+44:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 454, in main
+44:     features_loc, g_loc, ampbyp = oned_partition(rank, size, inputs, adj_matrix, data, \
+44:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 135, in oned_partition
+44:     proc_node_count = vtx_indices[rank + 1] - vtx_indices[rank]
+44: IndexError: list index out of range
+41: Traceback (most recent call last):
+41:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 620, in <module>
+41:     main(args)
+41:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 454, in main
+41:     features_loc, g_loc, ampbyp = oned_partition(rank, size, inputs, adj_matrix, data, \
+41:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 135, in oned_partition
+41:     proc_node_count = vtx_indices[rank + 1] - vtx_indices[rank]
+41: IndexError: list index out of range
+srun: error: nid001952: task 52: Exited with exit code 1
+srun: launch/slurm: _step_signal: Terminating StepId=6234293.0
+ 0: slurmstepd: error: *** STEP 6234293.0 ON nid001149 CANCELLED AT 2023-03-20T03:26:56 ***
+srun: error: nid003909: task 59: Exited with exit code 1
+srun: error: nid001685: tasks 45-46: Exited with exit code 1
+srun: error: nid001524: task 35: Exited with exit code 1
+srun: error: nid001936: task 51: Exited with exit code 1
+srun: error: nid001589: tasks 42-43: Exited with exit code 1
+srun: error: nid003912: task 62: Exited with exit code 1
+srun: error: nid001685: task 47: Exited with exit code 1
+srun: error: nid001561: task 38: Exited with exit code 1
+srun: error: nid001589: task 40: Exited with exit code 1
+srun: error: nid001952: tasks 54-55: Exited with exit code 1
+srun: error: nid001364: task 20: Terminated
+srun: error: nid001341: task 16: Terminated
+srun: error: nid001193: task 10: Terminated
+srun: error: nid001149: task 3: Terminated
+srun: error: nid003909: tasks 57-58: Exited with exit code 1
+srun: error: nid001329: tasks 12,15: Terminated
+srun: error: nid001168: task 5: Terminated
+srun: error: nid001453: task 27: Terminated
+srun: error: nid001524: tasks 32-33: Exited with exit code 1
+srun: error: nid001936: tasks 49-50: Exited with exit code 1
+srun: error: nid001460: task 28: Terminated
+srun: error: nid003912: tasks 60,63: Exited with exit code 1
+srun: error: nid001561: tasks 36,39: Exited with exit code 1
+srun: error: nid001193: tasks 8-9: Terminated
+srun: error: nid001341: tasks 17,19: Terminated
+srun: error: nid001168: tasks 4,7: Terminated
+srun: error: nid001364: tasks 22-23: Terminated
+srun: error: nid001453: tasks 24-25: Terminated
+srun: error: nid001952: task 53: Exited with exit code 1
+srun: error: nid001460: tasks 30-31: Terminated
+srun: error: nid001149: tasks 1-2: Terminated
+srun: error: nid001329: task 13: Terminated
+srun: error: nid001685: task 44: Exited with exit code 1
+srun: error: nid003909: task 56: Exited with exit code 1
+srun: error: nid001524: task 34: Exited with exit code 1
+srun: error: nid001936: task 48: Exited with exit code 1
+srun: error: nid003912: task 61: Exited with exit code 1
+srun: error: nid001561: task 37: Exited with exit code 1
+srun: error: nid001589: task 41: Terminated
+srun: error: nid001453: task 26: Terminated
+srun: error: nid001341: task 18: Terminated
+srun: error: nid001364: task 21: Terminated
+srun: error: nid001168: task 6: Terminated
+srun: error: nid001193: task 11: Terminated
+srun: error: nid001329: task 14: Terminated
+srun: error: nid001460: task 29: Terminated
+srun: error: nid001149: task 0: Terminated
+srun: Force Terminated StepId=6234293.0

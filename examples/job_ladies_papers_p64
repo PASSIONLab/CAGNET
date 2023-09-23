@@ -1,0 +1,21 @@
+#!/bin/bash
+#SBATCH --qos=regular
+#SBATCH --time=02:00:00
+#SBATCH --nodes=16
+#SBATCH --gpus=64
+#SBATCH --ntasks-per-node=4
+#SBATCH --constraint=gpu
+#SBATCH --account=m1982_g
+
+hostname=$(scontrol show hostnames | head -n 1)
+echo $hostname
+
+# ogbn-papers100M
+srun -l -n 64 --cpus-per-task 32 --ntasks-per-node 4 --gpus-per-node 4 python gcn_15d.py --dataset ogbn-papers100M --batch-size 256 --samp-num 256 --n-bulkmb 4715 --replication 1 --sample-method ladies --timing --hostname $hostname &> tmp_papers_ladies_bs256sn256_mb4715_p64c1_semibulk4.out
+
+srun -l -n 64 --cpus-per-task 32 --ntasks-per-node 4 --gpus-per-node 4 python gcn_15d.py --dataset ogbn-papers100M --batch-size 256 --samp-num 256 --n-bulkmb 4715 --replication 2 --sample-method ladies --timing --hostname $hostname &> tmp_papers_ladies_bs256sn256_mb4715_p64c2_semibulk4.out
+
+srun -l -n 64 --cpus-per-task 32 --ntasks-per-node 4 --gpus-per-node 4 python gcn_15d.py --dataset ogbn-papers100M --batch-size 256 --samp-num 256 --n-bulkmb 4715 --replication 4 --sample-method ladies --timing --hostname $hostname &> tmp_papers_ladies_bs256sn256_mb4715_p64c4_semibulk4.out
+
+srun -l -n 64 --cpus-per-task 32 --ntasks-per-node 4 --gpus-per-node 4 python gcn_15d.py --dataset ogbn-papers100M --batch-size 256 --samp-num 256 --n-bulkmb 4715 --replication 8 --sample-method ladies --timing --hostname $hostname &> tmp_papers_ladies_bs256sn256_mb4715_p64c8_semibulk4.out
+

@@ -1,0 +1,42 @@
+srun: Warning: can't run 4 processes on 16 nodes, setting nnodes to 4
+0: Traceback (most recent call last):
+0:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 20, in <module>
+0:     from cagnet.nn.conv import GCNConv
+0:   File "/global/homes/j/jinimukh/CAGNET/cagnet/nn/conv/__init__.py", line 1, in <module>
+0:     from .gcn_conv import GCNConv
+0:   File "/global/homes/j/jinimukh/CAGNET/cagnet/nn/conv/gcn_conv.py", line 118
+0:     """commenting out spmm call
+0:        ^
+0: SyntaxError: invalid syntax
+1: Traceback (most recent call last):
+1:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 20, in <module>
+1:     from cagnet.nn.conv import GCNConv
+1:   File "/global/homes/j/jinimukh/CAGNET/cagnet/nn/conv/__init__.py", line 1, in <module>
+1:     from .gcn_conv import GCNConv
+1:   File "/global/homes/j/jinimukh/CAGNET/cagnet/nn/conv/gcn_conv.py", line 118
+1:     """commenting out spmm call
+1:        ^
+1: SyntaxError: invalid syntax
+2: Traceback (most recent call last):
+2:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 20, in <module>
+2:     from cagnet.nn.conv import GCNConv
+2:   File "/global/homes/j/jinimukh/CAGNET/cagnet/nn/conv/__init__.py", line 1, in <module>
+2:     from .gcn_conv import GCNConv
+2:   File "/global/homes/j/jinimukh/CAGNET/cagnet/nn/conv/gcn_conv.py", line 118
+2:     """commenting out spmm call
+2:        ^
+2: SyntaxError: invalid syntax
+3: Traceback (most recent call last):
+3:   File "/global/u2/j/jinimukh/CAGNET/examples/gcn_1d.py", line 20, in <module>
+3:     from cagnet.nn.conv import GCNConv
+3:   File "/global/homes/j/jinimukh/CAGNET/cagnet/nn/conv/__init__.py", line 1, in <module>
+3:     from .gcn_conv import GCNConv
+3:   File "/global/homes/j/jinimukh/CAGNET/cagnet/nn/conv/gcn_conv.py", line 118
+3:     """commenting out spmm call
+3:        ^
+3: SyntaxError: invalid syntax
+srun: error: nid008472: task 0: Exited with exit code 1
+srun: launch/slurm: _step_signal: Terminating StepId=6053236.0
+srun: error: nid008473: task 1: Exited with exit code 1
+srun: error: nid008477: task 3: Exited with exit code 1
+srun: error: nid008476: task 2: Exited with exit code 1
