@@ -727,32 +727,28 @@ def dist_saspgemm15D(mata, matb, replication, rank, size, row_groups, col_groups
             #     matc += matc_chunk
             if mata.layout == torch.sparse_csr and name == "prob" and alg == "sage":
                 start_time(start_inner_timer)
-                mata_recv = torch.sparse_csr_tensor(mata_chunk_crows, mata_chunk_cols, mata_chunk_values,
-                                                        size=(mata.size(0), chunk_col_size))
+                # mata_recv = torch.sparse_csr_tensor(mata_chunk_crows, mata_chunk_cols, mata_chunk_values,
+                #                                         size=(mata.size(0), chunk_col_size))
                 matb_recv = sparse_coo_tensor_gpu(matb_recv_indices, matb_recv_values.float(),
                                                         torch.Size([chunk_col_size, matb.size(1)]))
                 matb_recv = matb_recv.to_sparse_csr()
                 stop_time_add(start_inner_timer, stop_inner_timer, timing_dict, f"spgemm-loc-csrinst-{name}")
 
 
-                start_time(start_inner_timer)
-                # mata_recv = mata_recv.to_sparse_coo()
-                # matb_recv = matb_recv.to_sparse_coo()
-                stop_time_add(start_inner_timer, stop_inner_timer, timing_dict, f"spgemm-loc-csr2coo-{name}")
 
-                # matc += torch.mm(mata_recv, matb_recv)
                 start_time(start_inner_timer)
                 # matc_chunk_indices, matc_chunk_values = torch_sparse.spspmm(mata_recv._indices(), \
                 #                                             mata_recv._values().float(), matb_recv_indices, \
                 #                                             matb_recv_values.float(), mata.size(0), \
                 #                                             chunk_col_size, matb.size(1), coalesced=True)
-                matc_chunk = nsparse_spgemm(mata_recv.crow_indices().int(), \
-                                        mata_recv.col_indices().int(), \
-                                        mata_recv.values().float(), \
+                # print(f"mata_nnz: {mata_chunk_values.size()} matb_nnz: {matb_recv._nnz()} dims: {mata.size(0)} {chunk_col_size} {matb_recv.size(1)}", flush=True)
+                matc_chunk = nsparse_spgemm(mata_chunk_crows.int(), \
+                                        mata_chunk_cols.int(), \
+                                        mata_chunk_values.float(), \
                                         matb_recv.crow_indices().int(), \
                                         matb_recv.col_indices().int(), \
                                         matb_recv.values().float(), \
-                                        mata_recv.size(0), mata_recv.size(1), matb_recv.size(1))
+                                        mata.size(0), chunk_col_size, matb_recv.size(1))
                 matc_chunk_crows = matc_chunk[0]
                 matc_chunk_cols = matc_chunk[1]
                 matc_chunk_values = matc_chunk[2]
@@ -766,7 +762,7 @@ def dist_saspgemm15D(mata, matb, replication, rank, size, row_groups, col_groups
                 matc_row_lens = matc_chunk_crows[1:] - matc_chunk_crows[:-1]
                 lt_zero_mask = matc_row_lens < 0
                 matc_chunk_rows = torch.repeat_interleave(
-                                    torch.arange(0, mata_recv.size(0), device=mata_recv.device), 
+                                    torch.arange(0, mata.size(0), device=mata.device), 
                                     matc_row_lens)
                 matc_chunk_indices = torch.stack((matc_chunk_rows, matc_chunk_cols))
 
@@ -1278,7 +1274,7 @@ def select(next_frontier, adj_matrix, batches, sa_masks, nnz, \
         batches_select = torch.masked_select(batches._indices()[1,:], \
                                                 batches._values().bool()).view(mb_count * batch_size, 1)
     next_frontier_select = torch.cat((next_frontier_select, batches_select), dim=1)
-    torch.cuda.nvtx.range_pop()
+    torch.cuda.nvtx.range_pop() # construct-nextf
     timing_dict["construct-nextf"].append(stop_time(start_timer, stop_timer, barrier=True))
 
     torch.cuda.nvtx.range_push("nvtx-select-rowcols")

@@ -77,14 +77,14 @@ def sage_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_total,
 
     batches_expand = batches_expand.to_sparse_csr()
 
-    adj_matrix = adj_matrix.to_sparse_csr()
+    # adj_matrix = adj_matrix.to_sparse_csr()
     current_frontier = batches_expand
 
     if baseline_compare:
         total_start_timer.record()
 
     for i in range(n_layers):
-        # print(f"Sampling layer {i}", flush=True)
+        print(f"Sampling layer {i}", flush=True)
         if i == 0:
             nnz = batch_size
         else:
@@ -184,7 +184,7 @@ def sage_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_total,
         torch.cuda.synchronize()
         total_time = total_start_timer.elapsed_time(total_stop_timer)
         print(f"total_time: {total_time}", flush=True)
-    if False and timing:
+    if timing:
         for k, v in sorted(timing_dict.items()):
             if (k.startswith("spgemm") and k != "spgemm-misc") or k == "probability-spgemm" or k == "row-select-spgemm" or k == "col-select-spgemm":
                 v_tens = torch.cuda.FloatTensor(1).fill_(sum(v))

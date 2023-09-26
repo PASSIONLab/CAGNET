@@ -33,6 +33,7 @@ tests/test_nccl
 tests/pytorch_geometric/
 tests/torch-quiver/
 tests/*.out
+examples/*.batch
 *.qdrep
 *.out
 *.nsys-rep
