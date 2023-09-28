@@ -8,6 +8,7 @@
 #include <ATen/SparseTensorUtils.h>
 
 #include <cuda.h>
+#include <cuda_runtime_api.h>
 #include <helper_cuda.h>
 #include "cusparse.h"
 
@@ -2585,6 +2586,49 @@ void sort_dst_proc_gpu(const at::Tensor& vtxs, const at::Tensor& src_vtx_sort, c
     CHECK_ERROR("sort_dst_proc error")
 }
 
+__global__ void RearrangeRows(long *mata_rows, long *mata_cols, long *matc_crows, long *matb_crows, 
+                                long *matb_cols, long *matc_cols, int nnz_count) { 
+
+    int     id = blockIdx.x * blockDim.x + threadIdx.x;
+    int stride = blockDim.x * gridDim.x;
+
+    for (int i = id; i < nnz_count; i += stride) {
+        long row = mata_rows[i];
+        long col = mata_cols[i];
+        long dst_idx = matc_crows[row];
+        long src_idx = matb_crows[col];
+        long row_len = matb_crows[col + 1] - matb_crows[col];
+        // memcpy(&matc_cols[dst_idx], &matb_cols[src_idx], row_len * sizeof(long));
+        for (int j = 0; j < row_len; j++) {
+            matc_cols[dst_idx + j] = matb_cols[src_idx + j];
+        }
+    } 
+}
+
+void rearrange_rows_gpu(const at::Tensor& mata_rows, const at::Tensor& mata_cols, const at::Tensor& matc_crows, 
+                            const at::Tensor& matb_crows, const at::Tensor& matb_cols, 
+                            const at::Tensor& matc_cols) {
+
+
+    int BLOCK_SIZE = 256;
+    int BLOCK_COUNT = std::ceil(mata_rows.sizes()[0] / ((float) BLOCK_SIZE));
+    BLOCK_COUNT = std::min(BLOCK_COUNT, 65535);
+
+    if (mata_rows.sizes()[0] == 0) {
+        return;
+    }
+
+    RearrangeRows<<<BLOCK_COUNT, BLOCK_SIZE>>>(mata_rows.data<long>(), 
+                                                    mata_cols.data<long>(),
+                                                    matc_crows.data<long>(), 
+                                                    matb_crows.data<long>(), 
+                                                    matb_cols.data<long>(),
+                                                    matc_cols.data<long>(),
+                                                    mata_rows.sizes()[0]);
+
+    CHECK_ERROR("rearrange_rows error")
+}
+
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
     m.def("sparse_coo_tensor_gpu", &sparse_coo_tensor_gpu, "Sparse COO Tensor GPU-only constructor");
     m.def("sparse_csr_tensor_gpu", &sparse_csr_tensor_gpu, "Sparse CSR Tensor GPU-only constructor");
@@ -2608,4 +2652,5 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
     m.def("normalize_batch_gpu", &normalize_batch_gpu, "Normalize SpMM output");
     m.def("sort_dst_proc_gpu", &sort_dst_proc_gpu, "Sort vertices by destination process");
     m.def("nsparse_spgemm", &nsparse_spgemm, "CUDA SpGEMM from NSparse");
+    m.def("rearrange_rows_gpu", &rearrange_rows_gpu, "Rearrange rows in in place of local spgemm");
 }

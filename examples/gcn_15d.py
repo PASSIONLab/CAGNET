@@ -27,7 +27,7 @@ import cagnet.nn.functional as CAGF
 import torch.nn.functional as F
 
 from sparse_coo_tensor_cpp import sort_dst_proc_gpu
-from torchviz import make_dot
+import quiver
 
 import socket
 
@@ -59,6 +59,7 @@ class GCN(nn.Module):
         self.timings["fwd"] = []
         self.timings["bwd"] = []
         self.timings["loss"] = []
+        self.timings["fakemats"] = []
 
         self.timings["precomp"] = []
         self.timings["spmm"] = []
@@ -66,28 +67,29 @@ class GCN(nn.Module):
         self.timings["gemm_w"] = []
         self.timings["aggr"] = []
 
-        # # # input layer
-        # self.layers.append(GCNConv(in_feats, n_hidden, self.partitioning, self.device))
-        # # hidden layers
-        # for i in range(n_layers - 2):
-        #         self.layers.append(GCNConv(n_hidden, n_hidden, self.partitioning, self.device))
-        # # output layer
-        # self.layers.append(GCNConv(n_hidden, n_classes, self.partitioning, self.device))
+        # input layer
+        self.layers.append(GCNConv(in_feats, n_hidden, self.partitioning, self.device))
+        # hidden layers
+        for i in range(n_layers - 2):
+                self.layers.append(GCNConv(n_hidden, n_hidden, self.partitioning, self.device))
+        # output layer
+        self.layers.append(GCNConv(n_hidden, n_classes, self.partitioning, self.device))
         # # self.layers.append(GCNConv(in_feats, n_classes, self.partitioning, self.device))
 
-        self.layers.append(SAGEConv(in_feats, n_hidden, root_weight=False, bias=False))
-        for _ in range(n_layers - 2):
-            self.layers.append(SAGEConv(n_hidden, n_hidden, root_weight=False, bias=False))
-        self.layers.append(SAGEConv(n_hidden, n_classes, root_weight=False, bias=False))
+        # self.layers.append(SAGEConv(in_feats, n_hidden, root_weight=False, bias=False))
+        # for _ in range(n_layers - 2):
+        #     self.layers.append(SAGEConv(n_hidden, n_hidden, root_weight=False, bias=False))
+        # self.layers.append(SAGEConv(n_hidden, n_classes, root_weight=False, bias=False))
 
     def forward(self, graphs, inputs, epoch):
         h = inputs
         for l, layer in enumerate(self.layers):
-            # h = layer(self, graphs[l], h, epoch) # GCNConv
-            nnz_index = graphs[l]._values().nonzero().squeeze() # SAGEConv
-            edge_index = graphs[l]._indices()[:, nnz_index] # SAGEConv
+            # nnz_index = graphs[l]._values().nonzero().squeeze() # SAGEConv
+            # edge_index = graphs[l]._indices()[:, nnz_index] # SAGEConv
             # edge_index = graphs[l] # SAGEConvfake
-            h = self.layers[l](h, edge_index) # SAGEConv
+            # edge_index, _, size = graphs[l] # quiver
+            # h = self.layers[l](h, edge_index) # SAGEConv
+            h = layer(self, graphs[l], h, epoch) # GCNConv
             if l != len(self.layers) - 1:
                 # h = CAGF.relu(h, self.partitioning)
                 h = F.relu(h)
@@ -97,56 +99,99 @@ class GCN(nn.Module):
         return h
 
     @torch.no_grad()
-    def evaluate(self, graph, features):
-        # """ GCNConv inference """
+    def evaluate(self, graph, features, test_idx, labels):
+        # subgraph_loader = NeighborSampler(graph, node_idx=None,
+        #                                   sizes=[-1], batch_size=2048,
+        #                                   shuffle=False, num_workers=6)
+
+        # for i in range(self.n_layers):
+        #     xs = []
+        #     for batch_size, n_id, adj in subgraph_loader:
+        #         edge_index, _, size = adj.to(self.device)
+        #         x = features[n_id].to(self.device)
+        #         # edge_index, _, size = adj
+        #         # x = features[n_id]
+        #         # x_target = x[:size[1]]
+        #         # x = self.convs[i]((x, x_target), edge_index)
+        #         x = self.layers[i](x, edge_index)
+        #         if i != self.n_layers - 1:
+        #             x = F.relu(x)
+        #         # xs.append(x)
+        #         xs.append(x[:batch_size])
+
+        #     features = torch.cat(xs, dim=0)
+
+        # return features
+
+        subgraph_loader = NeighborSampler(graph, node_idx=None,
+                                          sizes=[-1], batch_size=2048,
+        # subgraph_loader = NeighborSampler(graph, node_idx=test_idx,
+                                          # sizes=[-1, -1], batch_size=512,
+                                          shuffle=False)
+        non_eval_timings = copy.deepcopy(self.timings)
+        for l, layer in enumerate(self.layers):
+            hs = []
+            for batch_size, n_id, adj in subgraph_loader:
+                # edge_index, _, size = adj.to(self.device)
+                edge_index, _, size = adj
+                adj_batch = torch.sparse_coo_tensor(edge_index, 
+                                                        torch.FloatTensor(edge_index.size(1)).fill_(1.0),
+                                                        size)
+                adj_batch = adj_batch.t().coalesce()
+                h_batch = features[n_id]
+
+                h = layer(self, adj_batch, h_batch, epoch=-1) # GCNConv
+                if l != len(self.layers) - 1:
+                    h = CAGF.relu(h, self.partitioning)
+                hs.append(h) # GCNConv
+                # hs.append(h[:batch_size]) # SAGEConv
+            features = torch.cat(hs, dim=0)
+        return features
+
+        # print(f"test_idx: {test_idx}", flush=True)
+        # non_eval_timings = copy.deepcopy(self.timings)
+        # correct_count = 0
+        # for batch_size, n_id, adjs in subgraph_loader:
+        #     h = features[n_id]
+        #     for l, (edge_index, _, size) in enumerate(adjs):
+        #         # h = layer(self, adj_batch, h_batch, epoch=-1) # GCNConv
+        #         h = self.layers[l](h, edge_index) # SAGEConv
+        #         if l != len(self.layers) - 1:
+        #             h = F.relu(h)
+        #     h = F.log_softmax(h, dim=1)
+        #     batch = n_id[:batch_size]
+        #     print(f"batch: {batch}", flush=True)
+        #     print(f"h[:batch_size]: {h[:batch_size]}", flush=True)
+        #     print(f"h[:batch_size].argmax(dim=-1): {h[:batch_size].argmax(dim=-1)}", flush=True)
+        #     preds = h[:batch_size].argmax(dim=-1) == labels[batch]
+        #     correct_count += preds.sum()
+        # return correct_count
+
+        # """ SAGEConv inference """
         # subgraph_loader = NeighborSampler(graph, node_idx=None,
         #                                   sizes=[-1], batch_size=2048,
         #                                   shuffle=False)
-        # non_eval_timings = copy.deepcopy(self.timings)
-        # for l, layer in enumerate(self.layers):
-        #     hs = []
+
+        # # Compute representations of nodes layer by layer, using *all*
+        # # available edges. This leads to faster computation in contrast to
+        # # immediately computing the final representations of each batch.
+        # total_edges = 0
+        # for i in range(self.n_layers):
+        #     xs = []
         #     for batch_size, n_id, adj in subgraph_loader:
-        #         # edge_index, _, size = adj.to(self.device)
-        #         edge_index, _, size = adj
-        #         adj_batch = torch.sparse_coo_tensor(edge_index, 
-        #                                                 torch.FloatTensor(edge_index.size(1)).fill_(1.0),
-        #                                                 size)
-        #         adj_batch = adj_batch.t().coalesce()
-        #         h_batch = features[n_id]
+        #         edge_index, _, size = adj.to(self.device)
+        #         total_edges += edge_index.size(1)
+        #         x = features[n_id].to(self.device)
+        #         # x_target = x[:size[1]]
+        #         # x = self.convs[i]((x, x_target), edge_index)
+        #         x = self.layers[i](x, edge_index) # SAGEConv
+        #         if i != self.n_layers - 1:
+        #             x = F.relu(x)
+        #         x = x[:batch_size]
+        #         xs.append(x)
+        #     features = torch.cat(xs, dim=0)
 
-        #         # h = layer(self, adj_batch, h_batch, epoch=-1) # GCNConv
-        #         h = layer(h_batch, edge_index) # SAGEConv
-        #         if l != len(self.layers) - 1:
-        #             h = CAGF.relu(h, self.partitioning)
-        #         hs.append(h)
-        #     features = torch.cat(hs, dim=0)
         # return features
-
-        """ SAGEConv inference """
-        subgraph_loader = NeighborSampler(graph, node_idx=None,
-                                          sizes=[-1], batch_size=2048,
-                                          shuffle=False)
-
-        # Compute representations of nodes layer by layer, using *all*
-        # available edges. This leads to faster computation in contrast to
-        # immediately computing the final representations of each batch.
-        total_edges = 0
-        for i in range(self.n_layers):
-            xs = []
-            for batch_size, n_id, adj in subgraph_loader:
-                edge_index, _, size = adj.to(self.device)
-                total_edges += edge_index.size(1)
-                x = features[n_id].to(self.device)
-                # x_target = x[:size[1]]
-                # x = self.convs[i]((x, x_target), edge_index)
-                x = self.layers[i](x, edge_index) # SAGEConv
-                if i != self.n_layers - 1:
-                    x = F.relu(x)
-                x = x[:batch_size]
-                xs.append(x)
-            features = torch.cat(xs, dim=0)
-
-        return features
 
 def get_proc_groups(rank, size, replication):
     rank_c = rank // replication
@@ -663,7 +708,14 @@ def main(args, batches=None):
     # g_loc = g_loc.cpu()
     g_loc = g_loc.to_sparse_csr()
     g_loc = g_loc.to(device)
+
+    csr_topo = quiver.CSRTopo(adj_matrix)
+    quiver_sampler = quiver.pyg.GraphSageSampler(csr_topo, [args.samp_num] * args.n_layers, 0, 
+                                                    mode='UVA')
+    # train_loader = torch.utils.data.DataLoader(train_nid, batch_size=args.batch_size, 
+    #                                                 shuffle=True, drop_last=True)
     for epoch in range(args.n_epochs):
+        # train_loader_iter = iter(train_loader)
         print(f"Epoch: {epoch}", flush=True)
         if epoch >= 1:
             epoch_start = time.time()
@@ -674,14 +726,15 @@ def main(args, batches=None):
         adj1_dims = []
         adj0_nnzs = []
         adj1_nnzs = []
+        adj_nnzs = []
 
         # print("Constructing batches", flush=True)
         torch.cuda.nvtx.range_push("nvtx-construct-batches")
         batch_count = -(train_nid.size(0) // -args.batch_size) # ceil(train_nid.size(0) / batch_size)
-        if batches is None:
-            torch.manual_seed(epoch)
-            vertex_perm = torch.randperm(train_nid.size(0))
-            batches_all = train_nid[vertex_perm]
+        # if batches is None:
+        torch.manual_seed(epoch)
+        vertex_perm = torch.randperm(train_nid.size(0))
+        batches_all = train_nid[vertex_perm]
         torch.cuda.nvtx.range_pop() # construct-batches
 
         torch.cuda.nvtx.range_push("nvtx-extract-batches")
@@ -703,7 +756,6 @@ def main(args, batches=None):
             batches_indices = torch.stack((batches_indices_rows, batches_indices_cols))
         if epoch >= 1:
             epoch_start = time.time()
-        model.train()
         torch.cuda.nvtx.range_pop() # extract-batches
 
         # torch.cuda.nvtx.range_push("nvtx-construct-batches")
@@ -785,10 +837,7 @@ def main(args, batches=None):
 
             # print("Training", flush=True)
             torch.cuda.nvtx.range_push("nvtx-training")
-            bulk_batch_count = args.bulk_batch_fetch
 
-            # for b in range(0, rank_n_bulkmb, bulk_batch_count):
-            # for i in range(b, b + bulk_batch_count):
             for i in range(rank_n_bulkmb):
                 # forward
                 # batch_vtxs = frontiers[0][i].view(-1)
@@ -814,6 +863,7 @@ def main(args, batches=None):
                 src_select_min += src_select_size * rank_col * rank_n_bulkmb_row
                 src_select_max += src_select_size * rank_col * rank_n_bulkmb_row
                 src_vtxs = frontiers_bulk[-1][src_select_min:src_select_max,:].view(-1)
+                # print(f"src_vtxs: {src_vtxs} src_vtxs.size: {src_vtxs.size()} zero_count: {(src_vtxs == 0).sum()}", flush=True)
 
                 adjs = [None] * args.n_layers
                 for l in range(args.n_layers):
@@ -858,6 +908,8 @@ def main(args, batches=None):
                                                         adj_sample_values, \
                                                         (args.batch_size * (args.samp_num ** l), \
                                                                 args.batch_size * (args.samp_num ** (l + 1))))
+                        adj_nnzs.append(adj_sample_values.size(0))
+                        # print(f"i: {i} sample.nnz: {adj_matrix_sample._nnz()} sample.size: {adj_matrix_sample.size()} emptyrows: {(adj_sample_row_lens == 0).sum()}")
                     if epoch >= 1:
                         model.timings["extract-inst"].append(stop_time(start_inner_timer, stop_inner_timer))
 
@@ -915,18 +967,48 @@ def main(args, batches=None):
                 if epoch >= 1:
                     model.timings["selectfeats"].append(stop_time(start_inner_timer, stop_inner_timer))
 
-                # features_batch = torch.cuda.FloatTensor(69500, 128) # SAGEConvfake
-                # adjs[0] = torch.randint(0, 3500, (2, 3500)).cuda().long() # SAGEConvfake
-                # adjs[1] = torch.randint(0, 600, (2, 600)).cuda().long() # SAGEConvfake
+                # if epoch >= 1:
+                #     start_time(start_inner_timer)
+                # torch.cuda.nvtx.range_push("nvtx-fakemats")
+                # features_batch = torch.cuda.FloatTensor(69740, 128) # SAGEConvfake
+                # adjs0_rows = torch.randint(0, 9862, (91518,)).cuda().long() # SAGEConvfake
+                # adjs0_cols = torch.randint(0, 69740, (91518,)).cuda().long() # SAGEConvfake
+                # adjs[0] = torch.stack((adjs0_rows, adjs0_cols)) # SAGEConvfake
+                # adjs1_rows = torch.randint(0, 1024, (9065,)).cuda().long() # SAGEConvfake
+                # adjs1_cols = torch.randint(0, 9862, (9065,)).cuda().long() # SAGEConvfake
+                # adjs[1] = torch.stack((adjs1_rows, adjs1_cols)) # SAGEConvfake
+
+                # features_batch = torch.cuda.FloatTensor(69740, 128) # GCNConvfake
+                # adjs0_rows = torch.randint(0, 9862, (91518,)).cuda().long() # GCNConvfake
+                # adjs0_cols = torch.randint(0, 69740, (91518,)).cuda().long() # GCNConvfake
+                # adjs0_indices = torch.stack((adjs0_rows, adjs0_cols)) # GCNConvfake
+                # adjs0_vals = torch.cuda.FloatTensor(91518).fill_(1.0) # GCNConvfake
+                # adjs[0] = torch.sparse_coo_tensor(adjs0_indices, adjs0_vals, torch.Size([9862, 69740])) # GCNConvfake
+                # adjs[0] = adjs[0].coalesce()
+                # adjs1_rows = torch.randint(0, 1024, (9065,)).cuda().long() # GCNConvfake
+                # adjs1_cols = torch.randint(0, 9862, (9065,)).cuda().long() # GCNConvfake
+                # adjs1_indices = torch.stack((adjs1_rows, adjs1_cols)) # GCNConvfake
+                # adjs1_vals = torch.cuda.FloatTensor(9065).fill_(1.0) # GCNConvfake
+                # adjs[1] = torch.sparse_coo_tensor(adjs1_indices, adjs1_vals, torch.Size([1024, 9862])) # GCNConvfake
+                # adjs[1] = adjs[1].coalesce()
+                # if epoch >= 1:
+                #     model.timings["fakemats"].append(stop_time(start_inner_timer, stop_inner_timer))
+                # torch.cuda.nvtx.range_pop() # nvtx-fakemats
 
                 if epoch >= 1:
                     start_time(start_inner_timer)
                 torch.cuda.nvtx.range_push("nvtx-fwd")
-                feat_dims.append(features_batch.size(0))
-                adj0_dims.append(adjs[0].size(1))
-                adj1_dims.append(adjs[1].size(1))
-                adj0_nnzs.append(adjs[0]._nnz())
-                adj1_nnzs.append(adjs[1]._nnz())
+                # feat_dims.append(features_batch.size(0))
+                # adj0_dims.append(adjs[0].size(1))
+                # adj1_dims.append(adjs[1].size(1))
+                # adj0_nnzs.append(adjs[0]._nnz())
+                # adj1_nnzs.append(adjs[1]._nnz())
+
+                # seeds = next(train_loader_iter)
+                # n_id, batch_size, adjs = quiver_sampler.sample(batch_vtxs)
+                # adjs = [adj.to(rank) for adj in adjs]
+                # features_batch = features_loc[n_id]
+                optimizer.zero_grad()
                 logits = model(adjs, features_batch, epoch)
                 torch.cuda.nvtx.range_pop() # nvtx-fwd
                 if epoch >= 1:
@@ -935,10 +1017,11 @@ def main(args, batches=None):
                 if epoch >= 1:
                     start_time(start_inner_timer)
                 torch.cuda.nvtx.range_push("nvtx-loss")
-                # loss = F.nll_loss(logits, data.y[batch_vtxs].long()) # GCNConv
-                loss = F.nll_loss(logits[:args.batch_size], data.y[batch_vtxs].long()) # SAGEConv
+                print(f"logits: {logits[:args.batch_size]}", flush=True)
+                loss = F.nll_loss(logits, data.y[batch_vtxs].long()) # GCNConv
+                # loss = F.nll_loss(logits[:args.batch_size], data.y[batch_vtxs].long()) # SAGEConv
+                # loss = F.nll_loss(logits[:args.batch_size], data.y[seeds].long()) # quiver
 
-                optimizer.zero_grad()
                 torch.cuda.nvtx.range_pop() # nvtx-loss
                 if epoch >= 1:
                     model.timings["loss"].append(stop_time(start_inner_timer, stop_inner_timer))
@@ -987,6 +1070,7 @@ def main(args, batches=None):
                 gemmi_dur = [x / 1000 for x in model.timings["gemm_i"]]
                 gemmw_dur = [x / 1000 for x in model.timings["gemm_w"]]
                 aggr_dur = [x / 1000 for x in model.timings["aggr"]]
+                fakemats_dur = [x / 1000 for x in model.timings["fakemats"]]
                 # sf_precomp_dur = [x / 1000 for x in model.timings["selectfeats-precomp"]]
                 # sf_sortdst_dur = [x / 1000 for x in model.timings["selectfeats-sortdst"]]
                 # sf_tallysplit_dur = [x / 1000 for x in model.timings["selectfeats-tallysplit"]]
@@ -1001,26 +1085,27 @@ def main(args, batches=None):
 
                 print(f"sample: {np.sum(sample_dur)} extract-select: {np.sum(extract_select_dur)} extract-inst: {np.sum(extract_inst_dur)} extract-coalesce: {np.sum(extract_coalesce_dur)} train: {np.sum(train_dur)}", flush=True)
                 print(f"feats: {np.sum(selectfeats_dur)} fwd: {np.sum(fwd_dur)} bwd: {np.sum(bwd_dur)}")
-                print(f"precomp: {np.sum(precomp_dur)} spmm: {np.sum(spmm_dur)} gemmi: {np.sum(gemmi_dur)} gemmw: {np.sum(gemmw_dur)} aggr: {np.sum(aggr_dur)}")
-                print(f"feat_dim.median: {np.median(feat_dims)}")
-                print(f"adj0_dim.median: {np.median(adj0_dims)}")
-                print(f"adj1_dim.median: {np.median(adj1_dims)}")
-                print(f"adj0_nnz.median: {np.median(adj0_nnzs)}")
-                print(f"adj1_nnz.median: {np.median(adj1_nnzs)}")
-                # print(f"precomp: {np.sum(sf_precomp_dur)} sortdst: {np.sum(sf_sortdst_dur)} tallysplit: {np.sum(sf_tallysplit_dur)} tallya2a: {np.sum(sf_tallya2a_dur)} vtxsa2a: {np.sum(sf_vtxsa2a_dur)} featsa2a: {np.sum(sf_featsa2a_dur)}", flush=True)
-                # print(f"median: {np.median(sf_featsa2a_dur)}", flush=True)
+                print(f"precomp: {np.sum(precomp_dur)} spmm: {np.sum(spmm_dur)} gemmi: {np.sum(gemmi_dur)} gemmw: {np.sum(gemmw_dur)} aggr: {np.sum(aggr_dur)} fakemats: {np.sum(fakemats_dur)}")
+                # print(f"feat_dim.median: {np.median(feat_dims)}")
+                # print(f"adj0_dim.median: {np.median(adj0_dims)}")
+                # print(f"adj1_dim.median: {np.median(adj1_dims)}")
+                # print(f"adj0_nnz.median: {np.median(adj0_nnzs)}")
+                # print(f"adj1_nnz.median: {np.median(adj1_nnzs)}")
+                # print(f"adj_nnzs.median: {np.median(adj_nnzs)}")
                 print(f"total: {np.sum(dur)}", flush=True)
             if args.dataset != "Amazon" and ("Protein" not in args.dataset):
-                # out = model.evaluate(g_loc, features_loc)
-                print(f"adj_matrix.device: {adj_matrix.device} inputs.device: {inputs.device}", flush=True)
-                out = model.evaluate(adj_matrix, inputs)
-                res = out.argmax(dim=-1) == data.y
+                model = model.cpu()
                 train_nid = train_nid.cpu()
-                test_nid = train_nid.cpu()
-                acc1 = int(res[train_nid].sum()) / train_nid.size(0)
+                test_nid = test_nid.cpu()
+                out = model.evaluate(adj_matrix, inputs, test_nid, data.y)
+                # correct_count = model.evaluate(adj_matrix, inputs, test_nid, data.y.cpu())
+                res = out.argmax(dim=-1) == data.y.cpu()
+                # acc1 = int(res[train_nid].sum()) / train_nid.size(0)
                 acc3 = int(res[test_nid].sum()) / test_nid.size(0)
+                # acc3 = correct_count / test_nid.size(0)
                 train_nid = train_nid.to(device)
-                test_nid = train_nid.to(device)
+                test_nid = test_nid.to(device)
+                model = model.to(device)
                 print("Rank: {:05d} | Epoch: {:05d} | Time(s): {:.4f} | Loss: {:.4f} | Accuracy: {:.4f}".format(rank, epoch, np.sum(dur), loss.item(), acc3), flush=True)
             else:
                 print("Rank: {:05d} | Epoch: {:05d} | Time(s): {:.4f} | Accuracy: {:.4f}".format(rank, epoch, np.sum(dur), acc3), flush=True)

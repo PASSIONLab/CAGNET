@@ -10,7 +10,7 @@ from sparse_coo_tensor_cpp import downsample_gpu, compute_darts_gpu, throw_darts
                                     shift_rowselect_gpu, shift_colselect_gpu, \
                                     scatteri_add_gpu, rowselect_coo_gpu, \
                                     rowselect_csr_gpu, sparse_coo_tensor_gpu, spgemm_gpu, coogeam_gpu, \
-                                    sparse_csr_tensor_gpu, nsparse_spgemm
+                                    sparse_csr_tensor_gpu, nsparse_spgemm, rearrange_rows_gpu
 
 
 timing = True
@@ -584,8 +584,14 @@ def dist_saspgemm15D(mata, matb, replication, rank, size, row_groups, col_groups
                             matb_recv_crows[1:] = torch.cumsum(matb_rows_sum, dim=0)
                             matb_recv_crows[0] = 0
                         else:
-                            matb_recv_rows = torch.repeat_interleave(nnz_col_ids[j], matb_send_lengths)
-                            matb_recv_indices = torch.stack((matb_recv_rows, matb_recv_cols))
+                            # matb_recv_rows = torch.repeat_interleave(nnz_col_ids[j], matb_send_lengths)
+                            # matb_recv_indices = torch.stack((matb_recv_rows, matb_recv_cols))
+                            matb_rows_sum = torch.cuda.LongTensor(matb.crow_indices().size(0) - 1).fill_(0)
+                            if nnz_row_mask.any():
+                                matb_rows_sum[nnz_col_ids[j]] = matb_send_lengths
+                            matb_recv_crows = torch.cuda.LongTensor(matb.crow_indices().size(0))
+                            matb_recv_crows[1:] = torch.cumsum(matb_rows_sum, dim=0)
+                            matb_recv_crows[0] = 0
                     stop_time_add(start_inner_timer, stop_inner_timer, timing_dict, f"spgemm-send-calls-{name}")
                 elif matb.layout == torch.sparse_coo:
                     # rowselect_coo_gpu(nnz_col_ids[j], matb._indices()[0,:], nnz_row_mask, \
@@ -676,8 +682,14 @@ def dist_saspgemm15D(mata, matb, replication, rank, size, row_groups, col_groups
                     matb_recv_crows[1:] = torch.cumsum(matb_rows_sum, dim=0)
                     matb_recv_crows[0] = 0
                 else:
-                    matb_recv_rows = torch.repeat_interleave(nnz_cols, matb_recv_lengths)
-                    matb_recv_indices = torch.stack((matb_recv_rows, matb_recv_cols))
+                    # matb_recv_rows = torch.repeat_interleave(nnz_cols, matb_recv_lengths)
+                    # matb_recv_indices = torch.stack((matb_recv_rows, matb_recv_cols))
+                    matb_rows_sum = torch.cuda.LongTensor(chunk_col_size).fill_(0)
+                    if matb_recv_lengths.size(0) > 0:
+                        matb_rows_sum[nnz_cols] = matb_recv_lengths
+                    matb_recv_crows = torch.cuda.LongTensor(chunk_col_size + 1)
+                    matb_recv_crows[1:] = torch.cumsum(matb_rows_sum, dim=0)
+                    matb_recv_crows[0] = 0
 
                 nnz_count += 2 * matb_recv_cols.size(0) + matb_recv_lengths.size(0)
 
@@ -729,29 +741,48 @@ def dist_saspgemm15D(mata, matb, replication, rank, size, row_groups, col_groups
                 start_time(start_inner_timer)
                 # mata_recv = torch.sparse_csr_tensor(mata_chunk_crows, mata_chunk_cols, mata_chunk_values,
                 #                                         size=(mata.size(0), chunk_col_size))
-                matb_recv = sparse_coo_tensor_gpu(matb_recv_indices, matb_recv_values.float(),
-                                                        torch.Size([chunk_col_size, matb.size(1)]))
-                matb_recv = matb_recv.to_sparse_csr()
+                mata_recv_row_lens = mata_chunk_crows[1:] - mata_chunk_crows[:-1]
+                mata_recv_rows = torch.repeat_interleave(
+                                    torch.arange(0, mata.size(0), device=mata.device), 
+                                    mata_recv_row_lens)
+                # matb_recv = sparse_coo_tensor_gpu(matb_recv_indices, matb_recv_values.float(),
+                #                                         torch.Size([chunk_col_size, matb.size(1)]))
+                # matb_recv = matb_recv.to_sparse_csr()
                 stop_time_add(start_inner_timer, stop_inner_timer, timing_dict, f"spgemm-loc-csrinst-{name}")
 
 
 
                 start_time(start_inner_timer)
+                # mata_recv = mata_recv.to_sparse_coo()
                 # matc_chunk_indices, matc_chunk_values = torch_sparse.spspmm(mata_recv._indices(), \
                 #                                             mata_recv._values().float(), matb_recv_indices, \
                 #                                             matb_recv_values.float(), mata.size(0), \
                 #                                             chunk_col_size, matb.size(1), coalesced=True)
                 # print(f"mata_nnz: {mata_chunk_values.size()} matb_nnz: {matb_recv._nnz()} dims: {mata.size(0)} {chunk_col_size} {matb_recv.size(1)}", flush=True)
-                matc_chunk = nsparse_spgemm(mata_chunk_crows.int(), \
-                                        mata_chunk_cols.int(), \
-                                        mata_chunk_values.float(), \
-                                        matb_recv.crow_indices().int(), \
-                                        matb_recv.col_indices().int(), \
-                                        matb_recv.values().float(), \
-                                        mata.size(0), chunk_col_size, matb_recv.size(1))
-                matc_chunk_crows = matc_chunk[0]
-                matc_chunk_cols = matc_chunk[1]
-                matc_chunk_values = matc_chunk[2]
+
+                # matb_recv_row_lens = matb_recv.crow_indices()[1:] - matb_recv.crow_indices()[:-1]
+                matb_recv_row_lens = matb_recv_crows[1:] - matb_recv_crows[:-1]
+                matc_chunk_row_lens = torch.cuda.LongTensor(mata.size(0) + 1).fill_(0)
+                matc_chunk_row_lens[mata_recv_rows] = matb_recv_row_lens[mata_chunk_cols]
+                matc_chunk_crows = torch.cumsum(matc_chunk_row_lens, 0).roll(1)
+                matc_chunk_crows[0] = 0
+
+                matc_chunk_cols = torch.cuda.LongTensor(matc_chunk_crows[-1].item()).fill_(0)
+                rearrange_rows_gpu(mata_recv_rows, mata_chunk_cols, matc_chunk_crows, 
+                                        matb_recv_crows, matb_recv_cols, matc_chunk_cols)
+                                        # matb_recv.crow_indices(), matb_recv.col_indices(), matc_chunk_cols)
+                matc_chunk_values = torch.cuda.FloatTensor(matc_chunk_crows[-1].item()).fill_(1.0)
+
+                # matc_chunk = nsparse_spgemm(mata_chunk_crows.int(), \
+                #                         mata_chunk_cols.int(), \
+                #                         mata_chunk_values.float(), \
+                #                         matb_recv.crow_indices().int(), \
+                #                         matb_recv.col_indices().int(), \
+                #                         matb_recv.values().float(), \
+                #                         mata.size(0), chunk_col_size, matb_recv.size(1))
+                # matc_chunk_crows = matc_chunk[0]
+                # matc_chunk_cols = matc_chunk[1]
+                # matc_chunk_values = matc_chunk[2]
 
                 # mata_recv = mata_recv.to_sparse_coo()
                 # matb_recv = matb_recv.to_sparse_coo()
