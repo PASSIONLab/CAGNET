@@ -35,7 +35,11 @@ def stop_time_add(start_timer, stop_timer, timing_dict, range_name, barrier=Fals
         timing_dict[range_name].append(stop_time(start_timer, stop_timer, barrier))
 
 def csr_allreduce(mat, left, right, rank, name=None, timing_dict=None):
+    start_timer = torch.cuda.Event(enable_timing=True)
+    stop_timer = torch.cuda.Event(enable_timing=True)
+
     while left < right:
+        start_time(start_timer)
         group_size = right - left + 1
         mid_rank = (left + right) // 2
 
@@ -54,7 +58,7 @@ def csr_allreduce(mat, left, right, rank, name=None, timing_dict=None):
         for req in reqs:
             req.wait() 
 
-        torch.cuda.synchronize()
+        # torch.cuda.synchronize()
         rows_recv = torch.cuda.IntTensor(mat.size(0) + 1)
         cols_recv = torch.cuda.IntTensor(nnz_recv.item())
         if mat.dtype == torch.float32:
@@ -72,10 +76,15 @@ def csr_allreduce(mat, left, right, rank, name=None, timing_dict=None):
         reqs = dist.batch_isend_irecv(ops)
         for req in reqs:
             req.wait() 
+        stop_time_add(start_timer, stop_timer, timing_dict, f"spgemm-reduce-comm-{name}")
 
-        torch.cuda.synchronize()
+        # torch.cuda.synchronize()
+        start_time(start_timer)
         mat_recv = torch.sparse_csr_tensor(rows_recv, cols_recv, vals_recv, size=mat.size())
+        stop_time_add(start_timer, stop_timer, timing_dict, f"spgemm-reduce-csrinst-{name}")
+        start_time(start_timer)
         mat = mat + mat_recv
+        stop_time_add(start_timer, stop_timer, timing_dict, f"spgemm-reduce-sum-{name}")
 
         if rank <= mid_rank:
             right = mid_rank
@@ -570,7 +579,7 @@ def dist_saspgemm15D(mata, matb, replication, rank, size, row_groups, col_groups
                         send_ops[send_idx + 2] = \
                                     dist.P2POp(dist.isend, matb_send_cols.int(), recv_rank, tag=2)
                         send_ops[send_idx + 3] = \
-                                    dist.P2POp(dist.isend, matb_send_values, recv_rank, tag=3)
+                                    dist.P2POp(dist.isend, matb_send_values.float(), recv_rank, tag=3)
                         send_idx += 4
                     else:
                         # matb_recv_crows = matb_send_crows.clone()
@@ -661,7 +670,8 @@ def dist_saspgemm15D(mata, matb, replication, rank, size, row_groups, col_groups
                 recv_ops.append(dist.P2POp(dist.irecv, matb_recv_cols, q, tag=2))
                 # matb_recv_cols = matb_recv_cols.long()
 
-                matb_recv_values = torch.cuda.DoubleTensor(selected_rows_count_recv.item())
+                # matb_recv_values = torch.cuda.DoubleTensor(selected_rows_count_recv.item())
+                matb_recv_values = torch.cuda.FloatTensor(selected_rows_count_recv.item())
                 # dist.recv(matb_recv_values, tag=3, src=q)
                 recv_ops.append(dist.P2POp(dist.irecv, matb_recv_values, q, tag=3))
 
@@ -854,8 +864,8 @@ def dist_saspgemm15D(mata, matb, replication, rank, size, row_groups, col_groups
             if f"spgemm-loc-csrinst-{name}" not in timing_dict:
                 timing_dict[f"spgemm-loc-csrinst-{name}"] = []
 
-            if f"spgemm-loc-csr2coo-{name}" not in timing_dict:
-                timing_dict[f"spgemm-loc-csr2coo-{name}"] = []
+            # if f"spgemm-loc-csr2coo-{name}" not in timing_dict:
+            #     timing_dict[f"spgemm-loc-csr2coo-{name}"] = []
 
             if f"spgemm-loc-spspmm-{name}" not in timing_dict:
                 timing_dict[f"spgemm-loc-spspmm-{name}"] = []
@@ -874,7 +884,8 @@ def dist_saspgemm15D(mata, matb, replication, rank, size, row_groups, col_groups
     stop_time_add(start_timer, stop_timer, timing_dict, f"spgemm-reduce-coo2csr{name}", barrier=True)
 
     start_time(start_timer)
-    matc = csr_allreduce(matc, rank_row_start, rank_row_stop, rank)
+    # matc = csr_allreduce(matc, rank_row_start, rank_row_stop, rank)
+    matc = csr_allreduce(matc, rank_row_start, rank_row_stop, rank, "prob", timing_dict)
     stop_time_add(start_timer, stop_timer, timing_dict, f"spgemm-reduce-{name}", barrier=True)
 
     start_time(start_timer)
