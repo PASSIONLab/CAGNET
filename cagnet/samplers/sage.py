@@ -86,7 +86,7 @@ def sage_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_total,
         total_start_timer.record()
 
     for i in range(n_layers):
-        # print(f"Sampling layer {i}", flush=True)
+        print(f"Sampling layer {i}", flush=True)
         if i == 0:
             nnz = batch_size
         else:
@@ -110,7 +110,6 @@ def sage_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_total,
             nnz = batch_size * (frontier_size ** i)
             current_frontier = current_frontier.to_sparse_csr()
 
-        print(f"layer {i} current_frontier.size: {current_frontier.size()}", flush=True)
         # Expand batches matrix
         if baseline_compare:
             total_start_timer.record()
@@ -181,7 +180,6 @@ def sage_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_total,
         #                         size=torch.Size([mb_count * nnz, next_frontier_select.size(1) * nnz]))
         adj_matrix_sample = sparse_coo_tensor_gpu(adj_matrices_indices, adj_matrices_values, 
                                             torch.Size([mb_count * nnz, next_frontier_select.size(1) * nnz]))
-        print(f"layer: {i} adj_matrix_sample: {adj_matrix_sample}", flush=True)
         # adj_matrices[i] = adj_matrix_sample
         adj_matrices[i] = adj_matrix_sample.to_sparse_csr()
         frontiers[i + 1] = next_frontier_select.clone()
@@ -196,7 +194,7 @@ def sage_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_total,
         torch.cuda.synchronize()
         total_time = total_start_timer.elapsed_time(total_stop_timer)
         print(f"total_time: {total_time}", flush=True)
-    if False and timing:
+    if timing:
         for k, v in sorted(timing_dict.items()):
             if (k.startswith("spgemm") and k != "spgemm-misc") or k == "probability-spgemm" or k == "row-select-spgemm" or k == "col-select-spgemm":
                 v_tens = torch.cuda.FloatTensor(1).fill_(sum(v))

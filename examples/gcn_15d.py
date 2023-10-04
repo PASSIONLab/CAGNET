@@ -851,7 +851,7 @@ def main(args, batches=None):
 
             if epoch >= 1:
                 start_time(start_timer)
-            # print("Sampling", flush=True)
+            print("Sampling", flush=True)
             torch.cuda.nvtx.range_push("nvtx-sampling")
             if args.sample_method == "ladies":
                 current_frontier, next_frontier, adj_matrices_bulk = \
@@ -878,7 +878,7 @@ def main(args, batches=None):
                 start_time(start_timer)
             # g_loc = g_loc.coalesce()
 
-            # print("Training", flush=True)
+            print("Training", flush=True)
             torch.cuda.nvtx.range_push("nvtx-training")
 
             for i in range(rank_n_bulkmb):
@@ -894,20 +894,17 @@ def main(args, batches=None):
                 # if rank_col == args.replication - 1:
                 #     rank_n_bulkmb_row = rank_n_bulkmb - rank_n_bulkmb_row * (args.replication - 1)
 
-                batch_select_min += batch_select_size * rank_col * rank_n_bulkmb
-                batch_select_max += batch_select_size * rank_col * rank_n_bulkmb
+                # batch_select_min += batch_select_size * rank_col * rank_n_bulkmb
+                # batch_select_max += batch_select_size * rank_col * rank_n_bulkmb
                 batch_vtxs = frontiers_bulk[0][batch_select_min:batch_select_max,:].view(-1)
-                print(f"rank_n_bulkmb: {rank_n_bulkmb}", flush=True)
-                print(f"i: {i} batch_vtxs: {batch_vtxs}", flush=True)
-                print(f"i: {i} batch_select_min: {batch_select_min} max: {batch_select_max}", flush=True)
 
                 # src_vtxs = frontiers[-1][i].view(-1)
                 src_select_size = args.batch_size * (args.samp_num ** (args.n_layers - 1))
                 src_select_min = i * args.batch_size * (args.samp_num ** (args.n_layers - 1))
                 src_select_max = (i + 1) * args.batch_size  * (args.samp_num ** (args.n_layers - 1))
                 
-                src_select_min += src_select_size * rank_col * rank_n_bulkmb
-                src_select_max += src_select_size * rank_col * rank_n_bulkmb
+                # src_select_min += src_select_size * rank_col * rank_n_bulkmb
+                # src_select_max += src_select_size * rank_col * rank_n_bulkmb
                 src_vtxs = frontiers_bulk[-1][src_select_min:src_select_max,:].view(-1)
                 # print(f"src_vtxs: {src_vtxs} src_vtxs.size: {src_vtxs.size()} zero_count: {(src_vtxs == 0).sum()}", flush=True)
 
@@ -916,15 +913,13 @@ def main(args, batches=None):
                     adj_select_size = args.batch_size * (args.samp_num ** l)
                     adj_row_select_min = i * args.batch_size * (args.samp_num ** l)
                     adj_row_select_max = (i + 1) * args.batch_size  * (args.samp_num ** l)
-                    adj_row_select_min += adj_select_size * rank_col * rank_n_bulkmb
-                    adj_row_select_max += adj_select_size * rank_col * rank_n_bulkmb
+                    # adj_row_select_min += adj_select_size * rank_col * rank_n_bulkmb
+                    # adj_row_select_max += adj_select_size * rank_col * rank_n_bulkmb
                     adj_row_select_max = min(adj_row_select_max, adj_matrices_bulk[l].size(0))
 
                     if epoch >= 1:
                         start_time(start_inner_timer)
 
-                    print(f"l: {l} adj_matrices_bulk.size: {adj_matrices_bulk[l].size()}", flush=True)
-                    print(f"l: {l} adj_row_select_min: {adj_row_select_min} max: {adj_row_select_max}", flush=True)
                     adj_nnz_start = adj_matrices_bulk[l].crow_indices()[adj_row_select_min]
                     adj_nnz_stop = adj_matrices_bulk[l].crow_indices()[adj_row_select_max]
 

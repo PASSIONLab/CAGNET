@@ -10,7 +10,8 @@ from sparse_coo_tensor_cpp import downsample_gpu, compute_darts_gpu, throw_darts
                                     shift_rowselect_gpu, shift_colselect_gpu, \
                                     scatteri_add_gpu, rowselect_coo_gpu, \
                                     rowselect_csr_gpu, sparse_coo_tensor_gpu, spgemm_gpu, coogeam_gpu, \
-                                    sparse_csr_tensor_gpu, nsparse_spgemm, rearrange_rows_gpu
+                                    sparse_csr_tensor_gpu, nsparse_spgemm, rearrange_rows_gpu, \
+                                    reduce_sum_gpu
 
 
 timing = True
@@ -80,10 +81,28 @@ def csr_allreduce(mat, left, right, rank, name=None, timing_dict=None):
 
         # torch.cuda.synchronize()
         start_time(start_timer)
-        mat_recv = torch.sparse_csr_tensor(rows_recv, cols_recv, vals_recv, size=mat.size())
+        mat_recv = torch.sparse_csr_tensor(rows_recv.long(), cols_recv.long(), vals_recv, size=mat.size())
         stop_time_add(start_timer, stop_timer, timing_dict, f"spgemm-reduce-csrinst-{name}")
         start_time(start_timer)
-        mat = mat + mat_recv
+        # mat = mat + mat_recv
+
+        # Add mat + mat_recv
+        mat_row_lens = mat.crow_indices()[1:] - mat.crow_indices()[:-1]
+        mat_recv_row_lens = mat_recv.crow_indices()[1:] - mat_recv.crow_indices()[:-1]
+
+        mat_sum_row_lens = mat_row_lens + mat_recv_row_lens
+        mat_sum_crows = torch.cuda.LongTensor(mat_sum_row_lens.size(0) + 1).fill_(0)
+        mat_sum_crows[1:] = torch.cumsum(mat_sum_row_lens, dim=0)
+        mat_sum_crows[0] = 0
+        mat_sum_cols = torch.cuda.LongTensor(mat._nnz() + mat_recv._nnz()).fill_(0)
+        mat_row_lens_nnzrows = mat_row_lens.nonzero().squeeze()
+        mat_recv_row_lens_nnzrows = mat_recv_row_lens.nonzero().squeeze()
+        reduce_sum_gpu(mat_sum_crows, mat.crow_indices(), mat_recv.crow_indices(), 
+                        mat_sum_cols, mat.col_indices(), mat_recv.col_indices(),
+                        mat_row_lens_nnzrows, mat_recv_row_lens_nnzrows)
+
+        mat_sum_vals = torch.cuda.FloatTensor(mat_sum_cols.size(0)).fill_(1.0)
+        mat = torch.sparse_csr_tensor(mat_sum_crows, mat_sum_cols, mat_sum_vals, mat.size())
         stop_time_add(start_timer, stop_timer, timing_dict, f"spgemm-reduce-sum-{name}")
 
         if rank <= mid_rank:
