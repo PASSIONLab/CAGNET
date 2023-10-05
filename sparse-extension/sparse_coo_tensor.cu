@@ -2657,29 +2657,28 @@ void rearrange_rows_gpu(const at::Tensor& mata_rows, const at::Tensor& mata_cols
 //     } 
 // }
 
-__global__ void ReduceSum(long *matc_crows, long *mata_crows, long *matb_crows, 
-                            long *matc_cols, long *mata_cols, long *matb_cols, 
-                            long *mata_nnz_rows, long *matb_nnz_rows, 
-                            int mata_nnz_row_count, int matb_nnz_row_count) { 
+__global__ void ReduceSum(long *matc_crows, long *mata_crows, 
+                            long *matc_cols, long *mata_cols, 
+                            int row_count) { 
 
     int     id = blockIdx.x * blockDim.x + threadIdx.x;
     int stride = blockDim.x * gridDim.x;
 
-    for (int i = id; i < mata_nnz_row_count; i += stride) {
-        int row_id = mata_nnz_rows[i];
+    for (int i = id; i < row_count; i += stride) {
+        int row_id = i;
         int row_len = mata_crows[row_id + 1] - mata_crows[row_id];
         for (int j = 0; j < row_len; j++) {
             matc_cols[matc_crows[row_id] + j] = mata_cols[mata_crows[row_id] + j];
         }
     } 
 
-    for (int i = id; i < matb_nnz_row_count; i += stride) {
-        int row_id = matb_nnz_rows[i];
-        int row_len = matb_crows[row_id + 1] - matb_crows[row_id];
-        for (int j = 0; j < row_len; j++) {
-            matc_cols[matc_crows[row_id] + j] = matb_cols[matb_crows[row_id] + j];
-        }
-    } 
+    // for (int i = id; i < row_count; i += stride) {
+    //     int row_id = i;
+    //     int row_len = matb_crows[row_id + 1] - matb_crows[row_id];
+    //     for (int j = 0; j < row_len; j++) {
+    //         matc_cols[matc_crows[row_id] + j] = matb_cols[matb_crows[row_id] + j];
+    //     }
+    // } 
 }
 
 void reduce_sum_gpu(const at::Tensor& matc_crows, const at::Tensor& mata_crows, 
@@ -2689,9 +2688,10 @@ void reduce_sum_gpu(const at::Tensor& matc_crows, const at::Tensor& mata_crows,
                         const at::Tensor &matb_nnz_rows) {
 
     int BLOCK_SIZE = 256;
-    int mata_nnz_row_count = mata_nnz_rows.sizes()[0];
-    int matb_nnz_row_count = matb_nnz_rows.sizes()[0];
-    int ROW_COUNT = std::max(mata_nnz_row_count, matb_nnz_row_count);
+    // int mata_nnz_row_count = mata_nnz_rows.sizes()[0];
+    // int matb_nnz_row_count = matb_nnz_rows.sizes()[0];
+    // int ROW_COUNT = std::max(mata_nnz_row_count, matb_nnz_row_count);
+    int ROW_COUNT = matc_crows.sizes()[0] - 1;
     int BLOCK_COUNT = std::ceil(ROW_COUNT / ((float) BLOCK_SIZE));
     BLOCK_COUNT = std::min(BLOCK_COUNT, 65535);
 
@@ -2701,20 +2701,15 @@ void reduce_sum_gpu(const at::Tensor& matc_crows, const at::Tensor& mata_crows,
 
     ReduceSum<<<BLOCK_COUNT, BLOCK_SIZE>>>(matc_crows.data<long>(), 
                                                 mata_crows.data<long>(),
-                                                matb_crows.data<long>(),
                                                 matc_cols.data<long>(), 
                                                 mata_cols.data<long>(),
-                                                matb_cols.data<long>(),
-                                                mata_nnz_rows.data<long>(),
-                                                matb_nnz_rows.data<long>(),
-                                                mata_nnz_row_count,
-                                                matb_nnz_row_count);
+                                                ROW_COUNT);
 
-    // ReduceSum<<<BLOCK_COUNT, BLOCK_SIZE>>>(matc_crows.data<long>(), 
-    //                                             matb_crows.data<long>(),
-    //                                             matc_cols.data<long>(), 
-    //                                             matb_cols.data<long>(),
-    //                                             ROW_COUNT);
+    ReduceSum<<<BLOCK_COUNT, BLOCK_SIZE>>>(matc_crows.data<long>(), 
+                                                matb_crows.data<long>(),
+                                                matc_cols.data<long>(), 
+                                                matb_cols.data<long>(),
+                                                ROW_COUNT);
 
     CHECK_ERROR("reduce sum error")
 }

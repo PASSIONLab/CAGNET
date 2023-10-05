@@ -27,7 +27,6 @@ import cagnet.nn.functional as CAGF
 import torch.nn.functional as F
 
 from sparse_coo_tensor_cpp import sort_dst_proc_gpu
-import quiver
 
 import socket
 
@@ -1125,8 +1124,8 @@ def main(args, batches=None):
                 extract_inst_dur = [x / 1000 for x in model.timings["extract-inst"]]
                 extract_coalesce_dur = [x / 1000 for x in model.timings["extract-coalesce"]]
 
-                print(f"sample: {np.sum(sample_dur)} extract-select: {np.sum(extract_select_dur)} extract-inst: {np.sum(extract_inst_dur)} extract-coalesce: {np.sum(extract_coalesce_dur)} train: {np.sum(train_dur)}", flush=True)
-                print(f"feats: {np.sum(selectfeats_dur)} fwd: {np.sum(fwd_dur)} bwd: {np.sum(bwd_dur)}")
+                print(f"sample: {np.sum(sample_dur) / epoch} extract-select: {np.sum(extract_select_dur) / epoch} extract-inst: {np.sum(extract_inst_dur) / epoch} extract-coalesce: {np.sum(extract_coalesce_dur) / epoch} train: {np.sum(train_dur) / epoch}", flush=True)
+                print(f"feats: {np.sum(selectfeats_dur) / epoch} fwd: {np.sum(fwd_dur) / epoch} bwd: {np.sum(bwd_dur) / epoch}")
                 print(f"precomp: {np.sum(precomp_dur)} spmm: {np.sum(spmm_dur)} gemmi: {np.sum(gemmi_dur)} gemmw: {np.sum(gemmw_dur)} aggr: {np.sum(aggr_dur)} fakemats: {np.sum(fakemats_dur)}")
                 # print(f"feat_dim.median: {np.median(feat_dims)}")
                 # print(f"adj0_dim.median: {np.median(adj0_dims)}")
@@ -1134,7 +1133,7 @@ def main(args, batches=None):
                 # print(f"adj0_nnz.median: {np.median(adj0_nnzs)}")
                 # print(f"adj1_nnz.median: {np.median(adj1_nnzs)}")
                 # print(f"adj_nnzs.median: {np.median(adj_nnzs)}")
-                print(f"total: {np.sum(dur)}", flush=True)
+                print(f"total: {np.sum(dur) / epoch}", flush=True)
             if args.dataset != "ogbn-papers100M" and args.dataset != "Amazon" and ("Protein" not in args.dataset):
                 model = model.cpu()
                 train_nid = train_nid.cpu()

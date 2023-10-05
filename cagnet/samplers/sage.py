@@ -157,6 +157,9 @@ def sage_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_total,
         next_frontier_select = next_frontier._indices()[1,:].view(mb_count * nnz, frontier_size)
         # current_frontier_select = torch.masked_select(current_frontier.col_indices(), \
         #                                         current_frontier.values().bool()).view(current_frontier._nnz(), 1)
+        timing_dict["frontier-row-col-select"].append(stop_time(start_timer, stop_timer, barrier=True))
+
+        start_time(start_timer)
         current_frontier_select = current_frontier.col_indices().view(current_frontier._nnz(), 1)
         if i == 0:
             frontiers[0] = current_frontier_select.clone()
@@ -184,7 +187,7 @@ def sage_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_total,
         adj_matrices[i] = adj_matrix_sample.to_sparse_csr()
         frontiers[i + 1] = next_frontier_select.clone()
         current_frontier = next_frontier
-        timing_dict["row-col-select"].append(stop_time(start_timer, stop_timer, barrier=True))
+        timing_dict["adj-row-col-select"].append(stop_time(start_timer, stop_timer, barrier=True))
         del next_frontier_select
         del current_frontier_select
 
@@ -196,7 +199,7 @@ def sage_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_total,
         print(f"total_time: {total_time}", flush=True)
     if timing:
         for k, v in sorted(timing_dict.items()):
-            if (k.startswith("spgemm") and k != "spgemm-misc") or k == "probability-spgemm" or k == "row-select-spgemm" or k == "col-select-spgemm":
+            if (k.startswith("spgemm") and k != "spgemm-misc") or k == "probability-spgemm" or k == "row-select-spgemm" or k == "col-select-spgemm" or k == "sampling-iters" or k == "frontier-row-col-select" or k == "adj-row-col-select" or k.startswith("sample"):
                 v_tens = torch.cuda.FloatTensor(1).fill_(sum(v))
                 v_tens_recv = []
                 for i in range(size):
