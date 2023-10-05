@@ -162,17 +162,18 @@ def sage_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_total,
         start_time(start_timer)
         current_frontier_select = current_frontier.col_indices().view(current_frontier._nnz(), 1)
         if i == 0:
-            frontiers[0] = current_frontier_select.clone()
+            # frontiers[0] = current_frontier_select.clone()
+            frontiers[0] = current_frontier_select
 
         batch_vals = torch.cuda.LongTensor(current_frontier_select.size()).fill_(1)
         next_frontier_select_vals = next_frontier._values().view(-1)
 
-        batch_rows = torch.arange(mb_count * nnz).cuda().view(mb_count * nnz, 1)
+        batch_rows = torch.arange(mb_count * nnz, device=gpu).view(mb_count * nnz, 1)
         next_frontier_select_rows = next_frontier._indices()[0,:].view(-1)
 
         nnz_mask = next_frontier_select_vals.nonzero().squeeze()
         adj_sample_rows = next_frontier_select_rows[nnz_mask]
-        adj_sample_cols = torch.arange(next_frontier_select.numel()).cuda()
+        adj_sample_cols = torch.arange(next_frontier_select.numel(), device=gpu)
         adj_sample_cols = adj_sample_cols.remainder(next_frontier_select.size(1) * nnz)
         adj_sample_cols = adj_sample_cols[nnz_mask]
         adj_matrices_indices = torch.stack((adj_sample_rows, adj_sample_cols))
@@ -184,12 +185,13 @@ def sage_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_total,
         adj_matrix_sample = sparse_coo_tensor_gpu(adj_matrices_indices, adj_matrices_values, 
                                             torch.Size([mb_count * nnz, next_frontier_select.size(1) * nnz]))
         # adj_matrices[i] = adj_matrix_sample
-        adj_matrices[i] = adj_matrix_sample.to_sparse_csr()
-        frontiers[i + 1] = next_frontier_select.clone()
+        # frontiers[i + 1] = next_frontier_select.clone()
+        frontiers[i + 1] = next_frontier_select
         current_frontier = next_frontier
+        adj_matrices[i] = adj_matrix_sample.to_sparse_csr()
         timing_dict["adj-row-col-select"].append(stop_time(start_timer, stop_timer, barrier=True))
-        del next_frontier_select
-        del current_frontier_select
+        # del next_frontier_select
+        # del current_frontier_select
 
     # print(f"total_time: {stop_time(total_start_timer, total_stop_timer)}", flush=True)
     if baseline_compare:

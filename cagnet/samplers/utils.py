@@ -35,38 +35,6 @@ def stop_time_add(start_timer, stop_timer, timing_dict, range_name, barrier=Fals
     if timing_dict is not None:
         timing_dict[range_name].append(stop_time(start_timer, stop_timer, barrier))
 
-def ring_allgather(input_tensor, rank, proc_list):
-    output_tensor_recv = [None] * len(proc_list)
-
-    rank_idx = proc_list.index(rank)
-    current_buffer = input_tensor
-    for i in range(len(proc_list)):
-        recv_rank = proc_list[rank_idx - 1]
-        send_rank = proc_list[(rank_idx + 1) % len(proc_list)]
-
-        # Exchange sizes
-        ops = [None] * 2
-        recv_size = torch.cuda.IntTensor(1).fill_(0)
-        send_size = torch.cuda.IntTensor(1).fill_(current_buffer.size(0))
-        ops[0] = dist.P2POp(dist.isend, send_size, send_rank)
-        ops[1] = dist.P2POp(dist.irecv, recv_size, recv_rank)
-        reqs = dist.batch_isend_irecv(ops)
-        for req in reqs:
-            req.wait() 
-        
-        # Alloc buffer
-        recv_buffer = torch.cuda.IntTensor(recv_size.item())
-        ops[0] = dist.P2POp(dist.isend, current_buffer, send_rank)
-        ops[1] = dist.P2POp(dist.irecv, recv_buffer, recv_rank)
-        reqs = dist.batch_isend_irecv(ops)
-        for req in reqs:
-            req.wait() 
-        
-        current_buffer = recv_buffer
-        output_tensor_recv[rank_idx - 1 - i] = recv_buffer
-
-    return output_tensor_recv
-        
 def csr_allreduce(mat, left, right, rank, name=None, timing_dict=None):
     start_timer = torch.cuda.Event(enable_timing=True)
     stop_timer = torch.cuda.Event(enable_timing=True)
@@ -1202,34 +1170,18 @@ def sample(p, frontier_size, mb_count, node_count_total, n_darts, replication,
 
         start_time(start_timer)
         overflow = torch.clamp(sampled_count - frontier_size, min=0).int()
+        overflowed_minibatches = (overflow > 0).any()
         timing_dict["sample-select-preproc"].append(stop_time(start_timer, stop_timer))
 
         start_time(select_start_timer)
 
-        rank_n_bulkmb = int(next_frontier.size(0) / replication)
-        mb_start = rank_col * rank_n_bulkmb
-        mb_stop = min((rank_col + 1) * rank_n_bulkmb, next_frontier.size(0))
-        rank_n_bulkmb = mb_stop  - mb_start
-        if rank_col == replication - 1:
-            rank_n_bulkmb = next_frontier.size(0) - rank_n_bulkmb * (replication - 1)
-            mb_stop = next_frontier.size(0)
-        select_nnz_mask = (next_frontier._indices()[0,:] >= mb_start) & \
-                                            (next_frontier._indices()[0,:] < mb_stop)
-        # if rank_col == 0 and overflowed_minibatches:
-        overflow_select = overflow[mb_start:mb_stop]
-        sampled_count = sampled_count[mb_start:mb_stop]
-        overflowed_minibatches = (overflow_select > 0).any()
-        dart_hits_count_select = dart_hits_count[select_nnz_mask]
-        next_frontier_select_idxs = next_frontier._indices()[:,select_nnz_mask]
-        next_frontier_select_idxs[0,:] -= mb_start
-        if overflowed_minibatches:
+        if rank_col == 0 and overflowed_minibatches:
             while overflowed_minibatches:
                 start_time(select_iter_start_timer)
 
                 start_time(start_timer)
                 selection_iter_count += 1
-                # ps_overflow = torch.cumsum(overflow, dim=0)
-                ps_overflow = torch.cumsum(overflow_select, dim=0)
+                ps_overflow = torch.cumsum(overflow, dim=0)
                 total_overflow = ps_overflow[-1].item()
                 # n_darts_select = total_overflow // replication
                 # if rank_col == replication - 1:
@@ -1238,24 +1190,19 @@ def sample(p, frontier_size, mb_count, node_count_total, n_darts, replication,
                 timing_dict["select-psoverflow"].append(stop_time(start_timer, stop_timer))
 
                 start_time(start_timer)
-                # dart_hits_inv = dart_hits_count.reciprocal().double()
-                dart_hits_inv = dart_hits_count_select.reciprocal().double()
+                dart_hits_inv = dart_hits_count.reciprocal().double()
                 dart_hits_inv[dart_hits_inv == float("inf")] = 0
                 timing_dict["select-reciprocal"].append(stop_time(start_timer, stop_timer))
 
                 start_time(start_timer)
-                # dart_hits_inv_mtx = sparse_coo_tensor_gpu(next_frontier._indices(), dart_hits_inv,
-                #                                                 torch.Size([p.size(0), node_count_total]))
-                dart_hits_inv_mtx = sparse_coo_tensor_gpu(next_frontier_select_idxs, dart_hits_inv,
-                                                                torch.Size([rank_n_bulkmb, node_count_total]))
+                dart_hits_inv_mtx = sparse_coo_tensor_gpu(next_frontier._indices(), dart_hits_inv,
+                                                                torch.Size([p.size(0), node_count_total]))
                 timing_dict["select-instmtx"].append(stop_time(start_timer, stop_timer))
 
                 start_time(start_timer)
-                # dart_hits_inv_sum = torch.cuda.DoubleTensor(p.size(0)).fill_(0)
-                dart_hits_inv_sum = torch.cuda.DoubleTensor(rank_n_bulkmb).fill_(0)
+                dart_hits_inv_sum = torch.cuda.DoubleTensor(p.size(0)).fill_(0)
                 dart_hits_inv_nnzidxs = dart_hits_inv.nonzero().squeeze()
-                # indices_nnz_idxs = next_frontier._indices()[0,dart_hits_inv_nnzidxs]
-                indices_nnz_idxs = next_frontier_select_idxs[0,dart_hits_inv_nnzidxs]
+                indices_nnz_idxs = next_frontier._indices()[0,dart_hits_inv_nnzidxs]
                 dart_hits_inv_sum.scatter_add_(0, indices_nnz_idxs, dart_hits_inv[dart_hits_inv_nnzidxs])
                 timing_dict["select-invsum"].append(stop_time(start_timer, stop_timer))
 
@@ -1269,39 +1216,30 @@ def sample(p, frontier_size, mb_count, node_count_total, n_darts, replication,
                 dart_select = torch.cuda.DoubleTensor(n_darts_select).uniform_()
                 # Compute darts for selection 
                 compute_darts_select_gpu(dart_select, dart_hits_inv_sum, ps_dart_hits_inv_sum, ps_overflow,
-                                                rank_n_bulkmb, n_darts_select)
-                                                # p.size(0), n_darts_select)
-                                                # mb_count, total_overflow)
+                                                p.size(0), n_darts_select)
                 timing_dict["select-computedarts"].append(stop_time(start_timer, stop_timer))
 
                 start_time(start_timer)
                 # Throw selection darts 
                 ps_dart_hits_inv = torch.cumsum(dart_hits_inv, dim=0)
                 # throw_darts_select_gpu(dart_select, ps_dart_hits_inv, dart_hits_count, total_overflow,
-                # throw_darts_select_gpu(dart_select, ps_dart_hits_inv, dart_hits_count, n_darts_select,
-                                            # next_frontier._nnz())
-                throw_darts_select_gpu(dart_select, ps_dart_hits_inv, dart_hits_count_select, n_darts_select,
-                                            next_frontier_select_idxs.size(1))
+                throw_darts_select_gpu(dart_select, ps_dart_hits_inv, dart_hits_count, n_darts_select,
+                                            next_frontier._nnz())
                 timing_dict["select-throwdarts"].append(stop_time(start_timer, stop_timer))
 
                 start_time(start_timer)
                 # dist.all_reduce(dart_hits_count, op=dist.ReduceOp.MIN, group=row_groups[rank_c])
-                # next_frontier_values = torch.logical_or(dart_hits_count, next_frontier._values()).int()
-                next_frontier_values = torch.logical_or(dart_hits_count_select, 
-                                                            next_frontier._values()[select_nnz_mask]).int()
+                next_frontier_values = torch.logical_or(dart_hits_count, next_frontier._values()).int()
                 # next_frontier_tmp = torch.sparse_coo_tensor(indices=next_frontier._indices(),
                 #                                                 values=next_frontier_values,
                 #                                                 size=(p.size(0), node_count_total))
-                # next_frontier_tmp = sparse_coo_tensor_gpu(next_frontier._indices(), next_frontier_values,
-                #                                                 torch.Size([p.size(0), node_count_total]))
-                next_frontier_tmp = sparse_coo_tensor_gpu(next_frontier_select_idxs, next_frontier_values,
-                                                                torch.Size([rank_n_bulkmb, node_count_total]))
+                next_frontier_tmp = sparse_coo_tensor_gpu(next_frontier._indices(), next_frontier_values,
+                                                                torch.Size([p.size(0), node_count_total]))
                 timing_dict["select-add-to-frontier"].append(stop_time(start_timer, stop_timer))
 
                 start_time(start_timer)
-                # sampled_count = torch.cuda.IntTensor(p.size(0)).fill_(0)
-                sampled_count = torch.cuda.IntTensor(rank_n_bulkmb).fill_(0)
-                # sampled_count = torch.clamp(frontier_size - frontier_nnz_sizes, min=0)
+                sampled_count = torch.cuda.IntTensor(p.size(0)).fill_(0)
+                sampled_count = torch.clamp(frontier_size - frontier_nnz_sizes, min=0)
                 # sampled_count.scatter_add_(0, next_frontier_tmp._indices()[0,:], next_frontier_tmp._values())
                 next_frontier_nnzvals = next_frontier_tmp._values().nonzero().squeeze()
                 next_frontier_nnzidxs = next_frontier_tmp._indices()[0,next_frontier_nnzvals]
@@ -1310,10 +1248,8 @@ def sample(p, frontier_size, mb_count, node_count_total, n_darts, replication,
                 timing_dict["select-samplecount"].append(stop_time(start_timer, stop_timer))
 
                 start_time(start_timer)
-                # overflow = torch.clamp(sampled_count - frontier_size, min=0).int()
-                overflow_select = torch.clamp(sampled_count - frontier_size, min=0).int()
-                # overflowed_minibatches = (overflow > 0).any()
-                overflowed_minibatches = (overflow_select > 0).any()
+                overflow = torch.clamp(sampled_count - frontier_size, min=0).int()
+                overflowed_minibatches = (overflow > 0).any()
                 timing_dict["select-overflow"].append(stop_time(start_timer, stop_timer))
 
                 timing_dict["select-iter"].append(stop_time(select_iter_start_timer, select_iter_stop_timer))
@@ -1336,62 +1272,7 @@ def sample(p, frontier_size, mb_count, node_count_total, n_darts, replication,
 
         start_time(start_timer)
         # dist.all_reduce(dart_hits_count, group=row_groups[rank_c])
-        # dist.broadcast(dart_hits_count, src=rank_c * replication, group=row_groups[rank_c])
-        # max_len = 0
-        # max_len_samples = 0
-        # for i in range(replication):
-        #     mb_start_i = i * int(next_frontier.size(0) / replication)
-        #     mb_stop_i = (i + 1) * int(next_frontier.size(0) / replication)
-        #     if i == replication - 1:
-        #         mb_stop_i = next_frontier.size(0)
-        #     i_nnz_mask = (next_frontier._indices()[0,:] >= mb_start_i) & \
-        #                                         (next_frontier._indices()[0,:] < mb_stop_i)
-        #     max_len = max(i_nnz_mask.size(0), max_len)
-        #     max_len_samples = max(mb_stop_i - mb_start_i, max_len_samples)
-
-        # dart_hits_count_recv = torch.cuda.IntTensor(max_len * replication)
-        # sampled_count_recv = torch.cuda.IntTensor(max_len_samples * replication)
-
-        # if dart_hits_count_select.size(0) < max_len:
-        #     padding = torch.cuda.IntTensor(max_len - dart_hits_count_select.size(0)).fill_(-1)
-        #     print(f"dart.size: {dart_hits_count_select.size()} dartpadding.size: {padding.size()}", flush=True)
-        #     dart_hits_count_select = torch.cat((dart_hits_count_select, padding), dim=0)
-        # if sampled_count.size(0) < max_len_samples:
-        #     padding = torch.cuda.IntTensor(max_len_samples - sampled_count.size(0)).fill_(-1)
-        #     print(f"sample.size: {sampled_count.size()} samplepadding.size: {padding.size()}", flush=True)
-        #     sampled_count = torch.cat((sampled_count, padding), dim=0)
-
-        dart_lens = []
-        sample_lens = []
-        for i in range(replication):
-            mb_start_i = i * int(next_frontier.size(0) / replication)
-            mb_stop_i = (i + 1) * int(next_frontier.size(0) / replication)
-            if i == replication - 1:
-                mb_stop_i = next_frontier.size(0)
-            i_nnz_mask = (next_frontier._indices()[0,:] >= mb_start_i) & \
-                                                (next_frontier._indices()[0,:] < mb_stop_i)
-            # max_len = max(i_nnz_mask.size(0), max_len)
-            dart_lens.append(i_nnz_mask.size(0))
-            # max_len_samples = max(mb_stop_i - mb_start_i, max_len_samples)
-            sample_lens.append(mb_stop_i - mb_start_i)
-        
-        dart_hits_count_recv = []
-        sample_count_recv = []
-        for i in range(replication):
-            dart_hits_count_recv.append(torch.cuda.IntTensor(dart_lens[i]))
-            sample_count_recv.append(torch.cuda.IntTensor(sample_lens[i]))
-        timing_dict["sample-gather-counts-preproc"].append(stop_time(start_timer, stop_timer))
-
-        start_time(start_timer)
-        # dist.all_gather_into_tensor(dart_hits_count_recv, dart_hits_count_select, group=row_groups[rank_c])
-        # dist.all_gather_into_tensor(sampled_count_recv, sampled_count, group=row_groups[rank_c])
-        # dart_hits_count = dart_hits_count_recv[(dart_hits_count_recv != -1)]
-        # sampled_count = sampled_count_recv[(sampled_count_recv != -1)]
-        row_procs = list(range(rank_c * replication, (rank_c + 1) * replication))
-        dart_hits_count_recv = ring_allgather(dart_hits_count_select, rank, row_procs)
-        sampled_count_recv = ring_allgather(sampled_count, rank, row_procs)
-        dart_hits_count = torch.cat(dart_hits_count_recv, dim=0)
-        sampled_count = torch.cat(sampled_count_recv, dim=0)
+        dist.broadcast(dart_hits_count, src=rank_c * replication, group=row_groups[rank_c])
         next_frontier_values = torch.logical_or(
                                         dart_hits_count, 
                                         next_frontier._values()).int()
