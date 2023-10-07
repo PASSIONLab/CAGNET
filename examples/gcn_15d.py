@@ -564,12 +564,12 @@ def main(args, batches=None):
                         dist.send(test_idx_len, dst=dst_gpu)
                         dist.send(train_idx, dst=dst_gpu)
                         dist.send(test_idx, dst=dst_gpu)
-                    print("coalescing", flush=True)
-                    g_loc = g_loc.coalesce().t_()
-                    print("normalizing", flush=True)
-                    g_loc = g_loc.to(device)
-                    features_loc = features_loc.to(device)
-                    edge_count = adj_matrix.size(1)
+                print("coalescing", flush=True)
+                g_loc = g_loc.coalesce().t_()
+                print("normalizing", flush=True)
+                g_loc = g_loc.to(device)
+                features_loc = features_loc.to(device)
+                edge_count = adj_matrix.size(1)
             else:
                 print(f"loading", flush=True)
                 g_loc_meta = torch.load(f"../../data/ogbn_papers100M/cagnet/p16/{rank}g_loc_meta.pt", 
@@ -849,7 +849,7 @@ def main(args, batches=None):
             nnz_recv_upperbound = edge_count // (size // args.replication)
 
             if epoch >= 1:
-                start_time(start_timer)
+                start_time(start_timer, timing_arg=True)
             print("Sampling", flush=True)
             torch.cuda.nvtx.range_push("nvtx-sampling")
             if args.sample_method == "ladies":
@@ -870,11 +870,11 @@ def main(args, batches=None):
                                                                         col_groups, args.timing, args.baseline)
                 
             if epoch >= 1:
-                model.timings["sample"].append(stop_time(start_timer, stop_timer))
+                model.timings["sample"].append(stop_time(start_timer, stop_timer, timing_arg=True))
             torch.cuda.nvtx.range_pop() # nvtx-sampling
 
             if epoch >= 1:
-                start_time(start_timer)
+                start_time(start_timer, timing_arg=True)
             # g_loc = g_loc.coalesce()
 
             print("Training", flush=True)
@@ -917,7 +917,7 @@ def main(args, batches=None):
                     adj_row_select_max = min(adj_row_select_max, adj_matrices_bulk[l].size(0))
 
                     if epoch >= 1:
-                        start_time(start_inner_timer)
+                        start_time(start_inner_timer, timing_arg=True)
 
                     adj_nnz_start = adj_matrices_bulk[l].crow_indices()[adj_row_select_min]
                     adj_nnz_stop = adj_matrices_bulk[l].crow_indices()[adj_row_select_max]
@@ -930,10 +930,10 @@ def main(args, batches=None):
                     adj_sample_values = adj_matrices_bulk[l].values()[adj_nnz_start:adj_nnz_stop].float()
 
                     if epoch >= 1:
-                        model.timings["extract-select"].append(stop_time(start_inner_timer, stop_inner_timer))
+                        model.timings["extract-select"].append(stop_time(start_inner_timer, stop_inner_timer, timing_arg=True))
 
                     if epoch >= 1:
-                        start_time(start_inner_timer)
+                        start_time(start_inner_timer, timing_arg=True)
                     if args.sample_method == "ladies":
                         adj_matrix_sample = torch.sparse_coo_tensor(adj_matrix_sample_indices, \
                                                         adj_matrix_sample_values, \
@@ -953,18 +953,18 @@ def main(args, batches=None):
                         adj_nnzs.append(adj_sample_values.size(0))
                         # print(f"i: {i} sample.nnz: {adj_matrix_sample._nnz()} sample.size: {adj_matrix_sample.size()} emptyrows: {(adj_sample_row_lens == 0).sum()}")
                     if epoch >= 1:
-                        model.timings["extract-inst"].append(stop_time(start_inner_timer, stop_inner_timer))
+                        model.timings["extract-inst"].append(stop_time(start_inner_timer, stop_inner_timer, timing_arg=True))
 
                     if epoch >= 1:
-                        start_time(start_inner_timer)
+                        start_time(start_inner_timer, timing_arg=True)
                     # adjs[args.n_layers - l - 1] = adj_matrix_sample.to_sparse_coo()
                     adjs[args.n_layers - l - 1] = adj_matrix_sample.coalesce()
                     if epoch >= 1:
-                        model.timings["extract-coalesce"].append(stop_time(start_inner_timer, stop_inner_timer))
+                        model.timings["extract-coalesce"].append(stop_time(start_inner_timer, stop_inner_timer, timing_arg=True))
 
                 torch.cuda.nvtx.range_pop() # nvtx-extracting
                 if epoch >= 1:
-                    start_time(start_inner_timer)
+                    start_time(start_inner_timer, timing_arg=True)
                 torch.cuda.nvtx.range_push("nvtx-selectfeats")
                 if size > 1:
                     src_vtxs_sort = torch.cuda.LongTensor(src_vtxs.size(0))
@@ -1007,7 +1007,7 @@ def main(args, batches=None):
 
                 torch.cuda.nvtx.range_pop() # nvtx-selectfeats
                 if epoch >= 1:
-                    model.timings["selectfeats"].append(stop_time(start_inner_timer, stop_inner_timer))
+                    model.timings["selectfeats"].append(stop_time(start_inner_timer, stop_inner_timer, timing_arg=True))
 
                 # if epoch >= 1:
                 #     start_time(start_inner_timer)
@@ -1038,7 +1038,7 @@ def main(args, batches=None):
                 # torch.cuda.nvtx.range_pop() # nvtx-fakemats
 
                 if epoch >= 1:
-                    start_time(start_inner_timer)
+                    start_time(start_inner_timer, timing_arg=True)
                 torch.cuda.nvtx.range_push("nvtx-fwd")
                 # feat_dims.append(features_batch.size(0))
                 # adj0_dims.append(adjs[0].size(1))
@@ -1054,7 +1054,7 @@ def main(args, batches=None):
                 logits = model(adjs, features_batch, epoch)
                 torch.cuda.nvtx.range_pop() # nvtx-fwd
                 if epoch >= 1:
-                    model.timings["fwd"].append(stop_time(start_inner_timer, stop_inner_timer))
+                    model.timings["fwd"].append(stop_time(start_inner_timer, stop_inner_timer, timing_arg=True))
 
                 if epoch >= 1:
                     start_time(start_inner_timer)
@@ -1068,12 +1068,12 @@ def main(args, batches=None):
                     model.timings["loss"].append(stop_time(start_inner_timer, stop_inner_timer))
                 
                 if epoch >= 1:
-                    start_time(start_inner_timer)
+                    start_time(start_inner_timer, timing_arg=True)
                 torch.cuda.nvtx.range_push("nvtx-bwd")
                 loss.backward()
                 torch.cuda.nvtx.range_pop() # nvtx-bwd
                 if epoch >= 1:
-                    model.timings["bwd"].append(stop_time(start_inner_timer, stop_inner_timer))
+                    model.timings["bwd"].append(stop_time(start_inner_timer, stop_inner_timer, timing_arg=True))
 
                 for W in model.parameters():
                     dist.all_reduce(W.grad)
@@ -1081,7 +1081,7 @@ def main(args, batches=None):
                 optimizer.step()
                 torch.cuda.nvtx.range_pop() # nvtx-optstep
             if epoch >= 1:
-                model.timings["train"].append(stop_time(start_timer, stop_timer))
+                model.timings["train"].append(stop_time(start_timer, stop_timer, timing_arg=True))
 
             if last_batch:
                 # break
@@ -1100,7 +1100,7 @@ def main(args, batches=None):
             #                     data.val_mask.nonzero().squeeze().size(0), col_groups[0])
             acc1 = 0.0
             acc3 = 0.0
-            if args.timing:
+            if True or args.timing:
                 sample_dur = [x / 1000 for x in model.timings["sample"]]
                 train_dur = [x / 1000 for x in model.timings["train"]]
                 fwd_dur = [x / 1000 for x in model.timings["fwd"]]

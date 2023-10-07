@@ -16,12 +16,20 @@ from sparse_coo_tensor_cpp import downsample_gpu, compute_darts_gpu, throw_darts
 timing = True
 baseline_compare = True
 
-def start_time(timer):
-    if timing:
+def start_time(timer, timing_arg=None):
+    if timing_arg is not None:
+        start_timing = timing_arg
+    else:
+        start_timing = timing
+    if start_timing:
         timer.record()
 
-def stop_time(start_timer, stop_timer, barrier=False):
-    if timing:
+def stop_time(start_timer, stop_timer, barrier=False, timing_arg=None):
+    if timing_arg is not None:
+        start_timing = timing_arg
+    else:
+        start_timing = timing
+    if start_timing:
         stop_timer.record()
         torch.cuda.synchronize()
         time_taken = start_timer.elapsed_time(stop_timer)
@@ -117,6 +125,7 @@ def sage_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_total,
                                 replication, rank, size, row_groups, col_groups,
                                 sa_masks, timing_dict, "sage",
                                 timing_arg)
+        dist.barrier()
         # adj_matrix = adj_matrix.to_sparse_coo()
         if p.layout == torch.sparse_csr:
             p = p.to_sparse_coo()
@@ -124,6 +133,7 @@ def sage_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_total,
         next_frontier = sample(p, frontier_size, mb_count, node_count_total, n_darts,
                                     replication, rank, size, row_groups, col_groups,
                                     timing_dict, "sage")
+        dist.barrier()
 
         start_time(start_timer)
         # add explicit 0's to next_frontier to fix the number of rows as bs * sn^l
@@ -157,7 +167,7 @@ def sage_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_total,
         next_frontier_select = next_frontier._indices()[1,:].view(mb_count * nnz, frontier_size)
         # current_frontier_select = torch.masked_select(current_frontier.col_indices(), \
         #                                         current_frontier.values().bool()).view(current_frontier._nnz(), 1)
-        timing_dict["frontier-row-col-select"].append(stop_time(start_timer, stop_timer, barrier=True))
+        timing_dict["frontier-row-col-select"].append(stop_time(start_timer, stop_timer))
 
         start_time(start_timer)
         current_frontier_select = current_frontier.col_indices().view(current_frontier._nnz(), 1)
@@ -186,10 +196,13 @@ def sage_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_total,
                                             torch.Size([mb_count * nnz, next_frontier_select.size(1) * nnz]))
         # adj_matrices[i] = adj_matrix_sample
         # frontiers[i + 1] = next_frontier_select.clone()
-        frontiers[i + 1] = next_frontier_select
+        if i + 1 == n_layers:
+            frontiers[i + 1] = next_frontier_select
+        else:
+            del next_frontier_select
         current_frontier = next_frontier
+        timing_dict["adj-row-col-select"].append(stop_time(start_timer, stop_timer))
         adj_matrices[i] = adj_matrix_sample.to_sparse_csr()
-        timing_dict["adj-row-col-select"].append(stop_time(start_timer, stop_timer, barrier=True))
         # del next_frontier_select
         # del current_frontier_select
 

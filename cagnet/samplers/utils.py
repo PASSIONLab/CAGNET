@@ -16,12 +16,20 @@ from sparse_coo_tensor_cpp import downsample_gpu, compute_darts_gpu, throw_darts
 
 timing = True
 
-def start_time(timer):
-    if timing:
+def start_time(timer, timing_arg=None):
+    if timing_arg is not None:
+        start_timing = timing_arg
+    else:
+        start_timing = timing
+    if start_timing:
         timer.record()
 
-def stop_time(start_timer, stop_timer, barrier=False):
-    if timing:
+def stop_time(start_timer, stop_timer, barrier=False, timing_arg=None):
+    if timing_arg is not None:
+        start_timing = timing_arg
+    else:
+        start_timing = timing
+    if start_timing:
         stop_timer.record()
         torch.cuda.synchronize()
         time_taken = start_timer.elapsed_time(stop_timer)
