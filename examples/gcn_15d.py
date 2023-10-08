@@ -309,37 +309,37 @@ def one5d_partition(rank, size, inputs, adj_matrix, data, features, classes, rep
     # TODO: Maybe I do want grad here. Unsure.
     with torch.no_grad():
         # Column partitions
-        am_partitions, vtx_indices = split_coo(adj_matrix, node_count, n_per_proc, 1)
-        # proc_node_count = vtx_indices[rank_c + 1] - vtx_indices[rank_c]
-        # am_pbyp, _ = split_coo(am_partitions[rank_c], node_count, n_per_proc, 0)
-        # print(f"before", flush=True)
-        # for i in range(len(am_pbyp)):
-        #     if i == size // replication - 1:
-        #         last_node_count = vtx_indices[i + 1] - vtx_indices[i]
-        #         am_pbyp[i] = torch.sparse_coo_tensor(am_pbyp[i], torch.ones(am_pbyp[i].size(1)), 
-        #                                                 size=(last_node_count, proc_node_count),
-        #                                                 requires_grad=False)
+        # am_partitions, vtx_indices = split_coo(adj_matrix, node_count, n_per_proc, 1)
+        # # proc_node_count = vtx_indices[rank_c + 1] - vtx_indices[rank_c]
+        # # am_pbyp, _ = split_coo(am_partitions[rank_c], node_count, n_per_proc, 0)
+        # # print(f"before", flush=True)
+        # # for i in range(len(am_pbyp)):
+        # #     if i == size // replication - 1:
+        # #         last_node_count = vtx_indices[i + 1] - vtx_indices[i]
+        # #         am_pbyp[i] = torch.sparse_coo_tensor(am_pbyp[i], torch.ones(am_pbyp[i].size(1)), 
+        # #                                                 size=(last_node_count, proc_node_count),
+        # #                                                 requires_grad=False)
 
-        #         am_pbyp[i] = scale_elements(adj_matrix, am_pbyp[i], node_count, vtx_indices[i], 
-        #                                         vtx_indices[rank_c], normalize)
-        #     else:
-        #         am_pbyp[i] = torch.sparse_coo_tensor(am_pbyp[i], torch.ones(am_pbyp[i].size(1)), 
-        #                                                 size=(n_per_proc, proc_node_count),
-        #                                                 requires_grad=False)
+        # #         am_pbyp[i] = scale_elements(adj_matrix, am_pbyp[i], node_count, vtx_indices[i], 
+        # #                                         vtx_indices[rank_c], normalize)
+        # #     else:
+        # #         am_pbyp[i] = torch.sparse_coo_tensor(am_pbyp[i], torch.ones(am_pbyp[i].size(1)), 
+        # #                                                 size=(n_per_proc, proc_node_count),
+        # #                                                 requires_grad=False)
 
-        #         am_pbyp[i] = scale_elements(adj_matrix, am_pbyp[i], node_count, vtx_indices[i], 
-        #                                         vtx_indices[rank_c], normalize)
+        # #         am_pbyp[i] = scale_elements(adj_matrix, am_pbyp[i], node_count, vtx_indices[i], 
+        # #                                         vtx_indices[rank_c], normalize)
 
-        for i in range(len(am_partitions)):
-            proc_node_count = vtx_indices[i + 1] - vtx_indices[i]
-            am_partitions[i] = torch.sparse_coo_tensor(am_partitions[i], 
-                                                    torch.ones(am_partitions[i].size(1)).double(), 
-                                                    size=(node_count, proc_node_count), 
-                                                    requires_grad=False)
-            am_partitions[i] = scale_elements(adj_matrix, am_partitions[i], node_count,  0, vtx_indices[i], \
-                                                    normalize)
+        # for i in range(len(am_partitions)):
+        #     proc_node_count = vtx_indices[i + 1] - vtx_indices[i]
+        #     am_partitions[i] = torch.sparse_coo_tensor(am_partitions[i], 
+        #                                             torch.ones(am_partitions[i].size(1)).double(), 
+        #                                             size=(node_count, proc_node_count), 
+        #                                             requires_grad=False)
+        #     am_partitions[i] = scale_elements(adj_matrix, am_partitions[i], node_count,  0, vtx_indices[i], \
+        #                                             normalize)
 
-        # input_partitions = torch.split(inputs, math.ceil(float(inputs.size(0)) / (size / replication)), dim=0)
+        # # input_partitions = torch.split(inputs, math.ceil(float(inputs.size(0)) / (size / replication)), dim=0)
         input_partitions = torch.split(inputs, inputs.size(0) // (size // replication), dim=0)
         if len(input_partitions) > (size // replication):
             input_partitions_fused = [None] * (size // replication)
@@ -347,12 +347,13 @@ def one5d_partition(rank, size, inputs, adj_matrix, data, features, classes, rep
             input_partitions_fused[-1] = torch.cat(input_partitions[-2:], dim=0)
             input_partitions = input_partitions_fused
 
-        adj_matrix_loc = am_partitions[rank_c]
+        # adj_matrix_loc = am_partitions[rank_c]
         inputs_loc = input_partitions[rank_c]
 
-    print(f"rank: {rank} adj_matrix_loc.size: {adj_matrix_loc.size()}", flush=True)
+    # print(f"rank: {rank} adj_matrix_loc.size: {adj_matrix_loc.size()}", flush=True)
     print(f"rank: {rank} inputs_loc.size: {inputs_loc.size()}", flush=True)
-    return inputs_loc, adj_matrix_loc, am_partitions, input_partitions
+    # return inputs_loc, adj_matrix_loc, am_partitions, input_partitions
+    return inputs_loc, None, None, input_partitions
 
 def one5d_partition_mb(rank, size, batches, replication, mb_count):
     rank_c = rank // replication
@@ -467,6 +468,7 @@ def main(args, batches=None):
         import ogb
         data = Data()
         from ogb.nodeproppred import PygNodePropPredDataset # only import if necessary, takes a long time
+        print(flush=True, end='')
         if ("papers100M" in args.dataset and rank % args.gpu == 0) or "products" in args.dataset:
             dataset = PygNodePropPredDataset(name=args.dataset, root="/global/u1/a/alokt/data")
             data = dataset[0]
@@ -523,31 +525,67 @@ def main(args, batches=None):
                                             inputs, num_classes, args.replication, \
                                             args.normalize)
 
+                print(f"begin conversion", flush=True)
+                # adj_matrix = adj_matrix.int()
+                # adj_matrix_crows = torch.IntTensor(inputs.size(0) + 1).fill_(0)
+                # ones = torch.IntTensor(adj_matrix.size(1)).fill_(1)
+                # # adj_matrix_rows = torch.histc(adj_matrix[0,:], bins=inputs.size(0))
+                # adj_matrix_rows = torch.IntTensor(inputs.size(0)).fill_(0)
+                # adj_matrix_rows.scatter_add_(0, adj_matrix[0,:].long(), ones)
+                # adj_matrix_crows[1:] = torch.cumsum(adj_matrix_rows, dim=0).roll(1)
+                # adj_matrix_crows[0] = 0
+                adj_matrix_crows = torch.load("/global/u1/a/alokt/data/ogbn_papers100M/csr/indptr.pt")
+                adj_matrix_cols = torch.load("/global/u1/a/alokt/data/ogbn_papers100M/csr/indices.pt")
+                print(f"adj_matrix_crows: {adj_matrix_crows} dtype: {adj_matrix_crows.dtype} device: {adj_matrix_crows.device}", flush=True)
+                print(f"adj_matrix_cols: {adj_matrix_cols} dtype: {adj_matrix_cols.dtype} device: {adj_matrix_cols.device}", flush=True)
+                print(f"stop conversion", flush=True)
+                # adj_matrix_crows = adj_matrix_crows.int().to(device)
+                # adj_matrix_cols = adj_matrix[1,:].int().to(device)
+                adj_matrix_vals = torch.FloatTensor(adj_matrix_cols.size(0)).fill_(1)
+                g_loc = torch.sparse_csr_tensor(adj_matrix_crows.int(), adj_matrix_cols.int(), \
+                                                    adj_matrix_vals, \
+                                                    torch.Size([inputs.size(0), inputs.size(0)]))
+                g_loc = g_loc.to(device)
+                print(f"stop copying", flush=True)
                 for i in range(1, args.gpu):
                     print(f"iteration i: {i}", flush=True)
                     rank_send_row = (rank + i) // args.replication
                     dst_gpu = rank + i
-                    g_send = am_partitions[rank_send_row]
-                    print("coalescing", flush=True)
-                    g_send = g_send.coalesce().t_()
+                    # g_send = am_partitions[rank_send_row]
+                    g_send = adj_matrix
+                    # print("coalescing", flush=True)
+                    # g_send = g_send.coalesce().t_()
                     print("normalizing", flush=True)
-                    g_send = g_send.to(device)
-                    g_send = g_send.double()
+                    # g_send = g_send.to(device)
+                    # g_send = g_send.double()
+
                     features_send = input_partitions[rank_send_row].to(device)
                     edge_count = adj_matrix.size(1)
 
 
                     g_send_meta = torch.cuda.LongTensor(6)
-                    g_send_meta[0] = g_send._nnz()
-                    g_send_meta[1] = g_send.size(0)
-                    g_send_meta[2] = g_send.size(1)
-                    g_send_meta[3] = adj_matrix.size(1)
+                    # g_send_meta[0] = g_send._nnz()
+                    # g_send_meta[1] = g_send.size(0)
+                    # g_send_meta[2] = g_send.size(1)
+                    g_send_meta[0] = g_loc.col_indices().size(0)
+                    g_send_meta[1] = inputs.size(0)
+                    g_send_meta[2] = inputs.size(0)
+                    g_send_meta[3] = g_loc.col_indices().size(0)
                     g_send_meta[4] = num_features
                     g_send_meta[5] = num_classes
+                    print(f"g_send_meta: {g_send_meta}", flush=True)
                     dist.send(g_send_meta, dst=dst_gpu)
-                    dist.send(g_send._indices(), dst=dst_gpu)
-                    dist.send(g_send._values(), dst=dst_gpu)
+                    # dist.send(g_send._indices(), dst=dst_gpu)
+                    # dist.send(g_send._values(), dst=dst_gpu)
+                    # print(f"i: {i} g_send: {g_send} dtype: {g_send.dtype}", flush=True)
+                    # dist.send(g_send, dst=dst_gpu)
+                    print(f"i: {i} g_loc.crows: {g_loc.crow_indices()} dtype: {g_loc.crow_indices().dtype}", flush=True)
+                    dist.send(g_loc.crow_indices(), dst=dst_gpu)
+                    print(f"i: {i} g_loc.cols: {g_loc.col_indices()} dtype: {g_loc.col_indices().dtype}", flush=True)
+                    dist.send(g_loc.col_indices(), dst=dst_gpu)
+                    print(f"i: {i} features_send.size: {features_send.size()} dtype: {features_send.dtype}", flush=True)
                     dist.send(features_send, dst=dst_gpu)
+                    print(f"send data.y.size: {data.y.size()} inputs.size: {inputs.size()}", flush=True)
                     dist.send(data.y.float(), dst=dst_gpu)
                     # torch.save(g_send_meta, f"../../data/ogbn_papers100M/cagnet/p16/{dst_gpu}g_loc_meta.pt")
                     # torch.save(g_send._indices(), f"../../data/ogbn_papers100M/cagnet/p16/{dst_gpu}g_loc_indices.pt")
@@ -565,11 +603,11 @@ def main(args, batches=None):
                         dist.send(train_idx, dst=dst_gpu)
                         dist.send(test_idx, dst=dst_gpu)
                 print("coalescing", flush=True)
-                g_loc = g_loc.coalesce().t_()
+                # g_loc = g_loc.coalesce().t_()
                 print("normalizing", flush=True)
                 g_loc = g_loc.to(device)
                 features_loc = features_loc.to(device)
-                edge_count = adj_matrix.size(1)
+                edge_count = g_loc.col_indices().size(0)
             else:
                 print(f"loading", flush=True)
                 g_loc_meta = torch.load(f"../../data/ogbn_papers100M/cagnet/p16/{rank}g_loc_meta.pt", 
@@ -593,7 +631,7 @@ def main(args, batches=None):
                 g_loc = torch.sparse_coo_tensor(g_loc_indices, g_loc_values, 
                                                 torch.Size([g_loc_meta[1], g_loc_meta[2]]))
                 print("normalizing", flush=True)
-                edge_count = adj_matrix.size(1)
+                edge_count = g_loc.col_indices().size(0)
 
             # features_loc, g_loc, _, _ = one5d_partition(rank, size, inputs, adj_matrix, data, inputs, num_classes, \
             #                                 args.replication, args.normalize)
@@ -617,28 +655,55 @@ def main(args, batches=None):
                 g_loc_meta = torch.cuda.LongTensor(6).fill_(0)
                 dist.recv(g_loc_meta, src=src_gpu)
 
-                g_loc_indices = torch.cuda.LongTensor(2, g_loc_meta[0].item())
-                dist.recv(g_loc_indices, src=src_gpu)
+                # g_loc_indices = torch.cuda.IntTensor(2, g_loc_meta[0].item())
+                # dist.recv(g_loc_indices, src=src_gpu)
+                # torch.cuda.synchronize()
+                # print(f"recv indices", flush=True)
 
-                g_loc_values = torch.cuda.DoubleTensor(g_loc_meta[0].item())
-                dist.recv(g_loc_values, src=src_gpu)
+                g_loc_crows = torch.cuda.IntTensor(g_loc_meta[1].item() + 1)
+                dist.recv(g_loc_crows, src=src_gpu)
+                torch.cuda.synchronize()
+                print(f"recv crows", flush=True)
+
+                g_loc_cols = torch.cuda.IntTensor(g_loc_meta[0].item())
+                dist.recv(g_loc_cols, src=src_gpu)
+                torch.cuda.synchronize()
+                print(f"recv cols", flush=True)
+
+                # g_loc_values = torch.cuda.DoubleTensor(g_loc_meta[0].item())
+                # dist.recv(g_loc_values, src=src_gpu)
 
                 num_features = g_loc_meta[4].item()
                 num_classes = g_loc_meta[5].item()
+                rows_per_proc = g_loc_meta[1].item() // (size // args.replication)
                 if rank_row < proc_row - 1:
-                    inputs = torch.cuda.FloatTensor(g_loc_meta[1].item(), num_features)
+                    inputs = torch.cuda.FloatTensor(rows_per_proc, num_features)
                 else:
-                    rows = g_loc_meta[1].item() + (g_loc_meta[2].item() - proc_row * g_loc_meta[1].item())
+                    rows = g_loc_meta[1].item() - rows_per_proc * (proc_row - 1)
                     inputs = torch.cuda.FloatTensor(rows, num_features)
                 dist.recv(inputs, src=src_gpu)
+                torch.cuda.synchronize()
+                print(f"recv inputs", flush=True)
 
                 # data = Data()
                 data.y = torch.cuda.FloatTensor(g_loc_meta[2].item())
+                print(f"data.y.size: {data.y.size()}", flush=True)
                 dist.recv(data.y, src=src_gpu)
+                torch.cuda.synchronize()
+                print(f"recv datay", flush=True)
                 data.y = data.y.long()
+                print(f"cast datay", flush=True)
 
-                g_loc = torch.sparse_coo_tensor(g_loc_indices, g_loc_values, \
+                # g_loc_values = torch.cuda.FloatTensor(g_loc_indices.size(1)).fill_(1.0)
+                # g_loc = torch.sparse_coo_tensor(g_loc_indices, g_loc_values, \
+                #                                     torch.Size([g_loc_meta[1], g_loc_meta[2]]))
+                g_loc_values = torch.cuda.FloatTensor(g_loc_cols.size(0)).fill_(1.0)
+                g_loc_crows = g_loc_crows.cpu()
+                g_loc_cols = g_loc_cols.cpu()
+                g_loc_values = g_loc_values.cpu()
+                g_loc = torch.sparse_csr_tensor(g_loc_crows, g_loc_cols, g_loc_values, \
                                                     torch.Size([g_loc_meta[1], g_loc_meta[2]]))
+                g_loc = g_loc.to(device)
                 edge_count = g_loc_meta[3].item()
 
                 if args.dataset == "ogbn-papers100M":
@@ -687,10 +752,19 @@ def main(args, batches=None):
         features_loc, g_loc, _, _ = one5d_partition(rank, size, inputs, adj_matrix, data, inputs, num_classes, \
                                                     args.replication, args.normalize)
         print("coalescing", flush=True)
-        g_loc = g_loc.coalesce().t_()
+        # g_loc = g_loc.coalesce().t_()
+        adj_matrix_row_lens = torch.IntTensor(inputs.size(0)).fill_(0)
+        ones = torch.IntTensor(adj_matrix.size(1)).fill_(1)
+        adj_matrix_row_lens.scatter_add_(0, adj_matrix[0,:], ones)
+        adj_matrix_crows = torch.IntTensor(inputs.size(0) + 1)
+        adj_matrix_crows[1:] = torch.cumsum(adj_matrix_row_lens, dim=0)
+        adj_matrix_crows[0] = 0
+        adj_matrix_values = torch.FloatTensor(adj_matrix.size(1)).fill_(1.0)
+        g_loc = torch.sparse_csr_tensor(adj_matrix_crows, adj_matrix[1,:].int(), adj_matrix_values, 
+                                            size=torch.Size([inputs.size(0), inputs.size(0)]))
         print("normalizing", flush=True)
         g_loc = g_loc.to(device)
-        g_loc = g_loc.double()
+        # g_loc = g_loc.double()
         # features_loc = inputs
         features_loc = features_loc.to(device)
         # del inputs
@@ -797,7 +871,7 @@ def main(args, batches=None):
         # if batches is None:
         torch.manual_seed(epoch)
         vertex_perm = torch.randperm(train_nid.size(0))
-        batches_all = train_nid[vertex_perm]
+        batches_all = train_nid[vertex_perm].int()
         torch.cuda.nvtx.range_pop() # construct-batches
 
         # torch.cuda.nvtx.range_push("nvtx-construct-batches")
@@ -821,13 +895,13 @@ def main(args, batches=None):
                 args.batch_size = batch_count - b
             torch.cuda.nvtx.range_push("nvtx-partition-batches")
             batches = batches_all[b:(b + args.n_bulkmb * args.batch_size)].view(args.n_bulkmb, args.batch_size)
-            batches_loc = one5d_partition_mb(rank, size, batches, args.replication, args.n_bulkmb)
+            batches_loc = one5d_partition_mb(rank, size, batches, 1, args.n_bulkmb)
 
-            batches_indices_rows = torch.arange(batches_loc.size(0)).to(device)
+            batches_indices_rows = torch.arange(batches_loc.size(0), dtype=torch.int32, device=device)
             batches_indices_rows = batches_indices_rows.repeat_interleave(batches_loc.size(1))
             batches_indices_cols = batches_loc.view(-1)
             batches_indices = torch.stack((batches_indices_rows, batches_indices_cols))
-            batches_values = torch.cuda.DoubleTensor(batches_loc.size(1) * batches_loc.size(0), device=device).fill_(1.0)
+            batches_values = torch.cuda.FloatTensor(batches_loc.size(1) * batches_loc.size(0), device=device).fill_(1.0)
             batches_loc = torch.sparse_coo_tensor(batches_indices, batches_values, (batches_loc.size(0), g_loc.size(1)))
             torch.cuda.nvtx.range_pop() # partition-batches
             # g_loc = torch.pow(g_loc, 2)
@@ -843,8 +917,8 @@ def main(args, batches=None):
 
             # for sa-spgemm
             # nnz_row_masks = torch.cuda.BoolTensor((size // args.replication) * g_loc._indices().size(1)) 
-            nnz_row_masks = torch.cuda.BoolTensor((size // args.replication) * g_loc._nnz()) 
-            nnz_row_masks.fill_(0)
+            # nnz_row_masks = torch.cuda.BoolTensor((size // args.replication) * g_loc._nnz()) 
+            # nnz_row_masks.fill_(0)
             
             nnz_recv_upperbound = edge_count // (size // args.replication)
 
@@ -862,10 +936,12 @@ def main(args, batches=None):
                                                                             row_groups, col_groups, args.timing)
             elif args.sample_method == "sage":
                 # nnz_row_masks.fill_(False)
+                nnz_row_masks = None
                 frontiers_bulk, adj_matrices_bulk = sage_sampler(g_loc, batches_loc, args.batch_size, \
                                                                         args.samp_num, args.n_bulkmb, \
                                                                         args.n_layers, args.n_darts, \
-                                                                        args.replication, nnz_row_masks, 
+                                                                        1, nnz_row_masks, 
+                                                                        # args.replication, nnz_row_masks, 
                                                                         rank, size, row_groups, 
                                                                         col_groups, args.timing, args.baseline)
                 

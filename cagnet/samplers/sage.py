@@ -76,7 +76,7 @@ def sage_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_total,
 
     gpu = torch.device(f"cuda:{torch.cuda.current_device()}")
 
-    batches_expand_rows = torch.arange(mb_count * batch_size, device=gpu)
+    batches_expand_rows = torch.arange(mb_count * batch_size, dtype=torch.int32, device=gpu)
     batches_expand_idxs = torch.stack((batches_expand_rows, batches._indices()[1, :]))
     # batches_expand = torch.sparse_coo_tensor(
     #                         batches_expand_idxs,
@@ -85,7 +85,7 @@ def sage_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_total,
     batches_expand = sparse_coo_tensor_gpu(batches_expand_idxs, batches._values(), 
                                             torch.Size([mb_count * batch_size, node_count_total]))
 
-    batches_expand = batches_expand.to_sparse_csr()
+    # batches_expand = batches_expand.to_sparse_csr()
 
     # adj_matrix = adj_matrix.to_sparse_csr()
     current_frontier = batches_expand
@@ -116,7 +116,7 @@ def sage_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_total,
                                                torch.Size([current_frontier._nnz(), current_frontier.size(1)]))
             # nnz = current_frontier._nnz() // mb_count
             nnz = batch_size * (frontier_size ** i)
-            current_frontier = current_frontier.to_sparse_csr()
+            # current_frontier = current_frontier.to_sparse_csr()
 
         # Expand batches matrix
         if baseline_compare:
@@ -125,7 +125,9 @@ def sage_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_total,
                                 replication, rank, size, row_groups, col_groups,
                                 sa_masks, timing_dict, "sage",
                                 timing_arg)
+
         dist.barrier()
+
         # adj_matrix = adj_matrix.to_sparse_coo()
         if p.layout == torch.sparse_csr:
             p = p.to_sparse_coo()
@@ -170,7 +172,8 @@ def sage_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_total,
         timing_dict["frontier-row-col-select"].append(stop_time(start_timer, stop_timer))
 
         start_time(start_timer)
-        current_frontier_select = current_frontier.col_indices().view(current_frontier._nnz(), 1)
+        # current_frontier_select = current_frontier.col_indices().view(current_frontier._nnz(), 1)
+        current_frontier_select = current_frontier._indices()[1,:].view(current_frontier._nnz(), 1)
         if i == 0:
             # frontiers[0] = current_frontier_select.clone()
             frontiers[0] = current_frontier_select

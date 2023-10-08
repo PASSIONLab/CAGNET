@@ -1028,11 +1028,35 @@ def gen_prob_dist(numerator, adj_matrix, mb_count, node_count_total, replication
     # TODO: assume n_layers=1 for now
     # start_time(start_timer)
     start_timer.record()
-    sa_masks.fill_(False)
-    p_num_indices, p_num_values = dist_saspgemm15D(
-                                        numerator, adj_matrix, replication, rank, size, 
-                                        row_groups, col_groups, "prob", sa_masks, 
-                                        timing_dict, name)
+    # p_num_indices, p_num_values = dist_saspgemm15D(
+    #                                     numerator, adj_matrix, replication, rank, size, 
+    #                                     row_groups, col_groups, "prob", sa_masks, 
+    #                                     timing_dict, name)
+    if name == "sage":
+        matc_chunk_row_lens = torch.cuda.IntTensor(numerator.size(0)).fill_(0)
+        mata_rows = numerator._indices()[0,:]
+        mata_cols = numerator._indices()[1,:]
+        adj_row_lens = adj_matrix.crow_indices()[1:] - adj_matrix.crow_indices()[:-1]
+        matc_chunk_row_lens[mata_rows] = adj_row_lens[mata_cols]
+        matc_chunk_crows = torch.cuda.IntTensor(numerator.size(0) + 1)
+        matc_chunk_crows[1:] = torch.cumsum(matc_chunk_row_lens, 0, dtype=torch.int32)
+        matc_chunk_crows[0] = 0
+        matc_chunk_cols = torch.cuda.IntTensor(matc_chunk_crows[-1].item()).fill_(0)
+        rearrange_rows_gpu(numerator._indices()[0,:].int(), 
+                                numerator._indices()[1,:].int(), 
+                                matc_chunk_crows, 
+                                adj_matrix.crow_indices(), 
+                                adj_matrix.col_indices(), 
+                                matc_chunk_cols)
+        p_num_rows = torch.repeat_interleave(
+                                        torch.arange(matc_chunk_crows.size(0) - 1, device=numerator.device),
+                                                        matc_chunk_row_lens)
+        p_num_indices = torch.stack((p_num_rows, matc_chunk_cols))
+        p_num_values = torch.cuda.FloatTensor(p_num_indices.size(1)).fill_(1.0)
+    else:
+        sa_masks.fill_(False)
+        # TODO: LADIES code
+
     # p_num_indices, p_num_values =  dist_spgemm15D(numerator, adj_matrix, replication, rank, size, row_groups, col_groups, "prob")
     stop_timer.record()
     torch.cuda.synchronize()
@@ -1154,7 +1178,7 @@ def sample(p, frontier_size, mb_count, node_count_total, n_darts, replication,
         timing_dict["sample-filter-darts"].append(stop_time(start_timer, stop_timer))
 
         start_time(start_timer)
-        dist.all_reduce(dart_hits_count, group=row_groups[rank_c])
+        # dist.all_reduce(dart_hits_count, group=row_groups[rank_c])
         next_frontier_values = torch.logical_or(
                                     dart_hits_count, 
                                     next_frontier._values().int()).int()
@@ -1274,13 +1298,13 @@ def sample(p, frontier_size, mb_count, node_count_total, n_darts, replication,
             timing_dict["select-overflow"] = []
             timing_dict["select-iter"] = []
 
-        dist.barrier(group=row_groups[rank_c])
+        # dist.barrier(group=row_groups[rank_c])
 
         timing_dict["sample-dart-selection"].append(stop_time(select_start_timer, select_stop_timer))
 
         start_time(start_timer)
         # dist.all_reduce(dart_hits_count, group=row_groups[rank_c])
-        dist.broadcast(dart_hits_count, src=rank_c * replication, group=row_groups[rank_c])
+        # dist.broadcast(dart_hits_count, src=rank_c * replication, group=row_groups[rank_c])
         next_frontier_values = torch.logical_or(
                                         dart_hits_count, 
                                         next_frontier._values()).int()

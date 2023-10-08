@@ -2586,7 +2586,7 @@ void sort_dst_proc_gpu(const at::Tensor& vtxs, const at::Tensor& src_vtx_sort, c
     CHECK_ERROR("sort_dst_proc error")
 }
 
-__global__ void RearrangeRows(long *mata_rows, long *mata_cols, long *matc_crows, long *matb_crows, 
+__global__ void RearrangelRows(long *mata_rows, long *mata_cols, long *matc_crows, long *matb_crows, 
                                 long *matb_cols, long *matc_cols, int nnz_count) { 
 
     int     id = blockIdx.x * blockDim.x + threadIdx.x;
@@ -2605,9 +2605,9 @@ __global__ void RearrangeRows(long *mata_rows, long *mata_cols, long *matc_crows
     } 
 }
 
-void rearrange_rows_gpu(const at::Tensor& mata_rows, const at::Tensor& mata_cols, const at::Tensor& matc_crows, 
-                            const at::Tensor& matb_crows, const at::Tensor& matb_cols, 
-                            const at::Tensor& matc_cols) {
+void rearrangel_rows_gpu(const at::Tensor& mata_rows, const at::Tensor& mata_cols, 
+                            const at::Tensor& matc_crows, const at::Tensor& matb_crows, 
+                            const at::Tensor& matb_cols, const at::Tensor& matc_cols) {
 
 
     int BLOCK_SIZE = 256;
@@ -2618,12 +2618,55 @@ void rearrange_rows_gpu(const at::Tensor& mata_rows, const at::Tensor& mata_cols
         return;
     }
 
-    RearrangeRows<<<BLOCK_COUNT, BLOCK_SIZE>>>(mata_rows.data<long>(), 
+    RearrangelRows<<<BLOCK_COUNT, BLOCK_SIZE>>>(mata_rows.data<long>(), 
                                                     mata_cols.data<long>(),
                                                     matc_crows.data<long>(), 
                                                     matb_crows.data<long>(), 
                                                     matb_cols.data<long>(),
                                                     matc_cols.data<long>(),
+                                                    mata_rows.sizes()[0]);
+
+    CHECK_ERROR("rearrange_rows error")
+}
+
+__global__ void RearrangeRows(int *mata_rows, int *mata_cols, int *matc_crows, int *matb_crows, 
+                                int *matb_cols, int *matc_cols, int nnz_count) { 
+
+    int     id = blockIdx.x * blockDim.x + threadIdx.x;
+    int stride = blockDim.x * gridDim.x;
+
+    for (int i = id; i < nnz_count; i += stride) {
+        int row = mata_rows[i];
+        int col = mata_cols[i];
+        int dst_idx = matc_crows[row];
+        int src_idx = matb_crows[col];
+        int row_len = matb_crows[col + 1] - matb_crows[col];
+        // memcpy(&matc_cols[dst_idx], &matb_cols[src_idx], row_len * sizeof(long));
+        for (int j = 0; j < row_len; j++) {
+            matc_cols[dst_idx + j] = matb_cols[src_idx + j];
+        }
+    } 
+}
+
+void rearrange_rows_gpu(const at::Tensor& mata_rows, const at::Tensor& mata_cols, 
+                            const at::Tensor& matc_crows, const at::Tensor& matb_crows, 
+                            const at::Tensor& matb_cols, const at::Tensor& matc_cols) {
+
+
+    int BLOCK_SIZE = 256;
+    int BLOCK_COUNT = std::ceil(mata_rows.sizes()[0] / ((float) BLOCK_SIZE));
+    BLOCK_COUNT = std::min(BLOCK_COUNT, 65535);
+
+    if (mata_rows.sizes()[0] == 0) {
+        return;
+    }
+
+    RearrangeRows<<<BLOCK_COUNT, BLOCK_SIZE>>>(mata_rows.data<int>(), 
+                                                    mata_cols.data<int>(),
+                                                    matc_crows.data<int>(), 
+                                                    matb_crows.data<int>(), 
+                                                    matb_cols.data<int>(),
+                                                    matc_cols.data<int>(),
                                                     mata_rows.sizes()[0]);
 
     CHECK_ERROR("rearrange_rows error")
