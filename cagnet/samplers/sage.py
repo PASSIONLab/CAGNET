@@ -126,7 +126,7 @@ def sage_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_total,
                                 sa_masks, timing_dict, "sage",
                                 timing_arg)
 
-        dist.barrier()
+        # dist.barrier()
 
         # adj_matrix = adj_matrix.to_sparse_coo()
         if p.layout == torch.sparse_csr:
@@ -135,7 +135,7 @@ def sage_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_total,
         next_frontier = sample(p, frontier_size, mb_count, node_count_total, n_darts,
                                     replication, rank, size, row_groups, col_groups,
                                     timing_dict, "sage")
-        dist.barrier()
+        # dist.barrier()
 
         start_time(start_timer)
         # add explicit 0's to next_frontier to fix the number of rows as bs * sn^l

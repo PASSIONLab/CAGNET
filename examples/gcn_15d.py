@@ -467,8 +467,9 @@ def main(args, batches=None):
     elif args.dataset.startswith("ogb"):
         import ogb
         data = Data()
+        print(f"before loading ogb", flush=True)
         from ogb.nodeproppred import PygNodePropPredDataset # only import if necessary, takes a long time
-        print(flush=True, end='')
+        print(f"after loading ogb", flush=True)
         if ("papers100M" in args.dataset and rank % args.gpu == 0) or "products" in args.dataset:
             dataset = PygNodePropPredDataset(name=args.dataset, root="/global/u1/a/alokt/data")
             data = dataset[0]
