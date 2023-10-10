@@ -1038,19 +1038,21 @@ def gen_prob_dist(numerator, adj_matrix, mb_count, node_count_total, replication
         mata_cols = numerator._indices()[1,:]
         adj_row_lens = adj_matrix.crow_indices()[1:] - adj_matrix.crow_indices()[:-1]
         matc_chunk_row_lens[mata_rows] = adj_row_lens[mata_cols]
-        matc_chunk_crows = torch.cuda.IntTensor(numerator.size(0) + 1)
-        matc_chunk_crows[1:] = torch.cumsum(matc_chunk_row_lens, 0, dtype=torch.int32)
+        matc_chunk_crows = torch.cuda.LongTensor(numerator.size(0) + 1).fill_(0)
+        matc_chunk_crows[1:] = torch.cumsum(matc_chunk_row_lens, 0)
         matc_chunk_crows[0] = 0
         matc_chunk_cols = torch.cuda.IntTensor(matc_chunk_crows[-1].item()).fill_(0)
-        rearrange_rows_gpu(numerator._indices()[0,:].int(), 
-                                numerator._indices()[1,:].int(), 
+        rearrange_rows_gpu(numerator._indices()[0,:], 
+                                numerator._indices()[1,:], 
                                 matc_chunk_crows, 
-                                adj_matrix.crow_indices(), 
-                                adj_matrix.col_indices(), 
+                                adj_matrix.crow_indices().long(), 
+                                adj_matrix.col_indices().long(), 
                                 matc_chunk_cols)
         p_num_rows = torch.repeat_interleave(
-                                        torch.arange(matc_chunk_crows.size(0) - 1, device=numerator.device),
-                                                        matc_chunk_row_lens)
+                                        torch.arange(matc_chunk_crows.size(0) - 1, 
+                                                            dtype=torch.int32, 
+                                                            device=numerator.device),
+                                        matc_chunk_row_lens)
         p_num_indices = torch.stack((p_num_rows, matc_chunk_cols))
         p_num_values = torch.cuda.FloatTensor(p_num_indices.size(1)).fill_(1.0)
     else:
@@ -1065,24 +1067,25 @@ def gen_prob_dist(numerator, adj_matrix, mb_count, node_count_total, replication
     timing_dict["probability-spgemm"].append(time_taken)
 
     start_time(start_timer)
-    p_den = torch.cuda.DoubleTensor(numerator.size(0)).fill_(0)
     if name == "ladies":
         # p_num_values = torch.square(p_num_values).double()
+        p_den = torch.cuda.DoubleTensor(numerator.size(0)).fill_(0)
         p_num_values = p_num_values.double()
     elif name == "sage":
         # p_num_values = torch.cuda.DoubleTensor(p_num_values.size(0)).fill_(1.0)
-        p_num_values = p_num_values.double()
+        # p_num_values = p_num_values.double()
+        p_den = torch.cuda.FloatTensor(numerator.size(0)).fill_(0)
     # scatterd_add_gpu(p_den, p_num_indices[0, :], p_num_values, p_num_values.size(0))
     # frontier_nnz_sizes.scatter_add_(0, next_frontier._indices()[0,:], ones)
-    p_den.scatter_add_(0, p_num_indices[0, :], p_num_values)
+    p_den.scatter_add_(0, p_num_indices[0, :].long(), p_num_values)
     # p = torch.sparse_coo_tensor(indices=p_num_indices, 
     #                                 values=p_num_values, 
     #                                 size=(numerator.size(0), node_count_total))
     # p = sparse_coo_tensor_gpu(p_num_indices, p_num_values, torch.Size([numerator.size(0), node_count_total]))
     # normalize_gpu(p._values(), p_den, p._indices()[0, :], p._nnz())
-    normalize_gpu(p_num_values, p_den, p_num_indices[0, :], p_num_values.size(0))
+    normalize_gpu(p_num_values, p_den, p_num_indices[0, :].long(), p_num_values.size(0))
     p_num_values = torch.nan_to_num(p_num_values)
-    p = sparse_coo_tensor_gpu(p_num_indices, p_num_values, torch.Size([numerator.size(0), node_count_total]))
+    p = sparse_coo_tensor_gpu(p_num_indices.long(), p_num_values, torch.Size([numerator.size(0), node_count_total]))
     timing_dict["compute-p"].append(stop_time(start_timer, stop_timer))
     return p
 
@@ -1104,10 +1107,10 @@ def sample(p, frontier_size, mb_count, node_count_total, n_darts, replication,
     rank_c = rank // replication
     rank_col = rank % replication
 
-    n_darts_col = n_darts // replication
-    if rank_col == replication - 1:
-        n_darts_col = n_darts - (replication - 1) * n_darts_col
-    # n_darts_col = n_darts
+    # n_darts_col = n_darts // replication
+    # if rank_col == replication - 1:
+    #     n_darts_col = n_darts - (replication - 1) * n_darts_col
+    n_darts_col = n_darts
 
     next_frontier = torch.sparse_coo_tensor(indices=p._indices(),
                                         values=torch.cuda.LongTensor(p._nnz()).fill_(0),
@@ -1135,7 +1138,8 @@ def sample(p, frontier_size, mb_count, node_count_total, n_darts, replication,
     # underfull_minibatches = (sampled_count < frontier_size).any()
     underfull_minibatches = True
 
-    p_rowsum = torch.cuda.DoubleTensor(p.size(0)).fill_(0)
+    # p_rowsum = torch.cuda.DoubleTensor(p.size(0)).fill_(0)
+    p_rowsum = torch.cuda.FloatTensor(p.size(0)).fill_(0)
     while underfull_minibatches:
         iter_count += 1
         start_time(sample_start_timer)
@@ -1160,7 +1164,8 @@ def sample(p, frontier_size, mb_count, node_count_total, n_darts, replication,
 
         start_time(start_timer)
         # dart_values = torch.cuda.DoubleTensor(n_darts * mb_count).uniform_()
-        dart_values = torch.cuda.DoubleTensor(n_darts_col * p.size(0)).uniform_()
+        # dart_values = torch.cuda.DoubleTensor(n_darts_col * p.size(0)).uniform_()
+        dart_values = torch.cuda.FloatTensor(n_darts_col * p.size(0)).uniform_()
         timing_dict["sample-gen-darts"].append(stop_time(start_timer, stop_timer))
 
         start_time(start_timer)
@@ -1207,6 +1212,7 @@ def sample(p, frontier_size, mb_count, node_count_total, n_darts, replication,
 
         start_time(select_start_timer)
 
+        print(f"overflow: {overflow}", flush=True)
         if rank_col == 0 and overflowed_minibatches:
             while overflowed_minibatches:
                 start_time(select_iter_start_timer)
@@ -1338,8 +1344,8 @@ def sample(p, frontier_size, mb_count, node_count_total, n_darts, replication,
 
         timing_dict["sampling-iters"].append(stop_time(sample_start_timer, sample_stop_timer))
 
-    # print(f"iter_count: {iter_count}")
-    # print(f"selection_iter_count: {selection_iter_count}")
+    print(f"iter_count: {iter_count}")
+    print(f"selection_iter_count: {selection_iter_count}")
 
     return next_frontier
 

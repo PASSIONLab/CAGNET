@@ -85,6 +85,7 @@ class GCN(nn.Module):
         for l, layer in enumerate(self.layers):
             graphs[l].t_()
             nnz_index = graphs[l]._values().nonzero().squeeze() # SAGEConv
+            # print(f"nnz_index.size: {nnz_index.size()}", flush=True)
             edge_index = graphs[l]._indices()[:, nnz_index] # SAGEConv
             # edge_index = graphs[l] # SAGEConvfake
             # edge_index, _, size = graphs[l] # quiver
@@ -827,7 +828,8 @@ def main(args, batches=None):
     model = model.to(device)
 
     # use optimizer
-    optimizer = torch.optim.Adam(model.parameters(), lr=args.lr * size)
+    # optimizer = torch.optim.Adam(model.parameters(), lr=args.lr * size)
+    optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
 
     dur = []
     # torch.manual_seed(0)
@@ -886,6 +888,7 @@ def main(args, batches=None):
 
         torch.cuda.nvtx.range_push("nvtx-bulk")
         last_batch = False
+        print(f"batch_count: {batch_count}", flush=True)
         for b in range(0, batch_count, args.n_bulkmb):
             if b + args.n_bulkmb > batch_count:
                 break
@@ -914,7 +917,12 @@ def main(args, batches=None):
                 if args.sample_method == "ladies":
                     args.n_darts = avg_degree * args.batch_size * (args.replication ** 2)
                 elif args.sample_method == "sage":
-                    args.n_darts = avg_degree * 2
+                    args.n_darts = []
+                    avg_degree = edge_count / node_count
+                    for d in range(args.n_layers):
+                        dart_count = int(avg_degree * args.samp_num[d] / avg_degree)
+                        args.n_darts.append(dart_count)
+                    print(f"n_darts: {args.n_darts}", flush=True)
 
             # for sa-spgemm
             # nnz_row_masks = torch.cuda.BoolTensor((size // args.replication) * g_loc._indices().size(1)) 
@@ -975,22 +983,20 @@ def main(args, batches=None):
                 batch_vtxs = frontiers_bulk[0][batch_select_min:batch_select_max,:].view(-1)
 
                 # src_vtxs = frontiers[-1][i].view(-1)
-                src_select_size = args.batch_size * (args.samp_num ** (args.n_layers - 1))
-                src_select_min = i * args.batch_size * (args.samp_num ** (args.n_layers - 1))
-                src_select_max = (i + 1) * args.batch_size  * (args.samp_num ** (args.n_layers - 1))
+                # src_select_min = i * args.batch_size * (args.samp_num ** (args.n_layers - 1))
+                # src_select_max = (i + 1) * args.batch_size  * (args.samp_num ** (args.n_layers - 1))
+                src_select_min = i * args.batch_size * np.prod(args.samp_num[:-1], dtype=int)
+                src_select_max = (i + 1) * args.batch_size  * np.prod(args.samp_num[:-1], dtype=int)
                 
-                # src_select_min += src_select_size * rank_col * rank_n_bulkmb
-                # src_select_max += src_select_size * rank_col * rank_n_bulkmb
                 src_vtxs = frontiers_bulk[-1][src_select_min:src_select_max,:].view(-1)
                 # print(f"src_vtxs: {src_vtxs} src_vtxs.size: {src_vtxs.size()} zero_count: {(src_vtxs == 0).sum()}", flush=True)
 
                 adjs = [None] * args.n_layers
                 for l in range(args.n_layers):
-                    adj_select_size = args.batch_size * (args.samp_num ** l)
-                    adj_row_select_min = i * args.batch_size * (args.samp_num ** l)
-                    adj_row_select_max = (i + 1) * args.batch_size  * (args.samp_num ** l)
-                    # adj_row_select_min += adj_select_size * rank_col * rank_n_bulkmb
-                    # adj_row_select_max += adj_select_size * rank_col * rank_n_bulkmb
+                    # adj_row_select_min = i * args.batch_size * (args.samp_num ** l)
+                    # adj_row_select_max = (i + 1) * args.batch_size  * (args.samp_num ** l)
+                    adj_row_select_min = i * args.batch_size * np.prod(args.samp_num[:l], dtype=int)
+                    adj_row_select_max = (i + 1) * args.batch_size  * np.prod(args.samp_num[:l], dtype=int)
                     adj_row_select_max = min(adj_row_select_max, adj_matrices_bulk[l].size(0))
 
                     if epoch >= 1:
@@ -1025,8 +1031,10 @@ def main(args, batches=None):
                         adj_sample_indices = torch.stack((adj_sample_rows, adj_sample_cols))
                         adj_matrix_sample = torch.sparse_coo_tensor(adj_sample_indices, \
                                                         adj_sample_values, \
-                                                        (args.batch_size * (args.samp_num ** l), \
-                                                                args.batch_size * (args.samp_num ** (l + 1))))
+                                                    # (args.batch_size * (args.samp_num ** l), \
+                                                    #         args.batch_size * (args.samp_num ** (l + 1))))
+                                            (args.batch_size * np.prod(args.samp_num[:l], dtype=int), \
+                                                args.batch_size * (np.prod(args.samp_num[:(l+1)], dtype=int))))
                         adj_nnzs.append(adj_sample_values.size(0))
                         # print(f"i: {i} sample.nnz: {adj_matrix_sample._nnz()} sample.size: {adj_matrix_sample.size()} emptyrows: {(adj_sample_row_lens == 0).sum()}")
                     if epoch >= 1:
@@ -1154,6 +1162,7 @@ def main(args, batches=None):
 
                 for W in model.parameters():
                     dist.all_reduce(W.grad)
+                    W.grad /= size
                 torch.cuda.nvtx.range_push("nvtx-optstep")
                 optimizer.step()
                 torch.cuda.nvtx.range_pop() # nvtx-optstep
@@ -1252,8 +1261,8 @@ if __name__ == '__main__':
                         help="number of hidden gcn layers")
     parser.add_argument("--batch-size", type=int, default=512,
                         help="number of vertices in minibatch")
-    parser.add_argument("--samp-num", type=int, default=64,
-                        help="number of vertices per layer of layer-wise minibatch")
+    parser.add_argument("--samp-num", type=str, default="2-2",
+                        help="number of vertices per layer of minibatch")
     parser.add_argument("--weight-decay", type=float, default=5e-4,
                         help="Weight for L2 loss")
     parser.add_argument("--aggr", type=str, default="mean",
@@ -1287,6 +1296,7 @@ if __name__ == '__main__':
     parser.add_argument('--baseline', action="store_true",
                             help='whether to avoid col selection for baseline comparison')
     args = parser.parse_args()
+    args.samp_num = [int(i) for i in args.samp_num.split('-')]
     print(args)
 
     main(args)

@@ -1330,8 +1330,24 @@ using namespace at::sparse;
 //     }
 //   cudaThreadSynchronize();
 // }
+__device__ int binary_searchd(double *arr, double val, int imin, int imax) {
+    
+    int ans = 0;
+    while (imax >= imin) {
+        int imid = (imin + imax) / 2;
 
-__device__ int binary_searchf(double *arr, double val, int imin, int imax) {
+        if (arr[imid] < val) {
+            imin = imid + 1;
+        } else {
+            ans = imid;
+            imax = imid - 1;
+        }
+    }
+
+    return ans;
+}
+
+__device__ int binary_searchf(float *arr, float val, int imin, int imax) {
     
     int ans = 0;
     while (imax >= imin) {
@@ -2085,7 +2101,8 @@ void compute_darts_gpu(const at::Tensor& dartx_values,
     CHECK_ERROR("dart computation error")
 }
 
-__global__ void ComputeDarts1D(double *dart_values, double *p_rowsum, double *ps_p_rowsum, 
+// __global__ void ComputeDarts1D(double *dart_values, double *p_rowsum, double *ps_p_rowsum, 
+__global__ void ComputeDarts1D(float *dart_values, float *p_rowsum, float *ps_p_rowsum, 
                                     int n_darts, int mb_count) {
 
     int     id = blockIdx.x * blockDim.x + threadIdx.x;
@@ -2107,9 +2124,12 @@ void compute_darts1d_gpu(const at::Tensor& dart_values, const at::Tensor& p_rows
     int BLOCK_COUNT = std::ceil((n_darts * mb_count) / ((float) BLOCK_SIZE));
     BLOCK_COUNT = std::min(BLOCK_COUNT, 65535);
 
-    ComputeDarts1D<<<BLOCK_COUNT, BLOCK_SIZE>>>(dart_values.data<double>(), 
-                                                p_rowsum.data<double>(),
-                                                ps_p_rowsum.data<double>(),
+    // ComputeDarts1D<<<BLOCK_COUNT, BLOCK_SIZE>>>(dart_values.data<double>(), 
+    //                                             p_rowsum.data<double>(),
+    //                                             ps_p_rowsum.data<double>(),
+    ComputeDarts1D<<<BLOCK_COUNT, BLOCK_SIZE>>>(dart_values.data<float>(), 
+                                                p_rowsum.data<float>(),
+                                                ps_p_rowsum.data<float>(),
                                                 n_darts,
                                                 mb_count);
     CHECK_ERROR("dart1d computation error")
@@ -2189,7 +2209,7 @@ void throw_darts_gpu(const at::Tensor& dartx_values,
     CHECK_ERROR("dart throwing error")
 }
 
-__global__ void ThrowDarts1D(double *dart_values, double *ps_p_values, int *h_values, 
+__global__ void ThrowDarts1D(float *dart_values, float *ps_p_values, int *h_values, 
                                 int dart_count, int nnz) {
 
     int     id = blockIdx.x * blockDim.x + threadIdx.x;
@@ -2215,8 +2235,10 @@ void throw_darts1d_gpu(const at::Tensor& dart_values,
     int BLOCK_COUNT = std::ceil((dart_count) / ((float) BLOCK_SIZE));
     BLOCK_COUNT = std::min(BLOCK_COUNT, 65535);
 
-    ThrowDarts1D<<<BLOCK_COUNT, BLOCK_SIZE>>>(dart_values.data<double>(), 
-                                                ps_p_values.data<double>(), 
+    // ThrowDarts1D<<<BLOCK_COUNT, BLOCK_SIZE>>>(dart_values.data<double>(), 
+    //                                             ps_p_values.data<double>(), 
+    ThrowDarts1D<<<BLOCK_COUNT, BLOCK_SIZE>>>(dart_values.data<float>(), 
+                                                ps_p_values.data<float>(), 
                                                 h_values.data<int>(), 
                                                 dart_count,
                                                 nnz);
@@ -2230,7 +2252,8 @@ __global__ void ThrowDartsSelect(double *dart_select, double *ps_dart_hits_inv, 
     int stride = blockDim.x * gridDim.x;
 
     for (int i = id; i < total_overflow; i += stride) {
-        int vtx = binary_searchf(ps_dart_hits_inv, dart_select[i], 0, nnz);
+        // int vtx = binary_searchf(ps_dart_hits_inv, dart_select[i], 0, nnz);
+        int vtx = binary_searchd(ps_dart_hits_inv, dart_select[i], 0, nnz);
         atomicAnd(&dart_hits_count[vtx], 0);
     }
 }
@@ -2258,7 +2281,26 @@ void throw_darts_select_gpu(const at::Tensor& dart_select,
     CHECK_ERROR("selection dart throwing error")
 }
 
-__global__ void Normalize(double *output, double *input, long *index, int len) { 
+__global__ void Normalized(double *output, double *input, long *index, int len) { 
+    long     id = blockIdx.x * blockDim.x + threadIdx.x;
+    long stride = blockDim.x * gridDim.x;
+
+    for (int i = id; i < len; i += stride) {
+        output[i] /= input[index[i]];
+    }
+}
+
+void normalized_gpu(const at::Tensor& output, const at::Tensor& input, const at::Tensor& index, int len) {
+
+
+    int BLOCK_SIZE = 256;
+    int BLOCK_COUNT = std::ceil(len / ((float) BLOCK_SIZE));
+    BLOCK_COUNT = std::min(BLOCK_COUNT, 65535);
+
+    Normalized<<<BLOCK_COUNT, BLOCK_SIZE>>>(output.data<double>(), input.data<double>(), index.data<long>(), len);
+}
+
+__global__ void Normalize(float *output, float *input, long *index, int len) { 
     long     id = blockIdx.x * blockDim.x + threadIdx.x;
     long stride = blockDim.x * gridDim.x;
 
@@ -2274,7 +2316,7 @@ void normalize_gpu(const at::Tensor& output, const at::Tensor& input, const at::
     int BLOCK_COUNT = std::ceil(len / ((float) BLOCK_SIZE));
     BLOCK_COUNT = std::min(BLOCK_COUNT, 65535);
 
-    Normalize<<<BLOCK_COUNT, BLOCK_SIZE>>>(output.data<double>(), input.data<double>(), index.data<long>(), len);
+    Normalize<<<BLOCK_COUNT, BLOCK_SIZE>>>(output.data<float>(), input.data<float>(), index.data<long>(), len);
 }
 
 __global__ void NormalizeBatch(float *output, int *input, int output_rows, int output_cols) { 
@@ -2629,21 +2671,21 @@ void rearrangel_rows_gpu(const at::Tensor& mata_rows, const at::Tensor& mata_col
     CHECK_ERROR("rearrange_rows error")
 }
 
-__global__ void RearrangeRows(int *mata_rows, int *mata_cols, int *matc_crows, int *matb_crows, 
-                                int *matb_cols, int *matc_cols, int nnz_count) { 
+__global__ void RearrangeRows(long *mata_rows, long *mata_cols, long *matc_crows, long *matb_crows, 
+                                long *matb_cols, int *matc_cols, long nnz_count) { 
 
     int     id = blockIdx.x * blockDim.x + threadIdx.x;
     int stride = blockDim.x * gridDim.x;
 
     for (int i = id; i < nnz_count; i += stride) {
-        int row = mata_rows[i];
-        int col = mata_cols[i];
-        int dst_idx = matc_crows[row];
-        int src_idx = matb_crows[col];
-        int row_len = matb_crows[col + 1] - matb_crows[col];
+        long row = mata_rows[i];
+        long col = mata_cols[i];
+        long dst_idx = matc_crows[row];
+        long src_idx = matb_crows[col];
+        long row_len = matb_crows[col + 1] - matb_crows[col];
         // memcpy(&matc_cols[dst_idx], &matb_cols[src_idx], row_len * sizeof(long));
         for (int j = 0; j < row_len; j++) {
-            matc_cols[dst_idx + j] = matb_cols[src_idx + j];
+            matc_cols[dst_idx + j] = (int)(matb_cols[src_idx + j]);
         }
     } 
 }
@@ -2661,11 +2703,11 @@ void rearrange_rows_gpu(const at::Tensor& mata_rows, const at::Tensor& mata_cols
         return;
     }
 
-    RearrangeRows<<<BLOCK_COUNT, BLOCK_SIZE>>>(mata_rows.data<int>(), 
-                                                    mata_cols.data<int>(),
-                                                    matc_crows.data<int>(), 
-                                                    matb_crows.data<int>(), 
-                                                    matb_cols.data<int>(),
+    RearrangeRows<<<BLOCK_COUNT, BLOCK_SIZE>>>(mata_rows.data<long>(), 
+                                                    mata_cols.data<long>(),
+                                                    matc_crows.data<long>(), 
+                                                    matb_crows.data<long>(), 
+                                                    matb_cols.data<long>(),
                                                     matc_cols.data<int>(),
                                                     mata_rows.sizes()[0]);
 

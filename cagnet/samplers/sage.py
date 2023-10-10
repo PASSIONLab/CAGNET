@@ -2,6 +2,7 @@ import math
 import torch
 import torch.distributed as dist
 import torch_sparse
+import numpy as np
 from collections import defaultdict
 from cagnet.samplers.utils import *
 
@@ -39,7 +40,7 @@ def stop_time(start_timer, stop_timer, barrier=False, timing_arg=None):
     else:
         return 0.0
 
-def sage_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_total, n_layers, n_darts, \
+def sage_sampler(adj_matrix, batches, batch_size, frontier_sizes, mb_count_total, n_layers, n_darts_list, \
                         replication, sa_masks, rank, size, row_groups, col_groups,
                         timing_arg, baseline_arg):
 
@@ -63,11 +64,6 @@ def sage_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_total,
 
     rank_c = rank // replication
     rank_col = rank % replication
-
-    n_darts_col = n_darts // replication
-    if rank_col == replication - 1:
-        n_darts_col = n_darts - (replication - 1) * n_darts_col
-    n_darts_col = n_darts
 
     # adj_matrices = [[None] * n_layers for x in range(mb_count)] 
     # adj_matrices[i][j] --  mb i layer j
@@ -115,7 +111,8 @@ def sage_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_total,
             current_frontier = sparse_coo_tensor_gpu(current_frontier_nnzinds, current_frontier_nnzvals, 
                                                torch.Size([current_frontier._nnz(), current_frontier.size(1)]))
             # nnz = current_frontier._nnz() // mb_count
-            nnz = batch_size * (frontier_size ** i)
+            # nnz = batch_size * (frontier_size ** i)
+            nnz = batch_size * int(np.prod(frontier_sizes[:i], dtype=int))
             # current_frontier = current_frontier.to_sparse_csr()
 
         # Expand batches matrix
@@ -132,6 +129,8 @@ def sage_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_total,
         if p.layout == torch.sparse_csr:
             p = p.to_sparse_coo()
 
+        frontier_size = frontier_sizes[i]
+        n_darts = n_darts_list[i]
         next_frontier = sample(p, frontier_size, mb_count, node_count_total, n_darts,
                                     replication, rank, size, row_groups, col_groups,
                                     timing_dict, "sage")
