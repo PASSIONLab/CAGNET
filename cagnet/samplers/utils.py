@@ -1212,7 +1212,6 @@ def sample(p, frontier_size, mb_count, node_count_total, n_darts, replication,
 
         start_time(select_start_timer)
 
-        print(f"overflow: {overflow}", flush=True)
         if rank_col == 0 and overflowed_minibatches:
             while overflowed_minibatches:
                 start_time(select_iter_start_timer)

@@ -84,9 +84,9 @@ class GCN(nn.Module):
         h = inputs
         for l, layer in enumerate(self.layers):
             graphs[l].t_()
-            nnz_index = graphs[l]._values().nonzero().squeeze() # SAGEConv
-            # print(f"nnz_index.size: {nnz_index.size()}", flush=True)
-            edge_index = graphs[l]._indices()[:, nnz_index] # SAGEConv
+            # nnz_index = graphs[l]._values().nonzero().squeeze() # SAGEConv
+            # edge_index = graphs[l]._indices()[:, nnz_index] # SAGEConv
+            edge_index = graphs[l]._indices()
             # edge_index = graphs[l] # SAGEConvfake
             # edge_index, _, size = graphs[l] # quiver
             h = self.layers[l](h, edge_index) # SAGEConv
@@ -548,6 +548,7 @@ def main(args, batches=None):
                                                     adj_matrix_vals, \
                                                     torch.Size([inputs.size(0), inputs.size(0)]))
                 g_loc = g_loc.to(device)
+                features_zero_row = input_partitions[0][0].to(device) # feature vector in row 0
                 print(f"stop copying", flush=True)
                 for i in range(1, args.gpu):
                     print(f"iteration i: {i}", flush=True)
@@ -587,6 +588,8 @@ def main(args, batches=None):
                     dist.send(g_loc.col_indices(), dst=dst_gpu)
                     print(f"i: {i} features_send.size: {features_send.size()} dtype: {features_send.dtype}", flush=True)
                     dist.send(features_send, dst=dst_gpu)
+                    print(f"i: {i} features_zero_row.size: {features_zero_row.size()} dtype: {features_zero_row.dtype}", flush=True)
+                    dist.send(features_zero_row, dst=dst_gpu)
                     print(f"send data.y.size: {data.y.size()} inputs.size: {inputs.size()}", flush=True)
                     dist.send(data.y.float(), dst=dst_gpu)
                     # torch.save(g_send_meta, f"../../data/ogbn_papers100M/cagnet/p16/{dst_gpu}g_loc_meta.pt")
@@ -687,6 +690,11 @@ def main(args, batches=None):
                 torch.cuda.synchronize()
                 print(f"recv inputs", flush=True)
 
+                features_zero_row = torch.cuda.FloatTensor(num_features)
+                dist.recv(features_zero_row, src=src_gpu)
+                torch.cuda.synchronize()
+                print(f"recv features_zero_row", flush=True)
+
                 # data = Data()
                 data.y = torch.cuda.FloatTensor(g_loc_meta[2].item())
                 print(f"data.y.size: {data.y.size()}", flush=True)
@@ -768,6 +776,7 @@ def main(args, batches=None):
         g_loc = g_loc.to(device)
         # g_loc = g_loc.double()
         # features_loc = inputs
+        features_zero_row = inputs[0].to(device)
         features_loc = features_loc.to(device)
         # del inputs
 
@@ -1052,8 +1061,12 @@ def main(args, batches=None):
                     start_time(start_inner_timer, timing_arg=True)
                 torch.cuda.nvtx.range_push("nvtx-selectfeats")
                 if size > 1:
+
                     src_vtxs_sort = torch.cuda.LongTensor(src_vtxs.size(0))
                     og_idxs = torch.cuda.LongTensor(src_vtxs.size(0))
+                    # src_vtxs_nnz = src_vtxs[src_vtxs_nnz_mask]
+                    # src_vtxs_sort = torch.cuda.LongTensor(src_vtxs_nnz.size(0))
+                    # og_idxs = torch.cuda.LongTensor(src_vtxs_nnz.size(0))
                     tally.fill_(0)
 
                     # node_per_row = int(math.ceil(node_count / (size / args.replication)))
@@ -1063,6 +1076,11 @@ def main(args, batches=None):
                     # sort_dst_proc_gpu(src_vtxs, src_vtxs_sort, og_idxs, tally, node_per_proc)
                     sort_dst_proc_gpu(src_vtxs, src_vtxs_sort, og_idxs, tally, 
                                         node_per_row, proc_row)
+
+                    src_vtxs_sort_nnz = src_vtxs_sort != 0
+                    tally[0] -= (src_vtxs_sort == 0).sum()
+                    src_vtxs_sort = src_vtxs_sort[src_vtxs_sort_nnz]
+                    og_idxs_nnz = og_idxs[src_vtxs_sort_nnz]
                     src_vtx_per_proc = src_vtxs_sort.split(tally.tolist())
         
                     output_tally = []
@@ -1080,13 +1098,16 @@ def main(args, batches=None):
                     # output_src_vtxs -= node_per_proc * rank
 
                     input_features = features_loc[output_src_vtxs]
-                    output_features = torch.cuda.FloatTensor(src_vtxs.size(0), features_loc.size(1))
+                    # output_features = torch.cuda.FloatTensor(src_vtxs.size(0), features_loc.size(1))
+                    output_features = torch.cuda.FloatTensor(src_vtxs_sort.size(0), features_loc.size(1))
                     dist.all_to_all_single(output_features, input_features, 
                                                 input_tally, output_tally, 
                                                 col_groups[rank_col])
 
-                    features_batch = torch.cuda.FloatTensor(output_features.size())
-                    features_batch[og_idxs] = output_features
+                     #features_batch = torch.cuda.FloatTensor(output_features.size())
+                    features_batch = torch.cuda.FloatTensor(src_vtxs.size(0), features_loc.size(1))
+                    features_batch[og_idxs_nnz] = output_features
+                    features_batch[og_idxs[~src_vtxs_sort_nnz]] = features_zero_row
                 else:
                     features_batch = features_loc[src_vtxs]
 
