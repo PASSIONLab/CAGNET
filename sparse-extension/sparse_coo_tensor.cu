@@ -2118,8 +2118,8 @@ void compute_darts_gpu(const at::Tensor& dartx_values,
     CHECK_ERROR("dart computation error")
 }
 
-// __global__ void ComputeDarts1D(double *dart_values, double *p_rowsum, double *ps_p_rowsum, 
-__global__ void ComputeDarts1D(float *dart_values, float *p_rowsum, float *ps_p_rowsum, 
+__global__ void ComputeDarts1D(double *dart_values, double *p_rowsum, double *ps_p_rowsum, 
+// __global__ void ComputeDarts1D(float *dart_values, float *p_rowsum, float *ps_p_rowsum, 
                                     long *ps_dart_count_rows, int n_darts, int mb_count) {
 
     int     id = blockIdx.x * blockDim.x + threadIdx.x;
@@ -2129,9 +2129,6 @@ __global__ void ComputeDarts1D(float *dart_values, float *p_rowsum, float *ps_p_
     for (int i = id; i < n_darts; i += stride) {
         // int row = i / n_darts;
         long row = binary_searchl(ps_dart_count_rows, i, 0, mb_count);
-        if (row >= mb_count) {
-            printf("error row %ld mb_count %d\n", row, mb_count);
-        }
         dart_values[i] *= p_rowsum[row];
         dart_values[i] += ps_p_rowsum[row];
     }
@@ -2145,12 +2142,12 @@ void compute_darts1d_gpu(const at::Tensor& dart_values, const at::Tensor& p_rows
     int BLOCK_COUNT = std::ceil(n_darts / ((float) BLOCK_SIZE));
     BLOCK_COUNT = std::min(BLOCK_COUNT, 65535);
 
-    // ComputeDarts1D<<<BLOCK_COUNT, BLOCK_SIZE>>>(dart_values.data<double>(), 
-    //                                             p_rowsum.data<double>(),
-    //                                             ps_p_rowsum.data<double>(),
-    ComputeDarts1D<<<BLOCK_COUNT, BLOCK_SIZE>>>(dart_values.data<float>(), 
-                                                p_rowsum.data<float>(),
-                                                ps_p_rowsum.data<float>(),
+    ComputeDarts1D<<<BLOCK_COUNT, BLOCK_SIZE>>>(dart_values.data<double>(), 
+                                                p_rowsum.data<double>(),
+                                                ps_p_rowsum.data<double>(),
+    // ComputeDarts1D<<<BLOCK_COUNT, BLOCK_SIZE>>>(dart_values.data<float>(), 
+    //                                             p_rowsum.data<float>(),
+    //                                             ps_p_rowsum.data<float>(),
                                                 ps_dart_count_rows.data<long>(),
                                                 n_darts,
                                                 mb_count);
@@ -2231,14 +2228,15 @@ void throw_darts_gpu(const at::Tensor& dartx_values,
     CHECK_ERROR("dart throwing error")
 }
 
-__global__ void ThrowDarts1D(float *dart_values, float *ps_p_values, int *h_values, 
+__global__ void ThrowDarts1D(double *dart_values, double *ps_p_values, int *h_values, 
                                 int dart_count, int nnz) {
 
     int     id = blockIdx.x * blockDim.x + threadIdx.x;
     int stride = blockDim.x * gridDim.x;
 
     for (int i = id; i < dart_count; i += stride) {
-        int vtx = binary_searchf(ps_p_values, dart_values[i], 0, nnz - 1);
+        // int vtx = binary_searchf(ps_p_values, dart_values[i], 0, nnz - 1);
+        int vtx = binary_searchd(ps_p_values, dart_values[i], 0, nnz - 1);
         // if (vtx < 0 || vtx >= nnz) {
         //     printf("error i: %d vtx: %d nnz: %d\n", i, vtx, nnz);
         // } 
@@ -2259,8 +2257,8 @@ void throw_darts1d_gpu(const at::Tensor& dart_values,
 
     // ThrowDarts1D<<<BLOCK_COUNT, BLOCK_SIZE>>>(dart_values.data<double>(), 
     //                                             ps_p_values.data<double>(), 
-    ThrowDarts1D<<<BLOCK_COUNT, BLOCK_SIZE>>>(dart_values.data<float>(), 
-                                                ps_p_values.data<float>(), 
+    ThrowDarts1D<<<BLOCK_COUNT, BLOCK_SIZE>>>(dart_values.data<double>(), 
+                                                ps_p_values.data<double>(), 
                                                 h_values.data<int>(), 
                                                 dart_count,
                                                 nnz);
@@ -2322,7 +2320,7 @@ void normalized_gpu(const at::Tensor& output, const at::Tensor& input, const at:
     Normalized<<<BLOCK_COUNT, BLOCK_SIZE>>>(output.data<double>(), input.data<double>(), index.data<long>(), len);
 }
 
-__global__ void Normalize(float *output, float *input, long *index, int len) { 
+__global__ void Normalize(double *output, double *input, long *index, int len) { 
     long     id = blockIdx.x * blockDim.x + threadIdx.x;
     long stride = blockDim.x * gridDim.x;
 
@@ -2338,7 +2336,7 @@ void normalize_gpu(const at::Tensor& output, const at::Tensor& input, const at::
     int BLOCK_COUNT = std::ceil(len / ((float) BLOCK_SIZE));
     BLOCK_COUNT = std::min(BLOCK_COUNT, 65535);
 
-    Normalize<<<BLOCK_COUNT, BLOCK_SIZE>>>(output.data<float>(), input.data<float>(), index.data<long>(), len);
+    Normalize<<<BLOCK_COUNT, BLOCK_SIZE>>>(output.data<double>(), input.data<double>(), index.data<long>(), len);
 }
 
 __global__ void NormalizeBatch(float *output, int *input, int output_rows, int output_cols) { 

@@ -1054,7 +1054,8 @@ def gen_prob_dist(numerator, adj_matrix, mb_count, node_count_total, replication
                                                             device=numerator.device),
                                         matc_chunk_row_lens)
         p_num_indices = torch.stack((p_num_rows, matc_chunk_cols))
-        p_num_values = torch.cuda.FloatTensor(p_num_indices.size(1)).fill_(1.0)
+        # p_num_values = torch.cuda.FloatTensor(p_num_indices.size(1)).fill_(1.0)
+        p_num_values = torch.cuda.DoubleTensor(p_num_indices.size(1)).fill_(1.0)
     else:
         sa_masks.fill_(False)
         # TODO: LADIES code
@@ -1074,7 +1075,8 @@ def gen_prob_dist(numerator, adj_matrix, mb_count, node_count_total, replication
     elif name == "sage":
         # p_num_values = torch.cuda.DoubleTensor(p_num_values.size(0)).fill_(1.0)
         # p_num_values = p_num_values.double()
-        p_den = torch.cuda.FloatTensor(numerator.size(0)).fill_(0)
+        # p_den = torch.cuda.FloatTensor(numerator.size(0)).fill_(0)
+        p_den = torch.cuda.DoubleTensor(numerator.size(0)).fill_(0)
     # scatterd_add_gpu(p_den, p_num_indices[0, :], p_num_values, p_num_values.size(0))
     # frontier_nnz_sizes.scatter_add_(0, next_frontier._indices()[0,:], ones)
     p_den.scatter_add_(0, p_num_indices[0, :].long(), p_num_values)
@@ -1143,8 +1145,8 @@ def sample(p, frontier_size, mb_count, node_count_total, n_darts, replication,
     underfull_minibatches = True
 
     print(f"frontier_size: {frontier_size}", flush=True)
-    # p_rowsum = torch.cuda.DoubleTensor(p.size(0)).fill_(0)
-    p_rowsum = torch.cuda.FloatTensor(p.size(0)).fill_(0)
+    p_rowsum = torch.cuda.DoubleTensor(p.size(0)).fill_(0)
+    # p_rowsum = torch.cuda.FloatTensor(p.size(0)).fill_(0)
     while underfull_minibatches:
         iter_count += 1
         start_time(sample_start_timer)
@@ -1175,7 +1177,8 @@ def sample(p, frontier_size, mb_count, node_count_total, n_darts, replication,
         # dart_values = torch.cuda.DoubleTensor(n_darts * mb_count).uniform_()
         # dart_values = torch.cuda.DoubleTensor(n_darts_col * p.size(0)).uniform_()
         # dart_values = torch.cuda.FloatTensor(n_darts_col * p.size(0)).uniform_()
-        dart_values = torch.cuda.FloatTensor(n_darts_col).uniform_()
+        # dart_values = torch.cuda.FloatTensor(n_darts_col).uniform_()
+        dart_values = torch.cuda.DoubleTensor(n_darts_col).uniform_()
         # ps_dart_count_row = torch.cumsum(dart_count_row, dim=0, dtype=torch.int32).roll(1)
         ps_dart_count_row = torch.cumsum(dart_count_row, dim=0)
         timing_dict["sample-gen-darts"].append(stop_time(start_timer, stop_timer))
