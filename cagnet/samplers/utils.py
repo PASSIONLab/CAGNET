@@ -1110,7 +1110,11 @@ def sample(p, frontier_size, mb_count, node_count_total, n_darts, replication,
     # n_darts_col = n_darts // replication
     # if rank_col == replication - 1:
     #     n_darts_col = n_darts - (replication - 1) * n_darts_col
-    n_darts_col = n_darts
+
+    # n_darts_col = n_darts
+    # avg_degree = int(p._nnz() / p.size(0))
+    # n_darts_col = int(avg_degree * frontier_size / avg_degree)
+    n_darts_col = frontier_size
 
     next_frontier = torch.sparse_coo_tensor(indices=p._indices(),
                                         values=torch.cuda.LongTensor(p._nnz()).fill_(0),
@@ -1128,7 +1132,7 @@ def sample(p, frontier_size, mb_count, node_count_total, n_darts, replication,
 
     zero_idxs = p._indices()[0, (p._values() == 0)].unique()
     frontier_nnz_sizes[zero_idxs] = 0
-
+    
     timing_dict["sample-pre-loop"].append(stop_time(start_timer, stop_timer))
     sampled_count = torch.clamp(frontier_size - frontier_nnz_sizes, min=0)
 
@@ -1138,6 +1142,7 @@ def sample(p, frontier_size, mb_count, node_count_total, n_darts, replication,
     # underfull_minibatches = (sampled_count < frontier_size).any()
     underfull_minibatches = True
 
+    print(f"frontier_size: {frontier_size}", flush=True)
     # p_rowsum = torch.cuda.DoubleTensor(p.size(0)).fill_(0)
     p_rowsum = torch.cuda.FloatTensor(p.size(0)).fill_(0)
     while underfull_minibatches:
@@ -1162,31 +1167,43 @@ def sample(p, frontier_size, mb_count, node_count_total, n_darts, replication,
             ps_p_rowsum[0] = 0
         timing_dict["sample-prob-rowsum"].append(stop_time(start_timer, stop_timer))
 
+        # n_darts_col = int((frontier_size - sampled_count).sum().item() / p.size(0)) * 5 + 1
+        dart_count_row = frontier_size - sampled_count
+        n_darts_col = dart_count_row.sum().item()
+
         start_time(start_timer)
         # dart_values = torch.cuda.DoubleTensor(n_darts * mb_count).uniform_()
         # dart_values = torch.cuda.DoubleTensor(n_darts_col * p.size(0)).uniform_()
-        dart_values = torch.cuda.FloatTensor(n_darts_col * p.size(0)).uniform_()
+        # dart_values = torch.cuda.FloatTensor(n_darts_col * p.size(0)).uniform_()
+        dart_values = torch.cuda.FloatTensor(n_darts_col).uniform_()
+        # ps_dart_count_row = torch.cumsum(dart_count_row, dim=0, dtype=torch.int32).roll(1)
+        ps_dart_count_row = torch.cumsum(dart_count_row, dim=0)
         timing_dict["sample-gen-darts"].append(stop_time(start_timer, stop_timer))
-
+        print(f"dart_count_row: {dart_count_row} max: {dart_count_row.max()}", flush=True)
         start_time(start_timer)
         # compute_darts1d_gpu(dart_values, n_darts, mb_count)
         # compute_darts1d_gpu(dart_values, n_darts_col, mb_count)
-        compute_darts1d_gpu(dart_values, p_rowsum, ps_p_rowsum, n_darts_col, p.size(0))
+        # compute_darts1d_gpu(dart_values, p_rowsum, ps_p_rowsum, n_darts_col, p.size(0))
+        compute_darts1d_gpu(dart_values, p_rowsum, ps_p_rowsum, ps_dart_count_row, n_darts_col, p.size(0))
 
         timing_dict["sample-dart-throw"].append(stop_time(start_timer, stop_timer))
 
         start_time(start_timer)
         dart_hits_count = torch.cuda.IntTensor(p._nnz()).fill_(0)
         throw_darts1d_gpu(dart_values, ps_p_values, dart_hits_count, \
-                                n_darts_col * p.size(0), p._nnz())
+                                n_darts_col, p._nnz())
+                                # n_darts_col * p.size(0), p._nnz())
                                 # n_darts * mb_count, p._nnz())
         timing_dict["sample-filter-darts"].append(stop_time(start_timer, stop_timer))
+        print(f"dart_hits_count.sum: {dart_hits_count.sum()} n_darts_col: {n_darts_col} size: {sampled_count.size()}", flush=True)
 
         start_time(start_timer)
         # dist.all_reduce(dart_hits_count, group=row_groups[rank_c])
+        print(f"before dart_hits_count.nnz: {dart_hits_count.nonzero().squeeze().size()} next_frontier.vals.nnz: {next_frontier._values().nonzero().squeeze().size()}", flush=True)
         next_frontier_values = torch.logical_or(
                                     dart_hits_count, 
                                     next_frontier._values().int()).int()
+        print(f"after next_frontier_values.nnz: {next_frontier_values.nonzero().squeeze().size()}", flush=True)
         # next_frontier_tmp = torch.sparse_coo_tensor(indices=next_frontier._indices(),
         #                                             values=next_frontier_values,
         #                                             size=(p.size(0), node_count_total))
@@ -1196,6 +1213,7 @@ def sample(p, frontier_size, mb_count, node_count_total, n_darts, replication,
 
         start_time(start_timer)
         # sampled_count = torch.sparse.sum(next_frontier_tmp, dim=1)._values()
+        sampled_count_old = sampled_count.clone()
         sampled_count = sampled_count.fill_(0)
         sampled_count = torch.clamp(frontier_size - frontier_nnz_sizes, min=0)
         next_frontier_nnzmask = next_frontier_values.nonzero().squeeze()
@@ -1205,6 +1223,9 @@ def sample(p, frontier_size, mb_count, node_count_total, n_darts, replication,
         sampled_count.scatter_add_(0, next_frontier_nnzidxs, next_frontier_nnzvals)
         timing_dict["sample-count-samples"].append(stop_time(start_timer, stop_timer))
 
+        print(f"diff: {sampled_count - sampled_count_old} diff_max: {(sampled_count - sampled_count_old).max()} frontier_size: {frontier_size} sum: {(sampled_count - sampled_count_old).sum()}", flush=True)
+        del sampled_count_old
+
         start_time(start_timer)
         overflow = torch.clamp(sampled_count - frontier_size, min=0).int()
         overflowed_minibatches = (overflow > 0).any()
@@ -1212,6 +1233,7 @@ def sample(p, frontier_size, mb_count, node_count_total, n_darts, replication,
 
         start_time(select_start_timer)
 
+        print(f"total_overflow: {overflow.sum()} sampled_count.max: {sampled_count.max()} sum: {sampled_count.sum()}", flush=True)
         if rank_col == 0 and overflowed_minibatches:
             while overflowed_minibatches:
                 start_time(select_iter_start_timer)

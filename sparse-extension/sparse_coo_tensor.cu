@@ -1399,6 +1399,23 @@ __device__ long binary_searchl(long *arr, long val, long imin, long imax) {
     return ans;
 }
 
+__device__ long binary_searchi(int *arr, int val, int imin, int imax) {
+    
+    int ans = -1;
+    while (imax >= imin) {
+        int imid = (imin + imax) / 2;
+
+        if (arr[imid] <= val) {
+            imin = imid + 1;
+        } else if (arr[imid] > val) {
+            ans = imid;
+            imax = imid - 1;
+        }
+    }
+
+    return ans;
+}
+
 // Binary search that returns exact location, not insertion point (for COO row selection)
 __device__ long binary_search_rowselect(long *arr, long val, long imin, long imax) {
     while (imax >= imin) {
@@ -2103,25 +2120,29 @@ void compute_darts_gpu(const at::Tensor& dartx_values,
 
 // __global__ void ComputeDarts1D(double *dart_values, double *p_rowsum, double *ps_p_rowsum, 
 __global__ void ComputeDarts1D(float *dart_values, float *p_rowsum, float *ps_p_rowsum, 
-                                    int n_darts, int mb_count) {
+                                    long *ps_dart_count_rows, int n_darts, int mb_count) {
 
     int     id = blockIdx.x * blockDim.x + threadIdx.x;
     int stride = blockDim.x * gridDim.x;
 
-    int dart_count = n_darts * mb_count;
-    for (int i = id; i < dart_count; i += stride) {
-        int row = i / n_darts;
-        // dart_values[i] += (double)row;
+    // int dart_count = n_darts * mb_count;
+    for (int i = id; i < n_darts; i += stride) {
+        // int row = i / n_darts;
+        long row = binary_searchl(ps_dart_count_rows, i, 0, mb_count);
+        if (row >= mb_count) {
+            printf("error row %ld mb_count %d\n", row, mb_count);
+        }
         dart_values[i] *= p_rowsum[row];
         dart_values[i] += ps_p_rowsum[row];
     }
 }
 
 void compute_darts1d_gpu(const at::Tensor& dart_values, const at::Tensor& p_rowsum, 
-				const at::Tensor& ps_p_rowsum, int n_darts, int mb_count) {
+				const at::Tensor& ps_p_rowsum, const at::Tensor& ps_dart_count_rows, 
+                                int n_darts, int mb_count) {
 
     int BLOCK_SIZE = 256;
-    int BLOCK_COUNT = std::ceil((n_darts * mb_count) / ((float) BLOCK_SIZE));
+    int BLOCK_COUNT = std::ceil(n_darts / ((float) BLOCK_SIZE));
     BLOCK_COUNT = std::min(BLOCK_COUNT, 65535);
 
     // ComputeDarts1D<<<BLOCK_COUNT, BLOCK_SIZE>>>(dart_values.data<double>(), 
@@ -2130,6 +2151,7 @@ void compute_darts1d_gpu(const at::Tensor& dart_values, const at::Tensor& p_rows
     ComputeDarts1D<<<BLOCK_COUNT, BLOCK_SIZE>>>(dart_values.data<float>(), 
                                                 p_rowsum.data<float>(),
                                                 ps_p_rowsum.data<float>(),
+                                                ps_dart_count_rows.data<long>(),
                                                 n_darts,
                                                 mb_count);
     CHECK_ERROR("dart1d computation error")

@@ -466,33 +466,43 @@ def main(args, batches=None):
         data = data.to(device)
         data.y = data.y.to(device)
     elif args.dataset.startswith("ogb"):
-        import ogb
+        # import ogb
         data = Data()
-        print(f"before loading ogb", flush=True)
-        from ogb.nodeproppred import PygNodePropPredDataset # only import if necessary, takes a long time
-        print(f"after loading ogb", flush=True)
+        # from ogb.nodeproppred import PygNodePropPredDataset # only import if necessary, takes a long time
         if ("papers100M" in args.dataset and rank % args.gpu == 0) or "products" in args.dataset:
-            dataset = PygNodePropPredDataset(name=args.dataset, root="/global/u1/a/alokt/data")
-            data = dataset[0]
+            # dataset = PygNodePropPredDataset(name=args.dataset, root="/global/u1/a/alokt/data")
+            # data = dataset[0]
 
-            split_idx = dataset.get_idx_split() 
-            # train_loader = DataLoader(dataset[split_idx["train"]], batch_size=32, shuffle=True)
-            # valid_loader = DataLoader(dataset[split_idx["valid"]], batch_size=32, shuffle=False)
-            # test_loader = DataLoader(dataset[split_idx["test"]], batch_size=32, shuffle=False)
-            # data = data.to(device)
-            # data.x.requires_grad = True
-            # inputs = data.x.to(device)
-            inputs = data.x
+            # # split_idx = dataset.get_idx_split() 
+            # # # train_loader = DataLoader(dataset[split_idx["train"]], batch_size=32, shuffle=True)
+            # # # valid_loader = DataLoader(dataset[split_idx["valid"]], batch_size=32, shuffle=False)
+            # # # test_loader = DataLoader(dataset[split_idx["test"]], batch_size=32, shuffle=False)
+            # # # data = data.to(device)
+            # # # data.x.requires_grad = True
+            # # # inputs = data.x.to(device)
+            # inputs = data.x
+            # # data.y = data.y.squeeze().to(device)
+            # # # inputs.requires_grad = True
+            # # # data.y = data.y.to(device)
+            # num_features = dataset.num_features
+            # # edge_index = data.edge_index
+            # num_classes = dataset.num_classes
+            # adj_matrix = edge_index
+            # split_idx = dataset.get_idx_split()
+            # train_idx = split_idx['train'].to(device)
+            # test_idx = split_idx['test'].to(device)
+            adj_matrix = None
+            print(f"before loading", flush=True)
+            data.y = torch.load("/global/u1/a/alokt/data/ogbn_papers100M/label/label.pt")
             data.y = data.y.squeeze().to(device)
-            # inputs.requires_grad = True
-            # data.y = data.y.to(device)
-            num_features = dataset.num_features
-            edge_index = data.edge_index
-            num_classes = dataset.num_classes
-            adj_matrix = edge_index
-            split_idx = dataset.get_idx_split()
-            train_idx = split_idx['train'].to(device)
-            test_idx = split_idx['test'].to(device)
+            print(f"data.y: {data.y} data.y.dtype {data.y.dtype}", flush=True)
+            train_idx = torch.load("/global/u1/a/alokt/data/ogbn_papers100M/index/train_idx.pt")
+            train_idx = train_idx.to(device)
+            print(f"train_idx: {train_idx} train_idx.dtype {train_idx.dtype}", flush=True)
+            inputs = torch.load("/global/u1/a/alokt/data/ogbn_papers100M/feat/feature.pt")
+            print(f"inputs: {inputs} inputs.dtype {inputs.dtype}", flush=True)
+            num_features = inputs.size(1)
+            num_classes = 172
 
     # print(f"adj_matrix.size(): {adj_matrix.size()}")
     # print(f"adj_matrix: {adj_matrix}")
@@ -507,7 +517,11 @@ def main(args, batches=None):
 
     partitioning = Partitioning.ONE5D
 
+    print(f"before sync", flush=True)
+    torch.cuda.synchronize()
+    print(f"before get_proc_group", flush=True)
     row_groups, col_groups = get_proc_groups(rank, size, args.replication)
+    print(f"after get_proc_group", flush=True)
 
     proc_row = size // args.replication
     rank_row = rank // args.replication
@@ -520,7 +534,7 @@ def main(args, batches=None):
         if rank % args.gpu == 0:
             if True or args.dataset != "ogbn-papers100M": 
                 inputs = inputs.to(torch.device("cpu"))
-                adj_matrix = adj_matrix.to(torch.device("cpu"))
+                # adj_matrix = adj_matrix.to(torch.device("cpu"))
                 # send g_loc.nnz, g_loc, train_idx.len, and train_idx
                 features_loc, g_loc, am_partitions, input_partitions = \
                         one5d_partition(rank, size, inputs, adj_matrix, data, 
@@ -563,7 +577,8 @@ def main(args, batches=None):
                     # g_send = g_send.double()
 
                     features_send = input_partitions[rank_send_row].to(device)
-                    edge_count = adj_matrix.size(1)
+                    # edge_count = adj_matrix.size(1)
+                    edge_count = g_loc.col_indices().size(0)
 
 
                     g_send_meta = torch.cuda.LongTensor(6)
@@ -602,11 +617,11 @@ def main(args, batches=None):
 
                     if args.dataset == "ogbn-papers100M":
                         train_idx_len = torch.cuda.LongTensor(1).fill_(train_idx.size(0))
-                        test_idx_len = torch.cuda.LongTensor(1).fill_(test_idx.size(0))
+                        # test_idx_len = torch.cuda.LongTensor(1).fill_(test_idx.size(0))
                         dist.send(train_idx_len, dst=dst_gpu)
-                        dist.send(test_idx_len, dst=dst_gpu)
+                        # dist.send(test_idx_len, dst=dst_gpu)
                         dist.send(train_idx, dst=dst_gpu)
-                        dist.send(test_idx, dst=dst_gpu)
+                        # dist.send(test_idx, dst=dst_gpu)
                 print("coalescing", flush=True)
                 # g_loc = g_loc.coalesce().t_()
                 print("normalizing", flush=True)
@@ -718,14 +733,14 @@ def main(args, batches=None):
 
                 if args.dataset == "ogbn-papers100M":
                     train_idx_len = torch.cuda.LongTensor(1).fill_(0)
-                    test_idx_len = torch.cuda.LongTensor(1).fill_(0)
+                    # test_idx_len = torch.cuda.LongTensor(1).fill_(0)
                     dist.recv(train_idx_len, src=src_gpu)
-                    dist.recv(test_idx_len, src=src_gpu)
+                    # dist.recv(test_idx_len, src=src_gpu)
 
                     train_idx = torch.cuda.LongTensor(train_idx_len.item()).fill_(0)
-                    test_idx = torch.cuda.LongTensor(test_idx_len.item()).fill_(0)
+                    # test_idx = torch.cuda.LongTensor(test_idx_len.item()).fill_(0)
                     dist.recv(train_idx, src=src_gpu)
-                    dist.recv(test_idx, src=src_gpu)
+                    # dist.recv(test_idx, src=src_gpu)
             else:
                 print(f"loading", flush=True)
                 # Load data to CPU instead of GPU bc multiple processes spawn for some reason, 
@@ -785,7 +800,7 @@ def main(args, batches=None):
     print(f"features_loc.size: {features_loc.size()}", flush=True)
     dist.barrier()
 
-    if rank == 0:
+    if rank == 0 and args.dataset != "ogbn-papers100M":
         adj_matrix = adj_matrix.cpu()
         inputs = inputs.cpu()
 
@@ -806,9 +821,9 @@ def main(args, batches=None):
         print(f"test_nid.size: {test_nid.size()}")
     else:
         train_nid = train_idx
-        test_nid = test_idx
+        # test_nid = test_idx
         print(f"train_nid.size: {train_nid.size()}")
-        print(f"test_nid.size: {test_nid.size()}")
+        # print(f"test_nid.size: {test_nid.size()}")
     
     # # # adj_matrix = None # Uncomment bottom for testing
     # adj_matrix = adj_matrix.cuda()
