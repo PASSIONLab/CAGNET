@@ -1144,7 +1144,6 @@ def sample(p, frontier_size, mb_count, node_count_total, n_darts, replication,
     # underfull_minibatches = (sampled_count < frontier_size).any()
     underfull_minibatches = True
 
-    print(f"frontier_size: {frontier_size}", flush=True)
     p_rowsum = torch.cuda.DoubleTensor(p.size(0)).fill_(0)
     # p_rowsum = torch.cuda.FloatTensor(p.size(0)).fill_(0)
     while underfull_minibatches:
@@ -1182,7 +1181,6 @@ def sample(p, frontier_size, mb_count, node_count_total, n_darts, replication,
         # ps_dart_count_row = torch.cumsum(dart_count_row, dim=0, dtype=torch.int32).roll(1)
         ps_dart_count_row = torch.cumsum(dart_count_row, dim=0)
         timing_dict["sample-gen-darts"].append(stop_time(start_timer, stop_timer))
-        print(f"dart_count_row: {dart_count_row} max: {dart_count_row.max()}", flush=True)
         start_time(start_timer)
         # compute_darts1d_gpu(dart_values, n_darts, mb_count)
         # compute_darts1d_gpu(dart_values, n_darts_col, mb_count)
@@ -1198,15 +1196,12 @@ def sample(p, frontier_size, mb_count, node_count_total, n_darts, replication,
                                 # n_darts_col * p.size(0), p._nnz())
                                 # n_darts * mb_count, p._nnz())
         timing_dict["sample-filter-darts"].append(stop_time(start_timer, stop_timer))
-        print(f"dart_hits_count.sum: {dart_hits_count.sum()} n_darts_col: {n_darts_col} size: {sampled_count.size()}", flush=True)
 
         start_time(start_timer)
         # dist.all_reduce(dart_hits_count, group=row_groups[rank_c])
-        print(f"before dart_hits_count.nnz: {dart_hits_count.nonzero().squeeze().size()} next_frontier.vals.nnz: {next_frontier._values().nonzero().squeeze().size()}", flush=True)
         next_frontier_values = torch.logical_or(
                                     dart_hits_count, 
                                     next_frontier._values().int()).int()
-        print(f"after next_frontier_values.nnz: {next_frontier_values.nonzero().squeeze().size()}", flush=True)
         # next_frontier_tmp = torch.sparse_coo_tensor(indices=next_frontier._indices(),
         #                                             values=next_frontier_values,
         #                                             size=(p.size(0), node_count_total))
@@ -1226,7 +1221,6 @@ def sample(p, frontier_size, mb_count, node_count_total, n_darts, replication,
         sampled_count.scatter_add_(0, next_frontier_nnzidxs, next_frontier_nnzvals)
         timing_dict["sample-count-samples"].append(stop_time(start_timer, stop_timer))
 
-        print(f"diff: {sampled_count - sampled_count_old} diff_max: {(sampled_count - sampled_count_old).max()} frontier_size: {frontier_size} sum: {(sampled_count - sampled_count_old).sum()}", flush=True)
         del sampled_count_old
 
         start_time(start_timer)
@@ -1236,7 +1230,6 @@ def sample(p, frontier_size, mb_count, node_count_total, n_darts, replication,
 
         start_time(select_start_timer)
 
-        print(f"total_overflow: {overflow.sum()} sampled_count.max: {sampled_count.max()} sum: {sampled_count.sum()}", flush=True)
         if rank_col == 0 and overflowed_minibatches:
             while overflowed_minibatches:
                 start_time(select_iter_start_timer)
@@ -1367,9 +1360,6 @@ def sample(p, frontier_size, mb_count, node_count_total, n_darts, replication,
         overflow = torch.clamp(sampled_count - frontier_size, min=0).int()
 
         timing_dict["sampling-iters"].append(stop_time(sample_start_timer, sample_stop_timer))
-
-    print(f"iter_count: {iter_count}")
-    print(f"selection_iter_count: {selection_iter_count}")
 
     return next_frontier
 

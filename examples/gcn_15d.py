@@ -517,11 +517,8 @@ def main(args, batches=None):
 
     partitioning = Partitioning.ONE5D
 
-    print(f"before sync", flush=True)
     torch.cuda.synchronize()
-    print(f"before get_proc_group", flush=True)
     row_groups, col_groups = get_proc_groups(rank, size, args.replication)
-    print(f"after get_proc_group", flush=True)
 
     proc_row = size // args.replication
     rank_row = rank // args.replication
