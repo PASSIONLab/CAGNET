@@ -84,8 +84,6 @@ class GCN(nn.Module):
         h = inputs
         for l, layer in enumerate(self.layers):
             graphs[l].t_()
-            # nnz_index = graphs[l]._values().nonzero().squeeze() # SAGEConv
-            # edge_index = graphs[l]._indices()[:, nnz_index] # SAGEConv
             edge_index = graphs[l]._indices()
             # edge_index = graphs[l] # SAGEConvfake
             # edge_index, _, size = graphs[l] # quiver
@@ -943,7 +941,6 @@ def main(args, batches=None):
                     for d in range(args.n_layers):
                         dart_count = int(avg_degree * args.samp_num[d] / avg_degree)
                         args.n_darts.append(dart_count)
-                    print(f"n_darts: {args.n_darts}", flush=True)
 
             # for sa-spgemm
             # nnz_row_masks = torch.cuda.BoolTensor((size // args.replication) * g_loc._indices().size(1)) 
@@ -1013,6 +1010,7 @@ def main(args, batches=None):
                 # print(f"src_vtxs: {src_vtxs} src_vtxs.size: {src_vtxs.size()} zero_count: {(src_vtxs == 0).sum()}", flush=True)
 
                 adjs = [None] * args.n_layers
+                adj_sample_skip_cols = None
                 for l in range(args.n_layers):
                     # adj_row_select_min = i * args.batch_size * (args.samp_num ** l)
                     # adj_row_select_max = (i + 1) * args.batch_size  * (args.samp_num ** l)
@@ -1057,7 +1055,46 @@ def main(args, batches=None):
                                             (args.batch_size * np.prod(args.samp_num[:l], dtype=int), \
                                                 args.batch_size * (np.prod(args.samp_num[:(l+1)], dtype=int))))
                         adj_nnzs.append(adj_sample_values.size(0))
-                        # print(f"i: {i} sample.nnz: {adj_matrix_sample._nnz()} sample.size: {adj_matrix_sample.size()} emptyrows: {(adj_sample_row_lens == 0).sum()}")
+                        # if l > 0:
+                        #     adj_sample_row_lens = adj_sample_crows[1:] - adj_sample_crows[:-1]
+                        #     adj_sample_row_lens[adj_sample_skip_cols] = 0
+                        #     adj_sample_row_lens = adj_sample_row_lens[adj_sample_row_lens.nonzero().squeeze()]
+                        #     row_count = adj_sample_row_lens.size(0)
+                        #     adj_sample_rows = torch.repeat_interleave(
+                        #                         torch.arange(0, row_count, 
+                        #                                         device=adj_sample_row_lens.device), 
+                        #                         adj_sample_row_lens)
+                        #     nnz_col_mask = torch.cuda.BoolTensor(adj_sample_crows[-1].item()).fill_(False)
+                        #     rowselect_csr_gpu(adj_sample_skip_cols, adj_sample_crows, nnz_col_mask, \
+                        #                             adj_sample_skip_cols.size(0), adj_sample_crows[-1])
+                        #     adj_sample_values = adj_sample_values[~nnz_col_mask]
+                        #     adj_sample_cols = adj_sample_cols[~nnz_col_mask]
+                        # else:
+                        #     adj_sample_row_lens = adj_sample_crows[1:] - adj_sample_crows[:-1]
+                        #     row_count = adj_row_select_max - adj_row_select_min
+                        #     adj_sample_rows = torch.repeat_interleave(
+                        #                         torch.arange(0, row_count, 
+                        #                                         device=adj_sample_row_lens.device), 
+                        #                         adj_sample_row_lens)
+
+                        # # frontier_nnz_sizes = torch.histc(next_frontier._indices()[0,next_frontier_nnz], bins=p.size(0))
+                        # # row_count = args.batch_size * np.prod(args.samp_num[:l], dtype=int)
+                        # col_count = args.batch_size * np.prod(args.samp_num[:(l+1)], dtype=int)
+                        # adj_sample_skip_cols = torch.histc(adj_sample_cols, bins=col_count)
+                        # adj_sample_skip_cols = (adj_sample_skip_cols == 0).nonzero().squeeze(1)
+                        # # print(f"l: {l} adj_sample_cols: {adj_sample_cols} adj_sample_skip_cols: {adj_sample_skip_cols}", flush=True)
+                        # col_count = args.batch_size * np.prod(args.samp_num[:(l+1)], dtype=int) - \
+                        #                 adj_sample_skip_cols.size(0)
+                        # adj_sample_cols = torch.arange(0, adj_sample_values.size(0), device=device, dtype=int)
+                        # # print(f"adj_sample_skip_cols: {adj_sample_skip_cols}", flush=True)
+                        # # print(f"adj_sample_cols: {adj_sample_cols}", flush=True)
+                        # adj_sample_indices = torch.stack((adj_sample_rows, adj_sample_cols))
+                        # adj_matrix_sample = torch.sparse_coo_tensor(adj_sample_indices, \
+                        #                                 adj_sample_values, (row_count, col_count))
+                        #                             # (args.batch_size * (args.samp_num ** l), \
+                        #                             #         args.batch_size * (args.samp_num ** (l + 1))))
+                        # adj_nnzs.append(adj_sample_values.size(0))
+                        # # print(f"i: {i} sample.nnz: {adj_matrix_sample._nnz()} sample.size: {adj_matrix_sample.size()} emptyrows: {(adj_sample_row_lens == 0).sum()}")
                     if epoch >= 1:
                         model.timings["extract-inst"].append(stop_time(start_inner_timer, stop_inner_timer, timing_arg=True))
 
@@ -1065,6 +1102,8 @@ def main(args, batches=None):
                         start_time(start_inner_timer, timing_arg=True)
                     # adjs[args.n_layers - l - 1] = adj_matrix_sample.to_sparse_coo()
                     adjs[args.n_layers - l - 1] = adj_matrix_sample.coalesce()
+                    # print(f"l: {l} size: {adjs[args.n_layers - l - 1].size()} nnz: {adjs[args.n_layers - l - 1]._nnz()}")
+                    # print(f"l: {l} {adjs[args.n_layers - l- 1]}")
                     if epoch >= 1:
                         model.timings["extract-coalesce"].append(stop_time(start_inner_timer, stop_inner_timer, timing_arg=True))
 
@@ -1120,8 +1159,14 @@ def main(args, batches=None):
                     features_batch = torch.cuda.FloatTensor(src_vtxs.size(0), features_loc.size(1))
                     features_batch[og_idxs_nnz] = output_features
                     features_batch[og_idxs[~src_vtxs_sort_nnz]] = features_zero_row
+                    # features_mask = torch.cuda.BoolTensor(features_batch.size(0)).fill_(True)
+                    # features_mask[adj_sample_skip_cols] = False
+                    # features_batch = features_batch[features_mask]
                 else:
                     features_batch = features_loc[src_vtxs]
+                    # features_mask = torch.cuda.BoolTensor(features_batch.size(0)).fill_(True)
+                    # features_mask[adj_sample_skip_cols] = False
+                    # features_batch = features_batch[features_mask]
 
                 torch.cuda.nvtx.range_pop() # nvtx-selectfeats
                 if epoch >= 1:
@@ -1130,13 +1175,16 @@ def main(args, batches=None):
                 # if epoch >= 1:
                 #     start_time(start_inner_timer)
                 # torch.cuda.nvtx.range_push("nvtx-fakemats")
-                # features_batch = torch.cuda.FloatTensor(69740, 128) # SAGEConvfake
-                # adjs0_rows = torch.randint(0, 9862, (91518,)).cuda().long() # SAGEConvfake
-                # adjs0_cols = torch.randint(0, 69740, (91518,)).cuda().long() # SAGEConvfake
+                # features_batch = torch.cuda.FloatTensor(142247, 128) # SAGEConvfake
+                # adjs0_rows = torch.randint(0, 49387, (168660,)).cuda().long() # SAGEConvfake
+                # adjs0_cols = torch.randint(0, 142247, (168660,)).cuda().long() # SAGEConvfake
                 # adjs[0] = torch.stack((adjs0_rows, adjs0_cols)) # SAGEConvfake
-                # adjs1_rows = torch.randint(0, 1024, (9065,)).cuda().long() # SAGEConvfake
-                # adjs1_cols = torch.randint(0, 9862, (9065,)).cuda().long() # SAGEConvfake
+                # adjs1_rows = torch.randint(0, 8953, (57667,)).cuda().long() # SAGEConvfake
+                # adjs1_cols = torch.randint(0, 49387, (57667,)).cuda().long() # SAGEConvfake
                 # adjs[1] = torch.stack((adjs1_rows, adjs1_cols)) # SAGEConvfake
+                # adjs2_rows = torch.randint(0, 1024, (8125,)).cuda().long() # SAGEConvfake
+                # adjs2_cols = torch.randint(0, 8953, (8125,)).cuda().long() # SAGEConvfake
+                # adjs[2] = torch.stack((adjs2_rows, adjs2_cols)) # SAGEConvfake
 
                 # features_batch = torch.cuda.FloatTensor(69740, 128) # GCNConvfake
                 # adjs0_rows = torch.randint(0, 9862, (91518,)).cuda().long() # GCNConvfake
