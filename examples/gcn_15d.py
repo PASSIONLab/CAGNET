@@ -463,7 +463,32 @@ def main(args, batches=None):
         data.test_mask = torch.ones(n).long()
         data = data.to(device)
         data.y = data.y.to(device)
-    elif args.dataset.startswith("ogb"):
+    elif args.dataset == "ogbn-products":
+        import ogb
+        data = Data()
+        from ogb.nodeproppred import PygNodePropPredDataset # only import if necessary, takes a long time
+        dataset = PygNodePropPredDataset(name=args.dataset, root="/global/u1/a/alokt/data")
+        data = dataset[0]
+
+        # split_idx = dataset.get_idx_split() 
+        # # train_loader = DataLoader(dataset[split_idx["train"]], batch_size=32, shuffle=True)
+        # # valid_loader = DataLoader(dataset[split_idx["valid"]], batch_size=32, shuffle=False)
+        # # test_loader = DataLoader(dataset[split_idx["test"]], batch_size=32, shuffle=False)
+        # # data = data.to(device)
+        # # data.x.requires_grad = True
+        # # inputs = data.x.to(device)
+        inputs = data.x
+        data.y = data.y.squeeze().to(device)
+        # # inputs.requires_grad = True
+        # # data.y = data.y.to(device)
+        num_features = dataset.num_features
+        edge_index = data.edge_index
+        num_classes = dataset.num_classes
+        adj_matrix = edge_index
+        split_idx = dataset.get_idx_split()
+        train_idx = split_idx['train'].to(device)
+        test_idx = split_idx['test'].to(device)
+    elif args.dataset == "ogbn-papers100M":
         # import ogb
         data = Data()
         # from ogb.nodeproppred import PygNodePropPredDataset # only import if necessary, takes a long time
@@ -772,17 +797,29 @@ def main(args, batches=None):
         features_loc, g_loc, _, _ = one5d_partition(rank, size, inputs, adj_matrix, data, inputs, num_classes, \
                                                     args.replication, args.normalize)
         print("coalescing", flush=True)
-        # g_loc = g_loc.coalesce().t_()
-        adj_matrix_row_lens = torch.IntTensor(inputs.size(0)).fill_(0)
-        ones = torch.IntTensor(adj_matrix.size(1)).fill_(1)
-        adj_matrix_row_lens.scatter_add_(0, adj_matrix[0,:], ones)
-        adj_matrix_crows = torch.IntTensor(inputs.size(0) + 1)
-        adj_matrix_crows[1:] = torch.cumsum(adj_matrix_row_lens, dim=0)
-        adj_matrix_crows[0] = 0
-        adj_matrix_values = torch.FloatTensor(adj_matrix.size(1)).fill_(1.0)
-        g_loc = torch.sparse_csr_tensor(adj_matrix_crows, adj_matrix[1,:].int(), adj_matrix_values, 
-                                            size=torch.Size([inputs.size(0), inputs.size(0)]))
-        print("normalizing", flush=True)
+        if args.dataset == "ogbn-products":
+            adj_matrix_values = torch.FloatTensor(adj_matrix.size(1)).fill_(1.0)
+            g_loc = torch.sparse_coo_tensor(adj_matrix.int(), adj_matrix_values, 
+                                                size=torch.Size([inputs.size(0), inputs.size(0)]))
+            g_loc = g_loc.to_sparse_csr()
+            g_loc_crows = g_loc.crow_indices().int()
+            g_loc_cols = g_loc.col_indices().int()
+            adj_matrix_values = torch.FloatTensor(g_loc_cols.size(0)).fill_(1.0)
+            g_loc = torch.sparse_csr_tensor(g_loc_crows, g_loc_cols, adj_matrix_values, 
+                                                size=torch.Size([inputs.size(0), inputs.size(0)]))
+        else:
+            # g_loc = g_loc.coalesce().t_()
+            adj_matrix_row_lens = torch.IntTensor(inputs.size(0)).fill_(0)
+            ones = torch.IntTensor(adj_matrix.size(1)).fill_(1)
+            adj_matrix_row_lens.scatter_add_(0, adj_matrix[0,:], ones)
+            adj_matrix_crows = torch.IntTensor(inputs.size(0) + 1)
+            adj_matrix_crows[1:] = torch.cumsum(adj_matrix_row_lens, dim=0)
+            adj_matrix_crows[0] = 0
+            adj_matrix_values = torch.FloatTensor(adj_matrix.size(1)).fill_(1.0)
+            print(f"adj_matrix: {adj_matrix}", flush=True)
+            g_loc = torch.sparse_csr_tensor(adj_matrix_crows, adj_matrix[1,:].int(), adj_matrix_values, 
+                                                size=torch.Size([inputs.size(0), inputs.size(0)]))
+            print("normalizing", flush=True)
         g_loc = g_loc.to(device)
         # g_loc = g_loc.double()
         # features_loc = inputs
@@ -815,10 +852,14 @@ def main(args, batches=None):
         print(f"train_nid.size: {train_nid.size()}")
         print(f"test_nid.size: {test_nid.size()}")
     else:
-        train_nid = train_idx
-        # test_nid = test_idx
-        print(f"train_nid.size: {train_nid.size()}")
-        # print(f"test_nid.size: {test_nid.size()}")
+        if args.dataset == "ogbn-papers100M":
+            train_nid = train_idx
+            print(f"train_nid.size: {train_nid.size()}")
+        else:
+            train_nid = train_idx
+            test_nid = test_idx
+            print(f"train_nid.size: {train_nid.size()}")
+            print(f"test_nid.size: {test_nid.size()}")
     
     # # # adj_matrix = None # Uncomment bottom for testing
     # adj_matrix = adj_matrix.cuda()
@@ -1041,60 +1082,60 @@ def main(args, batches=None):
                                                         adj_matrix_sample_values, \
                                                         (args.batch_size, args.samp_num + args.batch_size))
                     else:
-                        adj_sample_row_lens = adj_sample_crows[1:] - adj_sample_crows[:-1]
-                        row_count = adj_row_select_max - adj_row_select_min
-                        adj_sample_rows = torch.repeat_interleave(
-                                            torch.arange(0, row_count, 
-                                                            device=adj_sample_row_lens.device), 
-                                            adj_sample_row_lens)
-                        adj_sample_indices = torch.stack((adj_sample_rows, adj_sample_cols))
-                        adj_matrix_sample = torch.sparse_coo_tensor(adj_sample_indices, \
-                                                        adj_sample_values, \
-                                                    # (args.batch_size * (args.samp_num ** l), \
-                                                    #         args.batch_size * (args.samp_num ** (l + 1))))
-                                            (args.batch_size * np.prod(args.samp_num[:l], dtype=int), \
-                                                args.batch_size * (np.prod(args.samp_num[:(l+1)], dtype=int))))
-                        adj_nnzs.append(adj_sample_values.size(0))
-                        # if l > 0:
-                        #     adj_sample_row_lens = adj_sample_crows[1:] - adj_sample_crows[:-1]
-                        #     adj_sample_row_lens[adj_sample_skip_cols] = 0
-                        #     adj_sample_row_lens = adj_sample_row_lens[adj_sample_row_lens.nonzero().squeeze()]
-                        #     row_count = adj_sample_row_lens.size(0)
-                        #     adj_sample_rows = torch.repeat_interleave(
-                        #                         torch.arange(0, row_count, 
-                        #                                         device=adj_sample_row_lens.device), 
-                        #                         adj_sample_row_lens)
-                        #     nnz_col_mask = torch.cuda.BoolTensor(adj_sample_crows[-1].item()).fill_(False)
-                        #     rowselect_csr_gpu(adj_sample_skip_cols, adj_sample_crows, nnz_col_mask, \
-                        #                             adj_sample_skip_cols.size(0), adj_sample_crows[-1])
-                        #     adj_sample_values = adj_sample_values[~nnz_col_mask]
-                        #     adj_sample_cols = adj_sample_cols[~nnz_col_mask]
-                        # else:
-                        #     adj_sample_row_lens = adj_sample_crows[1:] - adj_sample_crows[:-1]
-                        #     row_count = adj_row_select_max - adj_row_select_min
-                        #     adj_sample_rows = torch.repeat_interleave(
-                        #                         torch.arange(0, row_count, 
-                        #                                         device=adj_sample_row_lens.device), 
-                        #                         adj_sample_row_lens)
-
-                        # # frontier_nnz_sizes = torch.histc(next_frontier._indices()[0,next_frontier_nnz], bins=p.size(0))
-                        # # row_count = args.batch_size * np.prod(args.samp_num[:l], dtype=int)
-                        # col_count = args.batch_size * np.prod(args.samp_num[:(l+1)], dtype=int)
-                        # adj_sample_skip_cols = torch.histc(adj_sample_cols, bins=col_count)
-                        # adj_sample_skip_cols = (adj_sample_skip_cols == 0).nonzero().squeeze(1)
-                        # # print(f"l: {l} adj_sample_cols: {adj_sample_cols} adj_sample_skip_cols: {adj_sample_skip_cols}", flush=True)
-                        # col_count = args.batch_size * np.prod(args.samp_num[:(l+1)], dtype=int) - \
-                        #                 adj_sample_skip_cols.size(0)
-                        # adj_sample_cols = torch.arange(0, adj_sample_values.size(0), device=device, dtype=int)
-                        # # print(f"adj_sample_skip_cols: {adj_sample_skip_cols}", flush=True)
-                        # # print(f"adj_sample_cols: {adj_sample_cols}", flush=True)
+                        # adj_sample_row_lens = adj_sample_crows[1:] - adj_sample_crows[:-1]
+                        # row_count = adj_row_select_max - adj_row_select_min
+                        # adj_sample_rows = torch.repeat_interleave(
+                        #                     torch.arange(0, row_count, 
+                        #                                     device=adj_sample_row_lens.device), 
+                        #                     adj_sample_row_lens)
                         # adj_sample_indices = torch.stack((adj_sample_rows, adj_sample_cols))
                         # adj_matrix_sample = torch.sparse_coo_tensor(adj_sample_indices, \
-                        #                                 adj_sample_values, (row_count, col_count))
+                        #                                 adj_sample_values, \
                         #                             # (args.batch_size * (args.samp_num ** l), \
                         #                             #         args.batch_size * (args.samp_num ** (l + 1))))
+                        #                     (args.batch_size * np.prod(args.samp_num[:l], dtype=int), \
+                        #                         args.batch_size * (np.prod(args.samp_num[:(l+1)], dtype=int))))
                         # adj_nnzs.append(adj_sample_values.size(0))
-                        # # print(f"i: {i} sample.nnz: {adj_matrix_sample._nnz()} sample.size: {adj_matrix_sample.size()} emptyrows: {(adj_sample_row_lens == 0).sum()}")
+                        if l > 0:
+                            adj_sample_row_lens = adj_sample_crows[1:] - adj_sample_crows[:-1]
+                            adj_sample_row_lens[adj_sample_skip_cols] = 0
+                            adj_sample_row_lens = adj_sample_row_lens[adj_sample_row_lens.nonzero().squeeze()]
+                            row_count = adj_sample_row_lens.size(0)
+                            adj_sample_rows = torch.repeat_interleave(
+                                                torch.arange(0, row_count, 
+                                                                device=adj_sample_row_lens.device), 
+                                                adj_sample_row_lens)
+                            nnz_col_mask = torch.cuda.BoolTensor(adj_sample_crows[-1].item()).fill_(False)
+                            rowselect_csr_gpu(adj_sample_skip_cols, adj_sample_crows, nnz_col_mask, \
+                                                    adj_sample_skip_cols.size(0), adj_sample_crows[-1])
+                            adj_sample_values = adj_sample_values[~nnz_col_mask]
+                            adj_sample_cols = adj_sample_cols[~nnz_col_mask]
+                        else:
+                            adj_sample_row_lens = adj_sample_crows[1:] - adj_sample_crows[:-1]
+                            row_count = adj_row_select_max - adj_row_select_min
+                            adj_sample_rows = torch.repeat_interleave(
+                                                torch.arange(0, row_count, 
+                                                                device=adj_sample_row_lens.device), 
+                                                adj_sample_row_lens)
+
+                        # frontier_nnz_sizes = torch.histc(next_frontier._indices()[0,next_frontier_nnz], bins=p.size(0))
+                        # row_count = args.batch_size * np.prod(args.samp_num[:l], dtype=int)
+                        col_count = args.batch_size * np.prod(args.samp_num[:(l+1)], dtype=int)
+                        adj_sample_skip_cols = torch.histc(adj_sample_cols, bins=col_count)
+                        adj_sample_skip_cols = (adj_sample_skip_cols == 0).nonzero().squeeze(1)
+                        # print(f"l: {l} adj_sample_cols: {adj_sample_cols} adj_sample_skip_cols: {adj_sample_skip_cols}", flush=True)
+                        col_count = args.batch_size * np.prod(args.samp_num[:(l+1)], dtype=int) - \
+                                        adj_sample_skip_cols.size(0)
+                        adj_sample_cols = torch.arange(0, adj_sample_values.size(0), device=device, dtype=int)
+                        # print(f"adj_sample_skip_cols: {adj_sample_skip_cols}", flush=True)
+                        # print(f"adj_sample_cols: {adj_sample_cols}", flush=True)
+                        adj_sample_indices = torch.stack((adj_sample_rows, adj_sample_cols))
+                        adj_matrix_sample = torch.sparse_coo_tensor(adj_sample_indices, \
+                                                        adj_sample_values, (row_count, col_count))
+                                                    # (args.batch_size * (args.samp_num ** l), \
+                                                    #         args.batch_size * (args.samp_num ** (l + 1))))
+                        adj_nnzs.append(adj_sample_values.size(0))
+                        # print(f"i: {i} sample.nnz: {adj_matrix_sample._nnz()} sample.size: {adj_matrix_sample.size()} emptyrows: {(adj_sample_row_lens == 0).sum()}")
                     if epoch >= 1:
                         model.timings["extract-inst"].append(stop_time(start_inner_timer, stop_inner_timer, timing_arg=True))
 
@@ -1159,14 +1200,14 @@ def main(args, batches=None):
                     features_batch = torch.cuda.FloatTensor(src_vtxs.size(0), features_loc.size(1))
                     features_batch[og_idxs_nnz] = output_features
                     features_batch[og_idxs[~src_vtxs_sort_nnz]] = features_zero_row
-                    # features_mask = torch.cuda.BoolTensor(features_batch.size(0)).fill_(True)
-                    # features_mask[adj_sample_skip_cols] = False
-                    # features_batch = features_batch[features_mask]
+                    features_mask = torch.cuda.BoolTensor(features_batch.size(0)).fill_(True)
+                    features_mask[adj_sample_skip_cols] = False
+                    features_batch = features_batch[features_mask]
                 else:
                     features_batch = features_loc[src_vtxs]
-                    # features_mask = torch.cuda.BoolTensor(features_batch.size(0)).fill_(True)
-                    # features_mask[adj_sample_skip_cols] = False
-                    # features_batch = features_batch[features_mask]
+                    features_mask = torch.cuda.BoolTensor(features_batch.size(0)).fill_(True)
+                    features_mask[adj_sample_skip_cols] = False
+                    features_batch = features_batch[features_mask]
 
                 torch.cuda.nvtx.range_pop() # nvtx-selectfeats
                 if epoch >= 1:
