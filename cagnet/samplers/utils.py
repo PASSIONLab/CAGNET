@@ -11,7 +11,7 @@ from sparse_coo_tensor_cpp import downsample_gpu, compute_darts_gpu, throw_darts
                                     scatteri_add_gpu, rowselect_coo_gpu, \
                                     rowselect_csr_gpu, sparse_coo_tensor_gpu, spgemm_gpu, coogeam_gpu, \
                                     sparse_csr_tensor_gpu, nsparse_spgemm, rearrange_rows_gpu, \
-                                    reduce_sum_gpu
+                                    rearrangel_rows_gpu, reduce_sum_gpu
 
 
 timing = True
@@ -574,7 +574,7 @@ def dist_saspgemm15D(mata, matb, replication, rank, size, row_groups, col_groups
                 
                 if matb.layout == torch.sparse_csr:
                     start_time(start_inner_timer)
-                    rowselect_csr_gpu(nnz_col_ids[j], matb.crow_indices(), nnz_row_mask, \
+                    rowselect_csr_gpu(nnz_col_ids[j], matb.crow_indices().long(), nnz_row_mask, \
                                             nnz_col_ids[j].size(0), matb._nnz())
                     stop_time_add(start_inner_timer, stop_inner_timer, timing_dict, f"spgemm-send-rowsel-{name}")
 
@@ -805,7 +805,8 @@ def dist_saspgemm15D(mata, matb, replication, rank, size, row_groups, col_groups
                 matc_chunk_crows[0] = 0
 
                 matc_chunk_cols = torch.cuda.LongTensor(matc_chunk_crows[-1].item()).fill_(0)
-                rearrange_rows_gpu(mata_recv_rows, mata_chunk_cols, matc_chunk_crows, 
+                # rearrange_rows_gpu(mata_recv_rows, mata_chunk_cols, matc_chunk_crows, 
+                rearrangel_rows_gpu(mata_recv_rows, mata_chunk_cols, matc_chunk_crows, 
                                         matb_recv_crows, matb_recv_cols, matc_chunk_cols)
                                         # matb_recv.crow_indices(), matb_recv.col_indices(), matc_chunk_cols)
                 matc_chunk_values = torch.cuda.FloatTensor(matc_chunk_crows[-1].item()).fill_(1.0)
@@ -1017,7 +1018,7 @@ def dist_saspgemm15D(mata, matb, replication, rank, size, row_groups, col_groups
 
 def gen_prob_dist(numerator, adj_matrix, mb_count, node_count_total, replication, 
                     rank, size, row_groups, col_groups, sa_masks, 
-                    timing_dict, name, timing_arg):
+                    timing_dict, name, timing_arg, replicate_graph):
 
     global timing
     timing = timing_arg
@@ -1032,7 +1033,7 @@ def gen_prob_dist(numerator, adj_matrix, mb_count, node_count_total, replication
     #                                     numerator, adj_matrix, replication, rank, size, 
     #                                     row_groups, col_groups, "prob", sa_masks, 
     #                                     timing_dict, name)
-    if name == "sage":
+    if name == "sage" and replicate_graph:
         matc_chunk_row_lens = torch.cuda.IntTensor(numerator.size(0)).fill_(0)
         mata_rows = numerator._indices()[0,:]
         mata_cols = numerator._indices()[1,:]
@@ -1045,8 +1046,8 @@ def gen_prob_dist(numerator, adj_matrix, mb_count, node_count_total, replication
         rearrange_rows_gpu(numerator._indices()[0,:], 
                                 numerator._indices()[1,:], 
                                 matc_chunk_crows, 
-                                adj_matrix.crow_indices().long(), 
-                                adj_matrix.col_indices().long(), 
+                                adj_matrix.crow_indices(), 
+                                adj_matrix.col_indices(), 
                                 matc_chunk_cols)
         p_num_rows = torch.repeat_interleave(
                                         torch.arange(matc_chunk_crows.size(0) - 1, 
@@ -1058,7 +1059,11 @@ def gen_prob_dist(numerator, adj_matrix, mb_count, node_count_total, replication
         p_num_values = torch.cuda.DoubleTensor(p_num_indices.size(1)).fill_(1.0)
     else:
         sa_masks.fill_(False)
-        # TODO: LADIES code
+        p_num_indices, p_num_values = dist_saspgemm15D(
+                                            numerator, adj_matrix, replication, rank, size, 
+                                            row_groups, col_groups, "prob", sa_masks, 
+                                            timing_dict, name)
+        p_num_values = p_num_values.double()
 
     # p_num_indices, p_num_values =  dist_spgemm15D(numerator, adj_matrix, replication, rank, size, row_groups, col_groups, "prob")
     stop_timer.record()
@@ -1439,7 +1444,6 @@ def select(next_frontier, adj_matrix, batches, sa_masks, nnz, \
     sa_masks.fill_(0)
     row_select_mtx = row_select_mtx.to_sparse_csr()
     # adj_matrix = adj_matrix.to_sparse_csr()
-    print(f"adj_matrix.layout: {adj_matrix.layout}")
     sampled_indices, sampled_values = dist_saspgemm15D(row_select_mtx, adj_matrix, replication, rank, size, \
                                                         row_groups, col_groups, "rowsel", sa_masks, 
                                                         timing_dict)
@@ -1639,7 +1643,6 @@ def select(next_frontier, adj_matrix, batches, sa_masks, nnz, \
     sa_masks.fill_(0)
     row_select_mtx = row_select_mtx.to_sparse_csr()
     # adj_matrix = adj_matrix.to_sparse_csr()
-    print(f"adj_matrix.layout: {adj_matrix.layout}")
     sampled_indices, sampled_values = dist_saspgemm15D(row_select_mtx, adj_matrix, replication, rank, size, \
                                                         row_groups, col_groups, "rowsel", sa_masks, 
                                                         timing_dict)

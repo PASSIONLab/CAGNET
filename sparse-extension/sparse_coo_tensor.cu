@@ -2691,8 +2691,8 @@ void rearrangel_rows_gpu(const at::Tensor& mata_rows, const at::Tensor& mata_col
     CHECK_ERROR("rearrange_rows error")
 }
 
-__global__ void RearrangeRows(long *mata_rows, long *mata_cols, long *matc_crows, long *matb_crows, 
-                                long *matb_cols, int *matc_cols, long nnz_count) { 
+__global__ void RearrangeRows(long *mata_rows, long *mata_cols, long *matc_crows, int *matb_crows, 
+                                int *matb_cols, int *matc_cols, long nnz_count) { 
 
     int     id = blockIdx.x * blockDim.x + threadIdx.x;
     int stride = blockDim.x * gridDim.x;
@@ -2726,8 +2726,8 @@ void rearrange_rows_gpu(const at::Tensor& mata_rows, const at::Tensor& mata_cols
     RearrangeRows<<<BLOCK_COUNT, BLOCK_SIZE>>>(mata_rows.data<long>(), 
                                                     mata_cols.data<long>(),
                                                     matc_crows.data<long>(), 
-                                                    matb_crows.data<long>(), 
-                                                    matb_cols.data<long>(),
+                                                    matb_crows.data<int>(), 
+                                                    matb_cols.data<int>(),
                                                     matc_cols.data<int>(),
                                                     mata_rows.sizes()[0]);
 
@@ -2843,5 +2843,6 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
     m.def("sort_dst_proc_gpu", &sort_dst_proc_gpu, "Sort vertices by destination process");
     m.def("nsparse_spgemm", &nsparse_spgemm, "CUDA SpGEMM from NSparse");
     m.def("rearrange_rows_gpu", &rearrange_rows_gpu, "Rearrange rows in in place of local spgemm");
+    m.def("rearrangel_rows_gpu", &rearrangel_rows_gpu, "Rearrange rows in in place of local spgemm 64-bit");
     m.def("reduce_sum_gpu", &reduce_sum_gpu, "Sum for SAGE sa-spgemm reduction");
 }
