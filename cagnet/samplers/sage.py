@@ -120,8 +120,6 @@ def sage_sampler(adj_matrix, batches, batch_size, frontier_sizes, mb_count_total
         # Expand batches matrix
         if baseline_compare:
             total_start_timer.record()
-        print(f"current_frontier: {current_frontier}", flush=True)
-        print(f"adj_matrix: {adj_matrix}", flush=True)
         p = gen_prob_dist(current_frontier, adj_matrix, mb_count, node_count_total,
                                 replication, rank, size, row_groups, col_groups,
                                 sa_masks, timing_dict, "sage",
@@ -133,13 +131,11 @@ def sage_sampler(adj_matrix, batches, batch_size, frontier_sizes, mb_count_total
         if p.layout == torch.sparse_csr:
             p = p.to_sparse_coo()
 
-        print(f"p: {p}", flush=True)
         frontier_size = frontier_sizes[i]
         n_darts = n_darts_list[i]
         next_frontier = sample(p, frontier_size, mb_count, node_count_total, n_darts,
                                     replication, rank, size, row_groups, col_groups,
                                     timing_dict, "sage")
-        print(f"next_frontier: {next_frontier}", flush=True)
         # dist.barrier()
 
         start_time(start_timer)
@@ -210,6 +206,10 @@ def sage_sampler(adj_matrix, batches, batch_size, frontier_sizes, mb_count_total
             frontiers[i + 1] = next_frontier_select
         else:
             del next_frontier_select
+        del p
+
+        if i > 0:
+            del current_frontier_select
         current_frontier = next_frontier
         timing_dict["adj-row-col-select"].append(stop_time(start_timer, stop_timer))
         adj_matrices[i] = adj_matrix_sample.to_sparse_csr()

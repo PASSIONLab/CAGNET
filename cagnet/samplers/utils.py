@@ -570,7 +570,8 @@ def dist_saspgemm15D(mata, matb, replication, rank, size, row_groups, col_groups
             # start_time(start_inner_timer)
             for j in range(size // replication):
                 recv_rank = rank_col + j * replication
-                nnz_row_mask = nnz_row_masks[(j * matb._nnz()):((j + 1) * matb._nnz())]
+                # nnz_row_mask = nnz_row_masks[(j * matb._nnz()):((j + 1) * matb._nnz())]
+                nnz_row_mask = torch.cuda.BoolTensor(matb._nnz()).fill_(False)
                 
                 if matb.layout == torch.sparse_csr:
                     start_time(start_inner_timer)
@@ -622,11 +623,13 @@ def dist_saspgemm15D(mata, matb, replication, rank, size, row_groups, col_groups
                         else:
                             # matb_recv_rows = torch.repeat_interleave(nnz_col_ids[j], matb_send_lengths)
                             # matb_recv_indices = torch.stack((matb_recv_rows, matb_recv_cols))
-                            matb_rows_sum = torch.cuda.LongTensor(matb.crow_indices().size(0) - 1).fill_(0)
+                            # matb_rows_sum = torch.cuda.LongTensor(matb.crow_indices().size(0) - 1).fill_(0)
+                            matb_rows_sum = torch.cuda.IntTensor(matb.crow_indices().size(0) - 1).fill_(0)
                             if nnz_row_mask.any():
                                 matb_rows_sum[nnz_col_ids[j]] = matb_send_lengths
-                            matb_recv_crows = torch.cuda.LongTensor(matb.crow_indices().size(0))
-                            matb_recv_crows[1:] = torch.cumsum(matb_rows_sum, dim=0)
+                            # matb_recv_crows = torch.cuda.LongTensor(matb.crow_indices().size(0))
+                            matb_recv_crows = torch.cuda.IntTensor(matb.crow_indices().size(0))
+                            matb_recv_crows[1:] = torch.cumsum(matb_rows_sum, dtype=torch.int32, dim=0)
                             matb_recv_crows[0] = 0
                     stop_time_add(start_inner_timer, stop_inner_timer, timing_dict, f"spgemm-send-calls-{name}")
                 elif matb.layout == torch.sparse_coo:
@@ -707,25 +710,27 @@ def dist_saspgemm15D(mata, matb, replication, rank, size, row_groups, col_groups
                     req.wait()
                 torch.cuda.synchronize()
 
-                matb_recv_lengths = matb_recv_lengths.long()
-                matb_recv_cols = matb_recv_cols.long()
-
                 # the spgemm is better with COO for SAGE prob
                 if not (name == "prob" and alg == "sage"):
+                    matb_recv_lengths = matb_recv_lengths.long()
+                    matb_recv_cols = matb_recv_cols.long()
                     matb_rows_sum = torch.cuda.LongTensor(chunk_col_size).fill_(0)
                     if matb_recv_lengths.size(0) > 0:
                         matb_rows_sum[nnz_cols] = matb_recv_lengths
                     matb_recv_crows = torch.cuda.LongTensor(chunk_col_size + 1)
-                    matb_recv_crows[1:] = torch.cumsum(matb_rows_sum, dim=0)
+                    matb_recv_crows[1:] = torch.cumsum(matb_rows_sum, dtypes=torch.int32, dim=0)
                     matb_recv_crows[0] = 0
                 else:
                     # matb_recv_rows = torch.repeat_interleave(nnz_cols, matb_recv_lengths)
                     # matb_recv_indices = torch.stack((matb_recv_rows, matb_recv_cols))
-                    matb_rows_sum = torch.cuda.LongTensor(chunk_col_size).fill_(0)
+                    # matb_rows_sum = torch.cuda.LongTensor(chunk_col_size).fill_(0)
+                    matb_rows_sum = torch.cuda.IntTensor(chunk_col_size).fill_(0)
                     if matb_recv_lengths.size(0) > 0:
                         matb_rows_sum[nnz_cols] = matb_recv_lengths
-                    matb_recv_crows = torch.cuda.LongTensor(chunk_col_size + 1)
-                    matb_recv_crows[1:] = torch.cumsum(matb_rows_sum, dim=0)
+                    # matb_recv_crows = torch.cuda.LongTensor(chunk_col_size + 1)
+                    matb_recv_crows = torch.cuda.IntTensor(chunk_col_size + 1)
+                    # matb_recv_crows[1:] = torch.cumsum(matb_rows_sum, dim=0)
+                    matb_recv_crows[1:] = torch.cumsum(matb_rows_sum, dtype=torch.int32, dim=0)
                     matb_recv_crows[0] = 0
 
                 nnz_count += 2 * matb_recv_cols.size(0) + matb_recv_lengths.size(0)
@@ -799,14 +804,16 @@ def dist_saspgemm15D(mata, matb, replication, rank, size, row_groups, col_groups
 
                 # matb_recv_row_lens = matb_recv.crow_indices()[1:] - matb_recv.crow_indices()[:-1]
                 matb_recv_row_lens = matb_recv_crows[1:] - matb_recv_crows[:-1]
-                matc_chunk_row_lens = torch.cuda.LongTensor(mata.size(0) + 1).fill_(0)
+                # matc_chunk_row_lens = torch.cuda.LongTensor(mata.size(0) + 1).fill_(0)
+                matc_chunk_row_lens = torch.cuda.IntTensor(mata.size(0) + 1).fill_(0)
                 matc_chunk_row_lens[mata_recv_rows] = matb_recv_row_lens[mata_chunk_cols]
                 matc_chunk_crows = torch.cumsum(matc_chunk_row_lens, 0).roll(1)
                 matc_chunk_crows[0] = 0
 
-                matc_chunk_cols = torch.cuda.LongTensor(matc_chunk_crows[-1].item()).fill_(0)
-                # rearrange_rows_gpu(mata_recv_rows, mata_chunk_cols, matc_chunk_crows, 
-                rearrangel_rows_gpu(mata_recv_rows, mata_chunk_cols, matc_chunk_crows, 
+                # matc_chunk_cols = torch.cuda.LongTensor(matc_chunk_crows[-1].item()).fill_(0)
+                matc_chunk_cols = torch.cuda.IntTensor(matc_chunk_crows[-1].item()).fill_(0)
+                rearrange_rows_gpu(mata_recv_rows, mata_chunk_cols, matc_chunk_crows, 
+                # rearrangel_rows_gpu(mata_recv_rows, mata_chunk_cols, matc_chunk_crows, 
                                         matb_recv_crows, matb_recv_cols, matc_chunk_cols)
                                         # matb_recv.crow_indices(), matb_recv.col_indices(), matc_chunk_cols)
                 matc_chunk_values = torch.cuda.FloatTensor(matc_chunk_crows[-1].item()).fill_(1.0)
@@ -829,7 +836,6 @@ def dist_saspgemm15D(mata, matb, replication, rank, size, row_groups, col_groups
                 # matc_chunk_cols = matc_chunk.col_indices()
                 # matc_chunk_values = matc_chunk.values()
                 matc_row_lens = matc_chunk_crows[1:] - matc_chunk_crows[:-1]
-                lt_zero_mask = matc_row_lens < 0
                 matc_chunk_rows = torch.repeat_interleave(
                                     torch.arange(0, mata.size(0), device=mata.device), 
                                     matc_row_lens)
@@ -1058,7 +1064,8 @@ def gen_prob_dist(numerator, adj_matrix, mb_count, node_count_total, replication
         # p_num_values = torch.cuda.FloatTensor(p_num_indices.size(1)).fill_(1.0)
         p_num_values = torch.cuda.DoubleTensor(p_num_indices.size(1)).fill_(1.0)
     else:
-        sa_masks.fill_(False)
+        if sa_masks is not None:
+            sa_masks.fill_(False)
         p_num_indices, p_num_values = dist_saspgemm15D(
                                             numerator, adj_matrix, replication, rank, size, 
                                             row_groups, col_groups, "prob", sa_masks, 
