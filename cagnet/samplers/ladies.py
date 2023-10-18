@@ -25,13 +25,14 @@ def stop_time(start_timer, stop_timer, barrier=False):
     
 def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_total, n_layers, n_darts, \
                         semibulk_size, replication, sa_masks, rank, size, \
-                        row_groups, col_groups, timing):
+                        row_groups, col_groups, timing, replicate_graph):
 
     total_start_timer = torch.cuda.Event(enable_timing=True)
     total_stop_timer = torch.cuda.Event(enable_timing=True)
 
     timing_dict = defaultdict(list)
 
+    frontier_size = frontier_size[0] # one layer
     current_frontier = torch.cuda.IntTensor(mb_count_total, batch_size + frontier_size)
 
     node_count = adj_matrix.size(0)
@@ -57,9 +58,12 @@ def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_tota
             nnz = current_frontier[0, :].size(0)
 
         batches = batches.to_sparse_csr()
-        adj_matrix_sq = adj_matrix.square().to_sparse_csr()
+        # adj_matrix_sq = adj_matrix.square().to_sparse_csr()
+        adj_matrix_sq = adj_matrix.values().square()
+        adj_matrix_sq = torch.sparse_csr_tensor(adj_matrix.crow_indices(), adj_matrix.col_indices(),
+                                                    adj_matrix_sq, adj_matrix.size())
         p = gen_prob_dist(batches, adj_matrix_sq, mb_count, node_count_total, replication, rank, size, \
-                            row_groups, col_groups, sa_masks, timing_dict, "ladies", timing)
+                            row_groups, col_groups, sa_masks, timing_dict, "ladies", timing, replicate_graph)
 
         next_frontier = sample(p, frontier_size, mb_count, node_count_total, n_darts, replication, rank, size, \
                                     row_groups, col_groups, timing_dict, "ladies")
@@ -74,7 +78,8 @@ def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_tota
                                     replication, rank, size, row_groups, col_groups, timing_dict, i, "ladies",
                                     semibulk_size)
 
-        adj_matrices[i] = adj_matrix_sample
+        # adj_matrices[i] = adj_matrix_sample
+        adj_matrices[i] = adj_matrix_sample.to_sparse_csr()
         current_frontier = next_frontier
 
 

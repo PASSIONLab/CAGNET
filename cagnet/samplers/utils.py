@@ -614,11 +614,14 @@ def dist_saspgemm15D(mata, matb, replication, rank, size, row_groups, col_groups
                         matb_recv_cols = matb_send_cols.clone()
                         matb_recv_values = matb_send_values.clone()
                         if not (name == "prob" and alg == "sage"):
-                            matb_rows_sum = torch.cuda.LongTensor(matb.crow_indices().size(0) - 1).fill_(0)
+                            # matb_rows_sum = torch.cuda.LongTensor(matb.crow_indices().size(0) - 1).fill_(0)
+                            matb_rows_sum = torch.cuda.IntTensor(matb.crow_indices().size(0) - 1).fill_(0)
                             if nnz_row_mask.any():
                                 matb_rows_sum[nnz_col_ids[j]] = matb_send_lengths
-                            matb_recv_crows = torch.cuda.LongTensor(matb.crow_indices().size(0))
-                            matb_recv_crows[1:] = torch.cumsum(matb_rows_sum, dim=0)
+                            # matb_recv_crows = torch.cuda.LongTensor(matb.crow_indices().size(0))
+                            # matb_recv_crows[1:] = torch.cumsum(matb_rows_sum, dim=0)
+                            matb_recv_crows = torch.cuda.IntTensor(matb.crow_indices().size(0))
+                            matb_recv_crows[1:] = torch.cumsum(matb_rows_sum, dtype=torch.int32, dim=0)
                             matb_recv_crows[0] = 0
                         else:
                             # matb_recv_rows = torch.repeat_interleave(nnz_col_ids[j], matb_send_lengths)
@@ -718,7 +721,7 @@ def dist_saspgemm15D(mata, matb, replication, rank, size, row_groups, col_groups
                     if matb_recv_lengths.size(0) > 0:
                         matb_rows_sum[nnz_cols] = matb_recv_lengths
                     matb_recv_crows = torch.cuda.LongTensor(chunk_col_size + 1)
-                    matb_recv_crows[1:] = torch.cumsum(matb_rows_sum, dtypes=torch.int32, dim=0)
+                    matb_recv_crows[1:] = torch.cumsum(matb_rows_sum, dtype=torch.int32, dim=0)
                     matb_recv_crows[0] = 0
                 else:
                     # matb_recv_rows = torch.repeat_interleave(nnz_cols, matb_recv_lengths)
@@ -1156,6 +1159,8 @@ def sample(p, frontier_size, mb_count, node_count_total, n_darts, replication,
     # underfull_minibatches = (sampled_count < frontier_size).any()
     underfull_minibatches = True
 
+    ps_frontier_nnz_sizes = torch.cuda.IntTensor(p.size(0) + 1).fill_(0)
+    ps_frontier_nnz_sizes[1:] = torch.cumsum(frontier_nnz_sizes, dtype=torch.int32, dim=0)
     p_rowsum = torch.cuda.DoubleTensor(p.size(0)).fill_(0)
     # p_rowsum = torch.cuda.FloatTensor(p.size(0)).fill_(0)
     while underfull_minibatches:
@@ -1181,36 +1186,49 @@ def sample(p, frontier_size, mb_count, node_count_total, n_darts, replication,
         timing_dict["sample-prob-rowsum"].append(stop_time(start_timer, stop_timer))
 
         # n_darts_col = int((frontier_size - sampled_count).sum().item() / p.size(0)) * 5 + 1
+        rank_batches_start = rank_col * (sampled_count.size(0) // replication)
+        rank_batches_stop = (rank_col + 1) * (sampled_count.size(0) // replication)
+        rank_batches_stop = min(sampled_count.size(0), rank_batches_stop)
         dart_count_row = frontier_size - sampled_count
+        dart_count_row[:rank_batches_start] = 0
+        dart_count_row[rank_batches_stop:] = 0
         n_darts_col = dart_count_row.sum().item()
 
-        start_time(start_timer)
-        # dart_values = torch.cuda.DoubleTensor(n_darts * mb_count).uniform_()
-        # dart_values = torch.cuda.DoubleTensor(n_darts_col * p.size(0)).uniform_()
-        # dart_values = torch.cuda.FloatTensor(n_darts_col * p.size(0)).uniform_()
-        # dart_values = torch.cuda.FloatTensor(n_darts_col).uniform_()
-        dart_values = torch.cuda.DoubleTensor(n_darts_col).uniform_()
-        # ps_dart_count_row = torch.cumsum(dart_count_row, dim=0, dtype=torch.int32).roll(1)
-        ps_dart_count_row = torch.cumsum(dart_count_row, dim=0)
-        timing_dict["sample-gen-darts"].append(stop_time(start_timer, stop_timer))
-        start_time(start_timer)
-        # compute_darts1d_gpu(dart_values, n_darts, mb_count)
-        # compute_darts1d_gpu(dart_values, n_darts_col, mb_count)
-        # compute_darts1d_gpu(dart_values, p_rowsum, ps_p_rowsum, n_darts_col, p.size(0))
-        compute_darts1d_gpu(dart_values, p_rowsum, ps_p_rowsum, ps_dart_count_row, n_darts_col, p.size(0))
+        if n_darts_col > 0:
+            start_time(start_timer)
+            # dart_values = torch.cuda.DoubleTensor(n_darts * mb_count).uniform_()
+            # dart_values = torch.cuda.DoubleTensor(n_darts_col * p.size(0)).uniform_()
+            # dart_values = torch.cuda.FloatTensor(n_darts_col * p.size(0)).uniform_()
+            # dart_values = torch.cuda.FloatTensor(n_darts_col).uniform_()
+            dart_values = torch.cuda.DoubleTensor(n_darts_col).uniform_()
+            # ps_dart_count_row = torch.cumsum(dart_count_row, dim=0, dtype=torch.int32).roll(1)
+            ps_dart_count_row = torch.cumsum(dart_count_row, dim=0)
+            timing_dict["sample-gen-darts"].append(stop_time(start_timer, stop_timer))
 
-        timing_dict["sample-dart-throw"].append(stop_time(start_timer, stop_timer))
+            start_time(start_timer)
+            # compute_darts1d_gpu(dart_values, n_darts, mb_count)
+            # compute_darts1d_gpu(dart_values, n_darts_col, mb_count)
+            # compute_darts1d_gpu(dart_values, p_rowsum, ps_p_rowsum, n_darts_col, p.size(0))
+            compute_darts1d_gpu(dart_values, p_rowsum, ps_p_rowsum, ps_dart_count_row, n_darts_col, p.size(0))
+
+            timing_dict["sample-dart-throw"].append(stop_time(start_timer, stop_timer))
+
+            start_time(start_timer)
+            dart_hits_count = torch.cuda.IntTensor(p._nnz()).fill_(0)
+            throw_darts1d_gpu(dart_values, ps_p_values, dart_hits_count, \
+                                    n_darts_col, p._nnz())
+            timing_dict["sample-filter-darts"].append(stop_time(start_timer, stop_timer))
+
+            frontier_nnz_start = ps_frontier_nnz_sizes[rank_batches_start]
+            frontier_nnz_stop = ps_frontier_nnz_sizes[rank_batches_stop]
+            dart_hits_count[:frontier_nnz_start] = 0
+            dart_hits_count[frontier_nnz_stop:] = 0
+        else:
+            dart_hits_count = torch.cuda.IntTensor(p._nnz()).fill_(0)
 
         start_time(start_timer)
-        dart_hits_count = torch.cuda.IntTensor(p._nnz()).fill_(0)
-        throw_darts1d_gpu(dart_values, ps_p_values, dart_hits_count, \
-                                n_darts_col, p._nnz())
-                                # n_darts_col * p.size(0), p._nnz())
-                                # n_darts * mb_count, p._nnz())
-        timing_dict["sample-filter-darts"].append(stop_time(start_timer, stop_timer))
-
-        start_time(start_timer)
-        # dist.all_reduce(dart_hits_count, group=row_groups[rank_c])
+        if replication > 1:
+            dist.all_reduce(dart_hits_count, group=row_groups[rank_c])
         next_frontier_values = torch.logical_or(
                                     dart_hits_count, 
                                     next_frontier._values().int()).int()
@@ -1338,8 +1356,9 @@ def sample(p, frontier_size, mb_count, node_count_total, n_darts, replication,
         timing_dict["sample-dart-selection"].append(stop_time(select_start_timer, select_stop_timer))
 
         start_time(start_timer)
-        # dist.all_reduce(dart_hits_count, group=row_groups[rank_c])
-        # dist.broadcast(dart_hits_count, src=rank_c * replication, group=row_groups[rank_c])
+        if replication > 1:
+            dist.all_reduce(dart_hits_count, group=row_groups[rank_c])
+            dist.broadcast(dart_hits_count, src=rank_c * replication, group=row_groups[rank_c])
         next_frontier_values = torch.logical_or(
                                         dart_hits_count, 
                                         next_frontier._values()).int()
@@ -1647,7 +1666,8 @@ def select(next_frontier, adj_matrix, batches, sa_masks, nnz, \
     #                                                 size=(nnz * mb_count, node_count_total))
     row_select_mtx = sparse_coo_tensor_gpu(row_select_mtx_indices, row_select_mtx_values, 
                                                     torch.Size([nnz * mb_count, node_count_total]))
-    sa_masks.fill_(0)
+    if sa_masks is not None:
+        sa_masks.fill_(0)
     row_select_mtx = row_select_mtx.to_sparse_csr()
     # adj_matrix = adj_matrix.to_sparse_csr()
     sampled_indices, sampled_values = dist_saspgemm15D(row_select_mtx, adj_matrix, replication, rank, size, \

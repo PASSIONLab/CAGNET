@@ -1335,6 +1335,7 @@ __device__ int binary_searchd(double *arr, double val, int imin, int imax) {
     int ans = 0;
     while (imax >= imin) {
         int imid = (imin + imax) / 2;
+        // printf("imin: %d imax: %d imid: %d\n", imin, imax, imid);
 
         if (arr[imid] < val) {
             imin = imid + 1;
@@ -1343,7 +1344,7 @@ __device__ int binary_searchd(double *arr, double val, int imin, int imax) {
             imax = imid - 1;
         }
     }
-
+    
     return ans;
 }
 
@@ -2237,6 +2238,7 @@ __global__ void ThrowDarts1D(double *dart_values, double *ps_p_values, int *h_va
     for (int i = id; i < dart_count; i += stride) {
         // int vtx = binary_searchf(ps_p_values, dart_values[i], 0, nnz - 1);
         int vtx = binary_searchd(ps_p_values, dart_values[i], 0, nnz - 1);
+        // printf("i: %d vtx: %d\n", i, vtx);
         // if (vtx < 0 || vtx >= nnz) {
         //     printf("error i: %d vtx: %d nnz: %d\n", i, vtx, nnz);
         // } 

@@ -85,7 +85,7 @@ class GCN(nn.Module):
         for l, layer in enumerate(self.layers):
             graphs[l].t_()
             edge_index = graphs[l]._indices()
-            print(f"l: {l} h.size: {h.size()} dtype: {h.dtype} graph.sizes: {graphs[l].size()} edge_index: {edge_index} dtype: {edge_index.dtype}", flush=True)
+            # print(f"l: {l} h.size: {h.size()} dtype: {h.dtype} graph.sizes: {graphs[l].size()} edge_index: {edge_index} dtype: {edge_index.dtype}", flush=True)
             # edge_index = graphs[l] # SAGEConvfake
             # edge_index, _, size = graphs[l] # quiver
             h = self.layers[l](h, edge_index) # SAGEConv
@@ -193,6 +193,116 @@ class GCN(nn.Module):
         #     features = torch.cat(xs, dim=0)
 
         # return features
+
+class LADIES(nn.Module):
+    def __init__(self, in_feats, n_hidden, n_classes, n_layers, aggr, rank, size, partitioning, replication, 
+                                        device, group=None, row_groups=None, col_groups=None):
+        super(LADIES, self).__init__()
+        self.layers = nn.ModuleList()
+        self.n_layers = n_layers
+        self.aggr = aggr
+        self.rank = rank
+        self.size = size
+        self.group = group
+        self.row_groups = row_groups
+        self.col_groups = col_groups
+        self.device = device
+        self.partitioning = partitioning
+        self.replication = replication
+        self.timings = dict()
+
+        self.timings["total"] = []
+        self.timings["sample"] = []
+        self.timings["extract"] = []
+        self.timings["extract-select"] = []
+        self.timings["extract-inst"] = []
+        self.timings["extract-coalesce"] = []
+        self.timings["train"] = []
+        self.timings["selectfeats"] = []
+        self.timings["fwd"] = []
+        self.timings["bwd"] = []
+        self.timings["loss"] = []
+        self.timings["fakemats"] = []
+
+        self.timings["precomp"] = []
+        self.timings["spmm"] = []
+        self.timings["gemm_i"] = []
+        self.timings["gemm_w"] = []
+        self.timings["aggr"] = []
+
+        # # input layer
+        # self.layers.append(GCNConv(in_feats, n_hidden, self.partitioning, self.device))
+        # # hidden layers
+        # for i in range(n_layers - 2):
+        #         self.layers.append(GCNConv(n_hidden, n_hidden, self.partitioning, self.device))
+        # # output layer
+        # self.layers.append(GCNConv(n_hidden, n_classes, self.partitioning, self.device))
+        self.layers.append(GCNConv(in_feats, n_classes, self.partitioning, self.device))
+
+    def forward(self, graphs, inputs, epoch):
+        h = inputs
+        for l, layer in enumerate(self.layers):
+            # graphs[l].t_()
+            # edge_index = graphs[l]._indices()
+            h = layer(self, graphs[l], h, epoch) # GCNConv
+            if l != len(self.layers) - 1:
+                # h = CAGF.relu(h, self.partitioning)
+                h = F.relu(h)
+
+        # h = CAGF.log_softmax(self, h, self.partitioning, dim=1)
+        h = F.log_softmax(h, dim=1)
+        return h
+
+    @torch.no_grad()
+    def evaluate(self, graph, features, test_idx, labels):
+        # subgraph_loader = NeighborSampler(graph, node_idx=None,
+        #                                   sizes=[-1], batch_size=2048,
+        #                                   shuffle=False, num_workers=6)
+
+        # for i in range(self.n_layers):
+        #     xs = []
+        #     for batch_size, n_id, adj in subgraph_loader:
+        #         edge_index, _, size = adj.to(self.device)
+        #         x = features[n_id].to(self.device)
+        #         # edge_index, _, size = adj
+        #         # x = features[n_id]
+        #         # x_target = x[:size[1]]
+        #         # x = self.convs[i]((x, x_target), edge_index)
+        #         x = self.layers[i](x, edge_index)
+        #         if i != self.n_layers - 1:
+        #             x = F.relu(x)
+        #         # xs.append(x)
+        #         xs.append(x[:batch_size])
+
+        #     features = torch.cat(xs, dim=0)
+
+        # return features
+
+        subgraph_loader = NeighborSampler(graph, node_idx=None,
+                                          sizes=[-1], batch_size=2048,
+        # subgraph_loader = NeighborSampler(graph, node_idx=test_idx,
+                                          # sizes=[-1, -1], batch_size=512,
+                                          shuffle=False)
+        non_eval_timings = copy.deepcopy(self.timings)
+        for l, layer in enumerate(self.layers):
+            hs = []
+            for batch_size, n_id, adj in subgraph_loader:
+                # edge_index, _, size = adj.to(self.device)
+                edge_index, _, size = adj
+                adj_batch = torch.sparse_coo_tensor(edge_index, 
+                                                        torch.FloatTensor(edge_index.size(1)).fill_(1.0),
+                                                        size)
+                adj_batch = adj_batch.t().coalesce()
+                h = features[n_id]
+
+                # h = layer(self, adj_batch, h_batch, epoch=-1) # GCNConv
+                h = self.layers[l](h, edge_index)
+                if l != len(self.layers) - 1:
+                    h = CAGF.relu(h, self.partitioning)
+                # hs.append(h) # GCNConv
+                hs.append(h[:batch_size]) # SAGEConv
+            features = torch.cat(hs, dim=0)
+        return features
 
 def get_proc_groups(rank, size, replication):
     rank_c = rank // replication
@@ -583,140 +693,120 @@ def main(args, batches=None):
     torch.cuda.synchronize()
     if args.dataset == "ogbn-papers100M" or "Protein" in args.dataset:
         if rank % args.gpu == 0:
-            if True or args.dataset != "ogbn-papers100M": 
-                inputs = inputs.to(torch.device("cpu"))
-                if args.replicate_graph:
-                    # send g_loc.nnz, g_loc, train_idx.len, and train_idx
-                    features_loc, g_loc, am_partitions, input_partitions = \
-                            one5d_partition(rank, size, inputs, adj_matrix, data, 
-                                                inputs, num_classes, args.replication, \
-                                                args.normalize, args.replicate_graph)
+            inputs = inputs.to(torch.device("cpu"))
+            if args.replicate_graph:
+                # send g_loc.nnz, g_loc, train_idx.len, and train_idx
+                features_loc, g_loc, am_partitions, input_partitions = \
+                        one5d_partition(rank, size, inputs, adj_matrix, data, 
+                                            inputs, num_classes, args.replication, \
+                                            args.normalize, args.replicate_graph)
 
-                    print(f"begin conversion", flush=True)
+                if args.dataset == "ogbn-papers100M":
+                    print(f"begin copying", flush=True)
                     adj_matrix_crows = torch.load("/global/u1/a/alokt/data/ogbn_papers100M/csr/indptr.pt")
                     adj_matrix_cols = torch.load("/global/u1/a/alokt/data/ogbn_papers100M/csr/indices.pt")
                     print(f"adj_matrix_crows: {adj_matrix_crows} dtype: {adj_matrix_crows.dtype} device: {adj_matrix_crows.device}", flush=True)
                     print(f"adj_matrix_cols: {adj_matrix_cols} dtype: {adj_matrix_cols.dtype} device: {adj_matrix_cols.device}", flush=True)
-                    print(f"stop conversion", flush=True)
                     # adj_matrix_crows = adj_matrix_crows.int().to(device)
                     # adj_matrix_cols = adj_matrix[1,:].int().to(device)
                     adj_matrix_vals = torch.FloatTensor(adj_matrix_cols.size(0)).fill_(1)
                     g_loc = torch.sparse_csr_tensor(adj_matrix_crows.int(), adj_matrix_cols.int(), \
                                                         adj_matrix_vals, \
                                                         torch.Size([inputs.size(0), inputs.size(0)]))
-                    g_loc = g_loc.to(device)
                 else:
-                    adj_matrix = adj_matrix.to(torch.device("cpu"))
-                    features_loc, g_loc, am_partitions, input_partitions = \
-                            one5d_partition(rank, size, inputs, adj_matrix, data, 
-                                                inputs, num_classes, args.replication, \
-                                                args.normalize, args.replicate_graph)
-                features_zero_row = input_partitions[0][0].to(device) # feature vector in row 0
-                print(f"stop copying", flush=True)
-                for i in range(1, args.gpu):
-                    print(f"iteration i: {i}", flush=True)
-                    if args.replicate_graph:
-                        rank_send_row = (rank + i) // args.replication
-                        dst_gpu = rank + i
-                        g_send = adj_matrix
-                        print("normalizing", flush=True)
-
-                        features_send = input_partitions[rank_send_row].to(device)
-                        edge_count = g_loc.col_indices().size(0)
-
-
-                        g_send_meta = torch.cuda.LongTensor(6)
-                        g_send_meta[0] = g_loc.col_indices().size(0)
-                        g_send_meta[1] = inputs.size(0)
-                        g_send_meta[2] = inputs.size(0)
-                        g_send_meta[3] = g_loc.col_indices().size(0)
-                        g_send_meta[4] = num_features
-                        g_send_meta[5] = num_classes
-                        dist.send(g_send_meta, dst=dst_gpu)
-                        dist.send(g_loc.crow_indices(), dst=dst_gpu)
-                        dist.send(g_loc.col_indices(), dst=dst_gpu)
-                        dist.send(features_send, dst=dst_gpu)
-                        dist.send(features_zero_row, dst=dst_gpu)
-                        dist.send(data.y.float(), dst=dst_gpu)
-                    else:
-                        rank_send_row = (rank + i) // args.replication
-                        dst_gpu = rank + i
-                        g_send = am_partitions[rank_send_row]
-                        print("coalescing", flush=True)
-                        g_send = g_send.coalesce().t_()
-                        print("normalizing", flush=True)
-                        g_send = g_send.to(device)
-                        g_send = g_send.double()
-                        features_send = input_partitions[rank_send_row].to(device)
-                        edge_count = adj_matrix.size(1)
-
-
-                        g_send_meta = torch.cuda.LongTensor(6)
-                        g_send_meta[0] = g_send._nnz()
-                        g_send_meta[1] = g_send.size(0)
-                        g_send_meta[2] = g_send.size(1)
-                        g_send_meta[3] = adj_matrix.size(1)
-                        g_send_meta[4] = num_features
-                        g_send_meta[5] = num_classes
-                        dist.send(g_send_meta, dst=dst_gpu)
-                        dist.send(g_send._indices(), dst=dst_gpu)
-                        dist.send(g_send._values(), dst=dst_gpu)
-                        dist.send(features_send, dst=dst_gpu)
-                        dist.send(features_zero_row, dst=dst_gpu)
-                        dist.send(data.y.float(), dst=dst_gpu)
-
-                    del g_send
-                    del features_send
-
-                    if args.dataset == "ogbn-papers100M":
-                        train_idx_len = torch.cuda.LongTensor(1).fill_(train_idx.size(0))
-                        # test_idx_len = torch.cuda.LongTensor(1).fill_(test_idx.size(0))
-                        dist.send(train_idx_len, dst=dst_gpu)
-                        # dist.send(test_idx_len, dst=dst_gpu)
-                        dist.send(train_idx, dst=dst_gpu)
-                        # dist.send(test_idx, dst=dst_gpu)
-                if args.replicate_graph:
-                    edge_count = g_loc.col_indices().size(0)
-                else:
-                    edge_count = g_loc._indices().size(1)
-                    print("coalescing", flush=True)
-                    g_loc = g_loc.coalesce().t_()
-                    g_loc = g_loc.cpu()
+                    print(f"begin construction", flush=True)
+                    adj_matrix_vals = torch.FloatTensor(adj_matrix.size(1)).fill_(1)
+                    g_loc = torch.sparse_coo_tensor(adj_matrix, adj_matrix_vals, \
+                                                        torch.Size([inputs.size(0), inputs.size(0)]))
                     g_loc = g_loc.to_sparse_csr()
                     g_loc_crows = g_loc.crow_indices().int()
                     g_loc_cols = g_loc.col_indices().int()
-                    g_loc = torch.sparse_csr_tensor(g_loc_crows, g_loc_cols, g_loc.values(), g_loc.size())
-                print("host2device", flush=True)
+                    g_loc = torch.sparse_csr_tensor(g_loc_crows, g_loc_cols, adj_matrix_vals, g_loc.size())
                 g_loc = g_loc.to(device)
-                features_loc = features_loc.to(device)
             else:
-                print(f"loading", flush=True)
-                g_loc_meta = torch.load(f"../../data/ogbn_papers100M/cagnet/p16/{rank}g_loc_meta.pt", 
-                                                map_location=torch.device("cpu"))
-                g_loc_indices = torch.load(f"../../data/ogbn_papers100M/cagnet/p16/{rank}g_loc_indices.pt", 
-                                                map_location=torch.device("cpu"))
-                g_loc_values = torch.load(f"../../data/ogbn_papers100M/cagnet/p16/{rank}g_loc_values.pt", 
-                                                map_location=torch.device("cpu"))
-                features_loc = torch.load(f"../../data/ogbn_papers100M/cagnet/p16/{rank}features_loc.pt", 
-                                                map_location=torch.device("cpu"))
-
-                g_loc_meta = g_loc_meta.to(device)
-                g_loc_indices = g_loc_indices.to(device)
-                g_loc_values = g_loc_values.to(device)
-                features_loc = features_loc.to(device)
-                edge_count = g_loc_meta[3].item()
-                num_features = g_loc_meta[4].item()
-                num_classes = g_loc_meta[5].item()
-                # g_loc = sparse_coo_tensor_gpu(g_loc_indices, g_loc_values, 
-                #                                 torch.Size([g_loc_meta[1], g_loc_meta[2]]))
-                g_loc = torch.sparse_coo_tensor(g_loc_indices, g_loc_values, 
-                                                torch.Size([g_loc_meta[1], g_loc_meta[2]]))
-                print("normalizing", flush=True)
+                adj_matrix = adj_matrix.to(torch.device("cpu"))
+                features_loc, g_loc, am_partitions, input_partitions = \
+                        one5d_partition(rank, size, inputs, adj_matrix, data, 
+                                            inputs, num_classes, args.replication, \
+                                            args.normalize, args.replicate_graph)
+            features_zero_row = input_partitions[0][0].to(device) # feature vector in row 0
+            print(f"stop copying", flush=True)
+            for i in range(1, args.gpu):
+                print(f"iteration i: {i}", flush=True)
                 if args.replicate_graph:
+                    rank_send_row = (rank + i) // args.replication
+                    dst_gpu = rank + i
+                    g_send = adj_matrix
+                    print("normalizing", flush=True)
+
+                    features_send = input_partitions[rank_send_row].to(device)
                     edge_count = g_loc.col_indices().size(0)
+
+
+                    g_send_meta = torch.cuda.LongTensor(6)
+                    g_send_meta[0] = g_loc.col_indices().size(0)
+                    g_send_meta[1] = inputs.size(0)
+                    g_send_meta[2] = inputs.size(0)
+                    g_send_meta[3] = g_loc.col_indices().size(0)
+                    g_send_meta[4] = num_features
+                    g_send_meta[5] = num_classes
+                    dist.send(g_send_meta, dst=dst_gpu)
+                    dist.send(g_loc.crow_indices(), dst=dst_gpu)
+                    dist.send(g_loc.col_indices(), dst=dst_gpu)
+                    dist.send(features_send, dst=dst_gpu)
+                    dist.send(features_zero_row, dst=dst_gpu)
+                    dist.send(data.y.float(), dst=dst_gpu)
                 else:
-                    edge_count = g_loc._indices().size(1)
-                    g_loc = g_loc.coalesce().t_()
+                    rank_send_row = (rank + i) // args.replication
+                    dst_gpu = rank + i
+                    g_send = am_partitions[rank_send_row]
+                    print("coalescing", flush=True)
+                    g_send = g_send.coalesce().t_()
+                    print("normalizing", flush=True)
+                    g_send = g_send.to(device)
+                    g_send = g_send.double()
+                    features_send = input_partitions[rank_send_row].to(device)
+                    edge_count = adj_matrix.size(1)
+
+
+                    g_send_meta = torch.cuda.LongTensor(6)
+                    g_send_meta[0] = g_send._nnz()
+                    g_send_meta[1] = g_send.size(0)
+                    g_send_meta[2] = g_send.size(1)
+                    g_send_meta[3] = adj_matrix.size(1)
+                    g_send_meta[4] = num_features
+                    g_send_meta[5] = num_classes
+                    dist.send(g_send_meta, dst=dst_gpu)
+                    dist.send(g_send._indices(), dst=dst_gpu)
+                    dist.send(g_send._values(), dst=dst_gpu)
+                    dist.send(features_send, dst=dst_gpu)
+                    dist.send(features_zero_row, dst=dst_gpu)
+                    dist.send(data.y.float(), dst=dst_gpu)
+
+                del g_send
+                del features_send
+
+                if args.dataset == "ogbn-papers100M":
+                    train_idx_len = torch.cuda.LongTensor(1).fill_(train_idx.size(0))
+                    # test_idx_len = torch.cuda.LongTensor(1).fill_(test_idx.size(0))
+                    dist.send(train_idx_len, dst=dst_gpu)
+                    # dist.send(test_idx_len, dst=dst_gpu)
+                    dist.send(train_idx, dst=dst_gpu)
+                    # dist.send(test_idx, dst=dst_gpu)
+            if args.replicate_graph:
+                edge_count = g_loc.col_indices().size(0)
+            else:
+                edge_count = g_loc._indices().size(1)
+                print("coalescing", flush=True)
+                g_loc = g_loc.coalesce().t_()
+                g_loc = g_loc.cpu()
+                g_loc = g_loc.to_sparse_csr()
+                g_loc_crows = g_loc.crow_indices().int()
+                g_loc_cols = g_loc.col_indices().int()
+                g_loc = torch.sparse_csr_tensor(g_loc_crows, g_loc_cols, g_loc.values(), g_loc.size())
+            print("host2device", flush=True)
+            g_loc = g_loc.to(device)
+            features_loc = features_loc.to(device)
 
             # features_loc, g_loc, _, _ = one5d_partition(rank, size, inputs, adj_matrix, data, inputs, num_classes, \
             #                                 args.replication, args.normalize)
@@ -735,143 +825,114 @@ def main(args, batches=None):
             # del adj_matrix # Comment when testing
             # del inputs
         else:
-            if True or args.dataset != "ogbn-papers100M":
-                src_gpu = rank - (rank % args.gpu)
-                if args.replicate_graph:
-                    g_loc_meta = torch.cuda.LongTensor(6).fill_(0)
-                    dist.recv(g_loc_meta, src=src_gpu)
+            src_gpu = rank - (rank % args.gpu)
+            if args.replicate_graph:
+                g_loc_meta = torch.cuda.LongTensor(6).fill_(0)
+                dist.recv(g_loc_meta, src=src_gpu)
 
-                    # g_loc_indices = torch.cuda.IntTensor(2, g_loc_meta[0].item())
-                    # dist.recv(g_loc_indices, src=src_gpu)
-                    # torch.cuda.synchronize()
-                    # print(f"recv indices", flush=True)
+                # g_loc_indices = torch.cuda.IntTensor(2, g_loc_meta[0].item())
+                # dist.recv(g_loc_indices, src=src_gpu)
+                # torch.cuda.synchronize()
+                # print(f"recv indices", flush=True)
 
-                    g_loc_crows = torch.cuda.IntTensor(g_loc_meta[1].item() + 1)
-                    dist.recv(g_loc_crows, src=src_gpu)
-                    torch.cuda.synchronize()
-                    print(f"recv crows", flush=True)
+                g_loc_crows = torch.cuda.IntTensor(g_loc_meta[1].item() + 1)
+                dist.recv(g_loc_crows, src=src_gpu)
+                torch.cuda.synchronize()
+                print(f"recv crows", flush=True)
 
-                    g_loc_cols = torch.cuda.IntTensor(g_loc_meta[0].item())
-                    dist.recv(g_loc_cols, src=src_gpu)
-                    torch.cuda.synchronize()
-                    print(f"recv cols", flush=True)
+                g_loc_cols = torch.cuda.IntTensor(g_loc_meta[0].item())
+                dist.recv(g_loc_cols, src=src_gpu)
+                torch.cuda.synchronize()
+                print(f"recv cols", flush=True)
 
-                    # g_loc_values = torch.cuda.DoubleTensor(g_loc_meta[0].item())
-                    # dist.recv(g_loc_values, src=src_gpu)
+                # g_loc_values = torch.cuda.DoubleTensor(g_loc_meta[0].item())
+                # dist.recv(g_loc_values, src=src_gpu)
 
-                    num_features = g_loc_meta[4].item()
-                    num_classes = g_loc_meta[5].item()
-                    rows_per_proc = g_loc_meta[1].item() // (size // args.replication)
-                    if rank_row < proc_row - 1:
-                        inputs = torch.cuda.FloatTensor(rows_per_proc, num_features)
-                    else:
-                        rows = g_loc_meta[1].item() - rows_per_proc * (proc_row - 1)
-                        inputs = torch.cuda.FloatTensor(rows, num_features)
-                    dist.recv(inputs, src=src_gpu)
-                    torch.cuda.synchronize()
-                    print(f"recv inputs", flush=True)
-
-                    features_zero_row = torch.cuda.FloatTensor(num_features)
-                    dist.recv(features_zero_row, src=src_gpu)
-                    torch.cuda.synchronize()
-                    print(f"recv features_zero_row", flush=True)
-
-                    # data = Data()
-                    data.y = torch.cuda.FloatTensor(g_loc_meta[2].item())
-                    print(f"data.y.size: {data.y.size()}", flush=True)
-                    dist.recv(data.y, src=src_gpu)
-                    torch.cuda.synchronize()
-                    data.y = data.y.long()
-
-                    # g_loc_values = torch.cuda.FloatTensor(g_loc_indices.size(1)).fill_(1.0)
-                    # g_loc = torch.sparse_coo_tensor(g_loc_indices, g_loc_values, \
-                    #                                     torch.Size([g_loc_meta[1], g_loc_meta[2]]))
-                    g_loc_values = torch.cuda.FloatTensor(g_loc_cols.size(0)).fill_(1.0)
-                    g_loc_crows = g_loc_crows.cpu()
-                    g_loc_cols = g_loc_cols.cpu()
-                    g_loc_values = g_loc_values.cpu()
-                    g_loc = torch.sparse_csr_tensor(g_loc_crows, g_loc_cols, g_loc_values, \
-                                                        torch.Size([g_loc_meta[1], g_loc_meta[2]]))
-                    g_loc = g_loc.to(device)
-                    edge_count = g_loc_meta[3].item()
-                else:
-                    src_gpu = rank - (rank % args.gpu)
-                    g_loc_meta = torch.cuda.LongTensor(6).fill_(0)
-                    dist.recv(g_loc_meta, src=src_gpu)
-
-                    g_loc_indices = torch.cuda.LongTensor(2, g_loc_meta[0].item())
-                    dist.recv(g_loc_indices, src=src_gpu)
-
-                    g_loc_values = torch.cuda.DoubleTensor(g_loc_meta[0].item())
-                    dist.recv(g_loc_values, src=src_gpu)
-
-                    num_features = g_loc_meta[4].item()
-                    num_classes = g_loc_meta[5].item()
-                    if rank_row < proc_row - 1:
-                        inputs = torch.cuda.FloatTensor(g_loc_meta[1].item(), num_features)
-                    else:
-                        rows = g_loc_meta[1].item() + (g_loc_meta[2].item() - proc_row * g_loc_meta[1].item())
-                        inputs = torch.cuda.FloatTensor(rows, num_features)
-                    dist.recv(inputs, src=src_gpu)
-
-                    features_zero_row = torch.cuda.FloatTensor(num_features)
-                    dist.recv(features_zero_row, src=src_gpu)
-                    torch.cuda.synchronize()
-                    print(f"recv features_zero_row", flush=True)
-
-                    # data = Data()
-                    data.y = torch.cuda.FloatTensor(g_loc_meta[2].item())
-                    dist.recv(data.y, src=src_gpu)
-                    data.y = data.y.long()
-
-                    g_loc = torch.sparse_coo_tensor(g_loc_indices, g_loc_values, \
-                        				torch.Size([g_loc_meta[1], g_loc_meta[2]]))
-                    g_loc = g_loc.cpu()
-                    g_loc = g_loc.to_sparse_csr()
-                    g_loc_crows = g_loc.crow_indices().int()
-                    g_loc_cols = g_loc.col_indices().int()
-                    g_loc = torch.sparse_csr_tensor(g_loc_crows, g_loc_cols, g_loc.values(), g_loc.size())
-                    g_loc = g_loc.to(device)
-                    edge_count = g_loc_meta[3].item()
-
-                if args.dataset == "ogbn-papers100M":
-                    train_idx_len = torch.cuda.LongTensor(1).fill_(0)
-                    # test_idx_len = torch.cuda.LongTensor(1).fill_(0)
-                    dist.recv(train_idx_len, src=src_gpu)
-                    # dist.recv(test_idx_len, src=src_gpu)
-
-                    train_idx = torch.cuda.LongTensor(train_idx_len.item()).fill_(0)
-                    # test_idx = torch.cuda.LongTensor(test_idx_len.item()).fill_(0)
-                    dist.recv(train_idx, src=src_gpu)
-                    # dist.recv(test_idx, src=src_gpu)
-            else:
-                print(f"loading", flush=True)
-                # Load data to CPU instead of GPU bc multiple processes spawn for some reason, 
-                # and pytorch reserves less memory causing OOMs
-                g_loc_meta = torch.load(f"../../data/ogbn_papers100M/cagnet/p16/{rank}g_loc_meta.pt", 
-                                            map_location=torch.device("cpu"))
-                g_loc_indices = torch.load(f"../../data/ogbn_papers100M/cagnet/p16/{rank}g_loc_indices.pt", 
-                                            map_location=torch.device("cpu"))
-                g_loc_values = torch.load(f"../../data/ogbn_papers100M/cagnet/p16/{rank}g_loc_values.pt", 
-                                            map_location=torch.device("cpu"))
-                inputs = torch.load(f"../../data/ogbn_papers100M/cagnet/p16/{rank}features_loc.pt", 
-                                            map_location=torch.device("cpu"))
-
-                g_loc_meta = g_loc_meta.to(device)
-                g_loc_indices = g_loc_indices.to(device)
-                g_loc_values = g_loc_values.to(device)
-                inputs = inputs.to(device)
-                edge_count = g_loc_meta[3].item()
                 num_features = g_loc_meta[4].item()
                 num_classes = g_loc_meta[5].item()
-                g_loc = sparse_coo_tensor_gpu(g_loc_indices, g_loc_values, 
-                                                torch.Size([g_loc_meta[1], g_loc_meta[2]]))
-                data.y = torch.load(f"../../data/ogbn_papers100M/cagnet/p16/datay.pt")
-                train_idx = torch.load(f"../../data/ogbn_papers100M/cagnet/p16/train_idx.pt")
-                test_idx = torch.load(f"../../data/ogbn_papers100M/cagnet/p16/test_idx.pt")
-                data.y = data.y.to(device)
-                train_idx = train_idx.to(device)
-                test_idx = test_idx.to(device)
+                rows_per_proc = g_loc_meta[1].item() // (size // args.replication)
+                if rank_row < proc_row - 1:
+                    inputs = torch.cuda.FloatTensor(rows_per_proc, num_features)
+                else:
+                    rows = g_loc_meta[1].item() - rows_per_proc * (proc_row - 1)
+                    inputs = torch.cuda.FloatTensor(rows, num_features)
+                dist.recv(inputs, src=src_gpu)
+                torch.cuda.synchronize()
+                print(f"recv inputs", flush=True)
+
+                features_zero_row = torch.cuda.FloatTensor(num_features)
+                dist.recv(features_zero_row, src=src_gpu)
+                torch.cuda.synchronize()
+                print(f"recv features_zero_row", flush=True)
+
+                # data = Data()
+                data.y = torch.cuda.FloatTensor(g_loc_meta[2].item())
+                print(f"data.y.size: {data.y.size()}", flush=True)
+                dist.recv(data.y, src=src_gpu)
+                torch.cuda.synchronize()
+                data.y = data.y.long()
+
+                # g_loc_values = torch.cuda.FloatTensor(g_loc_indices.size(1)).fill_(1.0)
+                # g_loc = torch.sparse_coo_tensor(g_loc_indices, g_loc_values, \
+                #                                     torch.Size([g_loc_meta[1], g_loc_meta[2]]))
+                g_loc_values = torch.cuda.FloatTensor(g_loc_cols.size(0)).fill_(1.0)
+                g_loc_crows = g_loc_crows.cpu()
+                g_loc_cols = g_loc_cols.cpu()
+                g_loc_values = g_loc_values.cpu()
+                g_loc = torch.sparse_csr_tensor(g_loc_crows, g_loc_cols, g_loc_values, \
+                                                    torch.Size([g_loc_meta[1], g_loc_meta[2]]))
+                g_loc = g_loc.to(device)
+                edge_count = g_loc_meta[3].item()
+            else:
+                src_gpu = rank - (rank % args.gpu)
+                g_loc_meta = torch.cuda.LongTensor(6).fill_(0)
+                dist.recv(g_loc_meta, src=src_gpu)
+
+                g_loc_indices = torch.cuda.LongTensor(2, g_loc_meta[0].item())
+                dist.recv(g_loc_indices, src=src_gpu)
+
+                g_loc_values = torch.cuda.DoubleTensor(g_loc_meta[0].item())
+                dist.recv(g_loc_values, src=src_gpu)
+
+                num_features = g_loc_meta[4].item()
+                num_classes = g_loc_meta[5].item()
+                if rank_row < proc_row - 1:
+                    inputs = torch.cuda.FloatTensor(g_loc_meta[1].item(), num_features)
+                else:
+                    rows = g_loc_meta[1].item() + (g_loc_meta[2].item() - proc_row * g_loc_meta[1].item())
+                    inputs = torch.cuda.FloatTensor(rows, num_features)
+                dist.recv(inputs, src=src_gpu)
+
+                features_zero_row = torch.cuda.FloatTensor(num_features)
+                dist.recv(features_zero_row, src=src_gpu)
+                torch.cuda.synchronize()
+                print(f"recv features_zero_row", flush=True)
+
+                # data = Data()
+                data.y = torch.cuda.FloatTensor(g_loc_meta[2].item())
+                dist.recv(data.y, src=src_gpu)
+                data.y = data.y.long()
+
+                g_loc = torch.sparse_coo_tensor(g_loc_indices, g_loc_values, \
+                                                    torch.Size([g_loc_meta[1], g_loc_meta[2]]))
+                g_loc = g_loc.cpu()
+                g_loc = g_loc.to_sparse_csr()
+                g_loc_crows = g_loc.crow_indices().int()
+                g_loc_cols = g_loc.col_indices().int()
+                g_loc = torch.sparse_csr_tensor(g_loc_crows, g_loc_cols, g_loc.values(), g_loc.size())
+                g_loc = g_loc.to(device)
+                edge_count = g_loc_meta[3].item()
+
+            if args.dataset == "ogbn-papers100M":
+                train_idx_len = torch.cuda.LongTensor(1).fill_(0)
+                # test_idx_len = torch.cuda.LongTensor(1).fill_(0)
+                dist.recv(train_idx_len, src=src_gpu)
+                # dist.recv(test_idx_len, src=src_gpu)
+
+                train_idx = torch.cuda.LongTensor(train_idx_len.item()).fill_(0)
+                # test_idx = torch.cuda.LongTensor(test_idx_len.item()).fill_(0)
+                dist.recv(train_idx, src=src_gpu)
+                # dist.recv(test_idx, src=src_gpu)
             torch.cuda.synchronize()
             features_loc = inputs.to(device)
     else:
@@ -961,18 +1022,32 @@ def main(args, batches=None):
 
     # create GCN model
     # torch.manual_seed(0)
-    model = GCN(num_features,
-                      args.n_hidden,
-                      num_classes,
-                      args.n_layers,
-                      args.aggr,
-                      rank,
-                      size,
-                      Partitioning.NONE,
-                      args.replication,
-                      device,
-                      row_groups=row_groups,
-                      col_groups=col_groups)
+    if args.sample_method == "sage":
+        model = GCN(num_features,
+                          args.n_hidden,
+                          num_classes,
+                          args.n_layers,
+                          args.aggr,
+                          rank,
+                          size,
+                          Partitioning.NONE,
+                          args.replication,
+                          device,
+                          row_groups=row_groups,
+                          col_groups=col_groups)
+    elif args.sample_method == "ladies":
+        model = LADIES(num_features,
+                          args.n_hidden,
+                          num_classes,
+                          args.n_layers,
+                          args.aggr,
+                          rank,
+                          size,
+                          Partitioning.NONE,
+                          args.replication,
+                          device,
+                          row_groups=row_groups,
+                          col_groups=col_groups)
     model = model.to(device)
 
     # use optimizer
@@ -1050,7 +1125,10 @@ def main(args, batches=None):
                 args.batch_size = batch_count - b
             torch.cuda.nvtx.range_push("nvtx-partition-batches")
             batches = batches_all[b:(b + args.n_bulkmb * args.batch_size)].view(args.n_bulkmb, args.batch_size)
-            batches_loc = one5d_partition_mb(rank, size, batches, 1, args.n_bulkmb)
+            if args.sample_method == "sage":
+                batches_loc = one5d_partition_mb(rank, size, batches, 1, args.n_bulkmb)
+            elif args.sample_method == "ladies":
+                batches_loc = one5d_partition_mb(rank, size, batches, args.replication, args.n_bulkmb)
 
             batches_indices_rows = torch.arange(batches_loc.size(0), dtype=torch.int32, device=device)
             batches_indices_rows = batches_indices_rows.repeat_interleave(batches_loc.size(1))
@@ -1094,7 +1172,9 @@ def main(args, batches=None):
                                                                             args.n_layers, args.n_darts, \
                                                                             args.semibulk, args.replication, \
                                                                             nnz_row_masks, rank, size, 
-                                                                            row_groups, col_groups, args.timing)
+                                                                            row_groups, col_groups, args.timing,
+                                                                            args.replicate_graph)
+                frontiers_bulk = [current_frontier, next_frontier]
             elif args.sample_method == "sage":
                 if nnz_row_masks is not None:
                     nnz_row_masks.fill_(False)
@@ -1126,26 +1206,20 @@ def main(args, batches=None):
                 # batch_vtxs = frontiers[0][i].view(-1)
                 torch.cuda.nvtx.range_push("nvtx-extracting")
 
-                batch_select_size = args.batch_size
-                batch_select_min = i * args.batch_size 
-                batch_select_max = (i + 1) * args.batch_size
+                if args.sample_method == "sage":
+                    batch_select_size = args.batch_size
+                    batch_select_min = i * args.batch_size 
+                    batch_select_max = (i + 1) * args.batch_size
 
-                # rank_n_bulkmb_row = rank_n_bulkmb // args.replication
-                # if rank_col == args.replication - 1:
-                #     rank_n_bulkmb_row = rank_n_bulkmb - rank_n_bulkmb_row * (args.replication - 1)
+                    batch_vtxs = frontiers_bulk[0][batch_select_min:batch_select_max,:].view(-1)
 
-                # batch_select_min += batch_select_size * rank_col * rank_n_bulkmb
-                # batch_select_max += batch_select_size * rank_col * rank_n_bulkmb
-                batch_vtxs = frontiers_bulk[0][batch_select_min:batch_select_max,:].view(-1)
-
-                # src_vtxs = frontiers[-1][i].view(-1)
-                # src_select_min = i * args.batch_size * (args.samp_num ** (args.n_layers - 1))
-                # src_select_max = (i + 1) * args.batch_size  * (args.samp_num ** (args.n_layers - 1))
-                src_select_min = i * args.batch_size * np.prod(args.samp_num[:-1], dtype=int)
-                src_select_max = (i + 1) * args.batch_size  * np.prod(args.samp_num[:-1], dtype=int)
+                    src_select_min = i * args.batch_size * np.prod(args.samp_num[:-1], dtype=int)
+                    src_select_max = (i + 1) * args.batch_size  * np.prod(args.samp_num[:-1], dtype=int)
+                    src_vtxs = frontiers_bulk[-1][src_select_min:src_select_max,:].view(-1)
+                elif args.sample_method == "ladies":
+                    batch_vtxs = frontiers_bulk[0][i]
+                    src_vtxs = frontiers_bulk[-1][i]
                 
-                src_vtxs = frontiers_bulk[-1][src_select_min:src_select_max,:].view(-1)
-
                 adjs = [None] * args.n_layers
                 adj_sample_skip_cols = None
                 for l in range(args.n_layers):
@@ -1174,9 +1248,23 @@ def main(args, batches=None):
                     if epoch >= 1:
                         start_time(start_inner_timer, timing_arg=True)
                     if args.sample_method == "ladies":
-                        adj_matrix_sample = torch.sparse_coo_tensor(adj_matrix_sample_indices, \
-                                                        adj_matrix_sample_values, \
-                                                        (args.batch_size, args.samp_num + args.batch_size))
+                        adj_sample_row_lens = adj_sample_crows[1:] - adj_sample_crows[:-1]
+                        row_count = adj_row_select_max - adj_row_select_min
+                        adj_sample_rows = torch.repeat_interleave(
+                                            torch.arange(0, row_count, 
+                                                            device=adj_sample_row_lens.device), 
+                                            adj_sample_row_lens)
+                        adj_sample_indices = torch.stack((adj_sample_rows, adj_sample_cols))
+                        # adj_matrix_sample = torch.sparse_coo_tensor(adj_sample_indices, \
+                        #                                 adj_sample_values, \
+                        #                             # (args.batch_size * (args.samp_num ** l), \
+                        #                             #         args.batch_size * (args.samp_num ** (l + 1))))
+                        #                     (args.batch_size * np.prod(args.samp_num[:l], dtype=int), \
+                        #                         args.batch_size * (np.prod(args.samp_num[:(l+1)], dtype=int))))
+                        adj_matrix_sample = torch.sparse_coo_tensor(adj_sample_indices, \
+                                                        adj_sample_values, \
+                                                        (args.batch_size, args.samp_num[0] + args.batch_size))
+                                                        # (args.batch_size, args.samp_num + args.batch_size))
                     else:
                         # adj_sample_row_lens = adj_sample_crows[1:] - adj_sample_crows[:-1]
                         # row_count = adj_row_select_max - adj_row_select_min
@@ -1211,7 +1299,6 @@ def main(args, batches=None):
                         else:
                             adj_sample_row_lens = adj_sample_crows[1:] - adj_sample_crows[:-1]
                             row_count = adj_row_select_max - adj_row_select_min
-                            print(f"row_count: {row_count} min: {adj_row_select_min} max: {adj_row_select_max}", flush=True)
                             adj_sample_rows = torch.repeat_interleave(
                                                 torch.arange(0, row_count, 
                                                                 device=adj_sample_row_lens.device), 
@@ -1251,6 +1338,7 @@ def main(args, batches=None):
                 if epoch >= 1:
                     start_time(start_inner_timer, timing_arg=True)
                 torch.cuda.nvtx.range_push("nvtx-selectfeats")
+                print(f"adjs: {adjs}", flush=True)
                 if size > 1:
 
                     src_vtxs_sort = torch.cuda.LongTensor(src_vtxs.size(0))
@@ -1299,14 +1387,16 @@ def main(args, batches=None):
                     features_batch = torch.cuda.FloatTensor(src_vtxs.size(0), features_loc.size(1))
                     features_batch[og_idxs_nnz] = output_features
                     features_batch[og_idxs[~src_vtxs_sort_nnz]] = features_zero_row
-                    features_mask = torch.cuda.BoolTensor(features_batch.size(0)).fill_(True)
-                    features_mask[adj_sample_skip_cols] = False
-                    features_batch = features_batch[features_mask]
+                    if adj_sample_skip_cols is not None:
+                        features_mask = torch.cuda.BoolTensor(features_batch.size(0)).fill_(True)
+                        features_mask[adj_sample_skip_cols] = False
+                        features_batch = features_batch[features_mask]
                 else:
                     features_batch = features_loc[src_vtxs]
-                    features_mask = torch.cuda.BoolTensor(features_batch.size(0)).fill_(True)
-                    features_mask[adj_sample_skip_cols] = False
-                    features_batch = features_batch[features_mask]
+                    if adj_sample_skip_cols is not None:
+                        features_mask = torch.cuda.BoolTensor(features_batch.size(0)).fill_(True)
+                        features_mask[adj_sample_skip_cols] = False
+                        features_batch = features_batch[features_mask]
 
                 torch.cuda.nvtx.range_pop() # nvtx-selectfeats
                 if epoch >= 1:
@@ -1366,7 +1456,6 @@ def main(args, batches=None):
                     start_time(start_inner_timer)
                 torch.cuda.nvtx.range_push("nvtx-loss")
                 # loss = F.nll_loss(logits, data.y[batch_vtxs].long()) # GCNConv
-                print(f"logits.size: {logits.size()}", flush=True)
                 loss = F.nll_loss(logits[:args.batch_size], data.y[batch_vtxs].long()) # SAGEConv
                 # loss = F.nll_loss(logits[:args.batch_size], data.y[seeds].long()) # quiver
 
@@ -1453,7 +1542,7 @@ def main(args, batches=None):
                 # print(f"adj1_nnz.median: {np.median(adj1_nnzs)}")
                 # print(f"adj_nnzs.median: {np.median(adj_nnzs)}")
                 print(f"total: {np.sum(dur) / epoch}", flush=True)
-            if args.dataset != "ogbn-papers100M" and args.dataset != "Amazon" and ("Protein" not in args.dataset):
+            if args.sample_method == "sage" and args.dataset != "ogbn-papers100M" and args.dataset != "Amazon" and ("Protein" not in args.dataset):
                 model = model.cpu()
                 train_nid = train_nid.cpu()
                 test_nid = test_nid.cpu()
