@@ -7,11 +7,11 @@ from collections import defaultdict
 from sparse_coo_tensor_cpp import downsample_gpu, compute_darts_gpu, throw_darts_gpu, \
                                     compute_darts_select_gpu, throw_darts_select_gpu, \
                                     compute_darts1d_gpu, throw_darts1d_gpu, normalize_gpu, \
-                                    shift_rowselect_gpu, shift_colselect_gpu, \
+                                    normalize_csr_gpu, shift_rowselect_gpu, shift_colselect_gpu, \
                                     scatteri_add_gpu, rowselect_coo_gpu, \
                                     rowselect_csr_gpu, sparse_coo_tensor_gpu, spgemm_gpu, coogeam_gpu, \
                                     sparse_csr_tensor_gpu, nsparse_spgemm, rearrange_rows_gpu, \
-                                    rearrangel_rows_gpu, reduce_sum_gpu
+                                    rearrangel_rows_gpu, reduce_sum_gpu, sum_csrd_gpu, sum_csri_gpu
 
 
 timing = True
@@ -43,7 +43,7 @@ def stop_time_add(start_timer, stop_timer, timing_dict, range_name, barrier=Fals
     if timing_dict is not None:
         timing_dict[range_name].append(stop_time(start_timer, stop_timer, barrier))
 
-def csr_allreduce(mat, left, right, rank, name=None, timing_dict=None):
+def csr_allreduce(mat, left, right, rank, name=None, alg=None, timing_dict=None):
     start_timer = torch.cuda.Event(enable_timing=True)
     stop_timer = torch.cuda.Event(enable_timing=True)
 
@@ -89,28 +89,35 @@ def csr_allreduce(mat, left, right, rank, name=None, timing_dict=None):
 
         # torch.cuda.synchronize()
         start_time(start_timer)
+        torch.cuda.synchronize()
         mat_recv = torch.sparse_csr_tensor(rows_recv.long(), cols_recv.long(), vals_recv, size=mat.size())
         stop_time_add(start_timer, stop_timer, timing_dict, f"spgemm-reduce-csrinst-{name}")
         start_time(start_timer)
-        # mat = mat + mat_recv
 
-        # Add mat + mat_recv
-        mat_row_lens = mat.crow_indices()[1:] - mat.crow_indices()[:-1]
-        mat_recv_row_lens = mat_recv.crow_indices()[1:] - mat_recv.crow_indices()[:-1]
+        if True or alg == "ladies":
+            mat = mat + mat_recv
+        else:
+            # Add mat + mat_recv
+            mat_row_lens = mat.crow_indices()[1:] - mat.crow_indices()[:-1]
+            mat_recv_row_lens = mat_recv.crow_indices()[1:] - mat_recv.crow_indices()[:-1]
 
-        mat_sum_row_lens = mat_row_lens + mat_recv_row_lens
-        mat_sum_crows = torch.cuda.LongTensor(mat_sum_row_lens.size(0) + 1).fill_(0)
-        mat_sum_crows[1:] = torch.cumsum(mat_sum_row_lens, dim=0)
-        mat_sum_crows[0] = 0
-        mat_sum_cols = torch.cuda.LongTensor(mat._nnz() + mat_recv._nnz()).fill_(0)
-        mat_row_lens_nnzrows = mat_row_lens.nonzero().squeeze()
-        mat_recv_row_lens_nnzrows = mat_recv_row_lens.nonzero().squeeze()
-        reduce_sum_gpu(mat_sum_crows, mat.crow_indices(), mat_recv.crow_indices(), 
-                        mat_sum_cols, mat.col_indices(), mat_recv.col_indices(),
-                        mat_row_lens_nnzrows, mat_recv_row_lens_nnzrows)
+            mat_sum_row_lens = mat_row_lens + mat_recv_row_lens
+            mat_sum_crows = torch.cuda.LongTensor(mat_sum_row_lens.size(0) + 1).fill_(0)
+            mat_sum_crows[1:] = torch.cumsum(mat_sum_row_lens, dim=0)
+            mat_sum_crows[0] = 0
+            mat_sum_cols = torch.cuda.LongTensor(mat._nnz() + mat_recv._nnz()).fill_(0)
+            mat_row_lens_nnzrows = mat_row_lens.nonzero().squeeze()
+            mat_recv_row_lens_nnzrows = mat_recv_row_lens.nonzero().squeeze()
+            reduce_sum_gpu(mat_sum_crows, mat.crow_indices(), mat_recv.crow_indices(), 
+                            mat_sum_cols, mat.col_indices(), mat_recv.col_indices(),
+                            mat_row_lens_nnzrows, mat_recv_row_lens_nnzrows)
 
-        mat_sum_vals = torch.cuda.FloatTensor(mat_sum_cols.size(0)).fill_(1.0)
-        mat = torch.sparse_csr_tensor(mat_sum_crows, mat_sum_cols, mat_sum_vals, mat.size())
+            mat_sum_vals = torch.cuda.FloatTensor(mat_sum_cols.size(0)).fill_(1.0)
+            mat_sum_crows = mat_sum_crows.cpu()
+            mat_sum_cols = mat_sum_cols.cpu()
+            mat_sum_vals = mat_sum_vals.cpu()
+            mat = torch.sparse_csr_tensor(mat_sum_crows, mat_sum_cols, mat_sum_vals, mat.size())
+            mat = mat.to(device)
         stop_time_add(start_timer, stop_timer, timing_dict, f"spgemm-reduce-sum-{name}")
 
         if rank <= mid_rank:
@@ -600,6 +607,7 @@ def dist_saspgemm15D(mata, matb, replication, rank, size, row_groups, col_groups
                         # dist.send(matb_send_cols, tag=2, dst=recv_rank)
                         # dist.send(matb_send_values, tag=3, dst=recv_rank)
 
+                        # print(f"send selected_rows_count: {selected_rows_count}", flush=True)
                         send_ops[send_idx] = \
                                     dist.P2POp(dist.isend, selected_rows_count, recv_rank, tag=0)
                         send_ops[send_idx + 1] = \
@@ -684,6 +692,7 @@ def dist_saspgemm15D(mata, matb, replication, rank, size, row_groups, col_groups
             for req in reqs:
                 req.wait()
             torch.cuda.synchronize()
+            # print(f"recv selected_rows_count: {selected_rows_count_recv}", flush=True)
             # dist.recv(selected_rows_count_recv, tag=0, src=q)
 
             if matb.layout == torch.sparse_csr:
@@ -694,6 +703,7 @@ def dist_saspgemm15D(mata, matb, replication, rank, size, row_groups, col_groups
                 recv_ops = []
                 matb_recv_lengths = torch.cuda.IntTensor(nnz_cols.size(0))
                 # dist.recv(matb_recv_lengths, tag=1, src=q)
+                # print(f"recv matb_recv_lengths: {matb_recv_lengths}", flush=True)
                 recv_ops.append(dist.P2POp(dist.irecv, matb_recv_lengths, q, tag=1))
                 # matb_recv_lengths = matb_recv_lengths.long()
 
@@ -782,7 +792,7 @@ def dist_saspgemm15D(mata, matb, replication, rank, size, row_groups, col_groups
             #     matc_chunk = torch.sparse_csr_tensor(matb_recv_crows, matb_recv_cols, matb_recv_values.float(),
             #                                             size=(chunk_col_size, matb.size(1)))
             #     matc += matc_chunk
-            if mata.layout == torch.sparse_csr and name == "prob" and alg == "sage":
+            if mata.layout == torch.sparse_csr and (name == "prob" and alg == "sage") or (name == "rowsel"):
                 start_time(start_inner_timer)
                 # mata_recv = torch.sparse_csr_tensor(mata_chunk_crows, mata_chunk_cols, mata_chunk_values,
                 #                                         size=(mata.size(0), chunk_col_size))
@@ -809,7 +819,7 @@ def dist_saspgemm15D(mata, matb, replication, rank, size, row_groups, col_groups
                 matb_recv_row_lens = matb_recv_crows[1:] - matb_recv_crows[:-1]
                 # matc_chunk_row_lens = torch.cuda.LongTensor(mata.size(0) + 1).fill_(0)
                 matc_chunk_row_lens = torch.cuda.IntTensor(mata.size(0) + 1).fill_(0)
-                matc_chunk_row_lens[mata_recv_rows] = matb_recv_row_lens[mata_chunk_cols]
+                matc_chunk_row_lens[mata_recv_rows] = matb_recv_row_lens[mata_chunk_cols].int()
                 matc_chunk_crows = torch.cumsum(matc_chunk_row_lens, 0).roll(1)
                 matc_chunk_crows[0] = 0
 
@@ -817,7 +827,7 @@ def dist_saspgemm15D(mata, matb, replication, rank, size, row_groups, col_groups
                 matc_chunk_cols = torch.cuda.IntTensor(matc_chunk_crows[-1].item()).fill_(0)
                 rearrange_rows_gpu(mata_recv_rows, mata_chunk_cols, matc_chunk_crows, 
                 # rearrangel_rows_gpu(mata_recv_rows, mata_chunk_cols, matc_chunk_crows, 
-                                        matb_recv_crows, matb_recv_cols, matc_chunk_cols)
+                                        matb_recv_crows.int(), matb_recv_cols.int(), matc_chunk_cols)
                                         # matb_recv.crow_indices(), matb_recv.col_indices(), matc_chunk_cols)
                 matc_chunk_values = torch.cuda.FloatTensor(matc_chunk_crows[-1].item()).fill_(1.0)
 
@@ -870,9 +880,32 @@ def dist_saspgemm15D(mata, matb, replication, rank, size, row_groups, col_groups
                                                             mata_recv._values(), matb_recv._indices(), \
                                                             matb_recv._values(), mata.size(0), \
                                                             chunk_col_size, matb.size(1), coalesced=True)
+
+                # mata_row_lens = mata_chunk_crows[1:] - mata_chunk_crows[:-1]
+                # torch.cuda.synchronize()
+                # print(f"before nsparse", flush=True)
+                # matc_chunk = nsparse_spgemm(mata_chunk_crows.int(), \
+                #                         mata_chunk_cols.int(), \
+                #                         mata_chunk_values.float(), \
+                #                         matb_recv_crows.int(), \
+                #                         matb_recv_cols.int(), \
+                #                         matb_recv_values.float(), \
+                #                         mata.size(0), chunk_col_size, matb.size(1))
+                # print(f"after nsparse", flush=True)
+                # matc_chunk_crows = matc_chunk[0]
+                # matc_chunk_cols = matc_chunk[1]
+                # matc_chunk_values = matc_chunk[2]
+
+                # matc_row_lens = matc_chunk_crows[1:] - matc_chunk_crows[:-1]
+                # matc_chunk_rows = torch.repeat_interleave(
+                #                     torch.arange(0, mata.size(0), device=mata.device), 
+                #                     matc_row_lens)
+                # matc_chunk_indices = torch.stack((matc_chunk_rows, matc_chunk_cols))
+
                 matc_chunk = sparse_coo_tensor_gpu(matc_chunk_indices, matc_chunk_values, 
                                                         torch.Size([matc.size(0), matc.size(1)]))
                 matc_chunk = matc_chunk.coalesce()
+
                 matc += matc_chunk
                 matc_chunk = matc_chunk.to_sparse_csr()
                 # matc += torch.mm(mata_recv, matb_recv)
@@ -922,7 +955,7 @@ def dist_saspgemm15D(mata, matb, replication, rank, size, row_groups, col_groups
 
     start_time(start_timer)
     # matc = csr_allreduce(matc, rank_row_start, rank_row_stop, rank)
-    matc = csr_allreduce(matc, rank_row_start, rank_row_stop, rank, "prob", timing_dict)
+    matc = csr_allreduce(matc, rank_row_start, rank_row_stop, rank, "prob", alg, timing_dict)
     stop_time_add(start_timer, stop_timer, timing_dict, f"spgemm-reduce-{name}", barrier=True)
 
     start_time(start_timer)
@@ -1058,14 +1091,17 @@ def gen_prob_dist(numerator, adj_matrix, mb_count, node_count_total, replication
                                 adj_matrix.crow_indices(), 
                                 adj_matrix.col_indices(), 
                                 matc_chunk_cols)
-        p_num_rows = torch.repeat_interleave(
-                                        torch.arange(matc_chunk_crows.size(0) - 1, 
-                                                            dtype=torch.int32, 
-                                                            device=numerator.device),
-                                        matc_chunk_row_lens)
-        p_num_indices = torch.stack((p_num_rows, matc_chunk_cols))
+        # p_num_rows = torch.repeat_interleave(
+        #                                 torch.arange(matc_chunk_crows.size(0) - 1, 
+        #                                                     dtype=torch.int32, 
+        #                                                     device=numerator.device),
+        #                                 matc_chunk_row_lens)
+        # p_num_indices = torch.stack((p_num_rows, matc_chunk_cols))
+        p_num_crows = matc_chunk_crows
+        p_num_cols = matc_chunk_cols
         # p_num_values = torch.cuda.FloatTensor(p_num_indices.size(1)).fill_(1.0)
-        p_num_values = torch.cuda.DoubleTensor(p_num_indices.size(1)).fill_(1.0)
+        # p_num_values = torch.cuda.DoubleTensor(p_num_indices.size(1)).fill_(1.0)
+        p_num_values = torch.cuda.DoubleTensor(p_num_cols.size(0)).fill_(1.0)
     else:
         if sa_masks is not None:
             sa_masks.fill_(False)
@@ -1087,22 +1123,25 @@ def gen_prob_dist(numerator, adj_matrix, mb_count, node_count_total, replication
         # p_num_values = torch.square(p_num_values).double()
         p_den = torch.cuda.DoubleTensor(numerator.size(0)).fill_(0)
         p_num_values = p_num_values.double()
+        p_den.scatter_add_(0, p_num_indices[0, :].long(), p_num_values)
+        normalize_gpu(p_num_values, p_den, p_num_indices[0, :].long(), p_num_values.size(0))
+        p_num_values = torch.nan_to_num(p_num_values)
+        p = sparse_coo_tensor_gpu(p_num_indices.long(), p_num_values, torch.Size([numerator.size(0), node_count_total]))
     elif name == "sage":
         # p_num_values = torch.cuda.DoubleTensor(p_num_values.size(0)).fill_(1.0)
         # p_num_values = p_num_values.double()
         # p_den = torch.cuda.FloatTensor(numerator.size(0)).fill_(0)
-        p_den = torch.cuda.DoubleTensor(numerator.size(0)).fill_(0)
-    # scatterd_add_gpu(p_den, p_num_indices[0, :], p_num_values, p_num_values.size(0))
-    # frontier_nnz_sizes.scatter_add_(0, next_frontier._indices()[0,:], ones)
-    p_den.scatter_add_(0, p_num_indices[0, :].long(), p_num_values)
+        # p_den = torch.cuda.DoubleTensor(numerator.size(0)).fill_(0)
+        normalize_csr_gpu(p_num_values, p_num_crows, p_num_crows.size(0) - 1)
+        p_num_values = torch.nan_to_num(p_num_values)
+        p = torch.sparse_csr_tensor(p_num_crows, p_num_cols.long(), p_num_values, torch.Size([numerator.size(0), node_count_total]))
+    # p_den.scatter_add_(0, p_num_indices[0, :].long(), p_num_values)
     # p = torch.sparse_coo_tensor(indices=p_num_indices, 
     #                                 values=p_num_values, 
     #                                 size=(numerator.size(0), node_count_total))
     # p = sparse_coo_tensor_gpu(p_num_indices, p_num_values, torch.Size([numerator.size(0), node_count_total]))
     # normalize_gpu(p._values(), p_den, p._indices()[0, :], p._nnz())
-    normalize_gpu(p_num_values, p_den, p_num_indices[0, :].long(), p_num_values.size(0))
-    p_num_values = torch.nan_to_num(p_num_values)
-    p = sparse_coo_tensor_gpu(p_num_indices.long(), p_num_values, torch.Size([numerator.size(0), node_count_total]))
+    torch.cuda.synchronize()
     timing_dict["compute-p"].append(stop_time(start_timer, stop_timer))
     return p
 
@@ -1133,7 +1172,14 @@ def sample(p, frontier_size, mb_count, node_count_total, n_darts, replication,
     # n_darts_col = int(avg_degree * frontier_size / avg_degree)
     n_darts_col = frontier_size
 
-    next_frontier = torch.sparse_coo_tensor(indices=p._indices(),
+    p_row_lens = p.crow_indices()[1:] - p.crow_indices()[:-1]
+    next_frontier_rows = torch.repeat_interleave(
+                                    torch.arange(p.crow_indices().size(0) - 1, 
+                                                        dtype=torch.int32, 
+                                                        device=p.device),
+                                    p_row_lens)
+    next_frontier_indices = torch.stack((next_frontier_rows, p.col_indices()))
+    next_frontier = torch.sparse_coo_tensor(indices=next_frontier_indices,
                                         values=torch.cuda.LongTensor(p._nnz()).fill_(0),
                                         size=(p.size(0), node_count_total))
     # next_frontier = sparse_coo_tensor_gpu(p._indices(), torch.cuda.LongTensor(p._nnz()).fill_(0), 
@@ -1143,12 +1189,17 @@ def sample(p, frontier_size, mb_count, node_count_total, n_darts, replication,
 
     frontier_nnz_sizes = torch.cuda.IntTensor(p.size(0)).fill_(0)
     ones = torch.cuda.IntTensor(next_frontier._indices()[0,:].size(0)).fill_(1)
-    frontier_nnz_sizes.scatter_add_(0, next_frontier._indices()[0,:], ones)
+    if name == "ladies":
+        frontier_nnz_sizes.scatter_add_(0, next_frontier._indices()[0,:], ones)
+        zero_idxs = p._indices()[0, (p._values() == 0)].unique()
+    else:
+        sum_csri_gpu(frontier_nnz_sizes, p.crow_indices(), ones, p.crow_indices().size(0) - 1)
+        zero_idxs = next_frontier._indices()[0, (p.values() == 0)].unique()
     zero_count = (next_frontier._indices()[0,:] == 0).nonzero().size(0)
     frontier_nnz_sizes[0] = zero_count
 
-    zero_idxs = p._indices()[0, (p._values() == 0)].unique()
-    frontier_nnz_sizes[zero_idxs] = 0
+    # frontier_nnz_sizes[zero_idxs] = 0
+    frontier_nnz_sizes[zero_idxs] -= 1
     
     timing_dict["sample-pre-loop"].append(stop_time(start_timer, stop_timer))
     sampled_count = torch.clamp(frontier_size - frontier_nnz_sizes, min=0)
@@ -1177,9 +1228,10 @@ def sample(p, frontier_size, mb_count, node_count_total, n_darts, replication,
             ps_p_rowsum = torch.cumsum(p_rowsum, dim=0).roll(1)
             ps_p_rowsum[0] = 0
         elif name == "sage":
-            ps_p_values = torch.cumsum(p._values(), dim=0)
+            ps_p_values = torch.cumsum(p.values(), dim=0)
             p_rowsum.fill_(0)
-            p_rowsum.scatter_add_(0, p._indices()[0, :], p._values())
+            # p_rowsum.scatter_add_(0, p._indices()[0, :], p._values())
+            sum_csrd_gpu(p_rowsum, p.crow_indices(), p.values(), p.crow_indices().size(0) - 1)
             # ps_p_rowsum = torch.cumsum(p_rowsum, dim=0)
             ps_p_rowsum = torch.cumsum(p_rowsum, dim=0).roll(1)
             ps_p_rowsum[0] = 0
@@ -1244,11 +1296,14 @@ def sample(p, frontier_size, mb_count, node_count_total, n_darts, replication,
         sampled_count_old = sampled_count.clone()
         sampled_count = sampled_count.fill_(0)
         sampled_count = torch.clamp(frontier_size - frontier_nnz_sizes, min=0)
-        next_frontier_nnzmask = next_frontier_values.nonzero().squeeze()
-        next_frontier_nnzvals = next_frontier_values[next_frontier_nnzmask]
-        next_frontier_nnzidxs = next_frontier_tmp._indices()[0, next_frontier_nnzmask]
-        # sampled_count.scatter_add_(0, next_frontier_tmp._indices()[0, :], next_frontier_values)
-        sampled_count.scatter_add_(0, next_frontier_nnzidxs, next_frontier_nnzvals)
+        if name == "ladies":
+            next_frontier_nnzmask = next_frontier_values.nonzero().squeeze()
+            next_frontier_nnzvals = next_frontier_values[next_frontier_nnzmask]
+            next_frontier_nnzidxs = next_frontier_tmp._indices()[0, next_frontier_nnzmask]
+            # sampled_count.scatter_add_(0, next_frontier_tmp._indices()[0, :], next_frontier_values)
+            sampled_count.scatter_add_(0, next_frontier_nnzidxs, next_frontier_nnzvals)
+        else:
+            sum_csri_gpu(sampled_count, p.crow_indices(), next_frontier_values, p.crow_indices().size(0) - 1)
         timing_dict["sample-count-samples"].append(stop_time(start_timer, stop_timer))
 
         del sampled_count_old
@@ -1371,225 +1426,30 @@ def sample(p, frontier_size, mb_count, node_count_total, n_darts, replication,
 
         start_time(start_timer)
         dart_hits_mask = dart_hits_count > 0
-        p._values()[dart_hits_mask] = 0.0
+        p.values()[dart_hits_mask] = 0.0
 
         filled_minibatches = sampled_count == frontier_size
-        filled_minibatches_mask = torch.gather(filled_minibatches, 0, p._indices()[0,:])
-        p._values()[filled_minibatches_mask] = 0
+        # filled_minibatches_mask = torch.gather(filled_minibatches, 0, p._indices()[0,:])
+        filled_minibatches_mask = torch.gather(filled_minibatches, 0, next_frontier._indices()[0,:])
+        p.values()[filled_minibatches_mask] = 0
         timing_dict["sample-set-probs"].append(stop_time(start_timer, stop_timer))
 
         start_time(start_timer)
-        next_frontier_nnzvals = next_frontier._values().nonzero().squeeze()
-        next_frontier_nnzidxs = next_frontier._indices()[0,next_frontier_nnzvals]
         sampled_count = torch.cuda.IntTensor(p.size(0)).fill_(0)
         sampled_count = torch.clamp(frontier_size - frontier_nnz_sizes, min=0)
-        sampled_count.scatter_add_(0, next_frontier_nnzidxs, \
-                                    next_frontier._values()[next_frontier_nnzvals].int())
+        if name == "ladies":
+            next_frontier_nnzvals = next_frontier._values().nonzero().squeeze()
+            next_frontier_nnzidxs = next_frontier._indices()[0,next_frontier_nnzvals]
+            sampled_count.scatter_add_(0, next_frontier_nnzidxs, \
+                                        next_frontier._values()[next_frontier_nnzvals].int())
+        else:
+            sum_csri_gpu(sampled_count, p.crow_indices(), next_frontier._values(), p.crow_indices().size(0) - 1)
         underfull_minibatches = (sampled_count < frontier_size).any()
         timing_dict["sample-compute-bool"].append(stop_time(start_timer, stop_timer))
 
         overflow = torch.clamp(sampled_count - frontier_size, min=0).int()
 
         timing_dict["sampling-iters"].append(stop_time(sample_start_timer, sample_stop_timer))
-
-    return next_frontier
-
-def select(next_frontier, adj_matrix, batches, sa_masks, nnz, \
-                batch_size, frontier_size, mb_count, mb_count_total, node_count_total, replication, \
-                rank, size, row_groups, col_groups, timing_dict, layer_id, name, semibulk_size=128):
-
-    start_timer = torch.cuda.Event(enable_timing=True)
-    stop_timer = torch.cuda.Event(enable_timing=True)
-
-    semibulk_size = min(semibulk_size, mb_count // replication)
-
-    start_time(start_timer)
-    torch.cuda.nvtx.range_push("nvtx-construct-nextf")
-    if name == "ladies":
-        next_frontier_select = torch.masked_select(next_frontier._indices()[1,:], \
-                                                next_frontier._values().bool()).view(mb_count, frontier_size)
-        batches_select = torch.masked_select(batches._indices()[1,:], \
-                                                batches._values().bool()).view(mb_count, batch_size)
-    elif name == "sage":
-        next_frontier_select = next_frontier._indices()[1,:].view(mb_count * batch_size, frontier_size)
-        batches_select = torch.masked_select(batches._indices()[1,:], \
-                                                batches._values().bool()).view(mb_count * batch_size, 1)
-    next_frontier_select = torch.cat((next_frontier_select, batches_select), dim=1)
-    torch.cuda.nvtx.range_pop() # construct-nextf
-    timing_dict["construct-nextf"].append(stop_time(start_timer, stop_timer, barrier=True))
-
-    torch.cuda.nvtx.range_push("nvtx-select-rowcols")
-    # 1. Make the row/col select matrices
-    start_time(start_timer)
-    torch.cuda.nvtx.range_push("nvtx-select-mtxs")
-
-    if layer_id == 0:
-        row_select_mtx_indices = torch.stack((torch.arange(start=0, end=nnz * mb_count).cuda(),
-                                              batches_select.view(-1)))
-    else:
-        # TODO i > 0 (make sure size args to spspmm are right)
-        print("ERROR i > 0")
-
-    row_select_mtx_values = torch.cuda.DoubleTensor(row_select_mtx_indices[0].size(0)).fill_(1.0)
-
-    repeated_next_frontier = next_frontier_select.clone()
-    if name == "ladies":
-        scale_mtx = torch.arange(start=0, end=node_count_total * mb_count, step=node_count_total).cuda()
-    elif name == "sage":
-        scale_mtx = torch.arange(start=0, end=node_count_total * mb_count * batch_size, 
-                                        step=node_count_total).cuda()
-    scale_mtx = scale_mtx[:, None]
-    repeated_next_frontier.add_(scale_mtx)
-    col_select_mtx_rows = repeated_next_frontier.view(-1)
-    if name == "ladies":
-        col_select_mtx_cols = torch.arange(next_frontier_select.size(1)).cuda().repeat(
-                                        mb_count,1).view(-1)
-    elif name == "sage":
-        col_select_mtx_cols = torch.arange(next_frontier_select.size(1) * batch_size).cuda().repeat(
-                                        mb_count,1).view(-1)
-    col_select_mtx_indices = torch.stack((col_select_mtx_rows, col_select_mtx_cols))
-
-    # col_select_mtx_values = torch.cuda.DoubleTensor(col_select_mtx_rows.size(0)).fill_(1.0)
-
-    col_select_mtx_values = torch.cuda.DoubleTensor(col_select_mtx_rows.size(0)).fill_(0.0)
-    col_unique_rows, col_inverse = torch.unique(col_select_mtx_rows, sorted=True, return_inverse=True)
-    col_rows_perm = torch.arange(col_inverse.size(0), dtype=col_inverse.dtype, device=col_inverse.device)
-    col_row_mask = col_inverse.new_empty(col_unique_rows.size(0)).scatter_(0, col_inverse, col_rows_perm)
-    col_select_mtx_values[col_row_mask] = 1.0
-
-    torch.cuda.nvtx.range_pop()
-    timing_dict["select-mtxs"].append(stop_time(start_timer, stop_timer, barrier=True))
-
-    # 2. Multiply row_select matrix with adj_matrix
-    start_time(start_timer)
-    torch.cuda.nvtx.range_push("nvtx-row-select-spgemm")
-    # row_select_mtx = torch.sparse_coo_tensor(row_select_mtx_indices, row_select_mtx_values, 
-    #                                                 size=(nnz * mb_count, node_count_total))
-    row_select_mtx = sparse_coo_tensor_gpu(row_select_mtx_indices, row_select_mtx_values, 
-                                                    torch.Size([nnz * mb_count, node_count_total]))
-    sa_masks.fill_(0)
-    row_select_mtx = row_select_mtx.to_sparse_csr()
-    # adj_matrix = adj_matrix.to_sparse_csr()
-    sampled_indices, sampled_values = dist_saspgemm15D(row_select_mtx, adj_matrix, replication, rank, size, \
-                                                        row_groups, col_groups, "rowsel", sa_masks, 
-                                                        timing_dict)
-    row_select_mtx = row_select_mtx.to_sparse_coo()
-    # adj_matrix = adj_matrix.to_sparse_coo()
-    # sample_mtx = torch.sparse_coo_tensor(sampled_indices, sampled_values, 
-    #                                         size=(nnz * mb_count, node_count_total))
-    sample_mtx = sparse_coo_tensor_gpu(sampled_indices, sampled_values, 
-                                            torch.Size([nnz * mb_count, node_count_total]))
-
-    torch.cuda.nvtx.range_pop()
-    timing_dict["row-select-spgemm"].append(stop_time(start_timer, stop_timer, barrier=True))
-
-    # 3. Expand sampled rows
-    start_time(start_timer)
-    torch.cuda.nvtx.range_push("nvtx-row-select-expand")
-    row_shift = torch.cuda.LongTensor(sampled_values.size(0)).fill_(0)
-    if name == "ladies":
-        # semibulk_size = mb_count // (64 * replication) # number of batches to column extract from in bulk
-        # semibulk_size = 4 # number of batches to column extract from in bulk
-        # semibulk_size = 128 # number of batches to column extract from in bulk
-        shift_rowselect_gpu(row_shift, sampled_indices[0,:], sampled_values.size(0), 
-                                rank, size, replication, batch_size, node_count_total, mb_count_total, 
-                                batch_size, semibulk_size)
-    elif name == "sage":
-        semibulk_size = mb_count * nnz # vtxs to column extract from in bulk
-        shift_rowselect_gpu(row_shift, sampled_indices[0,:], sampled_values.size(0), 
-                                rank, size, replication, batch_size, node_count_total, mb_count_total, 1,
-                                semibulk_size)
-    sampled_indices[1,:] += row_shift
-    torch.cuda.nvtx.range_pop()
-    timing_dict["row-select-expand"].append(stop_time(start_timer, stop_timer, barrier=True))
-
-    # 4. Multiply sampled rows with col_select matrix
-    start_time(start_timer)
-    torch.cuda.nvtx.range_push("nvtx-col-select-spgemm")
-    if name == "ladies":
-        # sample_mtx = torch.sparse_coo_tensor(sampled_indices, sampled_values, 
-        #                                         size=(nnz * mb_count, node_count_total * mb_count_total))
-        sample_mtx = sparse_coo_tensor_gpu(sampled_indices, sampled_values, 
-                            torch.Size([nnz * mb_count, node_count_total * semibulk_size]))
-        # sample_mtx = sparse_coo_tensor_gpu(sampled_indices, sampled_values, 
-        #                                     torch.Size([nnz * mb_count, node_count_total]))
-    elif name == "sage":
-        sample_mtx = torch.sparse_coo_tensor(sampled_indices, sampled_values, 
-                                                size=(nnz * mb_count, node_count_total * mb_count_total * nnz))
-        # sample_mtx = sparse_coo_tensor_gpu(sampled_indices, sampled_values, 
-        #                                 torch.Size([nnz * mb_count, node_count_total * semibulk_size]))
-        # sample_mtx = sparse_coo_tensor_gpu(sampled_indices, sampled_values, 
-        #                                 torch.Size([nnz * mb_count, node_count_total]))
-    if name == "ladies":
-        # col_select_mtx = torch.sparse_coo_tensor(col_select_mtx_indices, col_select_mtx_values,
-        #                                         size=(node_count_total * mb_count, next_frontier.size(1)))
-        # col_select_mtx = sparse_coo_tensor_gpu(col_select_mtx_indices, col_select_mtx_values,
-    #                                         torch.Size([node_count_total * mb_count, next_frontier.size(1)]))
-        col_select_mtx = sparse_coo_tensor_gpu(col_select_mtx_indices, col_select_mtx_values,
-                                        torch.Size([node_count_total * mb_count, next_frontier_select.size(1)]))
-    elif name == "sage":
-        # col_select_mtx = torch.sparse_coo_tensor(col_select_mtx_indices, col_select_mtx_values,
-        #                     size=(node_count_total * mb_count * batch_size, next_frontier.size(1) * batch_size))
-        col_select_mtx = torch.sparse_coo_tensor(col_select_mtx_indices, col_select_mtx_values,
-                torch.Size([node_count_total * mb_count * batch_size, next_frontier_select.size(1) * batch_size]))
-
-    # sampled_indices, sampled_values = dist_spgemm15D(sample_mtx, col_select_mtx, replication, rank, size, \
-    #                                                     row_groups, col_groups, "colsel", timing_dict)
-
-    sample_mtx = sample_mtx.to_sparse_csr()
-    # sampled_indices, sampled_values = col_select15D(sample_mtx, next_frontier_select, mb_count, batch_size,
-    #                                             replication, rank, size, row_groups, col_groups, "colsel", 
-    #                                             timing_dict)
-    if name == "ladies":
-        bulk_items = mb_count
-        bulk_size = batch_size
-    elif name == "sage":
-        bulk_items = mb_count * nnz
-        bulk_size = 1
-        timing_dict["sample-gather-counts-preproc"].append(stop_time(start_timer, stop_timer))
-
-        start_time(start_timer)
-        # dist.all_gather_into_tensor(dart_hits_count_recv, dart_hits_count_select, group=row_groups[rank_c])
-        # dist.all_gather_into_tensor(sampled_count_recv, sampled_count, group=row_groups[rank_c])
-        # dart_hits_count = dart_hits_count_recv[(dart_hits_count_recv != -1)]
-        # sampled_count = sampled_count_recv[(sampled_count_recv != -1)]
-        dist.all_gather_into_tensor(dart_hits_count, dart_hits_count_select, group=row_groups[rank_c])
-        dist.all_gather_into_tensor(sampled_count, sampled_count, group=row_groups[rank_c])
-        next_frontier_values = torch.logical_or(
-                                        dart_hits_count, 
-                                        next_frontier._values()).int()
-        # next_frontier = torch.sparse_coo_tensor(indices=next_frontier._indices(),
-        #                                         values=next_frontier_values,
-        #                                         size=(p.size(0), node_count_total))
-        next_frontier = sparse_coo_tensor_gpu(next_frontier._indices(), next_frontier_values,
-                                                torch.Size([p.size(0), node_count_total]))
-        timing_dict["sample-gather-counts"].append(stop_time(start_timer, stop_timer))
-
-        start_time(start_timer)
-        dart_hits_mask = dart_hits_count > 0
-        p._values()[dart_hits_mask] = 0.0
-
-        filled_minibatches = sampled_count == frontier_size
-        filled_minibatches_mask = torch.gather(filled_minibatches, 0, p._indices()[0,:])
-        p._values()[filled_minibatches_mask] = 0
-        timing_dict["sample-set-probs"].append(stop_time(start_timer, stop_timer))
-
-        start_time(start_timer)
-        next_frontier_nnzvals = next_frontier._values().nonzero().squeeze()
-        next_frontier_nnzidxs = next_frontier._indices()[0,next_frontier_nnzvals]
-        sampled_count = torch.cuda.IntTensor(p.size(0)).fill_(0)
-        sampled_count = torch.clamp(frontier_size - frontier_nnz_sizes, min=0)
-        sampled_count.scatter_add_(0, next_frontier_nnzidxs, \
-                                    next_frontier._values()[next_frontier_nnzvals].int())
-        underfull_minibatches = (sampled_count < frontier_size).any()
-        timing_dict["sample-compute-bool"].append(stop_time(start_timer, stop_timer))
-
-        overflow = torch.clamp(sampled_count - frontier_size, min=0).int()
-
-        timing_dict["sampling-iters"].append(stop_time(sample_start_timer, sample_stop_timer))
-
-    # print(f"iter_count: {iter_count}")
-    # print(f"selection_iter_count: {selection_iter_count}")
 
     return next_frontier
 

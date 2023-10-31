@@ -52,6 +52,7 @@ def ladies_sampler(adj_matrix, batches, batch_size, frontier_size, mb_count_tota
 
     start_time(total_start_timer)
     for i in range(n_layers):
+        print(f"Sampling layer {i}", flush=True)
         if i == 0:
             nnz = batch_size
         else:

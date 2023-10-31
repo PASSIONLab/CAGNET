@@ -58,6 +58,7 @@ def sage_sampler(adj_matrix, batches, batch_size, frontier_sizes, mb_count_total
 
     timing_dict = defaultdict(list)
 
+    start_time(start_timer)
     node_count = adj_matrix.size(0)
     node_count_total = adj_matrix.size(1)
     mb_count = batches.size(0)
@@ -83,15 +84,14 @@ def sage_sampler(adj_matrix, batches, batch_size, frontier_sizes, mb_count_total
 
     if not replicate_graph:
         batches_expand = batches_expand.to_sparse_csr()
+    timing_dict["sage-preamble"].append(stop_time(start_timer, stop_timer))
 
     # adj_matrix = adj_matrix.to_sparse_csr()
     current_frontier = batches_expand
 
-    if baseline_compare:
-        total_start_timer.record()
-
     for i in range(n_layers):
-        print(f"Sampling layer {i}", flush=True)
+        start_time(total_start_timer)
+        # print(f"Sampling layer {i}", flush=True)
         if i == 0:
             nnz = batch_size
         else:
@@ -99,6 +99,7 @@ def sage_sampler(adj_matrix, batches, batch_size, frontier_sizes, mb_count_total
             # current_frontier_nnzmask = current_frontier._values().nonzero().squeeze()
             # current_frontier_nnzcols = current_frontier._indices()[1, current_frontier_nnzmask]
             # current_frontier_nnzrows = torch.arange(current_frontier_nnzcols.numel()).cuda()
+            start_time(start_timer)
             current_frontier_nnzcols = current_frontier._indices()[1, :]
             current_frontier_nnzrows = torch.arange(current_frontier._nnz()).cuda()
             current_frontier_nnzinds = torch.stack((current_frontier_nnzrows, current_frontier_nnzcols))
@@ -116,10 +117,9 @@ def sage_sampler(adj_matrix, batches, batch_size, frontier_sizes, mb_count_total
             nnz = batch_size * int(np.prod(frontier_sizes[:i], dtype=int))
             if not replicate_graph:
                 current_frontier = current_frontier.to_sparse_csr()
+            timing_dict["sage-startiter"].append(stop_time(start_timer, stop_timer))
 
         # Expand batches matrix
-        if baseline_compare:
-            total_start_timer.record()
         p = gen_prob_dist(current_frontier, adj_matrix, mb_count, node_count_total,
                                 replication, rank, size, row_groups, col_groups,
                                 sa_masks, timing_dict, "sage",
@@ -128,8 +128,10 @@ def sage_sampler(adj_matrix, batches, batch_size, frontier_sizes, mb_count_total
         # dist.barrier()
 
         # adj_matrix = adj_matrix.to_sparse_coo()
-        if p.layout == torch.sparse_csr:
-            p = p.to_sparse_coo()
+        # start_time(start_timer)
+        # if p.layout == torch.sparse_csr:
+        #     p = p.to_sparse_coo()
+        # timing_dict["sage-csr2coo"].append(stop_time(start_timer, stop_timer))
 
         frontier_size = frontier_sizes[i]
         n_darts = n_darts_list[i]
@@ -204,27 +206,25 @@ def sage_sampler(adj_matrix, batches, batch_size, frontier_sizes, mb_count_total
         # frontiers[i + 1] = next_frontier_select.clone()
         if i + 1 == n_layers:
             frontiers[i + 1] = next_frontier_select
-        else:
-            del next_frontier_select
-        del p
+        # else:
+        #     del next_frontier_select
+        # del p
 
-        if i > 0:
-            del current_frontier_select
+        # if i > 0:
+        #     del current_frontier_select
         current_frontier = next_frontier
         timing_dict["adj-row-col-select"].append(stop_time(start_timer, stop_timer))
+
+        start_time(start_timer)
         adj_matrices[i] = adj_matrix_sample.to_sparse_csr()
+        timing_dict["adj-coo2csr"].append(stop_time(start_timer, stop_timer))
         # del next_frontier_select
         # del current_frontier_select
+        timing_dict["sage-samplingiter"].append(stop_time(total_start_timer, total_stop_timer))
 
-    # print(f"total_time: {stop_time(total_start_timer, total_stop_timer)}", flush=True)
-    if baseline_compare:
-        total_stop_timer.record()
-        torch.cuda.synchronize()
-        total_time = total_start_timer.elapsed_time(total_stop_timer)
-        print(f"total_time: {total_time}", flush=True)
     if timing:
         for k, v in sorted(timing_dict.items()):
-            if (k.startswith("spgemm") and k != "spgemm-misc") or k == "probability-spgemm" or k == "row-select-spgemm" or k == "col-select-spgemm" or k == "sampling-iters" or k == "frontier-row-col-select" or k == "adj-row-col-select" or k.startswith("sample"):
+            if (k.startswith("spgemm") and k != "spgemm-misc") or k == "probability-spgemm" or k == "row-select-spgemm" or k == "col-select-spgemm" or k == "sampling-iters" or k == "frontier-row-col-select" or k == "adj-row-col-select" or k.startswith("sample") or k == "compute-p" or k == "sage-startiter" or k == "sage-csr2coo" or k == "sage-preamble" or k == "sage-samplingiter":
                 v_tens = torch.cuda.FloatTensor(1).fill_(sum(v))
                 v_tens_recv = []
                 for i in range(size):

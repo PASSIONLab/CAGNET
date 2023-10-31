@@ -793,19 +793,27 @@ def main(args, batches=None):
                     # dist.send(test_idx_len, dst=dst_gpu)
                     dist.send(train_idx, dst=dst_gpu)
                     # dist.send(test_idx, dst=dst_gpu)
-            if args.replicate_graph:
-                edge_count = g_loc.col_indices().size(0)
+            if args.sample_method == "sage":
+                if args.replicate_graph:
+                    edge_count = g_loc.col_indices().size(0)
+                else:
+                    edge_count = g_loc._indices().size(1)
+                    print("coalescing", flush=True)
+                    g_loc = g_loc.coalesce().t_()
+                    g_loc = g_loc.cpu()
+                    g_loc = g_loc.to_sparse_csr()
+                    g_loc_crows = g_loc.crow_indices().int()
+                    g_loc_cols = g_loc.col_indices().int()
+                    g_loc = torch.sparse_csr_tensor(g_loc_crows, g_loc_cols, g_loc.values(), g_loc.size())
+                print("host2device", flush=True)
+                g_loc = g_loc.to(device)
             else:
-                edge_count = g_loc._indices().size(1)
-                print("coalescing", flush=True)
                 g_loc = g_loc.coalesce().t_()
-                g_loc = g_loc.cpu()
+                g_loc = g_loc.to(device)
                 g_loc = g_loc.to_sparse_csr()
                 g_loc_crows = g_loc.crow_indices().int()
                 g_loc_cols = g_loc.col_indices().int()
                 g_loc = torch.sparse_csr_tensor(g_loc_crows, g_loc_cols, g_loc.values(), g_loc.size())
-            print("host2device", flush=True)
-            g_loc = g_loc.to(device)
             features_loc = features_loc.to(device)
 
             # features_loc, g_loc, _, _ = one5d_partition(rank, size, inputs, adj_matrix, data, inputs, num_classes, \
@@ -915,12 +923,19 @@ def main(args, batches=None):
 
                 g_loc = torch.sparse_coo_tensor(g_loc_indices, g_loc_values, \
                                                     torch.Size([g_loc_meta[1], g_loc_meta[2]]))
-                g_loc = g_loc.cpu()
-                g_loc = g_loc.to_sparse_csr()
-                g_loc_crows = g_loc.crow_indices().int()
-                g_loc_cols = g_loc.col_indices().int()
-                g_loc = torch.sparse_csr_tensor(g_loc_crows, g_loc_cols, g_loc.values(), g_loc.size())
-                g_loc = g_loc.to(device)
+                if args.sample_method == "sage":
+                    g_loc = g_loc.cpu()
+                    g_loc = g_loc.to_sparse_csr()
+                    g_loc_crows = g_loc.crow_indices().int()
+                    g_loc_cols = g_loc.col_indices().int()
+                    g_loc = torch.sparse_csr_tensor(g_loc_crows, g_loc_cols, g_loc.values(), g_loc.size())
+                    g_loc = g_loc.to(device)
+                else:
+                    g_loc = g_loc.to_sparse_csr()
+                    g_loc_crows = g_loc.crow_indices().int()
+                    g_loc_cols = g_loc.col_indices().int()
+                    g_loc = torch.sparse_csr_tensor(g_loc_crows, g_loc_cols, g_loc.values(), g_loc.size())
+
                 edge_count = g_loc_meta[3].item()
 
             if args.dataset == "ogbn-papers100M":
@@ -1161,9 +1176,9 @@ def main(args, batches=None):
             
             # nnz_recv_upperbound = edge_count // (size // args.replication)
 
+            print("Sampling", flush=True)
             if epoch >= 1:
                 start_time(start_timer, timing_arg=True)
-            print("Sampling", flush=True)
             torch.cuda.nvtx.range_push("nvtx-sampling")
             if args.sample_method == "ladies":
                 current_frontier, next_frontier, adj_matrices_bulk = \
@@ -1338,7 +1353,6 @@ def main(args, batches=None):
                 if epoch >= 1:
                     start_time(start_inner_timer, timing_arg=True)
                 torch.cuda.nvtx.range_push("nvtx-selectfeats")
-                print(f"adjs: {adjs}", flush=True)
                 if size > 1:
 
                     src_vtxs_sort = torch.cuda.LongTensor(src_vtxs.size(0))
@@ -1542,7 +1556,7 @@ def main(args, batches=None):
                 # print(f"adj1_nnz.median: {np.median(adj1_nnzs)}")
                 # print(f"adj_nnzs.median: {np.median(adj_nnzs)}")
                 print(f"total: {np.sum(dur) / epoch}", flush=True)
-            if args.sample_method == "sage" and args.dataset != "ogbn-papers100M" and args.dataset != "Amazon" and ("Protein" not in args.dataset):
+            if False and args.sample_method == "sage" and args.dataset != "ogbn-papers100M" and args.dataset != "Amazon" and ("Protein" not in args.dataset):
                 model = model.cpu()
                 train_nid = train_nid.cpu()
                 test_nid = test_nid.cpu()
