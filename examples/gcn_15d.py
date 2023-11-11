@@ -1066,7 +1066,7 @@ def main(args, batches=None):
     model = model.to(device)
 
     # use optimizer
-    optimizer = torch.optim.Adam(model.parameters(), lr=args.lr * size)
+    optimizer = torch.optim.Adam(model.parameters(), lr=args.lr * math.sqrt(size))
     # optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
 
     dur = []
@@ -1556,7 +1556,7 @@ def main(args, batches=None):
                 # print(f"adj1_nnz.median: {np.median(adj1_nnzs)}")
                 # print(f"adj_nnzs.median: {np.median(adj_nnzs)}")
                 print(f"total: {np.sum(dur) / epoch}", flush=True)
-            if False and args.sample_method == "sage" and args.dataset != "ogbn-papers100M" and args.dataset != "Amazon" and ("Protein" not in args.dataset):
+            if args.sample_method == "sage" and args.dataset != "ogbn-papers100M" and args.dataset != "Amazon" and ("Protein" not in args.dataset):
                 model = model.cpu()
                 train_nid = train_nid.cpu()
                 test_nid = test_nid.cpu()
