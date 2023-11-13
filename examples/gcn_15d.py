@@ -705,21 +705,22 @@ def main(args):
         inputs.requires_grad = True
         data.y = data.y.to(device)
 
-    # elif args.dataset == "Papers":
-    #     print(f"Loading coo...", flush=True)
-    #     edge_index = torch.load("/global/cfs/cdirs/m1982/alokt/data/ogbn_papers100M/processed/papers_sym.pt")
-    #     print(f"Done loading coo", flush=True)
-    #     n = 111059956 
-    #     num_features = 100
-    #     num_classes = 172
-    #     inputs = torch.rand(n, num_features)
-    #     data = Data()
-    #     data.y = torch.rand(n).uniform_(0, num_classes - 1).long()
-    #     data.train_mask = torch.ones(n).long()
-    #     adj_matrix = edge_index.t_()
-    #     data = data.to(device)
-    #     inputs.requires_grad = True
-    #     data.y = data.y.to(device)
+    elif args.dataset == "ogbn-papers100M":
+        if rank % args.gpu == 0: 
+            print(f"Loading coo...", flush=True)
+            edge_index = torch.load("/global/cfs/cdirs/m1982/alokt/data/ogbn_papers100M/processed/papers_sym.pt")
+            print(f"Done loading coo", flush=True)
+            n = 111059956 
+            num_features = 128
+            num_classes = 172
+            inputs = torch.rand(n, num_features)
+            data = Data()
+            data.y = torch.rand(n).uniform_(0, num_classes - 1).long()
+            data.train_mask = torch.ones(n).long()
+            adj_matrix = edge_index.t_()
+            data = data.to(device)
+            inputs.requires_grad = True
+            data.y = data.y.to(device)
  
     if args.normalize:
         adj_matrix, _ = add_remaining_self_loops(adj_matrix, num_nodes=inputs.size(0))
