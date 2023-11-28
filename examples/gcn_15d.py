@@ -206,27 +206,26 @@ def split_am_partition(am_partition, partitions, rank, size, replication, normal
     print(am_partition.size())
     proc_node_count = am_partition.size(1) # column count
     proc_node_count_row = int(math.ceil(node_count / (size // replication)))
-    am_pbyp, _ = split_coo(am_partition._indices(), partitions, 0)
+    am_pbyp, vtx_indices = split_coo(am_partition._indices(), partitions, 0)
     rank_c = size // replication
     rank_col = size % replication
     for i in range(len(am_pbyp)):
-        vtx_row = proc_node_count_row * i
-        vtx_col = proc_node_count_row * rank_col
         if i == size // replication - 1:
-            last_node_count = node_count - proc_node_count_row * i
+            last_node_count = vtx_indices[i + 1] - vtx_indices[i]
             am_pbyp[i] = torch.sparse_coo_tensor(am_pbyp[i], torch.ones(am_pbyp[i].size(1)), 
                                                     size=(last_node_count, proc_node_count),
                                                     requires_grad=False)
 
-            am_pbyp[i] = scale_elements(am_partition._indices(), am_pbyp[i], node_count, vtx_row, 
-                                            vtx_col, normalize)
+            am_pbyp[i] = scale_elements(am_partition._indices(), am_pbyp[i], node_count, vtx_indices[i], 
+                                            vtx_indices[rank_c], normalize)
         else:
+            proc_node_count_row = vtx_indices[i + 1] - vtx_indices[i]
             am_pbyp[i] = torch.sparse_coo_tensor(am_pbyp[i], torch.ones(am_pbyp[i].size(1)), 
                                                     size=(proc_node_count_row, proc_node_count),
                                                     requires_grad=False)
 
-            am_pbyp[i] = scale_elements(am_partition._indices(), am_pbyp[i], node_count, vtx_row, 
-                                            vtx_col, normalize)
+            am_pbyp[i] = scale_elements(am_partition._indices(), am_pbyp[i], node_count, vtx_indices[i], 
+                                            vtx_indices[rank_c], normalize)
 
     return am_pbyp
 
@@ -708,7 +707,10 @@ def main(args):
     elif args.dataset == "ogbn-papers100M":
         if rank % args.gpu == 0: 
             print(f"Loading coo...", flush=True)
-            edge_index = torch.load("/global/cfs/cdirs/m1982/alokt/data/ogbn_papers100M/processed/papers_sym.pt")
+            if args.partitions:
+                edge_index = torch.load("/pscratch/sd/r/roguzsel/zzz/sagnn/data/papers/base/papers_sym.pt")
+            else:
+                edge_index = torch.load("/global/cfs/cdirs/m1982/alokt/data/ogbn_papers100M/processed/papers_sym.pt")
             print(f"Done loading coo", flush=True)
             n = 111059956 
             num_features = 128
@@ -815,9 +817,12 @@ def main(args):
             if rank_c < proc_row - 1:
                 inputs = torch.cuda.FloatTensor(g_loc_meta[2].item(), num_features)
             else:
-                # rows = g_loc_meta[2].item() + (g_loc_meta[1].item() - proc_row * g_loc_meta[2].item())
-                normal_node_count = int(math.ceil(g_loc_meta[1].item() / (size // args.replication)))
-                rows = g_loc_meta[1].item() - (proc_row - 1) * normal_node_count
+                if args.partitions:
+                    rows = partitions[-1]
+                else:
+                    # rows = g_loc_meta[2].item() + (g_loc_meta[1].item() - proc_row * g_loc_meta[2].item())
+                    normal_node_count = int(math.ceil(g_loc_meta[1].item() / (size // args.replication)))
+                    rows = g_loc_meta[1].item() - (proc_row - 1) * normal_node_count
                 print(f"rows: {rows}", flush=True)
                 inputs = torch.cuda.FloatTensor(rows, num_features)
             dist.recv(inputs, src=src_gpu)
@@ -849,7 +854,6 @@ def main(args):
             features_loc = inputs.to(device)
             print(f"g_loc.size: {g_loc.size()}", flush=True)
             print(f"features_loc.size: {features_loc.size()}", flush=True)
-            print(f"ampbyp: {ampbyp}", flush=True)
 
     else:
         features_partition, g_loc_partitions, ampbyp = one5d_partition(rank, size, inputs, adj_matrix, data, \

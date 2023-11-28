@@ -197,7 +197,7 @@ def broad_func_one5d(self, graph, ampbyp, inputs):
                         ampbyp[am_partid].size(1), inputs_recv, z_loc)
         stop_time(self, "spmm_gpu", start, barrier=False)
         
-    z_loc = z_loc.contiguous()
+    # z_loc = z_loc.contiguous()
     start = time.time()
     dist.all_reduce(z_loc, op=dist.reduce_op.SUM, group=self.row_groups[rank_c])
     stop_time(self, "reduce", start, barrier=False)
