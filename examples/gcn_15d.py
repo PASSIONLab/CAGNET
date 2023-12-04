@@ -29,6 +29,8 @@ import torch.nn.functional as F
 from sparse_coo_tensor_cpp import sort_dst_proc_gpu
 
 import socket
+# import wandb
+# wandb.init(project="cagnet")
 
 class GCN(nn.Module):
     def __init__(self, in_feats, n_hidden, n_classes, n_layers, aggr, rank, size, partitioning, replication, 
@@ -75,10 +77,11 @@ class GCN(nn.Module):
         # self.layers.append(GCNConv(n_hidden, n_classes, self.partitioning, self.device))
         # # # self.layers.append(GCNConv(in_feats, n_classes, self.partitioning, self.device))
 
-        self.layers.append(SAGEConv(in_feats, n_hidden, root_weight=False, bias=False))
+        self.layers.append(SAGEConv(in_feats, n_hidden))
         for _ in range(n_layers - 2):
-            self.layers.append(SAGEConv(n_hidden, n_hidden, root_weight=False, bias=False))
-        self.layers.append(SAGEConv(n_hidden, n_classes, root_weight=False, bias=False))
+            self.layers.append(SAGEConv(n_hidden, n_hidden))
+        self.layers.append(SAGEConv(n_hidden, n_classes))
+        # self.layers.append(SAGEConv(in_feats, n_classes, root_weight=False, bias=False))
 
     def forward(self, graphs, inputs, epoch):
         h = inputs
@@ -1065,6 +1068,9 @@ def main(args, batches=None):
                           col_groups=col_groups)
     model = model.to(device)
 
+    for name, W in model.named_parameters():
+        print(f"name: {name} W.sum: {W.sum()}", flush=True)
+
     # use optimizer
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr * math.sqrt(size))
     # optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
@@ -1461,6 +1467,7 @@ def main(args, batches=None):
                 # adjs = [adj.to(rank) for adj in adjs]
                 # features_batch = features_loc[n_id]
                 optimizer.zero_grad()
+                print(f"adjs: {adjs} features_batch: {features_batch}", flush=True)
                 logits = model(adjs, features_batch, epoch)
                 torch.cuda.nvtx.range_pop() # nvtx-fwd
                 if epoch >= 1:
@@ -1470,7 +1477,8 @@ def main(args, batches=None):
                     start_time(start_inner_timer)
                 torch.cuda.nvtx.range_push("nvtx-loss")
                 # loss = F.nll_loss(logits, data.y[batch_vtxs].long()) # GCNConv
-                loss = F.nll_loss(logits[:args.batch_size], data.y[batch_vtxs].long()) # SAGEConv
+                # loss = F.nll_loss(logits[:args.batch_size], data.y[batch_vtxs].long()) # SAGEConv
+                loss = F.nll_loss(logits[:args.batch_size], data.y[batch_vtxs]) # SAGEConv
                 # loss = F.nll_loss(logits[:args.batch_size], data.y[seeds].long()) # quiver
 
                 torch.cuda.nvtx.range_pop() # nvtx-loss
@@ -1570,6 +1578,7 @@ def main(args, batches=None):
                 test_nid = test_nid.to(device)
                 model = model.to(device)
                 print("Rank: {:05d} | Epoch: {:05d} | Time(s): {:.4f} | Loss: {:.4f} | Accuracy: {:.4f}".format(rank, epoch, np.sum(dur), loss.item(), acc3), flush=True)
+                # wandb.log({'acc': acc3, 'time': np.sum(dur), 'loss': loss.item(), 'epoch': epoch})
             else:
                 print("Rank: {:05d} | Epoch: {:05d} | Time(s): {:.4f} | Accuracy: {:.4f}".format(rank, epoch, np.sum(dur), acc3), flush=True)
 

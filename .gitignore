@@ -38,3 +38,4 @@ examples/*.batch
 *.out
 *.nsys-rep
 *.ncu-rep
+examples/wandb
