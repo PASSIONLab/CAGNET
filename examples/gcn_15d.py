@@ -708,7 +708,8 @@ def main(args):
         if rank % args.gpu == 0: 
             print(f"Loading coo...", flush=True)
             if args.partitions:
-                edge_index = torch.load("/pscratch/sd/r/roguzsel/zzz/sagnn/data/papers/base/papers_sym.pt")
+                # edge_index = torch.load("/pscratch/sd/r/roguzsel/zzz/sagnn/data/papers/base/papers_sym.pt")
+                edge_index = torch.load("/global/cfs/cdirs/m1982/alokt/data/ogbn_papers100M/processed/papers_k16m1u1c10r2.pt")
             else:
                 edge_index = torch.load("/global/cfs/cdirs/m1982/alokt/data/ogbn_papers100M/processed/papers_sym.pt")
             print(f"Done loading coo", flush=True)
@@ -792,9 +793,13 @@ def main(args):
                     dist.send(train_idx, dst=dst_gpu)
                     dist.send(test_idx, dst=dst_gpu)
 
+                del g_send
+                del features_send
+
             # features_loc, g_loc, _, _ = one5d_partition(rank, size, inputs, adj_matrix, data, inputs, num_classes, \
             #                                 args.replication, args.normalize)
             print("coalescing", flush=True)
+            vtx_count = g_loc.size(0)
             g_loc = g_loc.coalesce().t_()
             print("normalizing", flush=True)
             g_loc = g_loc.to(device)
@@ -831,6 +836,7 @@ def main(args):
             data.y = torch.cuda.FloatTensor(g_loc_meta[1].item())
             dist.recv(data.y, src=src_gpu)
             data.y = data.y.long()
+            print(f"data.y.size: {data.y.size()}", flush=True)
 
             g_loc = torch.sparse_coo_tensor(g_loc_indices, g_loc_values, \
                                                 size=torch.Size([g_loc_meta[1], g_loc_meta[2]]))
@@ -850,9 +856,11 @@ def main(args):
                 print(f"recv test_idx: {test_idx}", flush=True)
             g_loc = g_loc.cpu()
             ampbyp = split_am_partition(g_loc, partitions, rank, size, args.replication, args.normalize)
-            g_loc = g_loc.cuda().coalesce().t_()
+            vtx_count = g_loc.size(0)
+            # g_loc = g_loc.cuda().coalesce().t_()
+            # g_loc = g_loc.coalesce().t_().cuda()
             features_loc = inputs.to(device)
-            print(f"g_loc.size: {g_loc.size()}", flush=True)
+            print(f"g_loc.size: {g_loc.size()} g_loc._nnz: {g_loc._nnz()}", flush=True)
             print(f"features_loc.size: {features_loc.size()}", flush=True)
 
     else:
@@ -866,7 +874,11 @@ def main(args):
 
     print("why segfault?", flush=True)
     features_loc = features_loc.to(device)
-    g_loc = g_loc.to(device)
+    print(f"g_loc: {g_loc}", flush=True)
+    del g_loc
+    g_loc = None
+
+    # g_loc = g_loc.to(device)
     print("reached here", flush=True)
     for i in range(len(ampbyp)):
         ampbyp[i] = ampbyp[i].t().coalesce().to(device)
@@ -919,6 +931,7 @@ def main(args):
 
     # row_data_recv = [torch.cuda.FloatTensor(device=self.device).resize_(counts_send[i].int().item(), inputs.size(1)).fill_(0) for i in range(len(counts_send))]
     # start = time.time()
+
     print("all to all indices")
     dist.all_to_all(row_indices_recv, row_indices_send)
 
@@ -928,8 +941,7 @@ def main(args):
     # use optimizer
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
 
-    print(f"g_loc: {g_loc}", flush=True)
-    n_per_proc = math.ceil(float(g_loc.size(1)) / (size / args.replication))
+    n_per_proc = math.ceil(float(vtx_count) / (size / args.replication))
 
     rank_train_mask = []
     labels_rank = []
@@ -944,7 +956,7 @@ def main(args):
             rank_train_mask = torch.split(data.train_mask, n_per_proc, dim=0)[rank_c]
             labels_rank = torch.split(data.y, n_per_proc, dim=0)[rank_c]
     else:
-        train_mask = torch.zeros(g_loc.size(1)).cuda()
+        train_mask = torch.zeros(vtx_count).cuda()
         train_mask = train_mask.scatter_(0, train_idx, True)
         train_nid = train_idx
         if partitions:
@@ -966,6 +978,7 @@ def main(args):
 
     torch.manual_seed(0)
     total_start = time.time()
+
     for epoch in range(args.n_epochs):
         print(f"Epoch: {epoch}", flush=True)
         if epoch == 1:

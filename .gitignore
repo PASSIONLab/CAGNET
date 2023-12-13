@@ -34,3 +34,4 @@ examples/*nsys-rep
 examples/job*
 examples/*.batch
 examples/sp-aware/
+examples/wandb/
