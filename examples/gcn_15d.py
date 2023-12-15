@@ -709,7 +709,8 @@ def main(args):
             print(f"Loading coo...", flush=True)
             if args.partitions:
                 # edge_index = torch.load("/pscratch/sd/r/roguzsel/zzz/sagnn/data/papers/base/papers_sym.pt")
-                edge_index = torch.load("/global/cfs/cdirs/m1982/alokt/data/ogbn_papers100M/processed/papers_k16m1u1c10r2.pt")
+                path = f"/global/cfs/cdirs/m1982/alokt/data/ogbn_papers100M/processed/papers_k{size}m1u1c10r2.pt"
+                edge_index = torch.load(path)
             else:
                 edge_index = torch.load("/global/cfs/cdirs/m1982/alokt/data/ogbn_papers100M/processed/papers_sym.pt")
             print(f"Done loading coo", flush=True)
