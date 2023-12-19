@@ -807,6 +807,7 @@ def main(args):
             features_loc = features_loc.to(device)
             g_loc = g_loc.double()
             edge_count = adj_matrix.size(1)
+            print(f"g_loc: {g_loc}", flush=True)
         else:
             src_gpu = rank - (rank % args.gpu)
             g_loc_meta = torch.cuda.LongTensor(6).fill_(0)
@@ -858,12 +859,17 @@ def main(args):
             g_loc = g_loc.cpu()
             ampbyp = split_am_partition(g_loc, partitions, rank, size, args.replication, args.normalize)
             vtx_count = g_loc.size(0)
+
             # g_loc = g_loc.cuda().coalesce().t_()
             # g_loc = g_loc.coalesce().t_().cuda()
             features_loc = inputs.to(device)
+            print(f"g_loc: {g_loc}", flush=True)
             print(f"g_loc.size: {g_loc.size()} g_loc._nnz: {g_loc._nnz()}", flush=True)
             print(f"features_loc.size: {features_loc.size()}", flush=True)
 
+            del g_loc
+            del g_loc_indices
+            del g_loc_values
     else:
         features_partition, g_loc_partitions, ampbyp = one5d_partition(rank, size, inputs, adj_matrix, data, \
                                                                   inputs, num_classes, args.replication, \
@@ -875,14 +881,28 @@ def main(args):
 
     print("why segfault?", flush=True)
     features_loc = features_loc.to(device)
-    print(f"g_loc: {g_loc}", flush=True)
-    del g_loc
+
+    # del g_loc
     g_loc = None
+
+    # torch.cuda.empty_cache()
+    # torch.cuda.synchronize()
+    # print(f"after del g_loc", flush=True)
+    # if rank == 0:
+    #     x = input()
+    # dist.barrier()
 
     # g_loc = g_loc.to(device)
     print("reached here", flush=True)
     for i in range(len(ampbyp)):
         ampbyp[i] = ampbyp[i].t().coalesce().to(device)
+
+    # torch.cuda.empty_cache()
+    # torch.cuda.synchronize()
+    # print(f"after ampbyp", flush=True)
+    # if rank == 0:
+    #     x = input()
+    # dist.barrier()
 
     print("create GCN model")
     # create GCN model
@@ -924,6 +944,13 @@ def main(args):
             counts_send.append(torch.cuda.LongTensor([unique_cols.size()], device=device).resize_(1, 1))
     
     model.row_indices_send = row_indices_send
+
+    # torch.cuda.empty_cache()
+    # torch.cuda.synchronize()
+    # print(f"before alltoall", flush=True)
+    # if rank == 0:
+    #     x = input()
+    # dist.barrier()
 
     print("all to all counts")  
     dist.all_to_all(counts_recv, counts_send)
@@ -979,6 +1006,12 @@ def main(args):
 
     torch.manual_seed(0)
     total_start = time.time()
+
+    # torch.cuda.synchronize()
+    # print(f"before training", flush=True)
+    # if rank == 0:
+    #     x = input()
+    # dist.barrier()
 
     for epoch in range(args.n_epochs):
         print(f"Epoch: {epoch}", flush=True)
