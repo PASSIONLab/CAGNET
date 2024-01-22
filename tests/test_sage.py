@@ -17,6 +17,7 @@ def main(args):
     # Compute aggregated neighborhood
     frontiers, adj_matrices_all, g_loc = examples.gcn_15d.main(args)
 
+    g_loc = g_loc.to_sparse_coo()
     print(f"g_loc: {g_loc}")
     print("")
     print("Beginning SAGE sampler test")
@@ -39,6 +40,8 @@ def main(args):
 
             adj_matrices = adj_matrices_all[l][mb_id] # adj_matrices for minibatch i
 
+            print(f"current_frontier: {current_frontier}", flush=True)
+            print(f"next_frontier: {next_frontier}", flush=True)
 
             vtx_mask = adj_matrices._indices()[0,:] == (i % args.batch_size)
             vtx_indices = adj_matrices._indices()[:, vtx_mask]
@@ -108,39 +111,60 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='test LADIES sampling code')
     parser.add_argument("--dataset", type=str, default="Cora",
                         help="dataset to train")
+    parser.add_argument("--sample-method", type=str, default="ladies",
+                        help="sampling algorithm for training")
+    parser.add_argument("--dropout", type=float, default=0.5,
+                        help="dropout probability")
     parser.add_argument("--gpu", type=int, default=4,
                         help="gpus per node")
+    parser.add_argument("--lr", type=float, default=1e-2,
+                        help="learning rate")
+    parser.add_argument("--n-epochs", type=int, default=200,
+                        help="number of training epochs")
+    parser.add_argument("--n-hidden", type=int, default=256,
+                        help="number of hidden gcn units")
     parser.add_argument("--n-layers", type=int, default=1,
                         help="number of hidden gcn layers")
     parser.add_argument("--batch-size", type=int, default=512,
                         help="number of vertices in minibatch")
-    parser.add_argument("--samp-num", type=int, default=64,
-                        help="number of vertices per layer of layer-wise minibatch")
-    parser.add_argument('--normalize', action="store_true",
-                            help='normalize adjacency matrix')
-    parser.add_argument('--hostname', default='127.0.0.1', type=str,
-                            help='hostname for rank 0')
+    parser.add_argument("--samp-num", type=str, default="2-2",
+                        help="number of vertices per layer of minibatch")
+    parser.add_argument("--weight-decay", type=float, default=5e-4,
+                        help="Weight for L2 loss")
+    parser.add_argument("--aggr", type=str, default="mean",
+                        help="Aggregator type: mean/sum")
+    parser.add_argument('--world-size', default=-1, type=int,
+                         help='number of nodes for distributed training')
+    parser.add_argument('--rank', default=-1, type=int,
+                         help='node rank for distributed training')
+    parser.add_argument('--dist-url', default='env://', type=str,
+                         help='url used to set up distributed training')
     parser.add_argument('--dist-backend', default='nccl', type=str,
                             help='distributed backend')
+    parser.add_argument('--hostname', default='127.0.0.1', type=str,
+                            help='hostname for rank 0')
+    parser.add_argument('--normalize', action="store_true",
+                            help='normalize adjacency matrix')
+    parser.add_argument('--partitioning', default='ONE5D', type=str,
+                            help='partitioning strategy to use')
     parser.add_argument('--replication', default=1, type=int,
                             help='partitioning strategy to use')
-    parser.add_argument('--cuda', type=int, default=0,
-                        help='Avaiable GPU ID')
-    parser.add_argument('--sample-method', type=str, default='sage',
-                        help='Sampled Algorithms: ladies/fastgcn/full')
-    parser.add_argument('--batch-num', type=int, default= 10,
-                        help='Maximum Batch Number')
-    parser.add_argument('--pool-num', type=int, default= 10,
-                        help='Number of Pool')
-    parser.add_argument('--n-bulkmb', type=int, default=1,
-                        help='Number of minibatches to sample in bulk')
-    parser.add_argument('--n-darts', type=int, default=-1,
-                        help='Number of darts to throw per minibatch in LADIES sampling')
+    parser.add_argument('--n-bulkmb', default=1, type=int,
+                            help='number of minibatches to sample in bulk')
+    parser.add_argument('--bulk-batch-fetch', default=1, type=int,
+                            help='number of minibatches to fetch features for in bulk')
+    parser.add_argument('--n-darts', default=-1, type=int,
+                            help='number of darts to throw per minibatch in LADIES sampling')
+    parser.add_argument('--semibulk', default=128, type=int,
+                            help='number of batches to column extract from in bulk')
     parser.add_argument('--timing', action="store_true",
                             help='whether to turn on timers')
     parser.add_argument('--baseline', action="store_true",
                             help='whether to avoid col selection for baseline comparison')
+    parser.add_argument('--replicate-graph', action="store_true",
+                            help='replicate adjacency matrix on each device')
     args = parser.parse_args()
+    args.samp_num = [int(i) for i in args.samp_num.split('-')]
     print(args)
 
     main(args)
