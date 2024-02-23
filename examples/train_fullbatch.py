@@ -3,9 +3,12 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch_geometric.nn import aggr, TransformerConv, global_mean_pool, GraphConv, BatchNorm
+from torch_geometric.nn import TransformerConv, global_mean_pool, GraphConv, BatchNorm
 from torch_geometric.data import Data, DataLoader
-from torch_geometric.loader import LinkNeighborLoader
+from torch_geometric.nn import aggr
+
+import wandb
+wandb.init(project="genomeface-gnn")
 
 class GNNEdgeClassifier(torch.nn.Module):
     def __init__(self, node_input_dim, edge_input_dim, hidden_dim, n_layers):
@@ -29,17 +32,13 @@ class GNNEdgeClassifier(torch.nn.Module):
 
     def forward(self, data):
         x, edge_index, edge_attr = data.x, data.edge_index, data.edge_attr
-        if hasattr(data, "edge_label_index"):
-            edge_label_index = data.edge_label_index
-        else:
-            edge_label_index = data.edge_index
 
         for i in range(len(self.convs)):
             x = F.gelu(self.convs[i](x, edge_index, edge_weight=edge_attr))
             x = self.norms[i](x)
 
         # edge_features = torch.cat([x[edge_index[0]], x[edge_index[1]], edge_attr], dim=-1)
-        edge_features = torch.cat([x[edge_label_index[0]], x[edge_label_index[1]]], dim=-1)
+        edge_features = torch.cat([x[edge_index[0]], x[edge_index[1]]], dim=-1)
 
         return torch.sigmoid(self.edge_mlp(edge_features)).squeeze()
 
@@ -64,6 +63,7 @@ def main(args):
     print("reshaped")
     m = data['indices'][:,:75]
     edges = (np.array([[i, j] for i in range(N) for j in m[i]]))
+    print("h4")
 
     gl = data['genome_labels']
     edge_labels = np.array([gl[i] == gl[j] for i, j in edges]).astype(int)
@@ -96,7 +96,7 @@ def main(args):
     # Move data to the appropriate device
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model.to(device)
-    # data = data.to(device)
+    data = data.to(device)
 
     data.x = torch.tensor(data.x, dtype=torch.float32) if not isinstance(data.x, torch.Tensor) else data.x
     data.edge_index = torch.tensor(data.edge_index, dtype=torch.long) \
@@ -105,14 +105,14 @@ def main(args):
     data.edge_attr = torch.tensor(data.edge_attr, dtype=torch.float32) \
                             if not isinstance(data.edge_attr, torch.Tensor) \
                                 else data.edge_attr
-    # target = torch.from_numpy(edge_labels).float().to(device)
-    target = torch.from_numpy(edge_labels).float()
+    target = torch.from_numpy(edge_labels).float().to(device)
 
     model.to(device)
-    # data = data.to(device)
+    data = data.to(device)
 
 
-    optimizer = torch.optim.AdamW(model.parameters(), lr=0.01)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=0.1)
+
 
     print("percent true",sum(edge_labels)/len(edge_labels))
 
@@ -120,88 +120,69 @@ def main(args):
     # model.load_state_dict(torch.load(model_path))
 
     # Training loop
-    print(f"data: {data}", flush=True)
-    train_loader = LinkNeighborLoader(
-        data,
-        num_neighbors=[args.samp_num] * 2,
-        batch_size=args.batch_size,
-        edge_label_index=data.edge_index,
-        edge_label=target,
-        num_workers=32,
-    )
-    print(f"train_loader.numw: {train_loader.num_workers}", flush=True)
-
     for epoch in range(args.n_epochs):  # Example epoch count
         model.train()
-        for i, batch in enumerate(train_loader):
-            print(f"Batch {i}/{len(train_loader)}", flush=True)
-            print(batch)
-            batch = batch.to(device)
-            optimizer.zero_grad()
-            # out = model(data)  # This outputs probabilities
-            out = model(batch)  # This outputs probabilities
-            # Convert probabilities to binary predictions
-            # Assuming a threshold of 0.5 for binary classification
-            predictions = (out > 0.5).float()  # Convert probabilities to 0 or 1
-            # Calculate loss (as before)
-            # loss = F.binary_cross_entropy(out, target)
-            loss = F.binary_cross_entropy(out, batch.edge_label)
-            loss.backward()
-            optimizer.step()
-            # Calculate accuracy
-            # correct = (predictions == target).float().sum()  # Count correct predictions
-            correct = (predictions == batch.edge_label).float().sum()  # Count correct predictions
-            # accuracy = correct / target.shape[0]  # Calculate accuracy
-            accuracy = correct / batch.edge_label.size(0)  # Calculate accuracy
-            if epoch % 10 == 0 and i == len(train_loader) - 1:
-                print(f'Epoch {epoch}, Loss: {loss.item()}, Accuracy: {accuracy.item()}')
+        optimizer.zero_grad()
+        out = model(data)  # This outputs probabilities
+        # Convert probabilities to binary predictions
+        # Assuming a threshold of 0.5 for binary classification
+        predictions = (out > 0.5).float()  # Convert probabilities to 0 or 1
+        # Calculate loss (as before)
+        loss = F.binary_cross_entropy(out, target)
+        loss.backward()
+        optimizer.step()
+        # Calculate accuracy
+        correct = (predictions == target).float().sum()  # Count correct predictions
+        accuracy = correct / target.shape[0]  # Calculate accuracy
+        if epoch % 10 == 0:
+            print(f'Epoch {epoch}, Loss: {loss.item()}, Accuracy: {accuracy.item()}')
+            model.eval()  # Set the model to evaluation mode
 
-            # model_path = 'model_weights.pth'  # Define the path to save the model weights
-            # torch.save(model.state_dict(), model_path)
-            # model_path = 'model_weights.pth'  # Path to your saved model weights
-            # model.load_state_dict(torch.load(model_path))
+            # Disable gradient computation for inference
+            with torch.no_grad():
+                out = model(data)
+            
+            # Assuming binary classification and `out` contains the sigmoid output of the model
+            predictions = out.squeeze()
+            
+            # Convert predictions to a numpy array
+            predictions_np = predictions.cpu().numpy()
+            
+            # True labels for your training data
+            true_labels = target.cpu().numpy()  # Assuming `target` contains your true labels
+            
+            # Separate predictions based on their true labels
+            positive_predictions = predictions_np[true_labels == 1]
+            negative_predictions = predictions_np[true_labels == 0]
+            
+            # import matplotlib.pyplot as plt
+            # # Plotting
+            # plt.figure(figsize=(10, 6))
+            # plt.hist(positive_predictions, bins=50, alpha=0.5, density=True, label='Positive Examples')
+            # plt.hist(negative_predictions, bins=50, alpha=0.5, density=True,label='Negative Examples')
+            # plt.xlabel('Prediction Score')
+            # plt.ylabel('Count')
+            # plt.title('Distribution of Predictions')
+            # plt.legend()
+            # plt.ylim([0,6])
+            # plt.savefig("/pscratch/sd/r/richardl/condpack/fig_airways2.png")
+            
+            from sklearn.metrics import roc_auc_score
+            predictions_np = predictions.cpu().detach().numpy() if torch.is_tensor(predictions) else predictions
+            targets_np = target.cpu().numpy() if torch.is_tensor(target) else target
+            
+            # Calculate AUC
+            auc_score = roc_auc_score(targets_np, predictions_np)
+            
+            print(f"AUC: {auc_score:.4f}")
+            wandb.log({'auc': auc_score, 'loss': loss.item(), 'epoch': epoch})
+
+        # model_path = 'model_weights.pth'  # Define the path to save the model weights
+        # torch.save(model.state_dict(), model_path)
+        # model_path = 'model_weights.pth'  # Path to your saved model weights
+        # model.load_state_dict(torch.load(model_path))
 
 
-                model.eval()  # Set the model to evaluation mode
-
-                data = data.to(device)
-                # Disable gradient computation for inference
-                with torch.no_grad():
-                    out = model(data)
-
-                # Assuming binary classification and `out` contains the sigmoid output of the model
-                predictions = out.squeeze()
-
-                # Convert predictions to a numpy array
-                predictions_np = predictions.cpu().numpy()
-
-                # True labels for your training data
-                true_labels = target.cpu().numpy()  # Assuming `target` contains your true labels
-
-                # Separate predictions based on their true labels
-                positive_predictions = predictions_np[true_labels == 1]
-                negative_predictions = predictions_np[true_labels == 0]
-
-                # import matplotlib.pyplot as plt
-                # # Plotting
-                # plt.figure(figsize=(10, 6))
-                # plt.hist(positive_predictions, bins=50, alpha=0.5, density=True, label='Positive Examples')
-                # plt.hist(negative_predictions, bins=50, alpha=0.5, density=True,label='Negative Examples')
-                # plt.xlabel('Prediction Score')
-                # plt.ylabel('Count')
-                # plt.title('Distribution of Predictions')
-                # plt.legend()
-                # plt.ylim([0,6])
-                # plt.savefig("/pscratch/sd/r/richardl/condpack/fig_airways2.png")
-
-                from sklearn.metrics import roc_auc_score
-                predictions_np = predictions.cpu().detach().numpy() if torch.is_tensor(predictions) else predictions
-                targets_np = target.cpu().numpy() if torch.is_tensor(target) else target
-
-                # Calculate AUC
-                auc_score = roc_auc_score(targets_np, predictions_np)
-
-                print(f"AUC: {auc_score:.4f}")
 
     # Calculate AUC using distances
     auc_score = roc_auc_score(targets_np, -X_edge_features)
@@ -212,14 +193,9 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='GCN')
     parser.add_argument("--n-epochs", type=int, default=300,
                         help="number of training epochs")
-    parser.add_argument("--batch-size", type=int, default=16384,
-                        help="batch size")
-    parser.add_argument("--samp-num", type=int, default=32,
-                        help="sampled neighbors per vertex")
     parser.add_argument("--n-hidden", type=int, default=16,
                         help="number of hidden gcn units")
     parser.add_argument("--n-layers", type=int, default=1,
                         help="number of hidden gcn layers")
     args = parser.parse_args()
-    print(args)
     main(args)
