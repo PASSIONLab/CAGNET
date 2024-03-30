@@ -259,20 +259,20 @@ def sage_sampler(adj_matrix, batches, batch_size, frontier_sizes, mb_count_total
         # print(f"after next_frontier: {next_frontier}", flush=True)
         # print(f"after next_frontier[==0]: {next_frontier._indices()[:,next_frontier._values() == 0]}", flush=True)
         # print(f"after next_frontier[==0].size: {next_frontier._indices()[:,next_frontier._values() == 0].size()}", flush=True)
-        # next_frontier = current_frontier + next_frontier
-        output_indices = torch.cuda.LongTensor(2, current_frontier._nnz() + next_frontier._nnz()).fill_(123123)
-        output_vals = torch.cuda.FloatTensor(current_frontier._nnz() + next_frontier._nnz()).fill_(123123.0)
-        frontier_sum_gpu(current_frontier._indices()[0,:], 
-                            current_frontier._indices()[1,:], 
-                            current_frontier._values(), 
-                            next_frontier._indices()[0,:],
-                            next_frontier._indices()[1,:], 
-                            next_frontier._values(), 
-                            output_indices[0,:],
-                            output_indices[1,:],
-                            output_vals,
-                            current_frontier._nnz(), next_frontier._nnz(), nnz_row, nnz_col, mb_count);
-        next_frontier = torch.sparse_coo_tensor(output_indices, output_vals, next_frontier.size())
+        next_frontier = current_frontier + next_frontier
+        # output_indices = torch.cuda.LongTensor(2, current_frontier._nnz() + next_frontier._nnz()).fill_(123123)
+        # output_vals = torch.cuda.FloatTensor(current_frontier._nnz() + next_frontier._nnz()).fill_(123123.0)
+        # frontier_sum_gpu(current_frontier._indices()[0,:], 
+        #                     current_frontier._indices()[1,:], 
+        #                     current_frontier._values(), 
+        #                     next_frontier._indices()[0,:],
+        #                     next_frontier._indices()[1,:], 
+        #                     next_frontier._values(), 
+        #                     output_indices[0,:],
+        #                     output_indices[1,:],
+        #                     output_vals,
+        #                     current_frontier._nnz(), next_frontier._nnz(), nnz_row, nnz_col, mb_count);
+        # next_frontier = torch.sparse_coo_tensor(output_indices, output_vals, next_frontier.size())
         # next_frontier = next_frontier.coalesce()
         # print(f"after2 next_frontier: {next_frontier}", flush=True)
         next_frontier_select = next_frontier._indices()[1,:].view(-1) #.clone()

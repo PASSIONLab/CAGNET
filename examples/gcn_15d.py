@@ -1047,7 +1047,7 @@ def main(args, batches=None):
     # return frontiers, adj_matrices, adj_matrix, col_groups
 
     # create GCN model
-    torch.manual_seed(0)
+    # torch.manual_seed(0)
     if args.sample_method == "sage":
         model = GCN(num_features,
                           args.n_hidden,
@@ -1414,7 +1414,7 @@ def main(args, batches=None):
                 torch.cuda.nvtx.range_push("nvtx-selectfeats")
                 if size > 1:
 
-                    src_vtxs = torch.cat((batch_vtxs, src_vtxs))
+                    # src_vtxs = torch.cat((batch_vtxs, src_vtxs))
                     src_vtxs_sort = torch.cuda.LongTensor(src_vtxs.size(0))
                     og_idxs = torch.cuda.LongTensor(src_vtxs.size(0))
                     # src_vtxs_nnz = src_vtxs[src_vtxs_nnz_mask]
@@ -1463,18 +1463,31 @@ def main(args, batches=None):
                     features_batch[og_idxs[~src_vtxs_sort_nnz]] = features_zero_row
                     if adj_sample_skip_cols is not None:
                         features_mask = torch.cuda.BoolTensor(features_batch.size(0)).fill_(True)
-                        adj_sample_skip_cols += args.batch_size
-                        features_mask[adj_sample_skip_cols] = False
+                        # adj_sample_skip_cols += args.batch_size
+                        # features_mask[adj_sample_skip_cols] = False
+                        features_mask[adj_sample_skip_cols_feats] = False
                         features_batch = features_batch[features_mask]
 
                     # features_batch_vtxs = features_loc[batch_vtxs]
                     # features_batch = torch.cat((features_batch_vtxs, features_batch))
-                    for j in range(len(adjs)):
+
+                    # for j in range(len(adjs)):
+                    #     adjs_cols = adjs[j]._indices()[1,:]
+                    #     adjs_cols += args.batch_size
+                    #     adjs_indices = torch.stack((adjs[j]._indices()[0,:], adjs_cols))
+                    #     adjs[j] = torch.sparse_coo_tensor(adjs_indices, adjs[j]._values(), 
+                    #                                 size=(adjs[j].size(0), adjs[j].size(1) + args.batch_size))
+                    for j in reversed(range(len(adjs))):
                         adjs_cols = adjs[j]._indices()[1,:]
-                        adjs_cols += args.batch_size
+                        if j == len(adjs) - 1:
+                            adjs_cols += args.batch_size
+                        else:
+                            adjs_cols += adjs[j + 1]._indices()[1,-1] + 1
+                        # adjs_cols += args.batch_size
                         adjs_indices = torch.stack((adjs[j]._indices()[0,:], adjs_cols))
                         adjs[j] = torch.sparse_coo_tensor(adjs_indices, adjs[j]._values(), 
-                                                    size=(adjs[j].size(0), adjs[j].size(1) + args.batch_size))
+                                                    # size=(adjs[j].size(0), features_batch.size(0)))
+                                                    size=(adjs[j].size(0), adjs[j].size(1)))
                 else:
                     # adj_sample_skip_cols += args.batch_size # manual fix, change this
 
