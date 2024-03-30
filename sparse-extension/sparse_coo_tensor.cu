@@ -2876,6 +2876,99 @@ void reduce_sum_gpu(const at::Tensor& matc_crows, const at::Tensor& mata_crows,
     CHECK_ERROR("reduce sum error")
 }
 
+__global__ void CurrCopy(long *curr_rows, 
+                            long *curr_cols, 
+                            float *curr_vals, 
+                            long *output_rows, 
+                            long *output_cols, 
+                            float *output_vals, 
+                            int curr_nnz, int nnz_row, int nnz_col, int mb_count) { 
+
+    int     id = blockIdx.x * blockDim.x + threadIdx.x;
+    int stride = blockDim.x * gridDim.x;
+
+    // mb_id = i / (nnz_row / mb_count)
+    // mb_row_start  = mb_id * ((nnz_row / mb_count) + nnz_col)
+    // dst_idx = mb_row_start + (i % (nnz_row / mb_count)
+
+    for (int i = id; i < curr_nnz; i += stride) {
+        int mb_id = i / (nnz_row / mb_count);
+        int mb_row_start = mb_id * ((nnz_row / mb_count) + nnz_col);
+        int dst_idx = mb_row_start + (i % (nnz_row / mb_count));
+        output_rows[dst_idx] = curr_rows[i];
+        output_cols[dst_idx] = curr_cols[i];
+        output_vals[dst_idx] = curr_vals[i];
+    } 
+}
+
+__global__ void NextCopy(long *next_rows, 
+                            long *next_cols, 
+                            long *next_vals, 
+                            long *output_rows, 
+                            long *output_cols, 
+                            float *output_vals, 
+                            int next_nnz, int nnz_row, int nnz_col, int mb_count) { 
+
+    int     id = blockIdx.x * blockDim.x + threadIdx.x;
+    int stride = blockDim.x * gridDim.x;
+
+    // mb_id = i / (nnz_col)
+    // mb_row_start =  mb_id * ((nnz_row / mb_count) + nnz_col) + nnz_row
+    // dst_idx = mb_row_start + (i % nnz_col)
+
+    for (int i = id; i < next_nnz; i += stride) {
+        int mb_id = i / nnz_col;
+        int mb_row_start = mb_id * ((nnz_row / mb_count) + nnz_col) + (nnz_row / mb_count);
+        int dst_idx = mb_row_start + (i % nnz_col);
+        output_rows[dst_idx] = next_rows[i];
+        output_cols[dst_idx] = next_cols[i];
+        output_vals[dst_idx] = (float) next_vals[i];
+    } 
+}
+
+void frontier_sum_gpu(const at::Tensor& curr_rows, 
+                        const at::Tensor& curr_cols, 
+                        const at::Tensor& curr_vals, 
+                        const at::Tensor& next_rows, 
+                        const at::Tensor& next_cols, 
+                        const at::Tensor& next_vals,
+                        const at::Tensor& output_rows, 
+                        const at::Tensor& output_cols, 
+                        const at::Tensor& output_vals,
+                        int curr_nnz, int next_nnz, int nnz_row, int nnz_col, int mb_count) {
+
+    int BLOCK_SIZE = 256;
+    // int mata_nnz_row_count = mata_nnz_rows.sizes()[0];
+    // int matb_nnz_row_count = matb_nnz_rows.sizes()[0];
+    // int ROW_COUNT = std::max(mata_nnz_row_count, matb_nnz_row_count);
+    int CURR_BLOCK_COUNT = std::ceil(curr_nnz / ((float) BLOCK_SIZE));
+    CURR_BLOCK_COUNT = std::min(CURR_BLOCK_COUNT, 65535);
+    int NEXT_BLOCK_COUNT = std::ceil(next_nnz / ((float) BLOCK_SIZE));
+    NEXT_BLOCK_COUNT = std::min(NEXT_BLOCK_COUNT, 65535);
+
+    if (curr_nnz == 0 || next_nnz == 0) {
+        return;
+    }
+
+    CurrCopy<<<CURR_BLOCK_COUNT, BLOCK_SIZE>>>(curr_rows.data<long>(), 
+                                                    curr_cols.data<long>(),
+                                                    curr_vals.data<float>(),
+                                                    output_rows.data<long>(), 
+                                                    output_cols.data<long>(), 
+                                                    output_vals.data<float>(),
+                                                    curr_nnz, nnz_row, nnz_col, mb_count);
+
+    NextCopy<<<NEXT_BLOCK_COUNT, BLOCK_SIZE>>>(next_rows.data<long>(), 
+                                                    next_cols.data<long>(),
+                                                    next_vals.data<long>(),
+                                                    output_rows.data<long>(), 
+                                                    output_cols.data<long>(), 
+                                                    output_vals.data<float>(),
+                                                    next_nnz, nnz_row, nnz_col, mb_count);
+
+    CHECK_ERROR("frontier sum error")
+}
+
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
     m.def("sparse_coo_tensor_gpu", &sparse_coo_tensor_gpu, "Sparse COO Tensor GPU-only constructor");
     m.def("sparse_csr_tensor_gpu", &sparse_csr_tensor_gpu, "Sparse CSR Tensor GPU-only constructor");
@@ -2905,4 +2998,5 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
     m.def("rearrange_rows_gpu", &rearrange_rows_gpu, "Rearrange rows in in place of local spgemm");
     m.def("rearrangel_rows_gpu", &rearrangel_rows_gpu, "Rearrange rows in in place of local spgemm 64-bit");
     m.def("reduce_sum_gpu", &reduce_sum_gpu, "Sum for SAGE sa-spgemm reduction");
+    m.def("frontier_sum_gpu", &frontier_sum_gpu, "Summing current and next frontiers in SAGE");
 }

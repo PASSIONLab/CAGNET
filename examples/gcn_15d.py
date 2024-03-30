@@ -13,8 +13,8 @@ import torch.autograd.profiler as profiler
 import torch_geometric
 import torch_geometric.transforms as T
 from torch_geometric.data import Data, Dataset
-# from torch_geometric.nn import SAGEConv
-from sage_conv import SAGEConv
+from torch_geometric.nn import SAGEConv
+# from sage_conv import SAGEConv
 from torch_geometric.datasets import Planetoid, Reddit
 from torch_geometric.loader import NeighborSampler
 from torch_geometric.utils import add_remaining_self_loops
@@ -102,7 +102,6 @@ class GCN(nn.Module):
 
         # h = CAGF.log_softmax(self, h, self.partitioning, dim=1)
         h = F.log_softmax(h, dim=1)
-        print(f"h.sum: {h.sum()}", flush=True)
         return h
 
     @torch.no_grad()
@@ -1048,7 +1047,7 @@ def main(args, batches=None):
     # return frontiers, adj_matrices, adj_matrix, col_groups
 
     # create GCN model
-    # torch.manual_seed(0)
+    torch.manual_seed(0)
     if args.sample_method == "sage":
         model = GCN(num_features,
                           args.n_hidden,
@@ -1077,9 +1076,6 @@ def main(args, batches=None):
                           col_groups=col_groups)
     model = model.to(device)
 
-    for name, W in model.named_parameters():
-        print(f"name: {name} W.sum: {W.sum()}", flush=True)
-
     # use optimizer
     # optimizer = torch.optim.Adam(model.parameters(), lr=args.lr * math.sqrt(size))
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr * size)
@@ -1106,8 +1102,6 @@ def main(args, batches=None):
     # g_loc = torch.sparse_csr_tensor(g_loc_crows, g_loc_cols, g_loc.values(), \
     #                                     g_loc.size())
     g_loc = g_loc.to(device)
-    print(f"g_loc: {g_loc}", flush=True)
-    print(f"g_loc[vtx23]: {g_loc.col_indices()[g_loc.crow_indices()[23]:g_loc.crow_indices()[24]]}", flush=True)
     # csr_topo = quiver.CSRTopo(adj_matrix)
     # quiver_sampler = quiver.pyg.GraphSageSampler(csr_topo, [args.samp_num] * args.n_layers, 0, 
     #                                                 mode='UVA')
@@ -1158,7 +1152,6 @@ def main(args, batches=None):
                 args.batch_size = batch_count - b
             torch.cuda.nvtx.range_push("nvtx-partition-batches")
             batches = batches_all[b:(b + args.n_bulkmb * args.batch_size)].view(args.n_bulkmb, args.batch_size)
-            print(f"batches: {batches}", flush=True)
             if args.sample_method == "sage":
                 batches_loc = one5d_partition_mb(rank, size, batches, 1, args.n_bulkmb)
             elif args.sample_method == "ladies":
@@ -1224,7 +1217,6 @@ def main(args, batches=None):
                                                                         col_groups, args.timing, args.baseline,
                                                                         args.replicate_graph)
                 
-            print(f"frontiers_bulk: {frontiers_bulk}", flush=True)
             if epoch >= 1:
                 model.timings["sample"].append(stop_time(start_timer, stop_timer, timing_arg=True))
             torch.cuda.nvtx.range_pop() # nvtx-sampling
@@ -1265,10 +1257,7 @@ def main(args, batches=None):
                     src_select_min = i * nnz_col
                     src_select_max = (i + 1) * nnz_col
 
-                    print(f"i: {i} src_select_min: {src_select_min} src_select_max: {src_select_max}", flush=True)
                     src_vtxs = frontiers_bulk[-1][src_select_min:src_select_max,:].view(-1)
-                    print(f"i: {i} batch_vtxs: {batch_vtxs}", flush=True)
-                    print(f"i: {i} src_vtxs: {src_vtxs}", flush=True)
 
                     # print(f"i: {i} batch_vtxs: {batch_vtxs}", flush=True)
                     # frontiers_test[0][i] = frontiers_bulk[0][batch_select_min:batch_select_max,:]
@@ -1306,7 +1295,6 @@ def main(args, batches=None):
                     adj_nnz_start = adj_matrices_bulk[l].crow_indices()[adj_row_select_min]
                     adj_nnz_stop = adj_matrices_bulk[l].crow_indices()[adj_row_select_max]
 
-                    print(f"adj_mat: {adj_matrices_bulk[l]}", flush=True)
                     adj_sample_crows = adj_matrices_bulk[l].crow_indices()[adj_row_select_min:(adj_row_select_max+1)].clone()
                     adj_sample_cols = adj_matrices_bulk[l].col_indices()[adj_nnz_start:adj_nnz_stop]
                     crows_start = adj_sample_crows[0].item()
@@ -1353,12 +1341,8 @@ def main(args, batches=None):
                         #                         args.batch_size * (np.prod(args.samp_num[:(l+1)], dtype=int))))
                         # adj_nnzs.append(adj_sample_values.size(0))
                         if l > 0:
-                            print(f"adj_sample_crows: {adj_sample_crows}", flush=True)
                             adj_sample_row_lens = adj_sample_crows[1:] - adj_sample_crows[:-1]
                             # adj_sample_row_lens[adj_sample_skip_cols] = 0
-                            print(f"row_lens: {adj_sample_row_lens}", flush=True)
-                            print(f"skip_cols: {adj_sample_skip_cols}", flush=True)
-                            print(F"adj_sample_cols: {adj_sample_cols}", flush=True)
                             adj_sample_row_lens[adj_sample_skip_cols] = -1
                             row_mask = adj_sample_row_lens > -1
                             adj_sample_row_lens = adj_sample_row_lens[row_mask]
@@ -1384,12 +1368,9 @@ def main(args, batches=None):
                         # row_count = args.batch_size * np.prod(args.samp_num[:l], dtype=int)
                         # col_count = args.batch_size * np.prod(args.samp_num[:(l+1)], dtype=int)
                         col_count = nnz_row * args.samp_num[l]
-                        print(f"before adj_sample_skip_cols: {adj_sample_skip_cols}", flush=True)
                         adj_sample_skip_cols_prev = adj_sample_skip_cols
                         adj_sample_skip_cols = torch.histc(adj_sample_cols, bins=col_count)
                         adj_sample_skip_cols = (adj_sample_skip_cols == 0).nonzero().squeeze(1)
-                        print(f"adj_sample_cols: {adj_sample_cols} skip_cols: {adj_sample_skip_cols} col_count: {col_count}", flush=True)
-                        print(f"skip_cols_prev: {adj_sample_skip_cols_prev}", flush=True)
                         if l == 0:
                             adj_sample_skip_cols += args.batch_size
                             adj_sample_skip_cols_feats = adj_sample_skip_cols
@@ -1398,10 +1379,8 @@ def main(args, batches=None):
                             for adj in adjs:
                                 if adj is not None:
                                     inc += adj._indices()[1,-1] + 1
-                            print(f"inc: {inc}", flush=True)
                             adj_sample_skip_cols += inc
                             adj_sample_skip_cols_feats = torch.cat((adj_sample_skip_cols_prev, adj_sample_skip_cols))
-                            print(f"adj_sample_skip_cols_feats: {adj_sample_skip_cols_feats}", flush=True)
                         # print(f"l: {l} adj_sample_cols: {adj_sample_cols} adj_sample_skip_cols: {adj_sample_skip_cols}", flush=True)
                         # col_count = args.batch_size * np.prod(args.samp_num[:(l+1)], dtype=int) - \
                         #                 adj_sample_skip_cols.size(0)
@@ -1410,7 +1389,6 @@ def main(args, batches=None):
                         # print(f"adj_sample_skip_cols: {adj_sample_skip_cols}", flush=True)
                         # print(f"adj_sample_cols: {adj_sample_cols}", flush=True)
                         adj_sample_indices = torch.stack((adj_sample_rows, adj_sample_cols))
-                        print(f"row_count: {row_count} col_count: {col_count} nnz_col: {nnz_col} skip_cols: {adj_sample_skip_cols.size(0)}", flush=True)
                         adj_matrix_sample = torch.sparse_coo_tensor(adj_sample_indices, \
                                                         adj_sample_values, (nnz_row, nnz_col))
                                                     # (args.batch_size * (args.samp_num ** l), \
@@ -1436,10 +1414,7 @@ def main(args, batches=None):
                 torch.cuda.nvtx.range_push("nvtx-selectfeats")
                 if size > 1:
 
-                    print(f"batch_vtxs: {batch_vtxs}", flush=True)
-                    print(f"src_vtxs: {src_vtxs}", flush=True)
                     src_vtxs = torch.cat((batch_vtxs, src_vtxs))
-                    print(f"src_vtxs2: {src_vtxs}", flush=True)
                     src_vtxs_sort = torch.cuda.LongTensor(src_vtxs.size(0))
                     og_idxs = torch.cuda.LongTensor(src_vtxs.size(0))
                     # src_vtxs_nnz = src_vtxs[src_vtxs_nnz_mask]
@@ -1501,13 +1476,7 @@ def main(args, batches=None):
                         adjs[j] = torch.sparse_coo_tensor(adjs_indices, adjs[j]._values(), 
                                                     size=(adjs[j].size(0), adjs[j].size(1) + args.batch_size))
                 else:
-                    print(f"batch_vtxs.size: {batch_vtxs.size()}", flush=True)
-                    print(f"src_vtxs.size: {src_vtxs.size()}", flush=True)
-                    print(f"batch_vtxs: {batch_vtxs}", flush=True)
-                    print(f"src_vtxs: {src_vtxs}", flush=True)
                     # adj_sample_skip_cols += args.batch_size # manual fix, change this
-                    print(f"(src_vtxs == 0).nnz: {(src_vtxs == 0).nonzero().squeeze()}", flush=True)
-                    print(f"adj_sample_skip_cols: {adj_sample_skip_cols}", flush=True)
 
                     # features_batch_vtxs = features_loc[batch_vtxs]
                     # features_batch = torch.cat((features_batch_vtxs, features_batch))
@@ -1539,10 +1508,6 @@ def main(args, batches=None):
                         #     adj_sample_skip_cols[skip_cols_mask] += adjs[adj_idx].size(0)
                         #     col_start += adjs[adj_idx].size(0)
                         # adj_sample_skip_cols = (src_vtxs == -1).nonzero().squeeze()
-                        print(f"src_vtxs == 0: {(src_vtxs == 0).nonzero().squeeze()}", flush=True)
-                        print(f"adj_sample_skip_cols_mod: {adj_sample_skip_cols}", flush=True)
-                        print(f"adj_sample_skip_cols_feats: {adj_sample_skip_cols_feats}", flush=True)
-                        print(f"features_batch.size: {features_batch.size()}", flush=True)
                         features_mask[adj_sample_skip_cols_feats] = False
                         features_batch = features_batch[features_mask]
 
@@ -1595,11 +1560,7 @@ def main(args, batches=None):
                 # adjs = [adj.to(rank) for adj in adjs]
                 # features_batch = features_loc[n_id]
                 optimizer.zero_grad()
-                print(f"adjs: {adjs} features_batch: {features_batch}", flush=True)
-                print(f"features_batch.size: {features_batch.size()}", flush=True)
                 logits = model(adjs, features_batch, epoch)
-                print(f"logits.size: {logits.size()}", flush=True)
-                print(f"logits.sum: {logits.sum()}", flush=True)
                 torch.cuda.nvtx.range_pop() # nvtx-fwd
                 if epoch >= 1:
                     model.timings["fwd"].append(stop_time(start_inner_timer, stop_inner_timer, timing_arg=True))
@@ -1624,8 +1585,6 @@ def main(args, batches=None):
                 if epoch >= 1:
                     model.timings["bwd"].append(stop_time(start_inner_timer, stop_inner_timer, timing_arg=True))
 
-                for name, W in model.named_parameters():
-                    print(f"name: {name} W.sum: {W.sum()} W.grad.sum: {W.grad.sum()}", flush=True)
                 for W in model.parameters():
                     dist.all_reduce(W.grad)
                     W.grad /= size

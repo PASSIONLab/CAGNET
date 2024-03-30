@@ -11,7 +11,7 @@ from sparse_coo_tensor_cpp import downsample_gpu, compute_darts_gpu, throw_darts
                                     compute_darts1d_gpu, throw_darts1d_gpu, normalize_gpu, \
                                     shift_rowselect_gpu, shift_colselect_gpu, \
                                     scatteri_add_gpu, rowselect_coo_gpu, \
-                                    sparse_coo_tensor_gpu
+                                    sparse_coo_tensor_gpu, frontier_sum_gpu 
 
 
 timing = True
@@ -192,7 +192,7 @@ def sage_sampler(adj_matrix, batches, batch_size, frontier_sizes, mb_count_total
                                                 torch.Size([nnz_row, node_count_total]))
                                                 # torch.Size([nnz * mb_count, node_count_total]))
 
-        next_frontier = next_frontier.coalesce()
+        # next_frontier = next_frontier.coalesce()
         # next_frontier_select = next_frontier._indices()[1,:].view(mb_count * nnz, frontier_size)
         next_frontier_select = next_frontier._indices()[1,:].view(-1)
         # current_frontier_select = torch.masked_select(current_frontier.col_indices(), \
@@ -243,23 +243,41 @@ def sage_sampler(adj_matrix, batches, batch_size, frontier_sizes, mb_count_total
         next_frontier_increments = torch.arange(1, mb_count + 1, dtype=torch.int32, device=gpu)
         next_frontier_increments *= nnz_row // mb_count
         next_frontier_increments = next_frontier_increments.repeat_interleave(nnz_col)
-        print(f"nnz_row: {nnz_row} nnz_col: {nnz_col}", flush=True)
-        print(f"next_frontier_indices.size: {next_frontier._indices().size()} next_frontier_increments.size: {next_frontier_increments.size()}", flush=True)
         next_frontier_rows = next_frontier._indices()[0,:] + next_frontier_increments
         next_frontier_idxs = torch.stack((next_frontier_rows, next_frontier._indices()[1,:]))
 
         next_frontier = sparse_coo_tensor_gpu(next_frontier_idxs, next_frontier._values(), 
                                            torch.Size([nnz_row + nnz_col * mb_count, next_frontier.size(1)]))
         # next_frontier = torch.cat((current_frontier, next_frontier))
-        print(f"current_frontier: {current_frontier}", flush=True)
-        print(f"before next_frontier: {next_frontier}", flush=True)
-        next_frontier = current_frontier + next_frontier
-        print(f"after1 next_frontier: {next_frontier}", flush=True)
-        next_frontier = next_frontier.coalesce()
-        print(f"after2 next_frontier: {next_frontier}", flush=True)
+        # print(f"before current_frontier: {current_frontier}", flush=True)
+        # current_frontier = current_frontier.coalesce()
+        # print(f"after current_frontier: {current_frontier}", flush=True)
+        # print(f"before next_frontier: {next_frontier}", flush=True)
+        # print(f"before next_frontier[==0]: {next_frontier._indices()[:,next_frontier._values() == 0]}", flush=True)
+        # print(f"before next_frontier[==0].size: {next_frontier._indices()[:,next_frontier._values() == 0].size()}", flush=True)
+        # next_frontier = next_frontier.coalesce()
+        # print(f"after next_frontier: {next_frontier}", flush=True)
+        # print(f"after next_frontier[==0]: {next_frontier._indices()[:,next_frontier._values() == 0]}", flush=True)
+        # print(f"after next_frontier[==0].size: {next_frontier._indices()[:,next_frontier._values() == 0].size()}", flush=True)
+        # next_frontier = current_frontier + next_frontier
+        output_indices = torch.cuda.LongTensor(2, current_frontier._nnz() + next_frontier._nnz()).fill_(123123)
+        output_vals = torch.cuda.FloatTensor(current_frontier._nnz() + next_frontier._nnz()).fill_(123123.0)
+        frontier_sum_gpu(current_frontier._indices()[0,:], 
+                            current_frontier._indices()[1,:], 
+                            current_frontier._values(), 
+                            next_frontier._indices()[0,:],
+                            next_frontier._indices()[1,:], 
+                            next_frontier._values(), 
+                            output_indices[0,:],
+                            output_indices[1,:],
+                            output_vals,
+                            current_frontier._nnz(), next_frontier._nnz(), nnz_row, nnz_col, mb_count);
+        next_frontier = torch.sparse_coo_tensor(output_indices, output_vals, next_frontier.size())
+        # next_frontier = next_frontier.coalesce()
+        # print(f"after2 next_frontier: {next_frontier}", flush=True)
+        next_frontier_select = next_frontier._indices()[1,:].view(-1) #.clone()
 
         # next_frontier_missing_vtxs = next_frontier._values() == 0
-        next_frontier_select = next_frontier._indices()[1,:].view(-1) #.clone()
         # next_frontier_select[next_frontier_missing_vtxs] = -1
 
         # adj_matrices[i] = adj_matrix_sample
@@ -270,7 +288,6 @@ def sage_sampler(adj_matrix, batches, batch_size, frontier_sizes, mb_count_total
         # print(f"current_frontier_select.size: {current_frontier_select.size()}", flush=True)
         # print(f"next_frontier_select: {next_frontier_select}", flush=True)
         # print(f"next_frontier_select.size: {next_frontier_select.size()}", flush=True)
-        print(f"adj_sample: {adj_matrix_sample}", flush=True)
         if i + 1 == n_layers:
             frontiers[i + 1] = next_frontier_select.view(-1, 1)
         # else:
