@@ -98,7 +98,7 @@ class GCN(nn.Module):
             if l != len(self.layers) - 1:
                 # h = CAGF.relu(h, self.partitioning)
                 h = F.relu(h)
-                # h = F.dropout(h, p=0.5, training=self.training)
+                h = F.dropout(h, p=0.5, training=self.training)
 
         # h = CAGF.log_softmax(self, h, self.partitioning, dim=1)
         h = F.log_softmax(h, dim=1)
@@ -106,98 +106,73 @@ class GCN(nn.Module):
 
     @torch.no_grad()
     def evaluate(self, graph, features, test_idx, labels):
-        # subgraph_loader = NeighborSampler(graph, node_idx=None,
-        #                                   sizes=[-1], batch_size=2048,
-        #                                   shuffle=False, num_workers=6)
 
-        # for i in range(self.n_layers):
-        #     xs = []
-        #     for batch_size, n_id, adj in subgraph_loader:
-        #         edge_index, _, size = adj.to(self.device)
-        #         x = features[n_id].to(self.device)
-        #         # edge_index, _, size = adj
-        #         # x = features[n_id]
-        #         # x_target = x[:size[1]]
-        #         # x = self.convs[i]((x, x_target), edge_index)
-        #         x = self.layers[i](x, edge_index)
-        #         if i != self.n_layers - 1:
-        #             x = F.relu(x)
-        #         # xs.append(x)
-        #         xs.append(x[:batch_size])
-
-        #     features = torch.cat(xs, dim=0)
-
-        # return features
-
-        subgraph_loader = NeighborSampler(graph, node_idx=None,
-                                          sizes=[-1], batch_size=1024,
-        # subgraph_loader = NeighborSampler(graph, node_idx=test_idx,
-                                          # sizes=[-1, -1], batch_size=512,
-                                          shuffle=False, num_workers=6)
-        non_eval_timings = copy.deepcopy(self.timings)
-        for l, layer in enumerate(self.layers):
-            hs = []
-            for batch_size, n_id, adj in subgraph_loader:
-                # edge_index, _, size = adj.to(self.device)
-                edge_index, _, size = adj
+        # for papers100M
+        subgraph_loader = NeighborSampler(graph, node_idx=test_idx,
+                                          sizes=[20] * self.n_layers, batch_size=1024,
+                                          shuffle=False, num_workers=32)
+        # non_eval_timings = copy.deepcopy(self.timings)
+        hs = []
+        batch_count = 0
+        for batch_size, n_id, adjs in subgraph_loader:
+            # h = features[n_id].to(self.device)
+            h = features[n_id]
+            print(f"batch_count: {batch_count} total: {len(subgraph_loader)}", flush=True)
+            for l, layer in enumerate(self.layers):
+                edge_index, _, size = adjs[l]
+                # edge_index_cpu, _, size = adjs[l]
+                # del edge_index_cpu
                 adj_batch = torch.sparse_coo_tensor(edge_index, 
                                                         torch.FloatTensor(edge_index.size(1)).fill_(1.0),
+                                                        # torch.cuda.FloatTensor(edge_index.size(1)).fill_(1.0),
                                                         size)
                 adj_batch = adj_batch.t().coalesce()
-                h = features[n_id]
 
                 # h = layer(self, adj_batch, h_batch, epoch=-1) # GCNConv
                 h = self.layers[l](h, edge_index)
+
+                del edge_index
+                del adj_batch
                 if l != len(self.layers) - 1:
                     h = CAGF.relu(h, self.partitioning)
-                # hs.append(h) # GCNConv
-                hs.append(h[:batch_size]) # SAGEConv
-            features = torch.cat(hs, dim=0)
+            hs.append(h[:batch_size])
+            batch_count += 1
+        features = torch.cat(hs, dim=0)
         return features
-
-        # print(f"test_idx: {test_idx}", flush=True)
-        # non_eval_timings = copy.deepcopy(self.timings)
-        # correct_count = 0
-        # for batch_size, n_id, adjs in subgraph_loader:
-        #     h = features[n_id]
-        #     for l, (edge_index, _, size) in enumerate(adjs):
-        #         # h = layer(self, adj_batch, h_batch, epoch=-1) # GCNConv
-        #         h = self.layers[l](h, edge_index) # SAGEConv
-        #         if l != len(self.layers) - 1:
-        #             h = F.relu(h)
-        #     h = F.log_softmax(h, dim=1)
-        #     batch = n_id[:batch_size]
-        #     print(f"batch: {batch}", flush=True)
-        #     print(f"h[:batch_size]: {h[:batch_size]}", flush=True)
-        #     print(f"h[:batch_size].argmax(dim=-1): {h[:batch_size].argmax(dim=-1)}", flush=True)
-        #     preds = h[:batch_size].argmax(dim=-1) == labels[batch]
-        #     correct_count += preds.sum()
-        # return correct_count
-
-        # """ SAGEConv inference """
         # subgraph_loader = NeighborSampler(graph, node_idx=None,
-        #                                   sizes=[-1], batch_size=2048,
-        #                                   shuffle=False)
-
-        # # Compute representations of nodes layer by layer, using *all*
-        # # available edges. This leads to faster computation in contrast to
-        # # immediately computing the final representations of each batch.
-        # total_edges = 0
-        # for i in range(self.n_layers):
-        #     xs = []
+        #                                   sizes=[20], batch_size=1024,
+        #                                   shuffle=False, num_workers=64)
+        # # non_eval_timings = copy.deepcopy(self.timings)
+        # for l, layer in enumerate(self.layers):
+        #     hs = []
+        #     print(f"l: {l}", flush=True)
         #     for batch_size, n_id, adj in subgraph_loader:
-        #         edge_index, _, size = adj.to(self.device)
-        #         total_edges += edge_index.size(1)
-        #         x = features[n_id].to(self.device)
-        #         # x_target = x[:size[1]]
-        #         # x = self.convs[i]((x, x_target), edge_index)
-        #         x = self.layers[i](x, edge_index) # SAGEConv
-        #         if i != self.n_layers - 1:
-        #             x = F.relu(x)
-        #         x = x[:batch_size]
-        #         xs.append(x)
-        #     features = torch.cat(xs, dim=0)
+        #         edge_index_cpu, _, size = adj
+        #         edge_index = edge_index_cpu.to(self.device)
+        #         del edge_index_cpu
+        #         adj_batch = torch.sparse_coo_tensor(edge_index, 
+        #                                                 torch.cuda.FloatTensor(edge_index.size(1)).fill_(1.0),
+        #                                                 size)
+        #         adj_batch = adj_batch.t().coalesce()
+        #         h = features[n_id].to(self.device)
 
+        #         # h = layer(self, adj_batch, h_batch, epoch=-1) # GCNConv
+        #         h = self.layers[l](h, edge_index)
+
+        #         del edge_index
+        #         del adj_batch
+        #         if l != len(self.layers) - 1:
+        #             h = CAGF.relu(h, self.partitioning)
+        #         # hs.append(h) # GCNConv
+        #         h_ans = h[:batch_size]
+        #         hs.append(h_ans.cpu()) # SAGEConv
+        #         del h
+        #         del h_ans
+        #     del features
+        #     features = torch.cat(hs, dim=0)
+        #     for tens in hs:
+        #         del tens
+        #     del hs
         # return features
 
 class LADIES(nn.Module):
@@ -285,7 +260,7 @@ class LADIES(nn.Module):
         # return features
 
         subgraph_loader = NeighborSampler(graph, node_idx=None,
-                                          sizes=[-1], batch_size=2048,
+                                          sizes=[20], batch_size=1024,
         # subgraph_loader = NeighborSampler(graph, node_idx=test_idx,
                                           # sizes=[-1, -1], batch_size=512,
                                           shuffle=False)
@@ -668,7 +643,10 @@ def main(args, batches=None):
                 print(f"data.y: {data.y} data.y.dtype {data.y.dtype}", flush=True)
                 train_idx = torch.load("/global/u1/a/alokt/data/ogbn_papers100M/index/train_idx.pt")
                 train_idx = train_idx.to(device)
+                test_idx = torch.load("/global/u1/a/alokt/data/ogbn_papers100M/index/test_idx.pt")
+                test_idx = test_idx.to(device)
                 print(f"train_idx: {train_idx} train_idx.dtype {train_idx.dtype}", flush=True)
+                print(f"test_idx: {test_idx} test_idx.dtype {test_idx.dtype}", flush=True)
                 inputs = torch.load("/global/u1/a/alokt/data/ogbn_papers100M/feat/feature.pt")
                 print(f"inputs: {inputs} inputs.dtype {inputs.dtype}", flush=True)
                 num_features = inputs.size(1)
@@ -715,16 +693,30 @@ def main(args, batches=None):
 
                 if args.dataset == "ogbn-papers100M":
                     print(f"begin copying", flush=True)
-                    adj_matrix_crows = torch.load("/global/u1/a/alokt/data/ogbn_papers100M/csr/indptr.pt")
-                    adj_matrix_cols = torch.load("/global/u1/a/alokt/data/ogbn_papers100M/csr/indices.pt")
+                    # adj_matrix_crows = torch.load("/global/u1/a/alokt/data/ogbn_papers100M/csr/indptr.pt")
+                    # adj_matrix_cols = torch.load("/global/u1/a/alokt/data/ogbn_papers100M/csr/indices.pt")
+                    adj_matrix_crows = torch.load("/global/u1/a/alokt/data/ogbn_papers100M/csr/indptr_reverse.pt")
+                    adj_matrix_cols = torch.load("/global/u1/a/alokt/data/ogbn_papers100M/csr/indices_reverse.pt")
+                    # adj_matrix_crows = torch.load("/global/u1/a/alokt/data/ogbn_papers100M/csr/indptr_selfloop.pt")
+                    # adj_matrix_cols = torch.load("/global/u1/a/alokt/data/ogbn_papers100M/csr/indices_selfloop.pt")
                     print(f"adj_matrix_crows: {adj_matrix_crows} dtype: {adj_matrix_crows.dtype} device: {adj_matrix_crows.device}", flush=True)
                     print(f"adj_matrix_cols: {adj_matrix_cols} dtype: {adj_matrix_cols.dtype} device: {adj_matrix_cols.device}", flush=True)
                     # adj_matrix_crows = adj_matrix_crows.int().to(device)
                     # adj_matrix_cols = adj_matrix[1,:].int().to(device)
+                    print(f"adj_matrix_crows[104308835]: {adj_matrix_cols[adj_matrix_crows[104308835]:adj_matrix_crows[104308835 + 1]]}", flush=True)
                     adj_matrix_vals = torch.FloatTensor(adj_matrix_cols.size(0)).fill_(1)
-                    g_loc = torch.sparse_csr_tensor(adj_matrix_crows.int(), adj_matrix_cols.int(), \
+                    adj_matrix_crows = adj_matrix_crows.int()
+                    adj_matrix_cols = adj_matrix_cols.int()
+                    g_loc = torch.sparse_csr_tensor(adj_matrix_crows, adj_matrix_cols, \
                                                         adj_matrix_vals, \
                                                         torch.Size([inputs.size(0), inputs.size(0)]))
+                    # adj_matrix = g_loc.clone().cpu().to_sparse_coo()._indices()
+                    g_loc_gpu = g_loc.to(device)
+                    del adj_matrix_crows
+                    del adj_matrix_cols
+                    del adj_matrix_vals
+                    del g_loc
+                    g_loc = g_loc_gpu
                 else:
                     print(f"begin construction", flush=True)
                     adj_matrix_vals = torch.FloatTensor(adj_matrix.size(1)).fill_(1)
@@ -734,7 +726,9 @@ def main(args, batches=None):
                     g_loc_crows = g_loc.crow_indices().int()
                     g_loc_cols = g_loc.col_indices().int()
                     g_loc = torch.sparse_csr_tensor(g_loc_crows, g_loc_cols, adj_matrix_vals, g_loc.size())
-                g_loc = g_loc.to(device)
+                    g_loc_gpu = g_loc.to(device)
+                    del g_loc
+                    g_loc = g_loc_gpu
             else:
                 adj_matrix = adj_matrix.to(torch.device("cpu"))
                 features_loc, g_loc, am_partitions, input_partitions = \
@@ -800,11 +794,11 @@ def main(args, batches=None):
 
                 if args.dataset == "ogbn-papers100M":
                     train_idx_len = torch.cuda.LongTensor(1).fill_(train_idx.size(0))
-                    # test_idx_len = torch.cuda.LongTensor(1).fill_(test_idx.size(0))
+                    test_idx_len = torch.cuda.LongTensor(1).fill_(test_idx.size(0))
                     dist.send(train_idx_len, dst=dst_gpu)
-                    # dist.send(test_idx_len, dst=dst_gpu)
+                    dist.send(test_idx_len, dst=dst_gpu)
                     dist.send(train_idx, dst=dst_gpu)
-                    # dist.send(test_idx, dst=dst_gpu)
+                    dist.send(test_idx, dst=dst_gpu)
             if args.sample_method == "sage":
                 if args.replicate_graph:
                     edge_count = g_loc.col_indices().size(0)
@@ -901,7 +895,12 @@ def main(args, batches=None):
                 g_loc_values = g_loc_values.cpu()
                 g_loc = torch.sparse_csr_tensor(g_loc_crows, g_loc_cols, g_loc_values, \
                                                     torch.Size([g_loc_meta[1], g_loc_meta[2]]))
-                g_loc = g_loc.to(device)
+                g_loc_gpu = g_loc.to(device)
+                del g_loc_crows
+                del g_loc_cols
+                del g_loc_values
+                del g_loc
+                g_loc = g_loc_gpu
                 edge_count = g_loc_meta[3].item()
             else:
                 src_gpu = rank - (rank % args.gpu)
@@ -952,14 +951,14 @@ def main(args, batches=None):
 
             if args.dataset == "ogbn-papers100M":
                 train_idx_len = torch.cuda.LongTensor(1).fill_(0)
-                # test_idx_len = torch.cuda.LongTensor(1).fill_(0)
+                test_idx_len = torch.cuda.LongTensor(1).fill_(0)
                 dist.recv(train_idx_len, src=src_gpu)
-                # dist.recv(test_idx_len, src=src_gpu)
+                dist.recv(test_idx_len, src=src_gpu)
 
                 train_idx = torch.cuda.LongTensor(train_idx_len.item()).fill_(0)
-                # test_idx = torch.cuda.LongTensor(test_idx_len.item()).fill_(0)
+                test_idx = torch.cuda.LongTensor(test_idx_len.item()).fill_(0)
                 dist.recv(train_idx, src=src_gpu)
-                # dist.recv(test_idx, src=src_gpu)
+                dist.recv(test_idx, src=src_gpu)
             torch.cuda.synchronize()
             features_loc = inputs.to(device)
     else:
@@ -1030,7 +1029,9 @@ def main(args, batches=None):
     else:
         if args.dataset == "ogbn-papers100M":
             train_nid = train_idx
+            test_nid = test_idx
             print(f"train_nid.size: {train_nid.size()}")
+            print(f"test_nid.size: {test_nid.size()}")
         else:
             train_nid = train_idx
             test_nid = test_idx
@@ -1047,7 +1048,7 @@ def main(args, batches=None):
     # return frontiers, adj_matrices, adj_matrix, col_groups
 
     # create GCN model
-    # torch.manual_seed(0)
+    torch.manual_seed(0)
     if args.sample_method == "sage":
         model = GCN(num_features,
                           args.n_hidden,
@@ -1077,8 +1078,8 @@ def main(args, batches=None):
     model = model.to(device)
 
     # use optimizer
-    # optimizer = torch.optim.Adam(model.parameters(), lr=args.lr * math.sqrt(size))
-    optimizer = torch.optim.Adam(model.parameters(), lr=args.lr * size)
+    optimizer = torch.optim.Adam(model.parameters(), lr=args.lr * math.sqrt(size))
+    # optimizer = torch.optim.Adam(model.parameters(), lr=args.lr * size)
     # optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
 
     dur = []
@@ -1283,11 +1284,9 @@ def main(args, batches=None):
                             nnz_row += nnz_row * args.samp_num[j]
                         nnz_col += nnz_col * args.samp_num[j]
 
-                    print(f"i: {i} nnz_row: {nnz_row} nnz_col: {nnz_col}", flush=True)
                     adj_row_select_min = i * nnz_row
                     adj_row_select_max = (i + 1) * nnz_row
                     adj_row_select_max = min(adj_row_select_max, adj_matrices_bulk[l].size(0))
-                    print(f"min: {adj_row_select_min} max: {adj_row_select_max}", flush=True)
 
                     if epoch >= 1:
                         start_time(start_inner_timer, timing_arg=True)
@@ -1352,6 +1351,12 @@ def main(args, batches=None):
                                                                 device=adj_sample_row_lens.device), 
                                                 adj_sample_row_lens)
                             nnz_col_mask = torch.cuda.BoolTensor(adj_sample_crows[-1].item()).fill_(False)
+                            # print(f"skip_cols: {adj_sample_skip_cols}", flush=True)
+                            # print(f"row_lens: {adj_sample_row_lens}", flush=True)
+                            # print(f"row_lens.size: {adj_sample_row_lens.size()}", flush=True)
+                            # print(f"row_lens == 0: {(adj_sample_row_lens == 0).sum()}", flush=True)
+                            # print(f"adj_sample_rows: {adj_sample_rows}", flush=True)
+                            # print(f"row_count: {row_count}", flush=True)
                             rowselect_csr_gpu(adj_sample_skip_cols, adj_sample_crows, nnz_col_mask, \
                                                     adj_sample_skip_cols.size(0), adj_sample_crows[-1])
                             adj_sample_values = adj_sample_values[~nnz_col_mask]
@@ -1359,10 +1364,15 @@ def main(args, batches=None):
                         else:
                             adj_sample_row_lens = adj_sample_crows[1:] - adj_sample_crows[:-1]
                             row_count = adj_row_select_max - adj_row_select_min
+                            print(f"adj_sample_row_lens: {adj_sample_row_lens}", flush=True)
+                            print(f"adj_sample_row_lens.size: {adj_sample_row_lens.size()}", flush=True)
+                            print(f"(adj_sample_row_lens == 0): {(adj_sample_row_lens == 0).sum()}", flush=True)
+                            print(f"row_count: {row_count}", flush=True)
                             adj_sample_rows = torch.repeat_interleave(
                                                 torch.arange(0, row_count, 
                                                                 device=adj_sample_row_lens.device), 
                                                 adj_sample_row_lens)
+                            print(f"adj_sample_row_lens: {adj_sample_rows}", flush=True)
 
                         # frontier_nnz_sizes = torch.histc(next_frontier._indices()[0,next_frontier_nnz], bins=p.size(0))
                         # row_count = args.batch_size * np.prod(args.samp_num[:l], dtype=int)
@@ -1381,9 +1391,14 @@ def main(args, batches=None):
                                     inc += adj._indices()[1,-1] + 1
                             adj_sample_skip_cols += inc
                             adj_sample_skip_cols_feats = torch.cat((adj_sample_skip_cols_prev, adj_sample_skip_cols))
+                        print(f"adj_sample_skip_cols_feats: {adj_sample_skip_cols_feats}", flush=True)
+                        print(f"adj_sample_skip_cols_feats.size: {adj_sample_skip_cols_feats.size()}", flush=True)
                         # print(f"l: {l} adj_sample_cols: {adj_sample_cols} adj_sample_skip_cols: {adj_sample_skip_cols}", flush=True)
                         # col_count = args.batch_size * np.prod(args.samp_num[:(l+1)], dtype=int) - \
                         #                 adj_sample_skip_cols.size(0)
+                        adj_sample_skip_cols = adj_sample_skip_cols_feats
+                        print(f"adj_sample_skip_cols: {adj_sample_skip_cols}", flush=True)
+                        print(f"adj_sample_skip_cols.size: {adj_sample_skip_cols.size()}", flush=True)
                         col_count = nnz_col - adj_sample_skip_cols.size(0)
                         adj_sample_cols = torch.arange(0, adj_sample_values.size(0), device=device, dtype=int)
                         # print(f"adj_sample_skip_cols: {adj_sample_skip_cols}", flush=True)
@@ -1573,6 +1588,15 @@ def main(args, batches=None):
                 # adjs = [adj.to(rank) for adj in adjs]
                 # features_batch = features_loc[n_id]
                 optimizer.zero_grad()
+                print(f"adjs: {adjs}", flush=True)
+                print(f"features_batch: {features_batch}", flush=True)
+                print(f"batch_vtxs: {batch_vtxs}", flush=True)
+                degrees = torch.cuda.LongTensor(batch_vtxs.size(0))
+                for vtx_idx, vtx in enumerate(batch_vtxs):
+                    deg = g_loc.crow_indices()[vtx + 1] - g_loc.crow_indices()[vtx]
+                    degrees[vtx_idx] = deg
+                print(f"degrees: {degrees}", flush=True)
+                print(f"degrees == 0: {(degrees == 0).sum()}", flush=True)
                 logits = model(adjs, features_batch, epoch)
                 torch.cuda.nvtx.range_pop() # nvtx-fwd
                 if epoch >= 1:
@@ -1636,6 +1660,7 @@ def main(args, batches=None):
         if epoch >= 1:
             dur.append(time.time() - epoch_start)
         if rank == 0 and epoch >= 1 and (epoch % 5 == 0 or epoch == args.n_epochs - 1):
+            model.eval()
             print("Evaluating", flush=True)
             # acc = model.evaluate(g_loc, features_loc, labels_rank, rank_val_nids, \
             #                     data.val_mask.nonzero().squeeze().size(0), col_groups[0])
@@ -1675,20 +1700,48 @@ def main(args, batches=None):
                 # print(f"adj1_nnz.median: {np.median(adj1_nnzs)}")
                 # print(f"adj_nnzs.median: {np.median(adj_nnzs)}")
                 print(f"total: {np.sum(dur) / epoch}", flush=True)
-            if args.sample_method == "sage" and args.dataset != "ogbn-papers100M" and args.dataset != "Amazon" and ("Protein" not in args.dataset):
-                model = model.cpu()
+            # if args.sample_method == "sage" and args.dataset != "ogbn-papers100M" and args.dataset != "Amazon" and ("Protein" not in args.dataset):
+            if args.sample_method == "sage" and args.dataset != "Amazon" and ("Protein" not in args.dataset):
                 train_nid = train_nid.cpu()
                 test_nid = test_nid.cpu()
-                out = model.evaluate(adj_matrix, inputs, test_nid, data.y)
+                adj_matrix_csr = g_loc.cpu()
+                adj_matrix = adj_matrix_csr.clone().detach().to_sparse_coo()._indices()
+                del adj_matrix_csr
+                print(f"adj_matrix: {adj_matrix}", flush=True)
+                print(f"inputs: {inputs}", flush=True)
+                print(f"adj_matrix.dtype: {adj_matrix.dtype}", flush=True)
+                print(f"inputs.dtype: {inputs.dtype}", flush=True)
                 # correct_count = model.evaluate(adj_matrix, inputs, test_nid, data.y.cpu())
-                res = out.argmax(dim=-1) == data.y.cpu()
-                # acc1 = int(res[train_nid].sum()) / train_nid.size(0)
-                acc3 = int(res[test_nid].sum()) / test_nid.size(0)
+                if args.dataset == "ogbn-papers100M":
+                    model = model.cpu()
+                    print(f"test_nid: {test_nid}", flush=True)
+                    print(f"test_nid.size: {test_nid.size()}", flush=True)
+                    print(f"test_nid.unique.size: {test_nid.unique().size()}", flush=True)
+                    out = model.evaluate(adj_matrix, inputs, test_nid, data.y)
+                    res = out.argmax(dim=-1) == data.y.cpu()[test_nid]
+                    print(f"out: {out}", flush=True)
+                    print(f"res: {res}", flush=True)
+                    print(f"train_nid: {train_nid}", flush=True)
+                    print(f"test_nid: {test_nid}", flush=True)
+                    acc1 = 0
+                    acc3 = int(res.sum()) / test_nid.size(0)
+                    del out
+                    del res
+                    model = model.to(device)
+                else:
+                    out = model.evaluate(adj_matrix, inputs, test_nid, data.y)
+                    res = out.argmax(dim=-1) == data.y.cpu()
+                    print(f"out: {out}", flush=True)
+                    print(f"res: {res}", flush=True)
+                    print(f"train_nid: {train_nid}", flush=True)
+                    print(f"test_nid: {test_nid}", flush=True)
+                    acc1 = int(res[train_nid].sum()) / train_nid.size(0)
+                    acc3 = int(res[test_nid].sum()) / test_nid.size(0)
                 # acc3 = correct_count / test_nid.size(0)
-                print("Rank: {:05d} | Epoch: {:05d} | Time(s): {:.4f} | Loss: {} | Accuracy: {:.4f}".format(rank, epoch, np.sum(dur), loss.item(), acc3), flush=True)
+                print("Rank: {:05d} | Epoch: {:05d} | Time(s): {:.4f} | Loss: {} | Train: {:.4f} | Accuracy: {:.4f}".format(rank, epoch, np.sum(dur), loss.item(), acc1, acc3), flush=True)
                 train_nid = train_nid.to(device)
                 test_nid = test_nid.to(device)
-                model = model.to(device)
+                g_loc = g_loc.to(device).to_sparse_csr()
                 # wandb.log({'acc': acc3, 'time': np.sum(dur), 'loss': loss.item(), 'epoch': epoch})
             else:
                 print("Rank: {:05d} | Epoch: {:05d} | Time(s): {:.4f} | Accuracy: {:.4f}".format(rank, epoch, np.sum(dur), acc3), flush=True)

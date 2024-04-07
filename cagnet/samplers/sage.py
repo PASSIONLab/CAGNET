@@ -96,7 +96,7 @@ def sage_sampler(adj_matrix, batches, batch_size, frontier_sizes, mb_count_total
             nnz_row = mb_count * batch_size
             # nnz_col = batch_size + batch_size * frontier_sizes[0]
             nnz_col = batch_size * frontier_sizes[0]
-            print(f"l: {i} nnz_row: {nnz_row} nnz_col: {nnz_col}", flush=True)
+            # print(f"l: {i} nnz_row: {nnz_row} nnz_col: {nnz_col}", flush=True)
             # nnz = batch_size
         else:
             # Restructure current_frontier to only have 1 nnz/row
@@ -127,12 +127,15 @@ def sage_sampler(adj_matrix, batches, batch_size, frontier_sizes, mb_count_total
                 # nnz_col += nnz_col * frontier_sizes[j]
             nnz_col = nnz_row * frontier_sizes[i]
             nnz_row *= mb_count
-            print(f"l: {i} nnz_row: {nnz_row} nnz_col: {nnz_col}", flush=True)
+            # print(f"l: {i} nnz_row: {nnz_row} nnz_col: {nnz_col}", flush=True)
             if not replicate_graph:
                 current_frontier = current_frontier.to_sparse_csr()
             timing_dict["sage-startiter"].append(stop_time(start_timer, stop_timer))
 
         # Expand batches matrix
+        print(f"l: {i} current_frontier: {current_frontier}", flush=True)
+        print(f"l: {i} current_frontier.indices.min: {current_frontier._indices().min()}", flush=True)
+        print(f"l: {i} current_frontier.indices.dtype: {current_frontier._indices().dtype}", flush=True)
         p = gen_prob_dist(current_frontier, adj_matrix, mb_count, node_count_total,
                                 replication, rank, size, row_groups, col_groups,
                                 sa_masks, timing_dict, "sage",
@@ -259,20 +262,20 @@ def sage_sampler(adj_matrix, batches, batch_size, frontier_sizes, mb_count_total
         # print(f"after next_frontier: {next_frontier}", flush=True)
         # print(f"after next_frontier[==0]: {next_frontier._indices()[:,next_frontier._values() == 0]}", flush=True)
         # print(f"after next_frontier[==0].size: {next_frontier._indices()[:,next_frontier._values() == 0].size()}", flush=True)
-        next_frontier = current_frontier + next_frontier
-        # output_indices = torch.cuda.LongTensor(2, current_frontier._nnz() + next_frontier._nnz()).fill_(123123)
-        # output_vals = torch.cuda.FloatTensor(current_frontier._nnz() + next_frontier._nnz()).fill_(123123.0)
-        # frontier_sum_gpu(current_frontier._indices()[0,:], 
-        #                     current_frontier._indices()[1,:], 
-        #                     current_frontier._values(), 
-        #                     next_frontier._indices()[0,:],
-        #                     next_frontier._indices()[1,:], 
-        #                     next_frontier._values(), 
-        #                     output_indices[0,:],
-        #                     output_indices[1,:],
-        #                     output_vals,
-        #                     current_frontier._nnz(), next_frontier._nnz(), nnz_row, nnz_col, mb_count);
-        # next_frontier = torch.sparse_coo_tensor(output_indices, output_vals, next_frontier.size())
+        # next_frontier = current_frontier + next_frontier
+        output_indices = torch.cuda.LongTensor(2, current_frontier._nnz() + next_frontier._nnz())
+        output_vals = torch.cuda.FloatTensor(current_frontier._nnz() + next_frontier._nnz())
+        frontier_sum_gpu(current_frontier._indices()[0,:], 
+                            current_frontier._indices()[1,:], 
+                            current_frontier._values(), 
+                            next_frontier._indices()[0,:],
+                            next_frontier._indices()[1,:], 
+                            next_frontier._values(), 
+                            output_indices[0,:],
+                            output_indices[1,:],
+                            output_vals,
+                            current_frontier._nnz(), next_frontier._nnz(), nnz_row, nnz_col, mb_count);
+        next_frontier = torch.sparse_coo_tensor(output_indices, output_vals, next_frontier.size())
         # next_frontier = next_frontier.coalesce()
         # print(f"after2 next_frontier: {next_frontier}", flush=True)
         next_frontier_select = next_frontier._indices()[1,:].view(-1) #.clone()
@@ -290,12 +293,12 @@ def sage_sampler(adj_matrix, batches, batch_size, frontier_sizes, mb_count_total
         # print(f"next_frontier_select.size: {next_frontier_select.size()}", flush=True)
         if i + 1 == n_layers:
             frontiers[i + 1] = next_frontier_select.view(-1, 1)
-        # else:
-        #     del next_frontier_select
-        # del p
+        else:
+            del next_frontier_select
+        del p
 
-        # if i > 0:
-        #     del current_frontier_select
+        if i > 0:
+            del current_frontier_select
         current_frontier = next_frontier
         timing_dict["adj-row-col-select"].append(stop_time(start_timer, stop_timer))
 

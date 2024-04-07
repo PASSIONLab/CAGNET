@@ -2749,20 +2749,25 @@ void rearrangel_rows_gpu(const at::Tensor& mata_rows, const at::Tensor& mata_col
 }
 
 __global__ void RearrangeRows(long *mata_rows, long *mata_cols, long *matc_crows, int *matb_crows, 
-                                int *matb_cols, int *matc_cols, long nnz_count) { 
+                                int *matb_cols, int *matc_cols, size_t nnz_count) { 
 
     int     id = blockIdx.x * blockDim.x + threadIdx.x;
     int stride = blockDim.x * gridDim.x;
 
-    for (int i = id; i < nnz_count; i += stride) {
+    for (size_t i = id; i < nnz_count; i += stride) {
         long row = mata_rows[i];
         long col = mata_cols[i];
         long dst_idx = matc_crows[row];
-        long src_idx = matb_crows[col];
-        long row_len = matb_crows[col + 1] - matb_crows[col];
+        int src_idx = matb_crows[col];
+        size_t row_len = matb_crows[col + 1] - matb_crows[col];
         // memcpy(&matc_cols[dst_idx], &matb_cols[src_idx], row_len * sizeof(long));
         for (int j = 0; j < row_len; j++) {
-            matc_cols[dst_idx + j] = (int)(matb_cols[src_idx + j]);
+            // matc_cols[dst_idx + j] = (int)(matb_cols[src_idx + j]);
+            matc_cols[dst_idx + j] = matb_cols[src_idx + j];
+            if (matc_cols[dst_idx + j] < 0) {
+                printf("kernel error j: %d src_idx: %d dst_idx: %ld\n", j, src_idx, dst_idx);
+                printf("kernel error dst: %d src: %d\n", matc_cols[dst_idx + j], matb_cols[src_idx + j]);
+            }
         }
     } 
 }
