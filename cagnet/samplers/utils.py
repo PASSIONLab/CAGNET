@@ -1086,28 +1086,18 @@ def gen_prob_dist(numerator, adj_matrix, mb_count, node_count_total, replication
         # print(f"mata_cols: {mata_cols}", flush=True)
         # print(f"mata_cols.min: {mata_cols.min()}", flush=True)
         # print(f"mata_cols.min: {mata_cols.min()}", flush=True)
-        matc_chunk_row_lens[mata_rows] = adj_row_lens[mata_cols]
+        # matc_chunk_row_lens[mata_rows] = adj_row_lens[mata_cols]
+        matc_chunk_row_lens[mata_rows] = adj_row_lens[mata_cols].int()
         matc_chunk_crows = torch.cuda.LongTensor(numerator.size(0) + 1).fill_(0)
         matc_chunk_crows[1:] = torch.cumsum(matc_chunk_row_lens, 0)
         matc_chunk_crows[0] = 0
         matc_chunk_cols = torch.cuda.IntTensor(matc_chunk_crows[-1].item()).fill_(0)
-        print(f"before crow_indices: {adj_matrix.crow_indices()}", flush=True)
-        print(f"before crow_indices.min: {adj_matrix.crow_indices().min()}", flush=True)
-        print(f"before crow_indices.max: {adj_matrix.crow_indices().max()}", flush=True)
-        print(f"before crow_indices.dtype: {adj_matrix.crow_indices().dtype}", flush=True)
-        print(f"before col_indices: {adj_matrix.col_indices()}", flush=True)
-        print(f"before col_indices.min: {adj_matrix.col_indices().min()}", flush=True)
-        print(f"before col_indices.max: {adj_matrix.col_indices().max()}", flush=True)
-        print(f"before col_indices.dtype: {adj_matrix.col_indices().dtype}", flush=True)
-        print(f"before matc_chunk_cols.min: {matc_chunk_cols.min()}", flush=True)
         rearrange_rows_gpu(numerator._indices()[0,:], 
                                 numerator._indices()[1,:], 
                                 matc_chunk_crows, 
-                                adj_matrix.crow_indices(), 
+                                adj_matrix.crow_indices().long(), 
                                 adj_matrix.col_indices(), 
                                 matc_chunk_cols)
-        print(f"after matc_chunk_cols: {matc_chunk_cols}", flush=True)
-        print(f"after matc_chunk_cols.min: {matc_chunk_cols.min()}", flush=True)
         # p_num_rows = torch.repeat_interleave(
         #                                 torch.arange(matc_chunk_crows.size(0) - 1, 
         #                                                     dtype=torch.int32, 

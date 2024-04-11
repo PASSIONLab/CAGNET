@@ -133,9 +133,6 @@ def sage_sampler(adj_matrix, batches, batch_size, frontier_sizes, mb_count_total
             timing_dict["sage-startiter"].append(stop_time(start_timer, stop_timer))
 
         # Expand batches matrix
-        print(f"l: {i} current_frontier: {current_frontier}", flush=True)
-        print(f"l: {i} current_frontier.indices.min: {current_frontier._indices().min()}", flush=True)
-        print(f"l: {i} current_frontier.indices.dtype: {current_frontier._indices().dtype}", flush=True)
         p = gen_prob_dist(current_frontier, adj_matrix, mb_count, node_count_total,
                                 replication, rank, size, row_groups, col_groups,
                                 sa_masks, timing_dict, "sage",
