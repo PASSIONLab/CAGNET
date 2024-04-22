@@ -20,7 +20,7 @@ def stop_time(self, range_name, start, barrier=True):
         self.timings["barrier"] += time.time() - start
         
 def broad_func_oned(self, graph, ampbyp, inputs):
-    """ # this is the old function
+    # """ # this is the old function
     
     n_per_proc = math.ceil(float(graph.size(0) / self.size))
 
@@ -44,8 +44,9 @@ def broad_func_oned(self, graph, ampbyp, inputs):
                         ampbyp[i].size(1), inputs_recv, z_loc)
         stop_time(self, "spmm_gpu", start)
     return z_loc
-    """
+    # """
 
+    """
     start = time.time()
     z_loc = torch.cuda.FloatTensor(ampbyp[0].size(0), inputs.size(1), device=self.device).fill_(1)
     
@@ -75,6 +76,7 @@ def broad_func_oned(self, graph, ampbyp, inputs):
     #del inputs_mul
     #torch.cuda.empty_cache()
     return z_loc
+    """
 
 def broad_func_one5d(self, graph, ampbyp, inputs):
     """ old code
@@ -185,7 +187,6 @@ def broad_func_one5d(self, graph, ampbyp, inputs):
             # print(f"start: {start} stop: {stop}", flush=True)
             # for j in col_procs[start:stop]:
             for j in col_procs:
-                print(f"j: {j}", flush=True)
                 if rank != j:
                     start = time.time()
                     rows_send = inputs[row_indices_recv[j].long(), :].clone()
@@ -199,7 +200,6 @@ def broad_func_one5d(self, graph, ampbyp, inputs):
                     # del rows_send
     #                print(f"rows_send dim {rows_send.size()}", flush=True)
     #        print(f"pls print {send_ops}", flush=True)
-            print(f"q: {q} row_count_sum: {row_count_sum}", flush=True)
             if len(send_ops) > 0:
                 start = time.time()
                 #print("sendinggg!", flush=True)
@@ -209,12 +209,12 @@ def broad_func_one5d(self, graph, ampbyp, inputs):
                 for req in reqs:
                     req.wait()
                 stop_time(self, "communication", start, barrier=False)
-                # for op in send_ops:
-                #     del op.tensor
-                #     del op
-                # send_ops = None
-                # del reqs
-                # torch.cuda.empty_cache()
+                for op in send_ops:
+                    del op.tensor
+                    del op
+                send_ops = None
+                del reqs
+                torch.cuda.empty_cache()
 
         # all other ranks receive the inputs
         inputs_recv = []
@@ -236,15 +236,6 @@ def broad_func_one5d(self, graph, ampbyp, inputs):
             start = time.time()
             # inputs_recv = inputs.clone()
             inputs_recv = inputs
-        # torch.cuda.synchronize()
-        # if i == 7:
-        #     print(f"after iteration {i}", flush=True)
-        #     if self.rank == 0:
-        #         x = input()
-        #     dist.barrier()
-
-        # inputs_recv = inputs_recv.contiguous()
-    
 
         spmm_gpu(ampbyp[am_partid].indices()[0].int(), ampbyp[am_partid].indices()[1].int(), 
                         ampbyp[am_partid].values(), ampbyp[am_partid].size(0), 
@@ -901,7 +892,6 @@ class GCNFuncONE5D(torch.autograd.Function):
         # graph: A
         # weight: W
 
-        print(f"forward inputs.size: {inputs.size()}", flush=True)
         z = broad_func_one5d(self, graph, ampbyp, inputs)
         z = z.mm(weight)
 
@@ -919,7 +909,6 @@ class GCNFuncONE5D(torch.autograd.Function):
         inputs, weight = ctx.saved_tensors
         self = ctx.self
 
-        print(f"backward grad_output.size: {grad_output.size()}", flush=True)
         # Assumes graph is undirected and A = A^T
         ag = broad_func_one5d(self, graph, ampbyp, grad_output)
 

@@ -515,12 +515,12 @@ def main(args):
         inputs.requires_grad = True
         data.y = data.y.to(device)
 
-    elif args.dataset.startswith("ogb"):
+    elif False and args.dataset.startswith("ogb"):
         import ogb
         data = Data()
         from ogb.nodeproppred import PygNodePropPredDataset # only import if necessary, takes a long time
         if ("papers100M" in args.dataset and rank % args.gpu == 0) or "products" in args.dataset:
-            dataset = PygNodePropPredDataset(name=args.dataset, root="../../data")
+            dataset = PygNodePropPredDataset(name=args.dataset, root="/global/u1/a/alokt/data")
             data = dataset[0]
 
             split_idx = dataset.get_idx_split() 
@@ -710,17 +710,23 @@ def main(args):
             if args.partitions:
                 # edge_index = torch.load("/pscratch/sd/r/roguzsel/zzz/sagnn/data/papers/base/papers_sym.pt")
                 path = f"/global/cfs/cdirs/m1982/alokt/data/ogbn_papers100M/processed/papers_k{size}m1u1c10r2.pt"
+                # path = f"/global/cfs/cdirs/m1982/alokt/data/ogbn_papers100M/processed/papers_k{size}m0u0c10r2.pt"
                 edge_index = torch.load(path)
             else:
                 edge_index = torch.load("/global/cfs/cdirs/m1982/alokt/data/ogbn_papers100M/processed/papers_sym.pt")
             print(f"Done loading coo", flush=True)
+            data = Data()
             n = 111059956 
             num_features = 128
             num_classes = 172
-            inputs = torch.rand(n, num_features)
-            data = Data()
-            data.y = torch.rand(n).uniform_(0, num_classes - 1).long()
-            data.train_mask = torch.ones(n).long()
+            inputs = torch.load("/global/u1/a/alokt/data/ogbn_papers100M/feat/feature.pt")
+            train_idx = torch.load("/global/u1/a/alokt/data/ogbn_papers100M/index/train_idx.pt")
+            train_idx = train_idx.to(device)
+            test_idx = torch.load("/global/u1/a/alokt/data/ogbn_papers100M/index/test_idx.pt")
+            test_idx = test_idx.to(device)
+            data.y = torch.load("/global/u1/a/alokt/data/ogbn_papers100M/label/label.pt")
+            data.y = data.y.squeeze().to(device)
+
             adj_matrix = edge_index.t_()
             data = data.to(device)
             inputs.requires_grad = True
@@ -746,6 +752,8 @@ def main(args):
     rank_col = rank % args.replication
     if rank_c >= (size // args.replication):
         return
+
+    print(f"before partitioning", flush=True)
 
     if args.dataset == "ogbn-papers100M":
         if rank % args.gpu == 0:
@@ -794,6 +802,7 @@ def main(args):
                     dist.send(train_idx, dst=dst_gpu)
                     dist.send(test_idx, dst=dst_gpu)
 
+                del g_send_meta
                 del g_send
                 del features_send
 
@@ -834,7 +843,7 @@ def main(args):
                 inputs = torch.cuda.FloatTensor(rows, num_features)
             dist.recv(inputs, src=src_gpu)
 
-            # data = Data()
+            data = Data()
             data.y = torch.cuda.FloatTensor(g_loc_meta[1].item())
             dist.recv(data.y, src=src_gpu)
             data.y = data.y.long()
@@ -1039,6 +1048,9 @@ def main(args):
               "ETputs(KTEPS) {:.2f}".format(rank, epoch, np.mean(dur), loss.item(),
                                             acc, n_edges / np.mean(dur) / 1000), flush=True)
         """
+
+        if epoch >= 1:
+            print(f"epoch_time: {(time.time() - total_start) / epoch}", flush=True)
     dist.barrier()
     total_stop = time.time()
     print(f"total_time: {total_stop - total_start}")
