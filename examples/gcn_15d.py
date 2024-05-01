@@ -21,6 +21,7 @@ from cagnet.nn.conv import GCNConv
 from cagnet.partitionings import Partitioning
 import cagnet.nn.functional as CAGF
 
+import gc
 import socket
 
 class GCN(nn.Module):
@@ -193,7 +194,7 @@ def one5d_partition(rank, size, inputs, adj_matrix, data, features, classes, rep
     print(f"rank: {rank} adj_matrix_loc.size: {adj_matrix_loc.size()}", flush=True)
     print(f"rank: {rank} inputs_loc.size: {inputs_loc.size()}", flush=True)
     # return inputs_loc, adj_matrix_loc, am_pbyp
-    return input_partitions, am_partitions, am_pbyp
+    return list(input_partitions), am_partitions, am_pbyp
 
 def split_am_partition(am_partition, partitions, rank, size, replication, normalize):
     node_count = am_partition.size(0)
@@ -767,10 +768,32 @@ def main(args):
             features_loc = input_partitions[rank_c]
             g_loc = am_partitions[rank_c]
 
+            idx_start = rank_c
+            idx_stop = (rank + args.gpu) // args.replication
+            for i in range(idx_start):
+                feature_idx = input_partitions[i]
+                del feature_idx
+                input_partitions[i] = None
+
+                am_idx = am_partitions[i]
+                del am_idx
+                am_partitions[i] = None
+
+            for i in range(idx_stop, len(am_partitions), 1):
+                feature_idx = input_partitions[i]
+                del feature_idx
+                input_partitions[i] = None
+
+                am_idx = am_partitions[i]
+                del am_idx
+                am_partitions[i] = None
+
             for i in range(1, args.gpu):
                 print(f"iteration i: {i}", flush=True)
                 rank_send_row = (rank + i) // args.replication
                 dst_gpu = rank + i
+                print(f"rank_send_row: {rank_send_row} len(am_partitions): {len(am_partitions)}", flush=True)
+                print(f"am_partitions: {am_partitions}", flush=True)
                 g_send = am_partitions[rank_send_row]
                 print("coalescing", flush=True)
                 g_send = g_send.coalesce()
@@ -805,6 +828,15 @@ def main(args):
                 del g_send_meta
                 del g_send
                 del features_send
+                print(f"type(input_partitions): {type(input_partitions)}", flush=True)
+                print(f"type(am_partitions): {type(am_partitions)}", flush=True)
+                print(f"input_partitions[rsrow]: {input_partitions[rank_send_row]}", flush=True)
+                print(f"am_partitions[rsrow]: {am_partitions[rank_send_row]}", flush=True)
+                print(f"input_partitions[rsrow].device: {input_partitions[rank_send_row].device}", flush=True)
+                print(f"am_partitions[rsrow].device: {am_partitions[rank_send_row].device}", flush=True)
+                # del input_partitions[rank_send_row]
+                # del am_partitions[rank_send_row]
+                gc.collect()
 
             # features_loc, g_loc, _, _ = one5d_partition(rank, size, inputs, adj_matrix, data, inputs, num_classes, \
             #                                 args.replication, args.normalize)

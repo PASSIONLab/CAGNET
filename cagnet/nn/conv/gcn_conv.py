@@ -250,9 +250,11 @@ def broad_func_one5d(self, graph, ampbyp, inputs):
     #     x = input()
     # dist.barrier()
     # z_loc = z_loc.contiguous()
+    print(f"before all_reduce", flush=True)
     start = time.time()
     dist.all_reduce(z_loc, op=dist.reduce_op.SUM, group=self.row_groups[rank_c])
     stop_time(self, "reduce", start, barrier=False)
+    print(f"after all_reduce", flush=True)
 
     # del inputs_recv_max
 
