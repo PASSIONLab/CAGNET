@@ -26,6 +26,7 @@ def test_nccl(args):
     rank = dist.get_rank()
     size = dist.get_world_size()
     torch.cuda.set_device(rank % args.gpu)
+    device = torch.device(f'cuda:{rank % args.gpu}')
 
     start_timer = torch.cuda.Event(enable_timing=True)
     stop_timer = torch.cuda.Event(enable_timing=True)
@@ -355,102 +356,120 @@ def test_nccl(args):
     # torch.cuda.nvtx.range_pop()
     # torch.cuda.profiler.cudart().cudaProfilerStop()
 
-    print(f"alltoall", flush=True)
-    buffer_size = 1 * 2**30 // size
-    run_count = 2
-    for r in range(run_count):
-        tensors = []
-        for i in range(size):
-            tensors.append(torch.cuda.FloatTensor(buffer_size).fill_(i))
-        tensors[-1] = torch.cuda.FloatTensor(0).fill_(i)
+    # print(f"alltoall", flush=True)
+    # buffer_size = 1 * 2**30 // size
+    # run_count = 2
+    # for r in range(run_count):
+    #     tensors = []
+    #     for i in range(size):
+    #         tensors.append(torch.cuda.FloatTensor(buffer_size).fill_(i))
+    #     tensors[-1] = torch.cuda.FloatTensor(0).fill_(i)
 
-        recv_tensors = []
-        for i in range(size):
-            if rank == size - 1:
-                recv_tensors.append(torch.cuda.FloatTensor(0))
-            else:
-                recv_tensors.append(torch.cuda.FloatTensor(buffer_size))
+    #     recv_tensors = []
+    #     for i in range(size):
+    #         if rank == size - 1:
+    #             recv_tensors.append(torch.cuda.FloatTensor(0))
+    #         else:
+    #             recv_tensors.append(torch.cuda.FloatTensor(buffer_size))
 
-        if r == run_count - 1 and rank == 0:
-            start_time(start_timer)
+    #     if r == run_count - 1 and rank == 0:
+    #         start_time(start_timer)
 
-        # dist.scatter(recv_tensor, tensors, src=0)
-        dist.all_to_all(recv_tensors, tensors)
-        torch.cuda.synchronize()
+    #     # dist.scatter(recv_tensor, tensors, src=0)
+    #     dist.all_to_all(recv_tensors, tensors)
+    #     torch.cuda.synchronize()
 
-        if r == run_count - 1 and rank == 0:
-            seconds = stop_time(start_timer, stop_timer) / 1000
-            gb_count = (buffer_size * 4 * size) / 2**30
-            bw = gb_count / seconds
-            print(f"gb: {gb_count} GB time: {seconds}s bw: {bw}GB/s")
-            print(f"time(ms): {seconds * 1000}")
-        dist.barrier()
+    #     if r == run_count - 1 and rank == 0:
+    #         seconds = stop_time(start_timer, stop_timer) / 1000
+    #         gb_count = (buffer_size * 4 * size) / 2**30
+    #         bw = gb_count / seconds
+    #         print(f"gb: {gb_count} GB time: {seconds}s bw: {bw}GB/s")
+    #         print(f"time(ms): {seconds * 1000}")
+    #     dist.barrier()
 
-    dist.barrier()
-    print(f"batched isend/irecv alltoall", flush=True)
-    buffer_size = 1 * 2**30 // size
-    # buffer_size = ((66 // 4) * 2**20 // 2) // (size - 1)
-    run_count = 3
-    for r in range(run_count):
-        send_tensors = [None] * size
-        recv_tensors = [None] * size
-        elem_count = 0
-        for i in range(size):
-            if i != rank:
-                elem_count += 2 * buffer_size
-                send_tensors[i] = torch.cuda.FloatTensor(buffer_size).fill_(i + 1)
-                recv_tensors[i] = torch.cuda.FloatTensor(buffer_size).fill_(0)
+    # dist.barrier()
+    # print(f"batched isend/irecv alltoall", flush=True)
+    # buffer_size = 1 * 2**30 // size
+    # # buffer_size = ((66 // 4) * 2**20 // 2) // (size - 1)
+    # run_count = 3
+    # for r in range(run_count):
+    #     send_tensors = [None] * size
+    #     recv_tensors = [None] * size
+    #     elem_count = 0
+    #     for i in range(size):
+    #         if i != rank:
+    #             elem_count += 2 * buffer_size
+    #             send_tensors[i] = torch.cuda.FloatTensor(buffer_size).fill_(i + 1)
+    #             recv_tensors[i] = torch.cuda.FloatTensor(buffer_size).fill_(0)
 
-        ops = []
-        for i in range(size):
-            if i != rank:
-                ops.append(dist.P2POp(dist.isend, send_tensors[i], i))
-                ops.append(dist.P2POp(dist.irecv, recv_tensors[i], i))
+    #     ops = []
+    #     for i in range(size):
+    #         if i != rank:
+    #             ops.append(dist.P2POp(dist.isend, send_tensors[i], i))
+    #             ops.append(dist.P2POp(dist.irecv, recv_tensors[i], i))
 
-        if r == run_count - 1:
-            start_time(start_timer)
-        reqs = dist.batch_isend_irecv(ops)
-        for req in reqs:
-            req.wait()
-        torch.cuda.synchronize()
-        dist.barrier()
+    #     if r == run_count - 1:
+    #         start_time(start_timer)
+    #     reqs = dist.batch_isend_irecv(ops)
+    #     for req in reqs:
+    #         req.wait()
+    #     torch.cuda.synchronize()
+    #     dist.barrier()
 
-        if r == run_count - 1 and rank == 0:
-            seconds = stop_time(start_timer, stop_timer) / 1000
-            gb_count = (buffer_size * size * 4) / 2**30 # assumes buffer_size is per process
-            bw = gb_count / seconds
-            print(f"gb: {gb_count} GB time: {seconds}s bw: {bw}GB/s")
-            print(f"time(ms): {seconds * 1000}")
-            print(f"elem_count: {elem_count}")
+    #     if r == run_count - 1 and rank == 0:
+    #         seconds = stop_time(start_timer, stop_timer) / 1000
+    #         gb_count = (buffer_size * size * 4) / 2**30 # assumes buffer_size is per process
+    #         bw = gb_count / seconds
+    #         print(f"gb: {gb_count} GB time: {seconds}s bw: {bw}GB/s")
+    #         print(f"time(ms): {seconds * 1000}")
+    #         print(f"elem_count: {elem_count}")
 
-    print(f"p2p cross-node send", flush=True)
-    buffer_size = 500 * 2**20
-    # buffer_size = ((66 // 4) * 2**20 // 2) // (size - 1)
-    run_count = 2
-    for r in range(run_count):
-        if rank == 0:
-            send_tensor = torch.cuda.FloatTensor(buffer_size).fill_(1.0)
-        elif rank == size - 1:
-            recv_tensor = torch.cuda.FloatTensor(buffer_size).fill_(1.0)
+    # print(f"p2p cross-node send", flush=True)
+    # buffer_sizes = [int(2**i) for i in range(1, 15)]
+    # for buff_size in buffer_sizes:
+    #     buffer_size = buff_size * 2**10
+    #     run_count = 2
+    #     for r in range(run_count):
+    #         if rank == 0:
+    #             send_tensor = torch.cuda.FloatTensor(buffer_size).fill_(1.0)
+    #         elif rank == size - 1:
+    #             recv_tensor = torch.cuda.FloatTensor(buffer_size).fill_(1.0)
 
-        dist.barrier()
-        if rank == size - 1 and r == run_count - 1:
-            start_time(start_timer)
-        
-        if rank == 0:
-            dist.send(send_tensor, dst=size-1)
-        elif rank == size - 1:
-            dist.recv(recv_tensor, src=0)
-        torch.cuda.synchronize()
-        dist.barrier()
+    #         dist.barrier()
+    #         if rank == size - 1 and r == run_count - 1:
+    #             start_time(start_timer)
+    #         
+    #         if rank == 0:
+    #             dist.send(send_tensor, dst=size-1)
+    #         elif rank == size - 1:
+    #             dist.recv(recv_tensor, src=0)
+    #         torch.cuda.synchronize()
+    #         dist.barrier()
 
-        if r == run_count - 1 and rank == size - 1:
-            seconds = stop_time(start_timer, stop_timer) / 1000
-            gb_count = (buffer_size * 4) / 2**30 # assumes buffer_size is per process
-            bw = gb_count / seconds
-            print(f"gb: {gb_count} GB time: {seconds}s bw: {bw}GB/s")
-            print(f"time(ms): {seconds * 1000}")
-            print(f"elem_count: {elem_count}")
+    #         if r == run_count - 1 and rank == size - 1:
+    #             seconds = stop_time(start_timer, stop_timer) / 1000
+    #             gb_count = (buffer_size * 4) / 2**30 # assumes buffer_size is per process
+    #             bw = gb_count / seconds
+    #             print(f"size: {buff_size} gb: {gb_count} GB time: {seconds}s bw: {bw}")
+    #             # print(f"time(ms): {seconds * 1000}")
+
+    print(f"cpu2gpu send", flush=True)
+    buffer_sizes = [int(2**i) for i in range(1, 20)]
+    for buff_size in buffer_sizes:
+        buffer_size = buff_size * 2**10
+        run_count = 2
+        for r in range(run_count):
+            tensor_buffer = torch.FloatTensor(buffer_size).fill_(1.0)
+
+            torch.cuda.synchronize()
+            if r == run_count - 1:
+                start_time(start_timer)
+            tensor_buffer_dst = tensor_buffer.to(device)
+            if r == run_count - 1:
+                seconds = stop_time(start_timer, stop_timer) / 1000
+                gb_count = (buffer_size * 4) / 2**30 # assumes buffer_size is per process
+                bw = gb_count / seconds
+                print(f"size: {size} gb: {gb_count} GB time: {seconds}s bw: {bw}GB/s")
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='NCCL P2P test')

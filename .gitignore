@@ -39,3 +39,4 @@ examples/*.batch
 *.nsys-rep
 *.ncu-rep
 examples/wandb
+*.png
