@@ -115,12 +115,12 @@ class GCN(nn.Module):
         value = torch.arange(graph.size(1))
         # value = torch.arange(graph.col_indices().size(0))
 
-        graph_t = SparseTensor(row=graph[0], col=graph[1],
-                                  value=value,
-                                  is_sorted=True,
-                                  sparse_sizes=(num_nodes, num_nodes))
-        # subgraph_loader = NeighborSampler(graph, node_idx=test_idx,
-        subgraph_loader = NeighborSampler(graph_t, node_idx=test_idx,
+        # graph_t = SparseTensor(row=graph[0], col=graph[1],
+        #                           value=value,
+        #                           is_sorted=True,
+        #                           sparse_sizes=(num_nodes, num_nodes))
+        subgraph_loader = NeighborSampler(graph, node_idx=test_idx,
+        # subgraph_loader = NeighborSampler(graph_t, node_idx=test_idx,
                                           sizes=[20] * self.n_layers, batch_size=1024,
                                           shuffle=False, num_workers=32)
         # non_eval_timings = copy.deepcopy(self.timings)
@@ -138,8 +138,9 @@ class GCN(nn.Module):
                 # edge_index_cpu, _, size = adjs[l]
                 # del edge_index_cpu
                 edge_index = edge_index.to(self.device)
-                edge_index = torch.stack((edge_index.storage.row(), edge_index.storage.col()))
+                # edge_index = torch.stack((edge_index.storage.row(), edge_index.storage.col()))
                 values = torch.cuda.FloatTensor(edge_index.size(1)).fill_(1.0)
+                print(f"edge_index: {edge_index} size: {size}", flush=True)
                 adj_batch = torch.sparse_coo_tensor(edge_index, 
                                                         # torch.FloatTensor(edge_index.size(1)).fill_(1.0),
                                                         values,
@@ -715,22 +716,22 @@ def main(args, batches=None):
 
                 if args.dataset == "ogbn-papers100M":
                     print(f"begin copying", flush=True)
-                    # adj_matrix_crows = torch.load("/global/u1/a/alokt/data/ogbn_papers100M/csr/indptr.pt")
-                    # adj_matrix_cols = torch.load("/global/u1/a/alokt/data/ogbn_papers100M/csr/indices.pt")
+                    adj_matrix_crows = torch.load("/global/u1/a/alokt/data/ogbn_papers100M/csr/indptr_dir.pt")
+                    adj_matrix_cols = torch.load("/global/u1/a/alokt/data/ogbn_papers100M/csr/indices_dir.pt")
                     # adj_matrix_crows = torch.load("/global/u1/a/alokt/data/ogbn_papers100M/csr/indptr_reverse.pt")
                     # adj_matrix_cols = torch.load("/global/u1/a/alokt/data/ogbn_papers100M/csr/indices_reverse.pt")
                     # adj_matrix_crows = torch.load("/global/u1/a/alokt/data/ogbn_papers100M/csr/indptr_selfloop.pt")
                     # adj_matrix_cols = torch.load("/global/u1/a/alokt/data/ogbn_papers100M/csr/indices_selfloop.pt")
                     # adj_matrix_crows = torch.load("/global/u1/a/alokt/data/ogbn_papers100M/csr/indptr_reverse_selfloop.pt")
                     # adj_matrix_cols = torch.load("/global/u1/a/alokt/data/ogbn_papers100M/csr/indices_reverse_selfloop.pt")
-                    adj_matrix_crows = torch.load("/global/homes/a/alokt/SALIENT_plusplus_artifact/dataset/ogbn-papers100M/rowptr.pt")
-                    adj_matrix_cols = torch.load("/global/homes/a/alokt/SALIENT_plusplus_artifact/dataset/ogbn-papers100M/col.pt")
+                    # adj_matrix_crows = torch.load("/global/homes/a/alokt/SALIENT_plusplus_artifact/dataset/ogbn-papers100M/rowptr.pt")
+                    # adj_matrix_cols = torch.load("/global/homes/a/alokt/SALIENT_plusplus_artifact/dataset/ogbn-papers100M/col.pt")
                     print(f"before adj_matrix_crows: {adj_matrix_crows} dtype: {adj_matrix_crows.dtype} device: {adj_matrix_crows.device}", flush=True)
                     print(f"adj_matrix_cols: {adj_matrix_cols} dtype: {adj_matrix_cols.dtype} device: {adj_matrix_cols.device}", flush=True)
                     # adj_matrix_crows = adj_matrix_crows.int().to(device)
                     # adj_matrix_cols = adj_matrix[1,:].int().to(device)
                     adj_matrix_vals = torch.FloatTensor(adj_matrix_cols.size(0)).fill_(1)
-                    # adj_matrix_crows = adj_matrix_crows.int()
+                    adj_matrix_crows = adj_matrix_crows.int()
                     adj_matrix_cols = adj_matrix_cols.int()
                     print(f"after adj_matrix_crows: {adj_matrix_crows} dtype: {adj_matrix_crows.dtype} device: {adj_matrix_crows.device}", flush=True)
                     g_loc = torch.sparse_csr_tensor(adj_matrix_crows, adj_matrix_cols, \
@@ -875,16 +876,14 @@ def main(args, batches=None):
                 # torch.cuda.synchronize()
                 # print(f"recv indices", flush=True)
 
-                # g_loc_crows = torch.cuda.IntTensor(g_loc_meta[1].item() + 1)
-                g_loc_crows = torch.cuda.LongTensor(g_loc_meta[1].item() + 1)
+                g_loc_crows = torch.cuda.IntTensor(g_loc_meta[1].item() + 1)
+                # g_loc_crows = torch.cuda.LongTensor(g_loc_meta[1].item() + 1)
                 dist.recv(g_loc_crows, src=src_gpu)
                 torch.cuda.synchronize()
-                print(f"recv crows", flush=True)
 
                 g_loc_cols = torch.cuda.IntTensor(g_loc_meta[0].item())
                 dist.recv(g_loc_cols, src=src_gpu)
                 torch.cuda.synchronize()
-                print(f"recv cols", flush=True)
 
                 # g_loc_values = torch.cuda.DoubleTensor(g_loc_meta[0].item())
                 # dist.recv(g_loc_values, src=src_gpu)
@@ -899,16 +898,13 @@ def main(args, batches=None):
                     inputs = torch.cuda.FloatTensor(rows, num_features)
                 dist.recv(inputs, src=src_gpu)
                 torch.cuda.synchronize()
-                print(f"recv inputs", flush=True)
 
                 features_zero_row = torch.cuda.FloatTensor(num_features)
                 dist.recv(features_zero_row, src=src_gpu)
                 torch.cuda.synchronize()
-                print(f"recv features_zero_row", flush=True)
 
                 # data = Data()
                 data.y = torch.cuda.FloatTensor(g_loc_meta[2].item())
-                print(f"data.y.size: {data.y.size()}", flush=True)
                 dist.recv(data.y, src=src_gpu)
                 torch.cuda.synchronize()
                 data.y = data.y.long()
@@ -952,7 +948,6 @@ def main(args, batches=None):
                 features_zero_row = torch.cuda.FloatTensor(num_features)
                 dist.recv(features_zero_row, src=src_gpu)
                 torch.cuda.synchronize()
-                print(f"recv features_zero_row", flush=True)
 
                 # data = Data()
                 data.y = torch.cuda.FloatTensor(g_loc_meta[2].item())
@@ -1033,7 +1028,9 @@ def main(args, batches=None):
     print(f"g_loc.nnz: {g_loc._nnz()}", flush=True)
     print(f"g_loc: {g_loc}", flush=True)
     print(f"features_loc.size: {features_loc.size()}", flush=True)
+    print(f"before barrier", flush=True)
     dist.barrier()
+    print(f"after barrier", flush=True)
 
     if rank == 0 and args.dataset != "ogbn-papers100M":
         adj_matrix = adj_matrix.cpu()
@@ -1186,7 +1183,11 @@ def main(args, batches=None):
                 args.n_bulkmb = 1
                 args.batch_size = batch_count - b
             torch.cuda.nvtx.range_push("nvtx-partition-batches")
-            batches = batches_all[b:(b + args.n_bulkmb * args.batch_size)].view(args.n_bulkmb, args.batch_size)
+            
+            batches_start = b * args.batch_size
+            batches_stop = (b + args.n_bulkmb) * args.batch_size
+            batches = batches_all[batches_start:batches_stop].view(args.n_bulkmb, args.batch_size)
+            # batches = batches_all[b:(b + args.n_bulkmb * args.batch_size)].view(args.n_bulkmb, args.batch_size)
             if args.sample_method == "sage":
                 batches_loc = one5d_partition_mb(rank, size, batches, 1, args.n_bulkmb)
             elif args.sample_method == "ladies":
@@ -1789,7 +1790,7 @@ def main(args, batches=None):
                 print(f"adj_matrix.dtype: {adj_matrix.dtype}", flush=True)
                 print(f"inputs.dtype: {inputs.dtype}", flush=True)
                 # correct_count = model.evaluate(adj_matrix, inputs, test_nid, data.y.cpu())
-                if args.dataset == "ogbn-papers100M" or args.dataset == "cora":
+                if args.dataset == "ogbn-papers100M":
                     # model = model.cpu()
                     print(f"test_nid: {test_nid}", flush=True)
                     print(f"test_nid.size: {test_nid.size()}", flush=True)
