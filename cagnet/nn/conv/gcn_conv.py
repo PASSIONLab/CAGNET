@@ -79,63 +79,59 @@ def broad_func_oned(self, graph, ampbyp, inputs):
     """
 
 def broad_func_one5d(self, graph, ampbyp, inputs):
-    """ old code
-
     
-    n_per_proc = math.ceil(float(graph.size(0)) / (self.size / self.replication))
+    if self.sparse_unaware:
+        print("in su code", flush=True)
+        n_per_proc = math.ceil(float(self.node_count) / (self.size / self.replication))
 
-    z_loc = torch.cuda.FloatTensor(ampbyp[0].size(0), inputs.size(1), device=self.device).fill_(0)
+        z_loc = torch.cuda.FloatTensor(ampbyp[0].size(0), inputs.size(1), device=self.device).fill_(0)
 
-    inputs_recv = torch.cuda.FloatTensor(n_per_proc, inputs.size(1), device=self.device).fill_(0)
+        inputs_recv = torch.cuda.FloatTensor(n_per_proc, inputs.size(1), device=self.device).fill_(0)
 
-    rank_c = self.rank // self.replication
-    rank_col = self.rank % self.replication
+        rank_c = self.rank // self.replication
+        rank_col = self.rank % self.replication
 
-    stages = self.size // (self.replication ** 2)
-    if rank_col == self.replication - 1:
-        stages = (self.size // self.replication) - (self.replication - 1) * stages
-    
-    for i in range(stages):
-        q = (rank_col * (self.size // (self.replication ** 2)) + i) * self.replication + rank_col
+        stages = self.size // (self.replication ** 2)
+        if rank_col == self.replication - 1:
+            stages = (self.size // self.replication) - (self.replication - 1) * stages
+        
+        row_count_sum = 0
+        for i in range(stages):
+            q = (rank_col * (self.size // (self.replication ** 2)) + i) * self.replication + rank_col
 
-        q_c = q // self.replication
+            q_c = q // self.replication
 
-        am_partid = rank_col * (self.size // self.replication ** 2) + i
+            am_partid = rank_col * (self.size // self.replication ** 2) + i
 
-        if q == self.rank:
-            inputs_recv = inputs.clone()
-        elif q_c == self.size // self.replication - 1:
-            inputs_recv = torch.cuda.FloatTensor(ampbyp[am_partid].size(1), \
-                                                    inputs.size(1), \
-                                                    device=self.device).fill_(0)
+            if q == self.rank:
+                inputs_recv = inputs.clone()
+            elif q_c == self.size // self.replication - 1:
+                inputs_recv = torch.cuda.FloatTensor(ampbyp[am_partid].size(1), \
+                                                        inputs.size(1), \
+                                                        device=self.device).fill_(0)
 
-        inputs_recv = inputs_recv.contiguous()
+            row_count_sum += inputs_recv.numel()
+            inputs_recv = inputs_recv.contiguous()
+            start = time.time()
+            dist.broadcast(inputs_recv, src=q, group=self.col_groups[rank_col])
+            stop_time(self, "broadcast", start)
+            start = time.time()
+            spmm_gpu(ampbyp[am_partid].indices()[0].int(), ampbyp[am_partid].indices()[1].int(), 
+                            ampbyp[am_partid].values(), ampbyp[am_partid].size(0), 
+                            ampbyp[am_partid].size(1), inputs_recv, z_loc)
+            stop_time(self, "spmm_gpu", start)
+        z_loc = z_loc.contiguous()
         start = time.time()
-        dist.broadcast(inputs_recv, src=q, group=self.col_groups[rank_col])
-        stop_time(self, "broadcast", start)
-        start = time.time()
-        spmm_gpu(ampbyp[am_partid].indices()[0].int(), ampbyp[am_partid].indices()[1].int(), 
-                        ampbyp[am_partid].values(), ampbyp[am_partid].size(0), 
-                        ampbyp[am_partid].size(1), inputs_recv, z_loc)
-        stop_time(self, "spmm_gpu", start)
-    z_loc = z_loc.contiguous()
-    start = time.time()
-    dist.all_reduce(z_loc, op=dist.reduce_op.SUM, group=self.row_groups[rank_c])
-    stop_time(self, "reduce", start)    
-    return z_loc    
-    """
+        dist.all_reduce(z_loc, op=dist.reduce_op.SUM, group=self.row_groups[rank_c])
+        stop_time(self, "reduce", start)    
+        return z_loc    
 
-    
-
-
-
-
-    # n_per_proc = math.ceil(float(graph.size(0)) / (self.size / self.replication))
-    
     """ 1.5d p2p"""
+    print("in sa code", flush=True)
     
 
 
+    """
     # torch.cuda.synchronize()
     # print(f"before spmm", flush=True)
     # if self.rank == 0:
@@ -163,6 +159,8 @@ def broad_func_one5d(self, graph, ampbyp, inputs):
     col_group_length = self.size // self.replication
     row_indices_recv = self.row_indices_recv
     stop_time(self, "allocate/math", start)
+
+    dist.barrier()
     for i in range(stages):
         # if i == 7:
         #     torch.cuda.synchronize()
@@ -193,8 +191,8 @@ def broad_func_one5d(self, graph, ampbyp, inputs):
                     row_count_sum += rows_send.size(0)
                     stop_time(self, "gather_row_data", start, barrier=False)
                     start = time.time()
-                    # dist.send(rows_send, dst=j, group=self.col_groups[rank_col])
                     send_ops.append(dist.P2POp(dist.isend, rows_send, j, group=self.col_groups[rank_col]))
+                    # dist.send(rows_send, dst=j, group=self.col_groups[rank_col])
                     # dist.send(rows_send, j, group=self.col_groups[rank_col])
                     stop_time(self, "send_ops", start, barrier=False)
                     # del rows_send
@@ -203,12 +201,15 @@ def broad_func_one5d(self, graph, ampbyp, inputs):
             if len(send_ops) > 0:
                 start = time.time()
                 #print("sendinggg!", flush=True)
+                torch.cuda.synchronize()
+                print(f"i: {i} before batch_isend_irecv", flush=True)
                 reqs = dist.batch_isend_irecv(send_ops)
                 #print("batch sent", flush=True)
                 #stop_time(self, "communication", start)
                 for req in reqs:
                     req.wait()
                 stop_time(self, "communication", start, barrier=False)
+                print(f"i: {i} after batch_isend_irecv", flush=True)
                 for op in send_ops:
                     del op.tensor
                     del op
@@ -222,7 +223,10 @@ def broad_func_one5d(self, graph, ampbyp, inputs):
             rows_recv = torch.cuda.FloatTensor(device=self.device).resize_((unique_cols.size(0), inputs.size(1))).fill_(0)
             start = time.time()
 #            print(f"rows_recv dim {rows_recv.size()}", flush=True)
+            torch.cuda.synchronize()
+            print(f"i: {i} before recv", flush=True)
             dist.recv(rows_recv, src=q, group=self.col_groups[rank_col])
+            print(f"i: {i} after recv", flush=True)
             stop_time(self, "communication", start, barrier=False)
             start = time.time()
             inputs_recv = torch.cuda.FloatTensor(ampbyp[am_partid].size(1), \
@@ -250,22 +254,20 @@ def broad_func_one5d(self, graph, ampbyp, inputs):
     #     x = input()
     # dist.barrier()
     # z_loc = z_loc.contiguous()
-    print(f"before all_reduce", flush=True)
     start = time.time()
     dist.all_reduce(z_loc, op=dist.reduce_op.SUM, group=self.row_groups[rank_c])
     stop_time(self, "reduce", start, barrier=False)
-    print(f"after all_reduce", flush=True)
 
     # del inputs_recv_max
 
     return z_loc
+    """
     
 
     """ a2a impl
     """
     
 
-    """
     z_loc = torch.cuda.FloatTensor(ampbyp[0].size(0), inputs.size(1), device=self.device).fill_(0)
     rank = self.rank
     rank_c = self.rank // self.replication
@@ -345,7 +347,6 @@ def broad_func_one5d(self, graph, ampbyp, inputs):
     start = time.time()
     dist.all_reduce(z_loc, op=dist.reduce_op.SUM, group=self.row_groups[rank_c])
     stop_time(self, "reduce", start, barrier=False)
-    """
 
     return z_loc
     

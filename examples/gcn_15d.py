@@ -25,16 +25,18 @@ import gc
 import socket
 
 class GCN(nn.Module):
-  def __init__(self, in_feats, n_hidden, n_classes, n_layers, rank, size, timers, partitioning, replication, device,
-                    group=None, row_groups=None, col_groups=None):
+  def __init__(self, in_feats, n_hidden, n_classes, n_layers, node_count, rank, size, timers, partitioning, 
+                    replication, sparse_unaware, device, group=None, row_groups=None, col_groups=None):
     super(GCN, self).__init__()
     self.layers = nn.ModuleList()
+    self.node_count = node_count
     self.rank = rank
     self.size = size
     self.timers = timers
     self.group = group
     self.row_groups = row_groups
     self.col_groups = col_groups
+    self.sparse_unaware = sparse_unaware
     self.device = device
     self.partitioning = partitioning
     self.replication = replication
@@ -297,6 +299,8 @@ def main(args):
         data = data.to(device)
         data.x.requires_grad = True
         inputs = data.x.to(device)
+        n = inputs.size(0)
+        vtx_count = n
         inputs.requires_grad = True
         data.y = data.y.to(device)
         edge_index = data.edge_index
@@ -706,6 +710,7 @@ def main(args):
         data.y = data.y.to(device)
 
     elif args.dataset == "ogbn-papers100M":
+        n = 111059956 
         if rank % args.gpu == 0: 
             print(f"Loading coo...", flush=True)
             if args.partitions:
@@ -717,7 +722,6 @@ def main(args):
                 edge_index = torch.load("/global/cfs/cdirs/m1982/alokt/data/ogbn_papers100M/processed/papers_sym.pt")
             print(f"Done loading coo", flush=True)
             data = Data()
-            n = 111059956 
             num_features = 128
             num_classes = 172
             inputs = torch.load("/global/u1/a/alokt/data/ogbn_papers100M/feat/feature.pt")
@@ -952,11 +956,13 @@ def main(args):
                       args.n_hidden,
                       num_classes,
                       args.n_layers,
+                      n,
                       rank,
                       size,
                       args.timers,
                       partitioning,
                       args.replication,
+                      args.sparse_unaware,
                       device,
                       row_groups=row_groups,
                       col_groups=col_groups)
@@ -977,7 +983,6 @@ def main(args):
     counts_recv = [torch.cuda.LongTensor(1, 1, device=device).fill_(0) for i in range(size)]
 
     for i in range(len(ampbyp)):
-        print(f"rank: {rank} i: {i}")
 
         unique_cols = ampbyp[i]._indices()[1].unique()
         for j in range(args.replication):
@@ -993,7 +998,7 @@ def main(args):
     #     x = input()
     # dist.barrier()
 
-    print("all to all counts")  
+    print("all to all counts", flush=True)  
     dist.all_to_all(counts_recv, counts_send)
  
     row_indices_recv = [torch.cuda.LongTensor(device=device).resize_(counts_recv[i].int().item(),).fill_(0) for i in range(len(counts_recv))]
@@ -1001,11 +1006,11 @@ def main(args):
     # row_data_recv = [torch.cuda.FloatTensor(device=self.device).resize_(counts_send[i].int().item(), inputs.size(1)).fill_(0) for i in range(len(counts_send))]
     # start = time.time()
 
-    print("all to all indices")
+    print("all to all indices", flush=True)
     dist.all_to_all(row_indices_recv, row_indices_send)
 
     model.row_indices_recv = row_indices_recv
-    print("all to all done")
+    print("all to all done", flush=True)
 
     # use optimizer
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
@@ -1152,6 +1157,8 @@ if __name__ == '__main__':
                             help='turn on timers')
     parser.add_argument('--partitions', default='', type=str,
                             help='text file for unequal partitions')
+    parser.add_argument('--sparse-unaware', action="store_true",
+                            help='use sparsity-unaware implementation')
     args = parser.parse_args()
     print(args)
 

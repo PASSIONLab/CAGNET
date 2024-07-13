@@ -35,3 +35,5 @@ examples/job*
 examples/*.batch
 examples/sp-aware/
 examples/wandb/
+examples/*.png
+examples/job*
