@@ -13,6 +13,7 @@ from tqdm import tqdm
 from matplotlib import pyplot as plt
 from atlasify import atlasify
 import seaborn as sns
+import yaml
 
 from sparse_coo_tensor_cpp import downsample_gpu, compute_darts_gpu, throw_darts_gpu, \
                                     compute_darts_select_gpu, throw_darts_select_gpu, \
@@ -1695,11 +1696,11 @@ class GraphDataset(Dataset):
         event = torch.load(event_path, map_location=torch.device("cpu"))
         # convert DataBatch to Data instance because some transformations don't work on DataBatch
         event = Data(**event.to_dict())
-        print(f"before preprocess event: {event}", flush=True)
+        print(f"before preprocess event: {event} event.r: {event.r} event.z: {event.z}", flush=True)
         if not self.preprocess:
             return event
         event = self.preprocess_event(event)
-        print(f"after preprocess event: {event}", flush=True)
+        print(f"after preprocess event: {event} event.r: {event.r} event.z: {event.z}", flush=True)
         # do pyg transformation if a torch_geometric.transforms instance is given
         if self.transform is not None:
             event = self.transform(event)
@@ -1888,7 +1889,6 @@ def load_datafiles_in_dir(input_dir, data_name=None, data_num=None):
         input_dir = os.path.join(input_dir, data_name)
 
     data_files = [str(path) for path in Path(input_dir).rglob("*.pyg")][:data_num]
-    print(f"data_files: {data_files}", flush=True)
     assert len(data_files) > 0, f"No data files found in {input_dir}"
     if data_num is not None:
         assert len(data_files) == data_num, (
@@ -2019,14 +2019,16 @@ def remap_from_mask(event, edge_mask):
     """
 
     truth_map_to_edges = torch.ones(edge_mask.shape[0], dtype=torch.long) * -1
+    truth_map_to_edges = truth_map_to_edges.to(event.truth_map.device)
     truth_map_to_edges[event.truth_map[event.truth_map >= 0]] = torch.arange(
-        event.truth_map.shape[0]
+        event.truth_map.shape[0], device=event.truth_map.device
     )[event.truth_map >= 0]
     truth_map_to_edges = truth_map_to_edges[edge_mask]
 
     new_map = torch.ones(event.truth_map.shape[0], dtype=torch.long) * -1
+    new_map = new_map.to(event.truth_map.device)
     new_map[truth_map_to_edges[truth_map_to_edges >= 0]] = torch.arange(
-        truth_map_to_edges.shape[0]
+        truth_map_to_edges.shape[0], device=truth_map_to_edges.device
     )[truth_map_to_edges >= 0]
     event.truth_map = new_map.to(event.truth_map.device)
 
@@ -2322,6 +2324,18 @@ def map_edges_to_tracks(
         "This is not a meaningful operation, but it is needed for completeness"
     )
 
+def rearrange_by_distance(event, edge_index):
+    assert "r" in get_pyg_data_keys(event) and "z" in get_pyg_data_keys(
+        event
+    ), "event must contain r and z"
+    distance = event.r**2 + event.z**2
+
+    # flip edges that are pointing inward
+    edge_mask = distance[edge_index[0]] > distance[edge_index[1]]
+    edge_index[:, edge_mask] = edge_index[:, edge_mask].flip(0)
+
+    return edge_index
+
 def graph_roc_curve(dataset_name, test_batches, title, filename):
     """
     Plot the ROC curve for the graph construction efficiency.
@@ -2446,6 +2460,455 @@ def graph_roc_curve(dataset_name, test_batches, title, filename):
     print("Finish plotting. Find the score distribution at" f" {filename}")
 
     return full_auc_score, masked_auc_score
+
+def graph_intersection(
+    input_pred_graph,
+    input_truth_graph,
+    return_y_pred=True,
+    return_y_truth=False,
+    return_pred_to_truth=False,
+    return_truth_to_pred=False,
+    unique_pred=True,
+    unique_truth=True,
+):
+    """
+    An updated version of the graph intersection function, which is around 25x faster than the
+    Scipy implementation (on GPU). Takes a prediction graph and a truth graph, assumed to have unique entries.
+    If unique_pred or unique_truth is False, the function will first find the unique entries in the input graphs, and return the updated edge lists.
+    """
+
+    if not unique_pred:
+        input_pred_graph = torch.unique(input_pred_graph, dim=1)
+    if not unique_truth:
+        input_truth_graph = torch.unique(input_truth_graph, dim=1)
+
+    unique_edges, inverse = torch.unique(
+        torch.cat([input_pred_graph, input_truth_graph], dim=1),
+        dim=1,
+        sorted=False,
+        return_inverse=True,
+        return_counts=False,
+    )
+
+    inverse_pred_map = torch.ones_like(unique_edges[1]) * -1
+    inverse_pred_map[inverse[: input_pred_graph.shape[1]]] = torch.arange(
+        input_pred_graph.shape[1], device=input_pred_graph.device
+    )
+
+    inverse_truth_map = torch.ones_like(unique_edges[1]) * -1
+    inverse_truth_map[inverse[input_pred_graph.shape[1] :]] = torch.arange(
+        input_truth_graph.shape[1], device=input_truth_graph.device
+    )
+
+    pred_to_truth = inverse_truth_map[inverse][: input_pred_graph.shape[1]]
+    truth_to_pred = inverse_pred_map[inverse][input_pred_graph.shape[1] :]
+
+    return_tensors = []
+
+    if not unique_pred:
+        return_tensors.append(input_pred_graph)
+    if not unique_truth:
+        return_tensors.append(input_truth_graph)
+    if return_y_pred:
+        y_pred = pred_to_truth >= 0
+        return_tensors.append(y_pred)
+    if return_y_truth:
+        y_truth = truth_to_pred >= 0
+        return_tensors.append(y_truth)
+    if return_pred_to_truth:
+        return_tensors.append(pred_to_truth)
+    if return_truth_to_pred:
+        return_tensors.append(truth_to_pred)
+
+    return return_tensors if len(return_tensors) > 1 else return_tensors[0]
+
+def apply_score_cut(event, score_cut):
+    """
+    Apply a score cut to the event. This is used for the evaluation stage.
+    """
+    passing_edges_mask = event.scores >= score_cut
+
+    # flip edge direction if points inward
+    event.edge_index = rearrange_by_distance(event, event.edge_index)
+    event.track_edges = rearrange_by_distance(event, event.track_edges)
+
+    event.graph_truth_map = graph_intersection(
+        event.edge_index,
+        event.track_edges,
+        return_y_pred=False,
+        return_y_truth=False,
+        return_truth_to_pred=True,
+    )
+    event.truth_map = graph_intersection(
+        event.edge_index[:, passing_edges_mask],
+        event.track_edges,
+        return_y_pred=False,
+        return_truth_to_pred=True,
+    )
+    event.pred = passing_edges_mask
+
+def apply_target_conditions(event, target_tracks):
+    """
+    Apply the target conditions to the event. This is used for the evaluation stage.
+    Target_tracks is a list of dictionaries, each of which contains the conditions to be applied to the event.
+    """
+    # passing_tracks = torch.ones(event.truth_map.shape[0], dtype=torch.bool).to(
+    #     self.device
+    # )
+    passing_tracks = torch.ones(event.truth_map.shape[0], dtype=torch.bool).cuda()
+
+    for condition_key, condition_val in target_tracks.items():
+        condition_lambda = get_condition_lambda(condition_key, condition_val)
+        # passing_tracks = passing_tracks * condition_lambda(event).to(self.device)
+        passing_tracks = passing_tracks * condition_lambda(event).cuda()
+
+    event.target_mask = passing_tracks
+
+def gnn_efficiency_rz(test_batches, plot_config: dict, config: dict):
+    """_summary_
+
+    Args:
+        plot_config (dict): any plotting config
+        config (dict): config
+
+    Plot GNN edgewise efficiency against rz
+    """
+
+    print("Plotting edgewise efficiency as a function of rz")
+    print(
+        f"Using score cut: {config.get('score_cut')}, events from {config['dataset']}"
+    )
+    if "target_tracks" in config:
+        print(f"Track selection criteria: \n{yaml.dump(config.get('target_tracks'))}")
+    else:
+        print("No track selection criteria found, accepting all tracks.")
+
+    target = {"z": torch.empty(0), "r": torch.empty(0)}
+    all_target = target.copy()
+    true_positive = target.copy()
+    input_graph_size, graph_size, n_graphs = (0, 0, 0)
+
+    # dataset_name = config["dataset"]
+    # dataset = getattr(lightning_module, dataset_name)
+
+    # for event in tqdm(dataset):
+    for event in tqdm(test_batches):
+        # event = event.to(lightning_module.device)
+        event = event.cuda()
+        print(f"event.r: {event.r}", flush=True)
+        print(f"event.z: {event.z}", flush=True)
+
+        # Need to apply score cut and remap the truth_map
+        if "score_cut" in config:
+            # lightning_module.apply_score_cut(event, config["score_cut"])
+            apply_score_cut(event, config["score_cut"])
+        if "target_tracks" in config:
+            apply_target_conditions(event, config["target_tracks"])
+        else:
+            event.target_mask = torch.ones(event.truth_map.shape[0], dtype=torch.bool)
+
+        # scale r and z
+        event.r /= 1000
+        event.z /= 1000
+
+        # flip edges that point inward if not undirected, since if undirected is True, lightning_module.apply_score_cut takes care of this
+        event.edge_index = rearrange_by_distance(event, event.edge_index)
+        event.track_edges = rearrange_by_distance(event, event.track_edges)
+        event = event.cpu()
+
+        # indices of all target edges present in the input graph
+        print(f"event.target_mask: {event.target_mask}", flush=True)
+        print(f"event.graph_truth_map: {event.graph_truth_map}", flush=True)
+        target_edges = event.track_edges[
+            :, event.target_mask & (event.graph_truth_map > -1)
+        ]
+
+        # indices of all target edges (may or may not be present in the input graph)
+        all_target_edges = event.track_edges[:, event.target_mask]
+
+        # get target z r
+        for key, item in target.items():
+            target[key] = torch.cat([item, event[key][target_edges[0]]], dim=0)
+        for key, item in all_target.items():
+            all_target[key] = torch.cat([item, event[key][all_target_edges[0]]], dim=0)
+
+        # indices of all true positive target edges
+        target_true_positive_edges = event.track_edges[
+            :, event.target_mask & (event.truth_map > -1)
+        ]
+        for key in ["r", "z"]:
+            true_positive[key] = torch.cat(
+                [true_positive[key], event[key][target_true_positive_edges[0]]], dim=0
+            )
+
+        input_graph_size += event.edge_index.size(1)
+        graph_size += event.pred.sum().numpy()
+        n_graphs += 1
+        event.r *= 1000 # rescale because events test_batches are maintained across function calls
+        event.z *= 1000
+
+    print(f"plot_efficiency_rz1", flush=True)
+    fig, ax = plot_efficiency_rz(
+        target["z"], target["r"], true_positive["z"], true_positive["r"], plot_config
+    )
+    # Save the plot
+    atlasify(
+        "Internal",
+        r"$\sqrt{s}=14$TeV, $t \bar{t}$, $\langle \mu \rangle = 200$, primaries $t"
+        r" \bar{t}$ and soft interactions) " + "\n"
+        r"$p_T > 1$ GeV, $ | \eta | < 4$ " + "\n"
+        "Graph Construction Efficiency:"
+        f" {(target['z'].shape[0] / all_target['z'].shape[0]):.4f}, Input graph size:"
+        f" {input_graph_size / n_graphs: .2e} \n"
+        r"Edge score cut: "
+        + str(config["score_cut"])
+        + f", Mean graph size: {graph_size / n_graphs :.2e} \n"
+        "Signal Efficiency:"
+        f" {true_positive['z'].shape[0] / target['z'].shape[0] :.4f} \n"
+        "Cumulative signal efficiency:"
+        f" {true_positive['z'].shape[0] / all_target['z'].shape[0]: .4f}"
+        + "\n"
+        # + f"Evaluated on {dataset.len()} events in {dataset_name}",
+        + f"Evaluated on {len(test_batches)} events",
+    )
+    plt.tight_layout()
+    save_dir = os.path.join(
+        f"{plot_config.get('filename', 'edgewise_efficiency_rz')}.png",
+    )
+    fig.savefig(save_dir)
+    print(f"Finish plotting. Find the plot at {save_dir}")
+    plt.close()
+
+    print(f"plot_efficiency_rz2", flush=True)
+    fig, ax = plot_efficiency_rz(
+        all_target["z"],
+        all_target["r"],
+        true_positive["z"],
+        true_positive["r"],
+        plot_config,
+    )
+    # Save the plot
+    atlasify(
+        "Internal",
+        r"$\sqrt{s}=14$TeV, $t \bar{t}$, $\langle \mu \rangle = 200$, primaries $t"
+        r" \bar{t}$ and soft interactions) " + "\n"
+        r"$p_T > 1$ GeV, $ | \eta | < 4$ " + "\n"
+        "Graph Construction Efficiency:"
+        f" {(target['z'].shape[0] / all_target['z'].shape[0]):.4f}, Input graph size:"
+        f" {input_graph_size / n_graphs: .2e} \n"
+        r"Edge score cut: "
+        + str(config["score_cut"])
+        + f", Mean graph size: {graph_size / n_graphs :.2e} \n"
+        "Signal Efficiency:"
+        f" {true_positive['z'].shape[0] / target['z'].shape[0] :.4f} \n"
+        "Cumulative signal efficiency:"
+        f" {true_positive['z'].shape[0] / all_target['z'].shape[0]: .4f}"
+        + "\n"
+        # + f"Evaluated on {dataset.len()} events in {dataset_name}",
+        + f"Evaluated on {len(test_batches)} events",
+    )
+    plt.tight_layout()
+    save_dir = os.path.join(
+        f"cumulative_{plot_config.get('filename', 'edgewise_efficiency_rz')}.png",
+    )
+    fig.savefig(save_dir)
+    print(f"Finish plotting. Find the plot at {save_dir}")
+    plt.close()
+
+    signal_efficiency = true_positive['z'].shape[0] / target['z'].shape[0]
+    return signal_efficiency
+
+def gnn_purity_rz(test_batches, plot_config: dict, config: dict):
+    """_summary_
+
+    Args:
+        plot_config (dict): any plotting config
+        config (dict): config
+
+    Plot GNN edgewise efficiency against rz
+    """
+
+    print("Plotting edgewise purity as a function of rz")
+    print(
+        f"Using score cut: {config.get('score_cut')}, events from {config['dataset']}"
+    )
+    if "target_tracks" in config:
+        print(f"Track selection criteria: \n{yaml.dump(config.get('target_tracks'))}")
+    else:
+        print("No track selection criteria found, accepting all tracks.")
+
+    true_positive = {
+        # key: torch.empty(0).to(lightning_module.device) for key in ["z", "r"]
+        key: torch.empty(0).cuda() for key in ["z", "r"]
+    }
+    target_true_positive = true_positive.copy()
+
+    pred = true_positive.copy()
+    masked_pred = true_positive.copy()
+
+    # dataset_name = config["dataset"]
+    # dataset = getattr(lightning_module, dataset_name)
+
+    # for event in tqdm(dataset):
+    for event in tqdm(test_batches):
+        # event = event.to(lightning_module.device)
+        event = event.cuda()
+        # Need to apply score cut and remap the truth_map
+        if "score_cut" in config:
+            apply_score_cut(event, config["score_cut"])
+        if "target_tracks" in config:
+            apply_target_conditions(event, config["target_tracks"])
+        else:
+            event.target_mask = torch.ones(event.truth_map.shape[0], dtype=torch.bool)
+
+        # scale r and z
+        event.r /= 1000
+        event.z /= 1000
+        print(f"event: {event}", flush=True)
+        print(f"event.r: {event.r}", flush=True)
+        print(f"event.z: {event.z}", flush=True)
+
+        # flip edges that point inward if not undirected, since if undirected is True, lightning_module.apply_score_cut takes care of this
+        event.edge_index = rearrange_by_distance(event, event.edge_index)
+        event.track_edges = rearrange_by_distance(event, event.track_edges)
+        # event = event.cpu()
+
+        # target true positive edge indices, used as numerator of target purity and purity
+        target_true_positive_edges = event.track_edges[
+            :, event.target_mask & (event.truth_map > -1)
+        ]
+
+        # true positive edge indices, used as numerator of total purity
+        true_positive_edges = event.track_edges[:, (event.truth_map > -1)]
+
+        # all positive edges, used as denominator of total and target purity
+        positive_edges = event.edge_index[:, event.pred]
+
+        # masked positive edge indices, including true positive target edges and all false positive edges
+        fake_positive_edges = event.edge_index[:, event.pred & (event.y == 0)]
+        masked_positive_edges = torch.cat(
+            [target_true_positive_edges, fake_positive_edges], dim=1
+        )
+
+        for key in ["r", "z"]:
+            target_true_positive[key] = torch.cat(
+                [
+                    target_true_positive[key].float(),
+                    event[key][target_true_positive_edges[0]].float(),
+                ],
+                dim=0,
+            )
+            true_positive[key] = torch.cat(
+                [
+                    true_positive[key].float(),
+                    event[key][true_positive_edges[0]].float(),
+                ],
+                dim=0,
+            )
+            pred[key] = torch.cat(
+                [pred[key].float(), event[key][positive_edges[0]].float()], dim=0
+            )
+            masked_pred[key] = torch.cat(
+                [
+                    masked_pred[key].float(),
+                    event[key][masked_positive_edges[0]].float(),
+                ],
+                dim=0,
+            )
+        print(f"true_positive[z]: {true_positive['z']}", flush=True)
+        print(f"true_positive[r]: {true_positive['r']}", flush=True)
+        event.r *= 1000 # rescale because events test_batches are maintained across function calls
+        event.z *= 1000
+
+    purity_definition_label = {
+        "target_purity": "Target Purity",
+        "masked_purity": "Masked Purity",
+        "total_purity": "Total Purity",
+    }
+    for numerator, denominator, suffix in zip(
+        [true_positive, target_true_positive, target_true_positive],
+        [pred, pred, masked_pred],
+        ["total_purity", "target_purity", "masked_purity"],
+    ):
+        print(f"plot_efficiency_rz3", flush=True)
+        print(f"numerator[z]: {numerator['z']}", flush=True)
+        print(f"numerator[r]: {numerator['r']}", flush=True)
+        fig, ax = plot_efficiency_rz(
+            denominator["z"].cpu(),
+            denominator["r"].cpu(),
+            numerator["z"].cpu(),
+            numerator["r"].cpu(),
+            plot_config,
+        )
+        # Save the plot
+        atlasify(
+            "Internal",
+            r"$\sqrt{s}=14$TeV, $t \bar{t}$, $\langle \mu \rangle = 200$, primaries $t"
+            r" \bar{t}$ and soft interactions) " + "\n"
+            r"$p_T > 1$ GeV, $ | \eta | < 4$" + "\n"
+            r"Edge score cut: "
+            + str(config["score_cut"])
+            + "\n"
+            + purity_definition_label[suffix]
+            + ": "
+            + f"{numerator['z'].size(0) / denominator['z'].size(0) : .5f}"
+            + "\n"
+            # + f"Evaluated on {dataset.len()} events in {dataset_name}",
+            + f"Evaluated on {len(test_batches)} events",
+        )
+        plt.tight_layout()
+        save_dir = os.path.join(
+            f"{plot_config.get('filename', 'edgewise')}_{suffix}_rz.png",
+        )
+        fig.savefig(save_dir)
+        print(f"Finish plotting. Find the plot at {save_dir}")
+        plt.close()
+
+def plot_efficiency_rz(
+    target_z: torch.Tensor,
+    target_r: torch.Tensor,
+    true_positive_z: torch.Tensor,
+    true_positive_r: torch.Tensor,
+    plot_config: dict,
+):
+    z_range, r_range = plot_config.get("z_range", [-3, 3]), plot_config.get(
+        "r_range", [0, 1.0]
+    )
+    z_bins, r_bins = plot_config.get("z_bins", 6 * 64), plot_config.get("r_bins", 64)
+    z_bins = np.linspace(z_range[0], z_range[1], z_bins, endpoint=True)
+    r_bins = np.linspace(r_range[0], r_range[1], r_bins, endpoint=True)
+
+    fig, ax = plt.subplots(1, 1, figsize=plot_config.get("fig_size", (12, 6)))
+    true_hist, _, _ = np.histogram2d(
+        target_z.numpy(),
+        target_r.numpy(),
+        bins=[z_bins, r_bins],
+    )
+    true_positive_hist, z_edges, r_edges = np.histogram2d(
+        true_positive_z.numpy(), true_positive_r.numpy(), bins=[z_bins, r_bins]
+    )
+
+    print(f"target_z: {target_z} z_bins: {z_bins}", flush=True)
+    print(f"target_r: {target_r} r_bins: {r_bins}", flush=True)
+    print(f"true_positive_hist: {true_positive_hist}", flush=True)
+    print(f"true_hist: {true_hist}", flush=True)
+    eff = true_positive_hist / true_hist
+    print(f"eff.T: {eff.T}", flush=True)
+    print(f"eff.T.nonnans: {np.count_nonzero(~np.isnan(eff.T))} eff.T.numelems: {eff.T.size}", flush=True)
+
+    c = ax.pcolormesh(
+        z_bins,
+        r_bins,
+        eff.T,
+        cmap="jet_r",
+        vmin=plot_config.get("vmin", 0.9),
+        vmax=plot_config.get("vmax", 1),
+    )
+    fig.colorbar(c, ax=ax)
+    ax.set_xlabel("z [m]")
+    ax.set_ylabel("r [m]")
+
+    return fig, ax
 
 def plot_score_histogram(scores, y, bins=100, ax=None, inverse_dataset_length=1):
     """

@@ -41,7 +41,8 @@ import yaml
 
 class InteractionGNN(nn.Module):
     def __init__(self, in_feats, n_hidden, n_classes, nb_node_layer, nb_edge_layer, n_graph_iters, 
-                                        layernorm, batchnorm, hidden_activation, output_activation, 
+                                        node_features, edge_features, layernorm, batchnorm, 
+                                        hidden_activation, output_activation, 
                                         aggr, rank, size, partitioning, replication, device, 
                                         group=None, row_groups=None, col_groups=None, 
                                         impl="cagnet", dataset="physics_ex3"):
@@ -50,6 +51,8 @@ class InteractionGNN(nn.Module):
         self.nb_node_layer = nb_node_layer
         self.nb_edge_layer = nb_edge_layer
         self.n_graph_iters = n_graph_iters
+        self.node_features = node_features
+        self.edge_features = edge_features
         self.layernorm = layernorm
         self.batchnorm = batchnorm
         self.hidden_activation = hidden_activation
@@ -82,14 +85,24 @@ class InteractionGNN(nn.Module):
             batch_norm=batchnorm,
         )
         
-        self.edge_encoder = self.make_mlp(
-            input_size=2 * n_hidden,
-            sizes=[n_hidden] * nb_edge_layer,
-            output_activation=output_activation,
-            hidden_activation=hidden_activation,
-            layer_norm=layernorm,
-            batch_norm=batchnorm,
-        )
+        if len(self.edge_features) > 0:
+            self.edge_encoder = self.make_mlp(
+                input_size=len(self.edge_features),
+                sizes=[n_hidden] * nb_edge_layer,
+                output_activation=output_activation,
+                hidden_activation=hidden_activation,
+                layer_norm=layernorm,
+                batch_norm=batchnorm,
+            )
+        else:
+            self.edge_encoder = self.make_mlp(
+                input_size=2 * n_hidden,
+                sizes=[n_hidden] * nb_edge_layer,
+                output_activation=output_activation,
+                hidden_activation=hidden_activation,
+                layer_norm=layernorm,
+                batch_norm=batchnorm,
+            )
         
         in_edge_net = n_hidden * 6
         self.edge_network = nn.ModuleList(
@@ -227,16 +240,37 @@ class InteractionGNN(nn.Module):
         return classifier_output
 
     def forward(self, batch, epoch=0):
-        x = torch.stack([batch["z"]], dim=-1).float()
+        # x = torch.stack([batch["z"]], dim=-1).float()
+        print(f"node_features: {self.node_features}", flush=True)
+        x = torch.stack(
+            [batch[feature] for feature in self.node_features], dim=-1
+        ).float()
+        print(f"x.size: {x.size()}", flush=True)
+
+        if len(self.edge_features) > 0:
+            edge_attr = torch.stack(
+                [batch[feature] for feature in self.edge_features], dim=-1
+            ).float()
+        else:
+            edge_attr = None
+        print(f"edge_attr: {edge_attr}", flush=True)
+
         if batch.edge_index is not None:
             src, dst = batch.edge_index
         elif batch.adj_t is not None:
             print(f"in adj_t else", flush=True)
             coo = batch.adj_t.coo()
             src, dst = coo[0], coo[1]
+
         x.requires_grad = True
+        if edge_attr is not None:
+            edge_attr.requires_grad = True
+
         x = self.node_encoder(x)
-        e = self.edge_encoder(torch.cat([x[src], x[dst]], dim=-1))
+        if edge_attr is not None:
+            e = self.edge_encoder(edge_attr)
+        else:
+            e = self.edge_encoder(torch.cat([x[src], x[dst]], dim=-1))
         
         # if concat
         input_x = x
@@ -252,7 +286,7 @@ class InteractionGNN(nn.Module):
             print(f"out.size: {out.size()}", flush=True)
             torch.cuda.empty_cache()
             torch.cuda.synchronize()
-            t = input("")
+            # t = input("")
             outputs.append(out)
 
         return outputs[-1].squeeze(-1)
@@ -325,6 +359,8 @@ class InteractionGNN(nn.Module):
         for i, batch in enumerate(test_loader):
             batch = batch.to(self.device)
             print(f"test_batch: {batch}", flush=True)
+            print(f"test_batch.r: {batch.r}", flush=True)
+            print(f"test_batch.z: {batch.z}", flush=True)
             output = self(batch)
             loss, pos_loss, neg_loss = self.loss_function(output, batch)
             print(f"test loss: {loss} pos_los: {pos_loss} neg_loss: {neg_loss}", flush=True)
@@ -333,10 +369,34 @@ class InteractionGNN(nn.Module):
             batch.scores = scores.detach()
             test_batches.append(batch)
 
-        filename = f"{self.impl}_{self.dataset}"
-        full_auc, masked_auc = graph_roc_curve("testset", test_batches, "Interaction GNN ROC curve", filename)
-        print(f"full_auc: {full_auc} type(full_auc): {type(full_auc)}", flush=True)
-        print(f"masked_auc: {masked_auc} type(masked_auc): {type(masked_auc)}", flush=True)
+        if self.dataset == "physics_ex3":
+            filename = f"{self.impl}_{self.dataset}"
+            full_auc, masked_auc = graph_roc_curve("testset", test_batches, "Interaction GNN ROC curve", filename)
+            print(f"full_auc: {full_auc} type(full_auc): {type(full_auc)}", flush=True)
+            print(f"masked_auc: {masked_auc} type(masked_auc): {type(masked_auc)}", flush=True)
+        elif self.dataset == "ctd":
+            filename = f"{self.impl}_{self.dataset}_edgewise"
+            plot_config = {"title": "GNN edge-wise Efficiency vs (r,z)",
+                                "filename": filename }
+            target_tracks = {"pt": [1000, np.inf],
+                                "nhits": [3, np.inf],
+                                "primary": True,
+                                # pdgId: {}
+                                "radius": [0., 260.],
+                                "eta_particle": [-4., 4.],
+                                "redundant_split_edges": False}
+
+            config = {"dataset": self.dataset,
+                        "score_cut": 0.5,
+                        "target_tracks": target_tracks,
+                        "stage_dir": filename }
+            signal_efficiency = gnn_efficiency_rz(test_batches, plot_config, config)
+            plot_config["vmin"] = 0.4
+            gnn_purity_rz(test_batches, plot_config, config)
+            full_auc = 0.0
+            masked_auc = 0.0
+            print(f"signal_efficiency: {signal_efficiency}", flush=True)
+
         return full_auc, masked_auc
 
         # # Load data from testset directory
@@ -619,6 +679,8 @@ def main(args, batches=None):
 
         node_count = torch.max(trainset.edge_index) + 1
         edge_count = trainset.edge_index.size(1)
+        node_features = ["z"]
+        edge_features = []
 
         testset = GraphDataset(input_dir, "testset", 10, "fit", hparams)
         print(f"testset: {testset}", flush=True)
@@ -641,7 +703,8 @@ def main(args, batches=None):
 
         
         # trainset = GraphDataset(input_dir, "trainset", 4053, "fit", hparams)
-        dataset = GraphDataset(input_dir, "trainset", 80, "fit", hparams)
+        # dataset = GraphDataset(input_dir, "trainset", 80, "fit", hparams)
+        dataset = GraphDataset(input_dir, "trainset", 20, "fit", hparams)
         trainset = []
         for data in dataset:
             if data is None:
@@ -683,8 +746,23 @@ def main(args, batches=None):
             trainset.append(data_obj)
         print(f"in except after loading", flush=True)
         trainset = Batch.from_data_list(trainset)
+        node_count = torch.max(trainset.edge_index) + 1
+        edge_count = trainset.edge_index.size(1)
+        node_features = ["r", "phi", "z", "eta", "cluster_r_1", "cluster_phi_1", "cluster_z_1", "cluster_eta_1", 
+                            "cluster_r_2", "cluster_phi_2", "cluster_z_2", "cluster_eta_2"]
+        edge_features = ["dr", "dphi", "dz", "deta", "phislope", "rphislope"]
+
+        g_loc_indices = trainset.edge_index.to(device)
+        g_loc_values = torch.arange(g_loc_indices.size(1), dtype=torch.int64).to(device)
+        g_loc = torch.sparse_coo_tensor(g_loc_indices, g_loc_values)
+        g_loc = g_loc.to_sparse_csr()
         # trainset = trainset.to(device)
+        print(f"dataset: {dataset}", flush=True)
         print(f"trainset: {trainset}", flush=True)
+    
+        # testset = GraphDataset(input_dir, "testset", 20, "fit", hparams)
+        input_dir_test = "/global/cfs/cdirs/m1982/alokt/data/trackml/ctd/gnn/"
+        testset = GraphDataset(input_dir_test, "valset", 10, "test", hparams, preprocess=False)
 
         # print(f"before trainset.edge_index: {trainset.edge_index} dtype: {trainset.edge_index.dtype}", flush=True)
         # node_count = torch.max(trainset.edge_index) + 1
@@ -715,7 +793,8 @@ def main(args, batches=None):
 
         # testset = GraphDataset(input_dir, "testset", 200, "fit", hparams)
         # print(f"testset: {testset}", flush=True)
-        num_features = 1
+        # num_features = 1
+        num_features = len(node_features)
         num_classes = 2
 
     proc_row = size // args.replication
@@ -734,6 +813,8 @@ def main(args, batches=None):
                       args.nb_node_layer,
                       args.nb_edge_layer,
                       args.n_graph_iters,
+                      node_features,
+                      edge_features,
                       args.layernorm,
                       args.batchnorm,
                       args.hidden_activation,
@@ -770,23 +851,22 @@ def main(args, batches=None):
 
     # torch.manual_seed(0)
     if args.impl == "torch":
-        print(f"before train_loader", flush=True)
-        # train_loader = ShaDowKHopSampler(trainset, 
-        #                                     depth=args.n_layers, 
-        #                                     num_neighbors=args.num_neighbors, 
-        #                                     batch_size=args.batch_size, 
-        #                                     num_workers=1,
-        #                                     shuffle=False,
-        #                                     drop_last=True)
-        train_loader = DataLoader(trainset, 
-				    batch_size=1, 
-				    num_workers=1,
-				    shuffle=False,
-				    drop_last=True)
-        print(f"after train_loader", flush=True)
+        train_loader = ShaDowKHopSampler(trainset, 
+                                            depth=args.n_layers, 
+                                            num_neighbors=args.num_neighbors, 
+                                            batch_size=args.batch_size, 
+                                            num_workers=16,
+                                            shuffle=False,
+                                            drop_last=True)
+        # train_loader = DataLoader(trainset, 
+	# 			    batch_size=1, 
+	# 			    num_workers=1,
+	# 			    shuffle=False,
+	# 			    drop_last=True)
+        print(f"train_loader depth: {args.n_layers} nn: {args.num_neighbors} batch_size: {args.batch_size}", flush=True)
         print(f"len(train_loader): {len(train_loader)}", flush=True)
         # trainset.edge_index = trainset.adj_t.coo()
-    # test_loader = DataLoader(testset, batch_size=1, num_workers=1)
+    test_loader = DataLoader(testset, batch_size=1, num_workers=1)
 
     # components_small = LargestConnectedComponents(args.batch_size - 1)
     # components_large = LargestConnectedComponents(args.batch_size)
@@ -802,7 +882,7 @@ def main(args, batches=None):
     torch.cuda.empty_cache()
     torch.cuda.synchronize()
     print(f"before training", flush=True)
-    x = input()
+    # x = input()
 
     dur = []
     for epoch in range(args.n_epochs):
@@ -812,15 +892,12 @@ def main(args, batches=None):
             epoch_start = time.time()
 
         if args.impl == "torch":
-            # for batch, n_id in train_loader:
-            for batch in train_loader:
-                print(f"batch: {batch}", flush=True)
+            for i, (batch, n_id) in enumerate(train_loader):
+            # for batch in train_loader:
+                print(f"batch {i}: {batch}", flush=True)
                 optimizer.zero_grad()
                 batch = batch.to(device)
-                torch.cuda.empty_cache()
-                torch.cuda.synchronize()
-                print(f"before fwd", flush=True)
-                x = input()
+                # x = input()
                 logits = model(batch, epoch)
                 loss, pos_loss, neg_loss = model.loss_function(logits, batch)     
                 print(f"loss: {loss} pos_loss: {pos_loss} neg_loss: {neg_loss}", flush=True)
@@ -841,6 +918,7 @@ def main(args, batches=None):
             print(f"batch_count: {batch_count}", flush=True)
 
             for b in range(0, batch_count, args.n_bulkmb):
+                print(f"batch b: {b}", flush=True)
                 if b + args.n_bulkmb >= batch_count:
                     break
                 batches_start = b * args.batch_size
@@ -907,7 +985,7 @@ def main(args, batches=None):
                     loss.backward()
                     optimizer.step()
 
-        if epoch % 5 == 0:
+        if epoch % 4 == 0:
             print(f"Evaluating", flush=True)
             full_auc, masked_auc = model.evaluate(test_loader)
 
@@ -919,12 +997,12 @@ def main(args, batches=None):
         print(f"Epoch: {epoch} lr: {curr_lr}", flush=True)
         if epoch >= 1:
             dur.append(time.time() - epoch_start)
-        if epoch >= 1 and epoch % 5 == 0:
+        if epoch >= 1:
             print(f"Epoch time: {np.sum(dur) / epoch}", flush=True)
             # wandb.log({'full_auc': full_auc.item(),
             #                 'masked_auc': masked_auc.item(), 
             #                 'time': np.sum(dur).item()})
-            if epoch == 5:
+            if epoch == 4:
                 break
     total_stop = time.time()
 

@@ -98,6 +98,16 @@ def shadow_sampler(adj_matrix, batches, batch_size, frontier_sizes, mb_count_tot
         collapsed_frontier_rows = collapsed_frontier_rows.div(row_div, rounding_mode="floor")
         collapsed_frontier_cols = next_frontier._indices()[1, next_frontier_mask]
         collapsed_frontier_idxs = torch.stack((collapsed_frontier_rows, collapsed_frontier_cols))
+        print(f"collapsed_frontier_rows: {collapsed_frontier_rows}", flush=True)
+        print(f"collapsed_frontier_cols: {collapsed_frontier_cols}", flush=True)
+        print(f"collapsed_frontier_rows: {collapsed_frontier_rows.numel()}", flush=True)
+        print(f"collapsed_frontier_cols: {collapsed_frontier_cols.numel()}", flush=True)
+        if collapsed_frontier_rows.numel() == 1 and collapsed_frontier_cols.numel() == 1:
+            print(f"collapsed_frontier_rows: {collapsed_frontier_rows.unsqueeze(0)}", flush=True)
+            print(f"collapsed_frontier_cols: {collapsed_frontier_cols.unsqueeze(0)}", flush=True)
+            print(f"collapsed_frontier_idxs: {torch.stack((collapsed_frontier_rows, collapsed_frontier_cols)).reshape(2, 1)}", flush=True)
+            collapsed_frontier_idxs = collapsed_frontier_idxs.reshape(2, 1)
+        print(f"collapsed_frontier_idxs: {collapsed_frontier_idxs}", flush=True)
         collapsed_frontier_vals = torch.cuda.LongTensor(collapsed_frontier_idxs.size(1)).fill_(1)
 
         collapsed_frontier = torch.sparse_coo_tensor(collapsed_frontier_idxs, 
