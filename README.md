@@ -1,5 +1,7 @@
 # CAGNET: Communication-Avoiding Graph Neural nETworks
 
+This branch contains implementations for CAGNET's full-batch training pipeline (SC'20). For CAGNET's minibatch training pipeline (MLSys'24), please refer to the `distributed-sampling` branch.
+
 ## Description
 
 CAGNET is a family of parallel algorithms for training GNNs that can asymptotically reduce communication compared to previous parallel GNN training methods. CAGNET algorithms are based on 1D, 1.5D, 2D, and 3D sparse-dense matrix multiplication, and are implemented with `torch.distributed` on GPU-equipped clusters. We also implement these parallel algorithms on a 2-layer GCN.

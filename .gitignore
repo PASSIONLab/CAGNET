@@ -19,3 +19,7 @@ examples/cagnet_outputs/
 *.out
 examples/*.nsys-rep
 examples/*.ncu-rep
+cagnet/
+examples/
+slurm_outputs/
+tests/
