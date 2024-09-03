@@ -71,6 +71,7 @@ class ShaDowKHopSampler(torch.utils.data.DataLoader):
     def __collate__(self, n_id):
         n_id = torch.tensor(n_id)
 
+        print(f"before n_id: {n_id}", flush=True)
         rowptr, col, value = self.adj_t.csr()
         out = torch.ops.torch_sparse.ego_k_hop_sample_adj(
             rowptr, col, n_id, self.depth, self.num_neighbors, self.replace)
@@ -91,6 +92,10 @@ class ShaDowKHopSampler(torch.utils.data.DataLoader):
             row, col, e_id = adj_t.t().coo()
             batch.edge_index = torch.stack([row, col], dim=0)
 
+        torch.set_printoptions(edgeitems=20)
+        print(f"n_id: {n_id}", flush=True)
+        print(f"e_id: {e_id}", flush=True)
+        torch.set_printoptions(edgeitems=3)
         for k, v in self.data:
             if k in ['edge_index', 'adj_t', 'num_nodes', 'batch', 'ptr']:
                 continue

@@ -36,9 +36,6 @@ from sparse_coo_tensor_cpp import sort_dst_proc_gpu
 import socket
 import yaml
 
-# import wandb
-# wandb.init(project="exatrkx")
-
 class InteractionGNN(nn.Module):
     def __init__(self, in_feats, n_hidden, n_classes, nb_node_layer, nb_edge_layer, n_graph_iters, 
                                         node_features, edge_features, layernorm, batchnorm, 
@@ -218,7 +215,6 @@ class InteractionGNN(nn.Module):
         # Compute new node features
         edge_inputs = torch.cat([e, x[src], x[dst]], dim=-1)  # order dst src x ?
         e_updated = self.edge_network[i](edge_inputs)
-        print(f"edge_network: {self.edge_network}", flush=True)
         edge_messages_from_src = scatter_add(e_updated, dst, dim=0, dim_size=x.shape[0])
         edge_messages_from_dst = scatter_add(e_updated, src, dim=0, dim_size=x.shape[0])
 
@@ -226,7 +222,6 @@ class InteractionGNN(nn.Module):
             [edge_messages_from_src, edge_messages_from_dst, x], dim=-1
         )  # to check : the order dst src  x ?
         x_updated = self.node_network[i](node_inputs)
-        print(f"node_network: {self.node_network}", flush=True)
         
         return (
             x_updated,
@@ -241,11 +236,9 @@ class InteractionGNN(nn.Module):
 
     def forward(self, batch, epoch=0):
         # x = torch.stack([batch["z"]], dim=-1).float()
-        print(f"node_features: {self.node_features}", flush=True)
         x = torch.stack(
             [batch[feature] for feature in self.node_features], dim=-1
         ).float()
-        print(f"x.size: {x.size()}", flush=True)
 
         if len(self.edge_features) > 0:
             edge_attr = torch.stack(
@@ -253,12 +246,10 @@ class InteractionGNN(nn.Module):
             ).float()
         else:
             edge_attr = None
-        print(f"edge_attr: {edge_attr}", flush=True)
 
         if batch.edge_index is not None:
             src, dst = batch.edge_index
         elif batch.adj_t is not None:
-            print(f"in adj_t else", flush=True)
             coo = batch.adj_t.coo()
             src, dst = coo[0], coo[1]
 
@@ -280,13 +271,7 @@ class InteractionGNN(nn.Module):
             # if concat
             x = torch.cat([x, input_x], dim=-1)
             e = torch.cat([e, input_e], dim=-1)
-            print(f"in iter i: {i} x.size: {x.size()} e.size: {e.size()}", flush=True)
-            print(f"in iter i: {i} x.dtype: {x.dtype} e.dtype: {e.dtype}", flush=True)
             x, e, out = self.message_step(x, e, src, dst, i)
-            print(f"out.size: {out.size()}", flush=True)
-            torch.cuda.empty_cache()
-            torch.cuda.synchronize()
-            # t = input("")
             outputs.append(out)
 
         return outputs[-1].squeeze(-1)
@@ -716,11 +701,13 @@ def main(args, batches=None):
             #                     edge_index=data["edge_index"], 
             #                     truth_map=data["truth_map"],
             #                     weights=data["weights"])
+            # edge_index, _ = add_remaining_self_loops(data["edge_index"])
             data_obj = Data(hit_id=data["hit_id"],
                                 x=data["x"], 
                                 y=data["y"], 
                                 z=data["z"], 
                                 edge_index=data["edge_index"], 
+                                # edge_index=edge_index, 
                                 truth_map=data["truth_map"],
                                 weights=data["weights"],
                                 r=data["r"],
@@ -849,13 +836,14 @@ def main(args, batches=None):
                     gamma=0.9,
                 )
 
-    # torch.manual_seed(0)
+    torch.manual_seed(0)
     if args.impl == "torch":
         train_loader = ShaDowKHopSampler(trainset, 
                                             depth=args.n_layers, 
                                             num_neighbors=args.num_neighbors, 
                                             batch_size=args.batch_size, 
-                                            num_workers=16,
+                                            # num_workers=16,
+                                            num_workers=1,
                                             shuffle=False,
                                             drop_last=True)
         # train_loader = DataLoader(trainset, 
@@ -868,8 +856,8 @@ def main(args, batches=None):
         # trainset.edge_index = trainset.adj_t.coo()
     test_loader = DataLoader(testset, batch_size=1, num_workers=1)
 
-    # components_small = LargestConnectedComponents(args.batch_size - 1)
-    # components_large = LargestConnectedComponents(args.batch_size)
+    components_small = LargestConnectedComponents(args.batch_size - 1)
+    components_large = LargestConnectedComponents(args.batch_size)
 
     row_n_bulkmb = int(args.n_bulkmb / (size / args.replication))
     if rank == size - 1:
@@ -894,17 +882,29 @@ def main(args, batches=None):
         if args.impl == "torch":
             for i, (batch, n_id) in enumerate(train_loader):
             # for batch in train_loader:
+
                 print(f"batch {i}: {batch}", flush=True)
+                torch.set_printoptions(edgeitems=15)
+                print(f"batch.edge_index {i}: {batch.edge_index}", flush=True)
+                print(f"batch.x {i}: {batch.x}", flush=True)
+                print(f"batch.y {i}: {batch.y}", flush=True)
+                print(f"batch.z {i}: {batch.z}", flush=True)
+                torch.set_printoptions(edgeitems=3)
                 optimizer.zero_grad()
                 batch = batch.to(device)
                 # x = input()
                 logits = model(batch, epoch)
                 loss, pos_loss, neg_loss = model.loss_function(logits, batch)     
+
+                print(f"components_small(batch) {i}: {components_small(batch.cpu())}", flush=True)
+                print(f"components_large(batch) {i}: {components_large(batch.cpu())}", flush=True)
+
                 print(f"loss: {loss} pos_loss: {pos_loss} neg_loss: {neg_loss}", flush=True)
-                # wandb.log({'loss': loss.item(),
-                #                 'pos_loss': pos_loss.item(), 
-                #                 'neg_loss': neg_loss.item(), 
-                #                 'epoch': epoch})
+                if args.wandb:
+                    wandb.log({'loss': loss.item(),
+                                    'pos_loss': pos_loss.item(), 
+                                    'neg_loss': neg_loss.item(), 
+                                    'epoch': epoch})
                 loss.backward()
                 optimizer.step()
                 del batch
@@ -913,14 +913,19 @@ def main(args, batches=None):
         elif args.impl == "cagnet":
             batches_all = torch.arange(node_count).to(device)
             # batches_all = torch.randperm(node_count).to(device)
-            batch_count = -(node_count // -args.batch_size) # ceil(train_nid.size(0) / batch_size)
+            # batch_count = -(node_count // -args.batch_size) # ceil(train_nid.size(0) / batch_size)
+            batch_count = node_count // args.batch_size # ceil(train_nid.size(0) / batch_size)
             print(f"node_count: {node_count}", flush=True)
             print(f"batch_count: {batch_count}", flush=True)
 
+            last_iter = False
             for b in range(0, batch_count, args.n_bulkmb):
                 print(f"batch b: {b}", flush=True)
                 if b + args.n_bulkmb >= batch_count:
-                    break
+                    last_iter = True
+                    old_nbulkmb = args.n_bulkmb
+                    args.n_bulkmb = batch_count - b
+                    # break
                 batches_start = b * args.batch_size
                 batches_stop = (b + args.n_bulkmb) * args.batch_size
                 batches = batches_all[batches_start:batches_stop].view(args.n_bulkmb, args.batch_size)
@@ -967,23 +972,66 @@ def main(args, batches=None):
                     frontier_cpu = frontiers_bulk[i].cpu()
                     edge_ids_cpu = adj_matrix._values().cpu()
 
-                    batch = Batch(batch=frontiers_bulk[i], 
-                                    edge_index=adj_matrices_bulk[i]._indices(),
-                                    y=trainset.y[edge_ids_cpu],
-                                    z=trainset.z[frontier_cpu],
-                                    weights=trainset.weights[edge_ids_cpu])
+                    if args.dataset == "physics_ex3":
+                        batch = Batch(batch=frontiers_bulk[i], 
+                                        edge_index=adj_matrices_bulk[i]._indices(),
+                                        y=trainset.y[edge_ids_cpu],
+                                        z=trainset.z[frontier_cpu],
+                                        weights=trainset.weights[edge_ids_cpu])
+                    elif args.dataset == "ctd":
+                        batch = Batch(hit_id=trainset.hit_id[frontier_cpu],
+                                            x=trainset.x[frontier_cpu], 
+                                            y=trainset.y[edge_ids_cpu], 
+                                            z=trainset.z[frontier_cpu], 
+                                            edge_index=adj_matrices_bulk[i]._indices(), 
+                                            truth_map=trainset.truth_map,
+                                            weights=trainset.weights[edge_ids_cpu],
+                                            r=trainset.r[frontier_cpu],
+                                            phi=trainset.phi[frontier_cpu],
+                                            eta=trainset.eta[frontier_cpu],
+                                            cluster_r_1=trainset.cluster_r_1[frontier_cpu],
+                                            cluster_phi_1=trainset.cluster_phi_1[frontier_cpu],
+                                            cluster_z_1=trainset.cluster_z_1[frontier_cpu],
+                                            cluster_eta_1=trainset.cluster_eta_1[frontier_cpu],
+                                            cluster_r_2=trainset.cluster_r_2[frontier_cpu],
+                                            cluster_phi_2=trainset.cluster_phi_2[frontier_cpu],
+                                            cluster_z_2=trainset.cluster_z_2[frontier_cpu],
+                                            cluster_eta_2=trainset.cluster_eta_2[frontier_cpu],
+                                            dr=trainset.dr[edge_ids_cpu],
+                                            dphi=trainset.dphi[edge_ids_cpu],
+                                            dz=trainset.dz[edge_ids_cpu],
+                                            deta=trainset.deta[edge_ids_cpu],
+                                            phislope=trainset.phislope[edge_ids_cpu],
+                                            rphislope=trainset.rphislope[edge_ids_cpu],
+                                        )
+                        print(f"batch: {batch}", flush=True)
+                        torch.set_printoptions(edgeitems=10)
+                        print(f"edge_ids_cpu: {edge_ids_cpu}", flush=True)
+                        print(f"batch.edge_index: {batch.edge_index}", flush=True)
+                        print(f"batch.x {i}: {batch.x}", flush=True)
+                        print(f"batch.y {i}: {batch.y}", flush=True)
+                        print(f"batch.z {i}: {batch.z}", flush=True)
+                        torch.set_printoptions(edgeitems=3)
 
                     optimizer.zero_grad()
                     batch = batch.to(device)
                     logits = model(batch, epoch)
+
                     loss, pos_loss, neg_loss = model.loss_function(logits, batch)     
+                    print(f"components_small(batch): {components_small(batch.cpu())}", flush=True)
+                    print(f"components_large(batch): {components_large(batch.cpu())}", flush=True)
                     print(f"loss: {loss} pos_loss: {pos_loss} neg_loss: {neg_loss}", flush=True)
-                    # wandb.log({'loss': loss.item(),
-                    #                 'pos_loss': pos_loss.item(), 
-                    #                 'neg_loss': neg_loss.item(), 
-                    #                 'epoch': epoch})
+                    if args.wandb:
+                        wandb.log({'loss': loss.item(),
+                                        'pos_loss': pos_loss.item(), 
+                                        'neg_loss': neg_loss.item(), 
+                                        'epoch': epoch})
                     loss.backward()
                     optimizer.step()
+
+                if last_iter:
+                    last_iter = False
+                    args.n_bulkmb = old_nbulkmb
 
         if epoch % 4 == 0:
             print(f"Evaluating", flush=True)
@@ -1078,8 +1126,15 @@ if __name__ == '__main__':
                             help='output activation in mlps')
     parser.add_argument('--impl', default='cagnet', type=str,
                             help='sampling implementation to use (torch/cagnet)')
+    parser.add_argument('--wandb', action="store_true",
+                            help='use wandb logging')
     args = parser.parse_args()
     args.samp_num = args.num_neighbors
+
+    if args.wandb:
+        import wandb
+        wandb.init(project="exatrkx")
+
     print(args)
 
     main(args)
