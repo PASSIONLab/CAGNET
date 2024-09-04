@@ -57,13 +57,6 @@ def shadow_sampler(adj_matrix, batches, batch_size, frontier_sizes, mb_count_tot
 
     adj_matrix = adj_matrix.t().to_sparse_csr()
 
-    print(f"adj_matrix: {adj_matrix}", flush=True)
-    # 16384, 16385, 16386
-
-    for i in [16384, 16385, 16386, 16387]:
-        print(f"adj_matrix[{i}].cols: {adj_matrix.col_indices()[adj_matrix.crow_indices()[i]:adj_matrix.crow_indices()[i + 1]]}", flush=True)
-        print(f"adj_matrix[{i}].vals: {adj_matrix.values()[adj_matrix.crow_indices()[i]:adj_matrix.crow_indices()[i + 1]]}", flush=True)
-
     batches_expand_rows = torch.arange(mb_count * batch_size, dtype=torch.int32, device=gpu)
     batches_expand_idxs = torch.stack((batches_expand_rows, batches._indices()[1, :]))
     batches_expand = sparse_coo_tensor_gpu(batches_expand_idxs, batches._values(), 
@@ -85,15 +78,9 @@ def shadow_sampler(adj_matrix, batches, batch_size, frontier_sizes, mb_count_tot
     for i in range(n_layers):
         neighbors = batch_size * int(np.prod(frontier_sizes[:(i + 1)], dtype=int))
 
-        torch.set_printoptions(edgeitems=10)
-        print(f"i: {i} before current_frontier: {current_frontier}", flush=True)
-        torch.set_printoptions(edgeitems=3)
         p = gen_prob_dist(current_frontier, adj_matrix, mb_count, node_count_total,
                                 replication, rank, size, row_groups, col_groups,
                                 None, timing_dict, "sage", timing_arg, replicate_graph)
-        torch.set_printoptions(edgeitems=10)
-        print(f"i: {i} p: {p}", flush=True)
-        torch.set_printoptions(edgeitems=3)
 
         # frontier_size = frontier_sizes[i]
         frontier_size = frontier_sizes[0]
@@ -102,8 +89,6 @@ def shadow_sampler(adj_matrix, batches, batch_size, frontier_sizes, mb_count_tot
                                     replication, rank, size, row_groups, col_groups,
                                     timing_dict, "sage")
 
-        torch.set_printoptions(edgeitems=15)
-        print(f"i: {i} next_frontier: {next_frontier}", flush=True)
         # collapse next_frontier to mb_count x node_count_total sparse matrix
         # TODO: Change this when collapsed frontier is sparse
         next_frontier_mask = next_frontier._values().nonzero().squeeze()
@@ -112,8 +97,6 @@ def shadow_sampler(adj_matrix, batches, batch_size, frontier_sizes, mb_count_tot
         if i == 0:
             collapsed_frontier_rows = next_frontier._indices()[0, next_frontier_mask]
         else:
-            print(f"current_frontier_mbids: {current_frontier_mbids}", flush=True)
-            print(f"current_frontier_mbids.size: {current_frontier_mbids.size()}", flush=True)
             collapsed_frontier_rows = current_frontier_mbids[next_frontier._indices()[0, next_frontier_mask]]
 
         # collapsed_frontier_rows = collapsed_frontier_rows.div(row_div, rounding_mode="floor")
@@ -126,16 +109,10 @@ def shadow_sampler(adj_matrix, batches, batch_size, frontier_sizes, mb_count_tot
         collapsed_frontier = torch.sparse_coo_tensor(collapsed_frontier_idxs, 
                                                         collapsed_frontier_vals,
                                                         torch.Size([mb_count * batch_size, node_count_total]))
-        print(f"i: {i} noncoalesced collapsed_frontier: {collapsed_frontier}", flush=True)
-        print(f"i: {i} current_frontier_mbids: {current_frontier_mbids}", flush=True)
-        if current_frontier_mbids is not None:
-            print(f"i: {i} current_frontier_mbids.size: {current_frontier_mbids.size()}", flush=True)
         collapsed_frontier = collapsed_frontier.coalesce()
         # collapsed_frontier_dense = collapsed_frontier.to_dense()
         # frontiers = frontiers + collapsed_frontier_dense
         current_frontier_mbids = collapsed_frontier_idxs[0,:]
-        print(f"i: {i} coalesced collapsed_frontier: {collapsed_frontier}", flush=True)
-        torch.set_printoptions(edgeitems=3)
         frontiers = frontiers + collapsed_frontier
         frontiers = frontiers.coalesce()
 
@@ -148,16 +125,9 @@ def shadow_sampler(adj_matrix, batches, batch_size, frontier_sizes, mb_count_tot
                                                             expand_frontier_vals,
                                                             torch.Size([mb_count * neighbors, node_count_total]))
             current_frontier = expand_frontier
-            torch.set_printoptions(edgeitems=10)
-            print(f"i: {i} after current_frontier: {current_frontier}", flush=True)
-            torch.set_printoptions(edgeitems=3)
 
     # sampled_frontiers = frontiers.nonzero()[:,1]
-    torch.set_printoptions(edgeitems=20)
-    print(f"frontiers: {frontiers}", flush=True)
     sampled_frontiers = frontiers._indices()[1,:]
-    print(f"sampled_frontiers: {sampled_frontiers}", flush=True)
-    torch.set_printoptions(edgeitems=3)
 
     batch_ids = torch.div(frontiers._indices()[0,:], batch_size, rounding_mode="floor").int()
     batch_sizes = torch.histc(batch_ids, bins=mb_count, min=0, max=mb_count-1)
@@ -179,7 +149,6 @@ def shadow_sampler(adj_matrix, batches, batch_size, frontier_sizes, mb_count_tot
     row_select_adj = torch.sparse_csr_tensor(rowselect_adj_crows, rowselect_adj_cols, rowselect_adj_vals,
                                                 torch.Size([sampled_frontier_size, node_count_total]))
 
-    print(f"row_select_adj: {row_select_adj}", flush=True)
     # sampled_frontiers_rowids = frontiers.nonzero()[:,0]
     sampled_frontiers_rowids = frontiers._indices()[0,:]
     sampled_frontiers_csr = frontiers.to_sparse_csr()
@@ -208,12 +177,8 @@ def shadow_sampler(adj_matrix, batches, batch_size, frontier_sizes, mb_count_tot
     sampled_adjs = torch.sparse_coo_tensor(sampled_adj_indices, sampled_adjs_vals, 
                                                 torch.Size([sampled_frontier_size, sampled_frontier_size]))
 
-    print(f"sampled_adjs: {sampled_adjs}", flush=True)
     # sampled_adjs = sampled_adjs.t()
 
-    print(f"sampled_frontier_size: {sampled_frontier_size}", flush=True)
-    print(f"batch_sizes: {batch_sizes}", flush=True)
-    print(f"ps_batch_sizes: {ps_batch_sizes}", flush=True)
     sampled_frontiers_split = torch.split(sampled_frontiers, batch_sizes.tolist())
 
     # sampled_adjs_indices_split = torch.split(sampled_adjs._indices(), batch_sizes.tolist(), dim=1)
@@ -228,7 +193,6 @@ def shadow_sampler(adj_matrix, batches, batch_size, frontier_sizes, mb_count_tot
                                     (sampled_adjs._indices()[0,:] < batch_sizes.sum().item())
         sampled_adjs_indices_split = sampled_adjs._indices()[:, sampled_adjs_mask]
         # sampled_adjs_indices_split[0,:] -= sampled_adjs_indices_split[0,:].min().item()
-        print(f"i: {i} sampled_adjs_indices: {sampled_adjs_indices_split}", flush=True)
         sampled_adjs_indices_split[0,:] -= ps_batch_sizes[i]
         sampled_adjs_values_split = sampled_adjs._values()[sampled_adjs_mask]
         sampled_adjs_split.append(torch.sparse_coo_tensor(sampled_adjs_indices_split,

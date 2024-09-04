@@ -213,11 +213,6 @@ class InteractionGNN(nn.Module):
 
     def message_step(self, x, e, src, dst, i):
         # Compute new node features
-        print(f"src: {src}", flush=True)
-        print(f"dst: {dst}", flush=True)
-        print(f"src.min: {src.min()} src.max: {src.max()}", flush=True)
-        print(f"dst.min: {dst.min()} dst.max: {dst.max()}", flush=True)
-        print(f"x.size: {x.size()}", flush=True)
         edge_inputs = torch.cat([e, x[src], x[dst]], dim=-1)  # order dst src x ?
         e_updated = self.edge_network[i](edge_inputs)
         edge_messages_from_src = scatter_add(e_updated, dst, dim=0, dim_size=x.shape[0])
@@ -348,12 +343,8 @@ class InteractionGNN(nn.Module):
         test_batches = []
         for i, batch in enumerate(test_loader):
             batch = batch.to(self.device)
-            print(f"test_batch: {batch}", flush=True)
-            print(f"test_batch.r: {batch.r}", flush=True)
-            print(f"test_batch.z: {batch.z}", flush=True)
             output = self(batch)
             loss, pos_loss, neg_loss = self.loss_function(output, batch)
-            print(f"test loss: {loss} pos_los: {pos_loss} neg_loss: {neg_loss}", flush=True)
 
             scores = torch.sigmoid(output)
             batch.scores = scores.detach()
@@ -383,7 +374,7 @@ class InteractionGNN(nn.Module):
             signal_efficiency = gnn_efficiency_rz(test_batches, plot_config, config)
             plot_config["vmin"] = 0.4
             gnn_purity_rz(test_batches, plot_config, config)
-            full_auc = 0.0
+            full_auc = signal_efficiency
             masked_auc = 0.0
             print(f"signal_efficiency: {signal_efficiency}", flush=True)
 
@@ -661,11 +652,6 @@ def main(args, batches=None):
         trainset = Batch.from_data_list(trainset)
         # trainset = trainset.to(device)
         print(f"trainset: {trainset}", flush=True)
-        print(f"trainset.x.sum: {trainset.x.sum()}", flush=True)
-        print(f"trainset.y.sum: {trainset.y.sum()}", flush=True)
-        print(f"trainset.z.sum: {trainset.z.sum()}", flush=True)
-        print(f"trainset.truth_map.sum: {trainset.truth_map.sum()}", flush=True)
-        print(f"trainset.weights.sum: {trainset.weights.sum()}", flush=True)
 
         node_count = torch.max(trainset.edge_index) + 1
         edge_count = trainset.edge_index.size(1)
@@ -690,7 +676,6 @@ def main(args, batches=None):
             hparams = yaml.safe_load(stream)
 
         print(f"hparams: {hparams}", flush=True)
-
         
         # trainset = GraphDataset(input_dir, "trainset", 4053, "fit", hparams)
         # dataset = GraphDataset(input_dir, "trainset", 80, "fit", hparams)
@@ -736,7 +721,6 @@ def main(args, batches=None):
 
             # data_obj = dataset.preprocess_event(data_obj)
             trainset.append(data_obj)
-        print(f"in except after loading", flush=True)
         trainset = Batch.from_data_list(trainset)
         node_count = torch.max(trainset.edge_index) + 1
         edge_count = trainset.edge_index.size(1)
@@ -874,8 +858,6 @@ def main(args, batches=None):
 
     torch.cuda.empty_cache()
     torch.cuda.synchronize()
-    print(f"before training", flush=True)
-    # x = input()
 
     dur = []
     for epoch in range(args.n_epochs):
@@ -888,21 +870,11 @@ def main(args, batches=None):
             for i, (batch, n_id) in enumerate(train_loader):
             # for batch in train_loader:
 
-                print(f"batch {i}: {batch}", flush=True)
-                torch.set_printoptions(edgeitems=15)
-                print(f"batch.edge_index {i}: {batch.edge_index}", flush=True)
-                print(f"batch.x {i}: {batch.x}", flush=True)
-                print(f"batch.y {i}: {batch.y}", flush=True)
-                print(f"batch.z {i}: {batch.z}", flush=True)
-                torch.set_printoptions(edgeitems=3)
                 optimizer.zero_grad()
                 batch = batch.to(device)
                 # x = input()
                 logits = model(batch, epoch)
                 loss, pos_loss, neg_loss = model.loss_function(logits, batch)     
-
-                print(f"components_small(batch) {i}: {components_small(batch.cpu())}", flush=True)
-                print(f"components_large(batch) {i}: {components_large(batch.cpu())}", flush=True)
 
                 print(f"loss: {loss} pos_loss: {pos_loss} neg_loss: {neg_loss}", flush=True)
                 if args.wandb:
@@ -936,8 +908,6 @@ def main(args, batches=None):
                 batches = batches_all[batches_start:batches_stop].view(args.n_bulkmb, args.batch_size)
                 batches_loc = one5d_partition_mb(rank, size, batches, 1, args.n_bulkmb)
 
-                print(f"batches: {batches}", flush=True)
-                print(f"batches_loc: {batches_loc}", flush=True)
                 batches_indices_rows = torch.arange(batches_loc.size(0), dtype=torch.int32, device=device)
                 batches_indices_rows = batches_indices_rows.repeat_interleave(batches_loc.size(1))
                 batches_indices_cols = batches_loc.view(-1)
@@ -1009,22 +979,12 @@ def main(args, batches=None):
                                             phislope=trainset.phislope[edge_ids_cpu],
                                             rphislope=trainset.rphislope[edge_ids_cpu],
                                         )
-                        print(f"batch: {batch}", flush=True)
-                        torch.set_printoptions(edgeitems=10)
-                        print(f"edge_ids_cpu: {edge_ids_cpu}", flush=True)
-                        print(f"batch.edge_index: {batch.edge_index}", flush=True)
-                        print(f"batch.x {i}: {batch.x}", flush=True)
-                        print(f"batch.y {i}: {batch.y}", flush=True)
-                        print(f"batch.z {i}: {batch.z}", flush=True)
-                        torch.set_printoptions(edgeitems=3)
 
                     optimizer.zero_grad()
                     batch = batch.to(device)
                     logits = model(batch, epoch)
 
                     loss, pos_loss, neg_loss = model.loss_function(logits, batch)     
-                    print(f"components_small(batch): {components_small(batch.cpu())}", flush=True)
-                    print(f"components_large(batch): {components_large(batch.cpu())}", flush=True)
                     print(f"loss: {loss} pos_loss: {pos_loss} neg_loss: {neg_loss}", flush=True)
                     if args.wandb:
                         wandb.log({'loss': loss.item(),
@@ -1038,18 +998,20 @@ def main(args, batches=None):
                     last_iter = False
                     args.n_bulkmb = old_nbulkmb
 
-        if epoch % 4 == 0:
-            print(f"Evaluating", flush=True)
-            full_auc, masked_auc = model.evaluate(test_loader)
-
-            # for name, W in model.named_parameters():
-            #     print(f"name: {name} W.grad.sum: {W.grad.sum()}", flush=True)
-
         scheduler.step()
         curr_lr = scheduler.get_last_lr()
         print(f"Epoch: {epoch} lr: {curr_lr}", flush=True)
         if epoch >= 1:
             dur.append(time.time() - epoch_start)
+            print(f"Evaluating", flush=True)
+            result, masked_auc = model.evaluate(test_loader)
+            if args.wandb:
+                if self.dataset == "ctd":
+                    wandb.log({'signal_effiency': result,
+                                'time': dur.sum()})
+                else:
+                    wandb.log({'full_auc': result,
+                                'time': dur.sum()})
         if epoch >= 1:
             print(f"Epoch time: {np.sum(dur) / epoch}", flush=True)
             # wandb.log({'full_auc': full_auc.item(),
