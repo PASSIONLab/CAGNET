@@ -211,6 +211,9 @@ def shadow_sampler(adj_matrix, batches, batch_size, frontier_sizes, mb_count_tot
     print(f"sampled_adjs: {sampled_adjs}", flush=True)
     # sampled_adjs = sampled_adjs.t()
 
+    print(f"sampled_frontier_size: {sampled_frontier_size}", flush=True)
+    print(f"batch_sizes: {batch_sizes}", flush=True)
+    print(f"ps_batch_sizes: {ps_batch_sizes}", flush=True)
     sampled_frontiers_split = torch.split(sampled_frontiers, batch_sizes.tolist())
 
     # sampled_adjs_indices_split = torch.split(sampled_adjs._indices(), batch_sizes.tolist(), dim=1)
@@ -225,6 +228,8 @@ def shadow_sampler(adj_matrix, batches, batch_size, frontier_sizes, mb_count_tot
                                     (sampled_adjs._indices()[0,:] < batch_sizes.sum().item())
         sampled_adjs_indices_split = sampled_adjs._indices()[:, sampled_adjs_mask]
         # sampled_adjs_indices_split[0,:] -= sampled_adjs_indices_split[0,:].min().item()
+        print(f"i: {i} sampled_adjs_indices: {sampled_adjs_indices_split}", flush=True)
+        sampled_adjs_indices_split[0,:] -= ps_batch_sizes[i]
         sampled_adjs_values_split = sampled_adjs._values()[sampled_adjs_mask]
         sampled_adjs_split.append(torch.sparse_coo_tensor(sampled_adjs_indices_split,
                                                             sampled_adjs_values_split,

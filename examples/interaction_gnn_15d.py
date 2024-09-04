@@ -67,7 +67,7 @@ class InteractionGNN(nn.Module):
         self.impl = impl
         self.dataset = dataset
 
-        # torch.manual_seed(0)
+        torch.manual_seed(0)
         # aggr_list = ["sum", "mean", "max", "std"]
         # self.aggregation = torch_geometric.nn.aggr.MultiAggregation(aggr_list, mode="cat")
 
@@ -213,6 +213,11 @@ class InteractionGNN(nn.Module):
 
     def message_step(self, x, e, src, dst, i):
         # Compute new node features
+        print(f"src: {src}", flush=True)
+        print(f"dst: {dst}", flush=True)
+        print(f"src.min: {src.min()} src.max: {src.max()}", flush=True)
+        print(f"dst.min: {dst.min()} dst.max: {dst.max()}", flush=True)
+        print(f"x.size: {x.size()}", flush=True)
         edge_inputs = torch.cat([e, x[src], x[dst]], dim=-1)  # order dst src x ?
         e_updated = self.edge_network[i](edge_inputs)
         edge_messages_from_src = scatter_add(e_updated, dst, dim=0, dim_size=x.shape[0])
