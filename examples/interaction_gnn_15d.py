@@ -12,17 +12,20 @@ import torch.nn as nn
 import torch.autograd.profiler as profiler
 import torch_geometric
 import torch_geometric.transforms as T
+import torch_sparse
+
 from torch_geometric.data import Batch, Data, Dataset
 from torch_geometric.nn import SAGEConv
 from torch_geometric.datasets import Planetoid, Reddit
 from torch_geometric.loader import DataLoader, NeighborSampler, NeighborLoader
-# from torch_geometric.loader.shadow import ShaDowKHopSampler
-from shadow import ShaDowKHopSampler
+from torch_geometric.loader.shadow import ShaDowKHopSampler
+# from shadow import ShaDowKHopSampler
 from torch_geometric.transforms import LargestConnectedComponents
 from torch_geometric.typing import SparseTensor
 from torch_geometric.utils import add_remaining_self_loops
 from torch_scatter import scatter_add
-import torch_sparse
+from torchmetrics.classification import Precision, Recall, PrecisionRecallCurve, ROC, AUROC, Accuracy
+from torch.utils.checkpoint import checkpoint
 
 from cagnet.nn.conv import GCNConv
 from cagnet.partitionings import Partitioning
@@ -32,6 +35,7 @@ import cagnet.nn.functional as CAGF
 import torch.nn.functional as F
 
 from sparse_coo_tensor_cpp import sort_dst_proc_gpu
+from sklearn.metrics import roc_auc_score
 
 import socket
 import yaml
@@ -40,7 +44,7 @@ class InteractionGNN(nn.Module):
     def __init__(self, in_feats, n_hidden, n_classes, nb_node_layer, nb_edge_layer, n_graph_iters, 
                                         node_features, edge_features, layernorm, batchnorm, 
                                         hidden_activation, output_activation, 
-                                        aggr, rank, size, partitioning, replication, device, 
+                                        aggr, rank, size, checkpointing, partitioning, replication, device, 
                                         group=None, row_groups=None, col_groups=None, 
                                         impl="cagnet", dataset="physics_ex3"):
         super(InteractionGNN, self).__init__()
@@ -57,6 +61,7 @@ class InteractionGNN(nn.Module):
         self.aggr = aggr
         self.rank = rank
         self.size = size
+        self.checkpointing = checkpointing
         self.group = group
         self.row_groups = row_groups
         self.col_groups = col_groups
@@ -257,22 +262,35 @@ class InteractionGNN(nn.Module):
         if edge_attr is not None:
             edge_attr.requires_grad = True
 
-        x = self.node_encoder(x)
-        if edge_attr is not None:
-            e = self.edge_encoder(edge_attr)
+        if self.checkpointing:
+            x = checkpoint(self.node_encoder, x, use_reentrant=False)
+            if edge_attr is not None:
+                e = checkpoint(self.edge_encoder, edge_attr, use_reentrant=False)
+            else:
+                e = checkpoint(self.edge_encoder, torch.cat([x[src], x[dst]], dim=-1), use_reentrant=False)
         else:
-            e = self.edge_encoder(torch.cat([x[src], x[dst]], dim=-1))
-        
+            x = self.node_encoder(x)
+            if edge_attr is not None:
+                e = self.edge_encoder(edge_attr)
+            else:
+                e = self.edge_encoder(torch.cat([x[src], x[dst]], dim=-1))
+
         # if concat
         input_x = x
         input_e = e
         outputs = []
         for i in range(self.n_graph_iters):
             # if concat
-            x = torch.cat([x, input_x], dim=-1)
-            e = torch.cat([e, input_e], dim=-1)
-            x, e, out = self.message_step(x, e, src, dst, i)
-            outputs.append(out)
+            if self.checkpointing:
+                x = torch.cat([x, input_x], dim=-1)
+                e = torch.cat([e, input_e], dim=-1)
+                x, e, out = checkpoint(self.message_step, x, e, src, dst, i, use_reentrant=False)
+                outputs.append(out)
+            else:
+                x = torch.cat([x, input_x], dim=-1)
+                e = torch.cat([e, input_e], dim=-1)
+                x, e, out = self.message_step(x, e, src, dst, i)
+                outputs.append(out)
 
         return outputs[-1].squeeze(-1)
 
@@ -336,13 +354,22 @@ class InteractionGNN(nn.Module):
             )
 
     @torch.no_grad()
-    def evaluate(self, test_loader):
+    def evaluate(self, test_loader, epoch, curr_lr, epoch_time):
         """
         The gateway for the evaluation stage. This class method is called from the eval_stage.py script.
         """
+        val_auc = AUROC(task="binary").to(self.device)
+        val_precision = Precision(task="binary").to(self.device)
+        val_recall = Recall(task="binary").to(self.device)    
+        val_loss = []
+        eff = []
+        tar_pur = []
+        tot_pur = []
+
         test_batches = []
         for i, batch in enumerate(test_loader):
             batch = batch.to(self.device)
+            print(f"batch: {batch}", flush=True)
             output = self(batch)
             loss, pos_loss, neg_loss = self.loss_function(output, batch)
 
@@ -350,12 +377,69 @@ class InteractionGNN(nn.Module):
             batch.scores = scores.detach()
             test_batches.append(batch)
 
+            all_truth = batch.y.bool()
+            target_truth = (batch.weights > 0) & all_truth
+
+
+            preds = torch.sigmoid(output) > 0.5
+            
+            # Positives
+            edge_positive = preds.sum().float()
+
+            # Signal true & signal tp
+            target_true = target_truth.sum().float()
+            target_true_positive = (target_truth.bool() & preds).sum().float()
+            all_true_positive = (all_truth.bool() & preds).sum().float()
+            target_auc = roc_auc_score(
+                target_truth.bool().cpu().detach(), torch.sigmoid(output).cpu().detach()
+            )
+            # Eff, pur, auc
+            target_eff = target_true_positive / target_true
+            target_pur = target_true_positive / edge_positive
+            total_pur = all_true_positive / edge_positive
+            
+            val_losses = self.loss_function(output, batch)
+            val_losses = sum(val_losses)
+            val_loss.append(val_losses)
+            eff.append(target_eff.item())
+            tar_pur.append(target_pur.item())
+            tot_pur.append(total_pur.item())
+            val_precision.update(preds, target_truth)
+            val_recall.update(preds, target_truth)
+            val_auc.update(output, target_truth)
+
+        avg_loss = sum(val_loss) / len(val_loss)
+        target_eff = sum(eff) / len(eff)
+        avg_tarpur = sum(tar_pur) / len(tar_pur)
+        avg_totpur = sum(tot_pur) / len(tot_pur)
+            
+        efficiency = val_precision.compute()
+        purity = val_recall.compute()
+        auc = val_auc.compute()
+        print(f"val logging", flush=True)
+        wandb.log({
+            # "train_loss": loss,
+            "current_lr": curr_lr,
+            "eff": target_eff,
+            "target_pur": avg_tarpur,
+            "total_pur": avg_totpur,
+            "auc": target_auc,
+            "val_loss": avg_loss,
+            "epoch": epoch,
+            "time": epoch_time,
+            # "trainer/global_step": step + epoch*step
+            # "trainer/global_step": epoch
+        })
+        val_auc.reset(), val_precision.reset(), val_recall.reset()
+
+        full_auc = 0.0
+        masked_auc = 0.0
         if self.dataset == "physics_ex3":
             filename = f"{self.impl}_{self.dataset}"
             full_auc, masked_auc = graph_roc_curve("testset", test_batches, "Interaction GNN ROC curve", filename)
             print(f"full_auc: {full_auc} type(full_auc): {type(full_auc)}", flush=True)
             print(f"masked_auc: {masked_auc} type(masked_auc): {type(masked_auc)}", flush=True)
-        elif self.dataset == "ctd":
+        elif False and self.dataset == "ctd":
             filename = f"{self.impl}_{self.dataset}_edgewise"
             plot_config = {"title": "GNN edge-wise Efficiency vs (r,z)",
                                 "filename": filename }
@@ -373,7 +457,8 @@ class InteractionGNN(nn.Module):
                         "stage_dir": filename }
             signal_efficiency = gnn_efficiency_rz(test_batches, plot_config, config)
             plot_config["vmin"] = 0.4
-            gnn_purity_rz(test_batches, plot_config, config)
+            # gnn_purity_rz(test_batches, plot_config, config)
+            gnn_purity_rz(test_loader, plot_config, config)
             full_auc = signal_efficiency
             masked_auc = 0.0
             print(f"signal_efficiency: {signal_efficiency}", flush=True)
@@ -610,6 +695,7 @@ def main(args, batches=None):
 
     path = osp.join(osp.dirname(osp.realpath(__file__)), '../..', 'data', args.dataset)
 
+    torch.manual_seed(0)
     if args.dataset == "cora" or args.dataset == "reddit":
         if args.dataset == "cora":
             dataset = Planetoid(path, args.dataset, transform=T.NormalizeFeatures())
@@ -658,7 +744,7 @@ def main(args, batches=None):
         node_features = ["z"]
         edge_features = []
 
-        testset = GraphDataset(input_dir, "testset", 10, "fit", hparams)
+        testset = GraphDataset(input_dir, "testset", 20, "fit", hparams)
         print(f"testset: {testset}", flush=True)
         num_features = 1
         num_classes = 2
@@ -678,20 +764,15 @@ def main(args, batches=None):
         print(f"hparams: {hparams}", flush=True)
         
         # trainset = GraphDataset(input_dir, "trainset", 4053, "fit", hparams)
-        # dataset = GraphDataset(input_dir, "trainset", 80, "fit", hparams)
-        dataset = GraphDataset(input_dir, "trainset", 20, "fit", hparams)
+        dataset = GraphDataset(input_dir, "trainset", 80, "fit", hparams)
         trainset = []
         for data in dataset:
             if data is None:
                 continue
-            # data_obj = Data(hit_id=data["hit_id"],
-            #                     x=data["x"], 
-            #                     y=data["y"], 
-            #                     z=data["z"], 
-            #                     edge_index=data["edge_index"], 
-            #                     truth_map=data["truth_map"],
-            #                     weights=data["weights"])
-            # edge_index, _ = add_remaining_self_loops(data["edge_index"])
+            if data["edge_index"].size(1) > 3400000:
+            # if data1["x"].size(0) > 250000:
+                print("skipped")
+                continue
             data_obj = Data(hit_id=data["hit_id"],
                                 x=data["x"], 
                                 y=data["y"], 
@@ -735,10 +816,49 @@ def main(args, batches=None):
         # trainset = trainset.to(device)
         print(f"dataset: {dataset}", flush=True)
         print(f"trainset: {trainset}", flush=True)
+        print(f"trainset.y: {trainset.y} sum: {trainset.y.sum()}", flush=True)
+        print(f"trainset.weights: {trainset.weights} sum: {trainset.weights.sum()}", flush=True)
     
-        # testset = GraphDataset(input_dir, "testset", 20, "fit", hparams)
-        input_dir_test = "/global/cfs/cdirs/m1982/alokt/data/trackml/ctd/gnn/"
-        testset = GraphDataset(input_dir_test, "valset", 10, "test", hparams, preprocess=False)
+        input_dir_test = "/global/cfs/cdirs/m4439/CTD2023_results/module_map/"
+        testset = GraphDataset(input_dir_test, "valset", 20, "test", hparams)
+        # dataset_test = GraphDataset(input_dir_test, "valset", 20, "test", hparams, preprocess=False)
+        # testset = []
+        # for data in dataset_test:
+        #     if data is None:
+        #         continue
+        #     # if data["edge_index"].size(1) > 3400000:
+        #     # # if data1["x"].size(0) > 250000:
+        #     #     print("skipped")
+        #     #     continue
+        #     data_obj = Data(hit_id=data["hit_id"],
+        #                         x=data["x"], 
+        #                         y=data["y"], 
+        #                         z=data["z"], 
+        #                         edge_index=data["edge_index"], 
+        #                         truth_map=data["truth_map"],
+        #                         # weights=data["weights"],
+        #                         r=data["r"],
+        #                         phi=data["phi"],
+        #                         eta=data["eta"],
+        #                         cluster_r_1=data["cluster_r_1"],
+        #                         cluster_phi_1=data["cluster_phi_1"],
+        #                         cluster_z_1=data["cluster_z_1"],
+        #                         cluster_eta_1=data["cluster_eta_1"],
+        #                         cluster_r_2=data["cluster_r_2"],
+        #                         cluster_phi_2=data["cluster_phi_2"],
+        #                         cluster_z_2=data["cluster_z_2"],
+        #                         cluster_eta_2=data["cluster_eta_2"],
+        #                         # dr=data["dr"],
+        #                         # dphi=data["dphi"],
+        #                         # dz=data["dz"],
+        #                         # deta=data["deta"],
+        #                         phislope=data["phislope"],
+        #                         rphislope=data["rphislope"],
+        #                     )
+
+        #     testset.append(data_obj)
+        # testset = Batch.from_data_list(testset)
+        print(f"testset: {testset}", flush=True)
 
         # print(f"before trainset.edge_index: {trainset.edge_index} dtype: {trainset.edge_index.dtype}", flush=True)
         # node_count = torch.max(trainset.edge_index) + 1
@@ -798,6 +918,7 @@ def main(args, batches=None):
                       args.aggr,
                       rank,
                       size,
+                      args.checkpointing,
                       Partitioning.NONE,
                       args.replication,
                       device,
@@ -819,27 +940,26 @@ def main(args, batches=None):
             amsgrad=True,
             weight_decay=0.01
         )
+    print(f"optimizer: {optimizer}", flush=True)
     scheduler = torch.optim.lr_scheduler.StepLR(
                     optimizer,
-                    step_size=10,
+                    step_size=15,
                     gamma=0.9,
                 )
 
-    torch.manual_seed(0)
     if args.impl == "torch":
-        train_loader = ShaDowKHopSampler(trainset, 
-                                            depth=args.n_layers, 
-                                            num_neighbors=args.num_neighbors, 
-                                            batch_size=args.batch_size, 
-                                            # num_workers=16,
-                                            num_workers=1,
-                                            shuffle=False,
-                                            drop_last=True)
-        # train_loader = DataLoader(trainset, 
-	# 			    batch_size=1, 
-	# 			    num_workers=1,
-	# 			    shuffle=False,
-	# 			    drop_last=True)
+        # train_loader = ShaDowKHopSampler(trainset, 
+        #                                     depth=args.n_layers, 
+        #                                     num_neighbors=args.num_neighbors, 
+        #                                     batch_size=args.batch_size, 
+        #                                     num_workers=16,
+        #                                     shuffle=False,
+        #                                     drop_last=True)
+        train_loader = DataLoader(trainset, 
+				    batch_size=1, 
+				    num_workers=32,
+				    shuffle=False,
+				    drop_last=True)
         print(f"train_loader depth: {args.n_layers} nn: {args.num_neighbors} batch_size: {args.batch_size}", flush=True)
         print(f"len(train_loader): {len(train_loader)}", flush=True)
         # trainset.edge_index = trainset.adj_t.coo()
@@ -862,21 +982,29 @@ def main(args, batches=None):
     dur = []
     for epoch in range(args.n_epochs):
         model.train()
+        if (args.warmup != -1) and (epoch < args.warmup):
+            lr_scale = min(1.0, float(epoch + 1) / args.warmup)
+            for pg in optimizer.param_groups:
+                pg["lr"] = lr_scale * args.lr
+        # current_lr = optimizer.param_groups[0]['lr']
+
         print(f"Epoch: {epoch}", flush=True)
         if epoch >= 1:
             epoch_start = time.time()
 
         if args.impl == "torch":
-            for i, (batch, n_id) in enumerate(train_loader):
-            # for batch in train_loader:
+            # for i, (batch, n_id) in enumerate(train_loader):
 
+            for i, batch in enumerate(train_loader):
+
+                print(f"batch: {batch}", flush=True)
                 optimizer.zero_grad()
                 batch = batch.to(device)
                 # x = input()
                 logits = model(batch, epoch)
                 loss, pos_loss, neg_loss = model.loss_function(logits, batch)     
 
-                print(f"loss: {loss} pos_loss: {pos_loss} neg_loss: {neg_loss}", flush=True)
+                print(f"batch {i} loss: {loss} pos_loss: {pos_loss} neg_loss: {neg_loss}", flush=True)
                 if args.wandb:
                     wandb.log({'loss': loss.item(),
                                     'pos_loss': pos_loss.item(), 
@@ -884,8 +1012,6 @@ def main(args, batches=None):
                                     'epoch': epoch})
                 loss.backward()
                 optimizer.step()
-                del batch
-                del logits
 
         elif args.impl == "cagnet":
             batches_all = torch.arange(node_count).to(device)
@@ -1003,22 +1129,25 @@ def main(args, batches=None):
         print(f"Epoch: {epoch} lr: {curr_lr}", flush=True)
         if epoch >= 1:
             dur.append(time.time() - epoch_start)
-            print(f"Evaluating", flush=True)
-            result, masked_auc = model.evaluate(test_loader)
-            if args.wandb:
-                if self.dataset == "ctd":
-                    wandb.log({'signal_effiency': result,
-                                'time': dur.sum()})
-                else:
-                    wandb.log({'full_auc': result,
-                                'time': dur.sum()})
+        print(f"Evaluating", flush=True)
+        model.eval()
+        with torch.no_grad():
+            result, masked_auc = model.evaluate(test_loader, epoch, curr_lr[0], np.sum(dur))
+        if args.wandb:
+            # wandb.log({
+            #     "current_lr": curr_lr[0],
+            #     "epoch": epoch,
+            #     # "trainer/global_step": step + epoch*step
+            #     # "trainer/global_step": epoch
+            # })
+            if args.dataset == "ctd":
+                wandb.log({'signal_effiency': result,
+                            'time': np.sum(dur)})
+            else:
+                wandb.log({'full_auc': result,
+                            'time': np.sum(dur)})
         if epoch >= 1:
             print(f"Epoch time: {np.sum(dur) / epoch}", flush=True)
-            # wandb.log({'full_auc': full_auc.item(),
-            #                 'masked_auc': masked_auc.item(), 
-            #                 'time': np.sum(dur).item()})
-            if epoch == 4:
-                break
     total_stop = time.time()
 
 if __name__ == '__main__':
@@ -1095,6 +1224,10 @@ if __name__ == '__main__':
                             help='sampling implementation to use (torch/cagnet)')
     parser.add_argument('--wandb', action="store_true",
                             help='use wandb logging')
+    parser.add_argument('--checkpointing', action="store_true",
+                            help='use checkpointing')
+    parser.add_argument("--warmup", type=int, default=5,
+                        help="number of warmup iterations for learning rate")
     args = parser.parse_args()
     args.samp_num = args.num_neighbors
 
