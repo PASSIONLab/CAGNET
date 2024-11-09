@@ -1,7 +1,5 @@
 # CAGNET: Communication-Avoiding Graph Neural nETworks
 
-This branch contains implementations for CAGNET's full-batch training pipeline (SC'20). For CAGNET's minibatch training pipeline (MLSys'24), please refer to the `distributed-sampling` branch.
-
 ## Description
 
 CAGNET is a family of parallel algorithms for training GNNs that can asymptotically reduce communication compared to previous parallel GNN training methods. CAGNET algorithms are based on 1D, 1.5D, 2D, and 3D sparse-dense matrix multiplication, and are implemented with `torch.distributed` on GPU-equipped clusters. We also implement these parallel algorithms on a 2-layer GCN.
@@ -12,13 +10,19 @@ For more information, please read our ACM/IEEE SC'20 paper [Reducing Communicati
 **Contact:** Alok Tripathy (<alokt@berkeley.edu>)
 
 ## Dependencies
-- Python 3.6.10
-- PyTorch 1.3.1
-- PyTorch Geometric (PyG) 1.3.2
-- CUDA 10.1
-- GCC 6.4.0
+- Python 3.8.11
+- PyTorch 1.9.0
+- PyTorch Geometric (PyG) 1.7.2
+- CUDA 10.2
+- GCC 9.3.0
 
-On OLCF Summit, all of these dependencies can be accessed with the following
+On NERSC Perlmutter, all of these dependencies can be accessed with the following
+```bash
+module load tudatoolkit/21.3_10.2 # CUDA 10.2
+module load pytorch/1.9.0 # PyTorch and PyG
+```
+
+On OLCF Summit, older versions of these dependencies can be accessed with the following
 ```bash
 module load cuda # CUDA 10.1
 module load gcc # GCC 6.4.0
@@ -45,45 +49,39 @@ python setup.py install
 ## Documentation
 
 Each algorithm in CAGNET is implemented in a separate file.
-- `gcn_distr.py` : 1D algorithm
-- `gcn_distr_15d.py` : 1.5D algorithm
-- `gcn_distr_2d.py` : 2D algorithm
-- `gcn_distr_3d.py` : 3D algorithm
+- `examples/gcn_1d.py` : 1D algorithm
+- `examples/gcn_15d.py` : 1.5D algorithm
+- `examples/gcn_2d.py` : 2D algorithm
+- `examples/gcn_3d.py` : 3D algorithm
 
 Each file also as the following flags:
 
-- `--accperrank <int>` : Number of GPUs on each node
-- `--epochs <int>`  : Number of epochs to run training
-- `--graphname <Reddit/Amazon/subgraph3>` : Graph dataset to run training on
+- `--n-epochs <int>`  : Number of epochs to run training
+- `--dataset <Cora/Reddit/Amazon/Protein>` : Graph dataset to run training on
 - `--timing <True/False>` : Enable timing barriers to time phases in training
-- `--midlayer <int>` : Number of activations in the hidden layer
-- `--runcount <int>` : Number of times to run training
-- `--normalization <True/False>` : Normalize adjacency matrix in preprocessing
-- `--activations <True/False>` : Enable activation functions between layers
+- `--n-hidden <int>` : Number of activations in the hidden layer
+- `--normalize` : Normalize adjacency matrix in preprocessing
 - `--accuracy <True/False>` : Compute and print accuracy metrics (Reddit only)
 - `--replication <int>` : Replication factor (1.5D algorithm only)
-- `--download <True/False>` : Download the Reddit dataset
 
 Some of these flags do not currently exist for the 3D algorithm.
 
-Amazon/Protein datasets must exist as COO files in `../data/<graphname>/processed/`, compressed with pickle. 
-For Reddit, PyG handles downloading and accessing the dataset (see below).
+Amazon/Protein datasets must exist as COO files in `../../data/<graphname>/processed/`, compressed with pickle. 
+For Cora and Reddit, PyG handles downloading and accessing the dataset.
 
-## Running on OLCF Summit (example)
+## Running on NERSC Perlmutter (example)
 
 To run the CAGNET 1.5D algorithm on Reddit with
-- 16 processes
+- 4 processes
 - 100 epochs
 - 16 hidden layer activations
 - 2-factor replication
+- normalization
+- no weight decay
 
-run the following command to download the Reddit dataset:
+run the following command with Slurm:
 
-`python gcn_distr_15d.py --graphname=Reddit --download=True`
-
-This will download Reddit into `../data`. After downloading the Reddit dataset, run the following command to run training
-
-`ddlrun -x WORLD_SIZE=16 -x MASTER_ADDR=$(echo $LSB_MCPU_HOSTS | cut -d " " -f 3) -x MASTER_PORT=1234 -accelerators 6 python gcn_distr_15d.py --accperrank=6 --epochs=100 --graphname=Reddit --timing=False --midlayer=16 --runcount=1 --replication=2`
+`cd examples && srun -n 4 --ntasks-per-node=4 --gpus-per-task=1 --gpu-bind=map_gpu:0,1,2,3 python gcn_15d.py --dataset=Reddit --n-epochs=100 --n-hidden 16 --weight-decay 0 --replication 2 --normalize`
 
 ## Citation
 

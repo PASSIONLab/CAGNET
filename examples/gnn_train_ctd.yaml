@@ -1,0 +1,77 @@
+stage: edge_classifier
+model: InteractionGNN2
+input_dir: /global/cfs/cdirs/m4439/CTD2023_results/module_map/ # Should contain the files used in training and inference
+stage_dir: /global/cfs/cdirs/m1982/alokt/data/trackml/ctd/gnn # A directory to be created that will store logs, artifacts, and output data
+project: CTD_2023 # Used in logging
+accelerator: gpu
+devices: 1
+nodes: 1
+
+# Dataset parameters
+data_split: [7800, 1000, 1000] # Number of [training, validation, testing] examples
+dataset_class: GraphDataset
+undirected: False
+
+# Truth and weighting parameters. Syntax is...
+# Single value: track[key] == value
+# List of 2 floats: value1 <= track[key] <= value2
+# List with a string as the first value: First value defines the boolean test, the second value is a list or value. Boolean tests are: (in, not_in, is, is_not, within, not_within)
+# All other tracks follow the default: If a true edge, weight=0. If a fake edge, weight=1.
+weighting:
+  - weight: 0.1
+    conditions: 
+      y: False
+  - weight: 0.
+    conditions:
+      y: True
+  - weight: 1.
+    conditions:
+      y: True
+      pt: [1000, .inf]
+      nhits: [3, .inf]
+      primary: True
+      pdgId: [not_in, [11, -11]]
+      radius: [0., 260.]
+      eta_particle: [-4., 4.]
+      redundant_split_edges: False
+
+# Model parameters
+edge_cut: 0.5
+node_features: [r, phi, z, eta, cluster_r_1, cluster_phi_1, cluster_z_1, cluster_eta_1, cluster_r_2, cluster_phi_2, cluster_z_2, cluster_eta_2]
+node_scales: [1000., 3.14159265359, 1000., 1., 1000., 3.14159265359, 1000., 1., 1000., 3.14159265359, 1000., 1.]
+edge_features: [dr, dphi, dz, deta, phislope, rphislope]
+#edge_features: None
+hidden: 128
+n_graph_iters: 8
+n_node_encoder_layers: 3
+n_edge_encoder_layers: 3
+n_node_net_layers: 3
+n_edge_net_layers: 3
+n_node_decoder_layers: 3
+n_edge_decoder_layers: 3
+layernorm: False
+output_layer_norm: False
+edge_output_transform_final_layer_norm: False
+batchnorm: True
+output_batch_norm: False
+edge_output_transform_final_batch_norm: False
+bn_track_running_stats: False
+hidden_activation: ReLU
+output_activation: ReLU
+edge_output_transform_final_activation: null
+concat: True
+node_net_recurrent: False
+edge_net_recurrent: False
+in_out_diff_agg: True
+checkpointing: True
+
+# Training parameters
+warmup: 5
+lr: 0.0005
+min_lr: 0.000005
+factor: 0.9
+patience: 15
+max_epochs: 1000
+debug: false
+num_workers: [8,8,8]
+max_training_graph_size: 2800000
