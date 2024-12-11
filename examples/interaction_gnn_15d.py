@@ -4,6 +4,7 @@ import math
 import os
 import os.path as osp
 import time
+import torch.multiprocessing as mp
 import numpy as np
 
 import torch
@@ -433,49 +434,51 @@ class InteractionGNN(nn.Module):
         test_batches = []
         for i, batch in enumerate(test_loader):
             # batch = batch.to(self.device)
-            print(f"batch {i}: {batch}", flush=True)
-            output = self(batch)
-            loss, pos_loss, neg_loss = self.loss_function(output, batch)
+            if rank == 0:
+                print(f"batch {i}: {batch}", flush=True)
+                output = self(batch)
+                loss, pos_loss, neg_loss = self.loss_function(output, batch)
 
-            scores = torch.sigmoid(output)
-            batch.scores = scores.detach()
-            test_batches.append(batch)
+                scores = torch.sigmoid(output)
+                batch.scores = scores.detach()
+                test_batches.append(batch)
 
-            all_truth = batch.y.bool()
-            target_truth = (batch.weights > 0) & all_truth
+                all_truth = batch.y.bool()
+                target_truth = (batch.weights > 0) & all_truth
 
 
-            preds = torch.sigmoid(output) > 0.5
-            
-            # Positives
-            edge_positive = preds.sum().float()
+                preds = torch.sigmoid(output) > 0.5
+                
+                # Positives
+                edge_positive = preds.sum().float()
 
-            # Signal true & signal tp
-            target_true = target_truth.sum().float()
-            target_true_positive = (target_truth.bool() & preds).sum().float()
-            all_true_positive = (all_truth.bool() & preds).sum().float()
-            target_auc = roc_auc_score(
-                target_truth.bool().cpu().detach(), torch.sigmoid(output).cpu().detach()
-            )
-            # Eff, pur, auc
-            target_eff = target_true_positive / target_true
-            target_pur = target_true_positive / edge_positive
-            total_pur = all_true_positive / edge_positive
-            
-            val_losses = self.loss_function(output, batch)
-            val_losses = sum(val_losses)
-            val_loss.append(val_losses)
-            eff.append(target_eff.item())
-            tar_pur.append(target_pur.item())
-            tot_pur.append(total_pur.item())
-            # val_precision.update(preds, target_truth)
-            # val_recall.update(preds, target_truth)
-            # val_auc.update(output, target_truth)
+                # Signal true & signal tp
+                target_true = target_truth.sum().float()
+                target_true_positive = (target_truth.bool() & preds).sum().float()
+                all_true_positive = (all_truth.bool() & preds).sum().float()
+                target_auc = roc_auc_score(
+                    target_truth.bool().cpu().detach(), torch.sigmoid(output).cpu().detach()
+                )
+                # Eff, pur, auc
+                target_eff = target_true_positive / target_true
+                target_pur = target_true_positive / edge_positive
+                total_pur = all_true_positive / edge_positive
+                
+                val_losses = self.loss_function(output, batch)
+                val_losses = sum(val_losses)
+                val_loss.append(val_losses)
+                eff.append(target_eff.item())
+                tar_pur.append(target_pur.item())
+                tot_pur.append(total_pur.item())
+                # val_precision.update(preds, target_truth)
+                # val_recall.update(preds, target_truth)
+                # val_auc.update(output, target_truth)
 
-        avg_loss = sum(val_loss) / len(val_loss)
-        jarget_eff = sum(eff) / len(eff)
-        avg_tarpur = sum(tar_pur) / len(tar_pur)
-        avg_totpur = sum(tot_pur) / len(tot_pur)
+        if rank == 0:
+            avg_loss = sum(val_loss) / len(val_loss)
+            jarget_eff = sum(eff) / len(eff)
+            avg_tarpur = sum(tar_pur) / len(tar_pur)
+            avg_totpur = sum(tot_pur) / len(tot_pur)
             
         # efficiency = val_precision.compute()
         # purity = val_recall.compute()
@@ -729,14 +732,18 @@ def one5d_partition_mb(rank, size, batches, replication, mb_count):
     # batch_partitions = torch.split(batches, int(mb_count // size), dim=0)
     # return batch_partitions[rank]
 
-def main(args, batches=None):
+def main(local_rank, args, trainset, testset, g_loc_crows, g_loc_cols, g_loc_vals,
+                    g_loc_t_crows, g_loc_t_cols, g_loc_t_vals, node_count, edge_count, 
+                    node_features, edge_features, num_features, num_classes):
     # load and preprocess dataset
     # Initialize distributed environment with SLURM
     if "SLURM_PROCID" in os.environ.keys():
         os.environ["RANK"] = os.environ["SLURM_PROCID"]
+        global_rank = int(os.environ["RANK"]) * args.gpu + local_rank
 
     if "SLURM_NTASKS" in os.environ.keys():
         os.environ["WORLD_SIZE"] = os.environ["SLURM_NTASKS"]
+        global_size = int(os.environ["WORLD_SIZE"]) * args.gpu
 
     os.environ["MASTER_ADDR"] = args.hostname 
     os.environ["MASTER_PORT"] = "1234"
@@ -744,16 +751,22 @@ def main(args, batches=None):
     print(f"device_count: {torch.cuda.device_count()}")
     print(f"hostname: {socket.gethostname()}", flush=True)
     if not dist.is_initialized():
-        dist.init_process_group(backend=args.dist_backend)
+        dist.init_process_group(backend=args.dist_backend, rank=global_rank, world_size=global_size)
     rank = dist.get_rank()
     size = dist.get_world_size()
     print(f"hostname: {socket.gethostname()} rank: {rank} size: {size}", flush=True)
-    torch.cuda.set_device(rank % args.gpu)
+    # torch.cuda.set_device(rank % args.gpu)
+    print(f"local_rank: {local_rank}", flush=True)
+    torch.cuda.set_device(local_rank)
 
     if args.wandb and rank == 0:
         wandb.init(project="exatrkx")
 
     device = torch.device(f'cuda:{rank % args.gpu}')
+    g_loc = torch.sparse_csr_tensor(g_loc_crows, g_loc_cols, g_loc_vals)
+    g_loc_t = torch.sparse_csr_tensor(g_loc_t_crows, g_loc_t_cols, g_loc_t_vals)
+    g_loc = g_loc.to(device)
+    g_loc_t = g_loc_t.to(device)
 
     start_timer = torch.cuda.Event(enable_timing=True)
     stop_timer = torch.cuda.Event(enable_timing=True)
@@ -764,205 +777,6 @@ def main(args, batches=None):
     path = osp.join(osp.dirname(osp.realpath(__file__)), '../..', 'data', args.dataset)
 
     torch.manual_seed(0)
-    if args.dataset == "cora" or args.dataset == "reddit":
-        if args.dataset == "cora":
-            dataset = Planetoid(path, args.dataset, transform=T.NormalizeFeatures())
-        elif args.dataset == "reddit":
-            dataset = Reddit(path)
-
-        data = dataset[0]
-        data = data.to(device)
-        # data.x.requires_grad = True
-        inputs = data.x.to(device)
-        # inputs.requires_grad = True
-        data.y = data.y.to(device)
-        edge_index = data.edge_index
-        num_features = dataset.num_features
-        num_classes = dataset.num_classes
-        adj_matrix = edge_index
-    elif args.dataset == "physics_ex3":
-        print(f"Loading coo...", flush=True)
-        input_dir = "/pscratch/sd/a/alokt/data_dir/Example_3/metric_learning/"
-        with open(f"gnn_train_{args.dataset}.yaml") as stream:
-            hparams = yaml.safe_load(stream)
-
-        print(f"hparams: {hparams}", flush=True)
-
-        dataset = GraphDataset(input_dir, "trainset", 80, "fit", hparams)
-
-        print(f"dataset: {dataset}", flush=True)
-        trainset = []
-        for data in dataset:
-            data_obj = Data(hit_id=data["hit_id"],
-                                x=data["x"], 
-                                y=data["y"], 
-                                z=data["z"], 
-                                edge_index=data["edge_index"], 
-                                truth_map=data["truth_map"],
-                                weights=data["weights"])
-
-            # data_obj = dataset.preprocess_event(data_obj)
-            trainset.append(data_obj)
-        trainset = Batch.from_data_list(trainset)
-        # trainset = trainset.to(device)
-        print(f"trainset: {trainset}", flush=True)
-
-        node_count = torch.max(trainset.edge_index) + 1
-        edge_count = trainset.edge_index.size(1)
-        node_features = ["z"]
-        edge_features = []
-
-        testset = GraphDataset(input_dir, "testset", 20, "fit", hparams)
-        print(f"testset: {testset}", flush=True)
-        num_features = 1
-        num_classes = 2
-
-        g_loc_indices = trainset.edge_index.to(device)
-        g_loc_values = torch.arange(g_loc_indices.size(1), dtype=torch.int64).to(device)
-        g_loc = torch.sparse_coo_tensor(g_loc_indices, g_loc_values)
-        g_loc = g_loc.to_sparse_csr()
-        print(f"g_loc: {g_loc}", flush=True)
-
-    elif args.dataset == "ctd":
-        print(f"Loading coo...", flush=True)
-        # input_dir = "/global/cfs/cdirs/m4439/CTD2023_results/module_map/"
-        input_dir = "/global/cfs/cdirs/m4439/REL2024/metric_learning_7_30/"
-        with open(f"gnn_train_{args.dataset}.yaml") as stream:
-            hparams = yaml.safe_load(stream)
-
-        print(f"hparams: {hparams}", flush=True)
-        
-        # trainset = GraphDataset(input_dir, "trainset", 4053, "fit", hparams)
-        dataset = GraphDataset(input_dir, "trainset", 80, "fit", hparams)
-        trainset = []
-        for data in dataset:
-            if data is None:
-                continue
-            # if data["edge_index"].size(1) > 2000000:
-            # # if data1["x"].size(0) > 250000:
-            #     print("skipped")
-            #     continue
-            data_obj = Data(hit_id=data["hit_id"],
-                                x=data["x"], 
-                                y=data["y"], 
-                                z=data["z"], 
-                                edge_index=data["edge_index"], 
-                                # edge_index=edge_index, 
-                                truth_map=data["truth_map"],
-                                weights=data["weights"],
-                                r=data["r"],
-                                phi=data["phi"],
-                                eta=data["eta"],
-                                cluster_r_1=data["cluster_r_1"],
-                                cluster_phi_1=data["cluster_phi_1"],
-                                cluster_z_1=data["cluster_z_1"],
-                                cluster_eta_1=data["cluster_eta_1"],
-                                cluster_r_2=data["cluster_r_2"],
-                                cluster_phi_2=data["cluster_phi_2"],
-                                cluster_z_2=data["cluster_z_2"],
-                                cluster_eta_2=data["cluster_eta_2"],
-                                dr=data["dr"],
-                                dphi=data["dphi"],
-                                dz=data["dz"],
-                                deta=data["deta"],
-                                phislope=data["phislope"],
-                                rphislope=data["rphislope"],
-                            )
-
-            # data_obj = dataset.preprocess_event(data_obj)
-            trainset.append(data_obj)
-        trainset = Batch.from_data_list(trainset)
-        node_count = torch.max(trainset.edge_index) + 1
-        edge_count = trainset.edge_index.size(1)
-        node_features = ["r", "phi", "z", "eta", "cluster_r_1", "cluster_phi_1", "cluster_z_1", "cluster_eta_1", 
-                            "cluster_r_2", "cluster_phi_2", "cluster_z_2", "cluster_eta_2"]
-        edge_features = ["dr", "dphi", "dz", "deta", "phislope", "rphislope"]
-
-        g_loc_indices = trainset.edge_index.to(device)
-        g_loc_values = torch.arange(g_loc_indices.size(1), dtype=torch.int64).to(device)
-        g_loc = torch.sparse_coo_tensor(g_loc_indices, g_loc_values)
-        g_loc = g_loc.to_sparse_csr()
-        g_loc_t = g_loc.t().to_sparse_csr()
-        # trainset = trainset.to(device)
-        print(f"dataset: {dataset}", flush=True)
-        print(f"trainset: {trainset}", flush=True)
-        print(f"trainset.y: {trainset.y} sum: {trainset.y.sum()}", flush=True)
-        print(f"trainset.weights: {trainset.weights} sum: {trainset.weights.sum()}", flush=True)
-    
-        # input_dir_test = "/global/cfs/cdirs/m4439/CTD2023_results/module_map/"
-        input_dir_test = "/global/cfs/cdirs/m4439/REL2024/metric_learning_7_30/"
-        testset = GraphDataset(input_dir_test, "valset", 20, "test", hparams)
-        # dataset_test = GraphDataset(input_dir_test, "valset", 20, "test", hparams, preprocess=False)
-        # testset = []
-        # for data in dataset_test:
-        #     if data is None:
-        #         continue
-        #     # if data["edge_index"].size(1) > 3400000:
-        #     # # if data1["x"].size(0) > 250000:
-        #     #     print("skipped")
-        #     #     continue
-        #     data_obj = Data(hit_id=data["hit_id"],
-        #                         x=data["x"], 
-        #                         y=data["y"], 
-        #                         z=data["z"], 
-        #                         edge_index=data["edge_index"], 
-        #                         truth_map=data["truth_map"],
-        #                         # weights=data["weights"],
-        #                         r=data["r"],
-        #                         phi=data["phi"],
-        #                         eta=data["eta"],
-        #                         cluster_r_1=data["cluster_r_1"],
-        #                         cluster_phi_1=data["cluster_phi_1"],
-        #                         cluster_z_1=data["cluster_z_1"],
-        #                         cluster_eta_1=data["cluster_eta_1"],
-        #                         cluster_r_2=data["cluster_r_2"],
-        #                         cluster_phi_2=data["cluster_phi_2"],
-        #                         cluster_z_2=data["cluster_z_2"],
-        #                         cluster_eta_2=data["cluster_eta_2"],
-        #                         # dr=data["dr"],
-        #                         # dphi=data["dphi"],
-        #                         # dz=data["dz"],
-        #                         # deta=data["deta"],
-        #                         phislope=data["phislope"],
-        #                         rphislope=data["rphislope"],
-        #                     )
-
-        #     testset.append(data_obj)
-        # testset = Batch.from_data_list(testset)
-        print(f"testset: {testset}", flush=True)
-
-        # print(f"before trainset.edge_index: {trainset.edge_index} dtype: {trainset.edge_index.dtype}", flush=True)
-        # node_count = torch.max(trainset.edge_index) + 1
-        # edge_count = trainset.edge_index.size(1)
-
-        # # g_loc_indices = trainset.edge_index.to(device)
-        # # g_loc_values = torch.arange(g_loc_indices.size(1), dtype=torch.int64).to(device)
-        # # g_loc = torch.sparse_coo_tensor(g_loc_indices, g_loc_values)
-        # # g_loc = g_loc.to_sparse_csr()
-        # # print(f"g_loc: {g_loc}", flush=True)
-
-        # trainset.adj_t = SparseTensor(
-        #                             row=trainset.edge_index[0,:], col=trainset.edge_index[1,:], 
-        #                             value=torch.arange(trainset.edge_index.size(1)), 
-        #                             is_sorted=True,
-        #                             trust_data=True,
-        #                             sparse_sizes=(node_count, node_count))
-        # trainset.edge_index = None
-        # print(f"after trainset.edge_index: {trainset.edge_index}", flush=True)
-        # print(f"after trainset.adj_t: {trainset.adj_t}", flush=True)
-        # # print(f"after trainset.edge_index row.dtype: {trainset.edge_index.row.dtype} col.dtype: {trainset.edge_index.col.dtype}", flush=True)
-        # print(f"trainset: {trainset}", flush=True)
-        # print(f"trainset.x.sum: {trainset.x.sum()}", flush=True)
-        # print(f"trainset.y.sum: {trainset.y.sum()}", flush=True)
-        # print(f"trainset.z.sum: {trainset.z.sum()}", flush=True)
-        # print(f"trainset.truth_map.sum: {trainset.truth_map.sum()}", flush=True)
-        # print(f"trainset.weights.sum: {trainset.weights.sum()}", flush=True)
-
-        # testset = GraphDataset(input_dir, "testset", 200, "fit", hparams)
-        # print(f"testset: {testset}", flush=True)
-        # num_features = 1
-        num_features = len(node_features)
-        num_classes = 2
 
     proc_row = size // args.replication
     rank_row = rank // args.replication
@@ -1084,19 +898,21 @@ def main(args, batches=None):
             # batch_count = 375 * 4
             # batch_count = 93
             batch_count = 13320
+            batch_counter = 0
             for i in range(0, batch_count, size):
+                batch_counter += 1
                 batch_ids = torch.arange((i + rank) * args.batch_size, (i + rank + 1) * args.batch_size)
                 if epoch >= 1:
-                    start_time(start_timer, timing_arg=True)
+                    start_time(start_timer, timing_arg=False)
                 batch = train_loader.__collate__(batch_ids)
                 if epoch >= 1:
-                    model.timings["sample"].append(stop_time(start_timer, stop_timer, timing_arg=True))
+                    model.timings["sample"].append(stop_time(start_timer, stop_timer, timing_arg=False))
 
-                print(f"batch_ids: {batch_ids}", flush=True)
+                print(f"rank: {rank} batch_ids: {batch_ids}", flush=True)
                 print(f"batch: {batch}", flush=True)
                 optimizer.zero_grad()
                 if epoch >= 1:
-                    start_time(start_timer, timing_arg=True)
+                    start_time(start_timer, timing_arg=False)
                 batch = batch.to(device)
                 logits = model(batch, epoch)
                 loss, pos_loss, neg_loss = model.loss_function(logits, batch)     
@@ -1109,17 +925,18 @@ def main(args, batches=None):
                                     'epoch': epoch})
                 loss.backward()
                 if epoch >= 1:
-                    model.timings["train"].append(stop_time(start_timer, stop_timer, timing_arg=True))
+                    model.timings["train"].append(stop_time(start_timer, stop_timer, timing_arg=False))
 
                 if epoch >= 1:
-                    start_time(start_timer, timing_arg=True)
+                    start_time(start_timer, timing_arg=False)
                 for W in model.parameters():
                     if W.grad is not None:
                         dist.all_reduce(W.grad.data)
                         W.grad.data /= size
                 optimizer.step()
                 if epoch >= 1:
-                    model.timings["gradsync"].append(stop_time(start_timer, stop_timer, timing_arg=True))
+                    model.timings["gradsync"].append(stop_time(start_timer, stop_timer, timing_arg=False))
+            print(f"batch_counter: {batch_counter}", flush=True)
 
         elif args.impl == "cagnet":
             batches_all = torch.arange(node_count).to(device)
@@ -1278,6 +1095,7 @@ def main(args, batches=None):
         print(f"Epoch: {epoch} lr: {curr_lr}", flush=True)
         if epoch >= 1:
             dur.append(time.time() - epoch_start)
+            print(f"Epoch time: {np.sum(dur) / epoch}", flush=True)
 
         model.eval()
         print(f"Evaluating", flush=True)
@@ -1292,8 +1110,6 @@ def main(args, batches=None):
             elif rank == 0:
                 wandb.log({'full_auc': result,
                             'time': np.sum(dur)})
-        if epoch >= 1:
-            print(f"Epoch time: {np.sum(dur) / epoch}", flush=True)
         torch.cuda.synchronize()
         dist.barrier()
         torch.cuda.synchronize()
@@ -1411,4 +1227,144 @@ if __name__ == '__main__':
 
     print(args)
 
-    main(args)
+    # main(args)
+
+    if args.dataset == "cora" or args.dataset == "reddit":
+        if args.dataset == "cora":
+            dataset = Planetoid(path, args.dataset, transform=T.NormalizeFeatures())
+        elif args.dataset == "reddit":
+            dataset = Reddit(path)
+
+        data = dataset[0]
+        data = data.to(device)
+        # data.x.requires_grad = True
+        inputs = data.x.to(device)
+        # inputs.requires_grad = True
+        data.y = data.y.to(device)
+        edge_index = data.edge_index
+        num_features = dataset.num_features
+        num_classes = dataset.num_classes
+        adj_matrix = edge_index
+    elif args.dataset == "physics_ex3":
+        print(f"Loading coo...", flush=True)
+        input_dir = "/pscratch/sd/a/alokt/data_dir/Example_3/metric_learning/"
+        with open(f"gnn_train_{args.dataset}.yaml") as stream:
+            hparams = yaml.safe_load(stream)
+
+        print(f"hparams: {hparams}", flush=True)
+
+        dataset = GraphDataset(input_dir, "trainset", 80, "fit", hparams)
+
+        print(f"dataset: {dataset}", flush=True)
+        trainset = []
+        for data in dataset:
+            data_obj = Data(hit_id=data["hit_id"],
+                                x=data["x"], 
+                                y=data["y"], 
+                                z=data["z"], 
+                                edge_index=data["edge_index"], 
+                                truth_map=data["truth_map"],
+                                weights=data["weights"])
+
+            # data_obj = dataset.preprocess_event(data_obj)
+            trainset.append(data_obj)
+        trainset = Batch.from_data_list(trainset)
+        # trainset = trainset.to(device)
+        print(f"trainset: {trainset}", flush=True)
+
+        node_count = torch.max(trainset.edge_index) + 1
+        edge_count = trainset.edge_index.size(1)
+        node_features = ["z"]
+        edge_features = []
+
+        testset = GraphDataset(input_dir, "testset", 20, "fit", hparams)
+        print(f"testset: {testset}", flush=True)
+        num_features = 1
+        num_classes = 2
+
+        g_loc_indices = trainset.edge_index.to(device)
+        g_loc_values = torch.arange(g_loc_indices.size(1), dtype=torch.int64).to(device)
+        g_loc = torch.sparse_coo_tensor(g_loc_indices, g_loc_values)
+        g_loc = g_loc.to_sparse_csr()
+        print(f"g_loc: {g_loc}", flush=True)
+
+    elif args.dataset == "ctd":
+        print(f"Loading coo...", flush=True)
+        # input_dir = "/global/cfs/cdirs/m4439/CTD2023_results/module_map/"
+        input_dir = "/global/cfs/cdirs/m4439/REL2024/metric_learning_7_30/"
+        with open(f"gnn_train_{args.dataset}.yaml") as stream:
+            hparams = yaml.safe_load(stream)
+
+        print(f"hparams: {hparams}", flush=True)
+        
+        # trainset = GraphDataset(input_dir, "trainset", 4053, "fit", hparams)
+        dataset = GraphDataset(input_dir, "trainset", 80, "fit", hparams)
+        trainset = []
+        for data in dataset:
+            if data is None:
+                continue
+            data_obj = Data(hit_id=data["hit_id"],
+                                x=data["x"], 
+                                y=data["y"], 
+                                z=data["z"], 
+                                edge_index=data["edge_index"], 
+                                # edge_index=edge_index, 
+                                truth_map=data["truth_map"],
+                                weights=data["weights"],
+                                r=data["r"],
+                                phi=data["phi"],
+                                eta=data["eta"],
+                                cluster_r_1=data["cluster_r_1"],
+                                cluster_phi_1=data["cluster_phi_1"],
+                                cluster_z_1=data["cluster_z_1"],
+                                cluster_eta_1=data["cluster_eta_1"],
+                                cluster_r_2=data["cluster_r_2"],
+                                cluster_phi_2=data["cluster_phi_2"],
+                                cluster_z_2=data["cluster_z_2"],
+                                cluster_eta_2=data["cluster_eta_2"],
+                                dr=data["dr"],
+                                dphi=data["dphi"],
+                                dz=data["dz"],
+                                deta=data["deta"],
+                                phislope=data["phislope"],
+                                rphislope=data["rphislope"],
+                            )
+
+            trainset.append(data_obj)
+        trainset = Batch.from_data_list(trainset)
+        node_count = torch.max(trainset.edge_index) + 1
+        edge_count = trainset.edge_index.size(1)
+        node_features = ["r", "phi", "z", "eta", "cluster_r_1", "cluster_phi_1", "cluster_z_1", "cluster_eta_1", 
+                            "cluster_r_2", "cluster_phi_2", "cluster_z_2", "cluster_eta_2"]
+        edge_features = ["dr", "dphi", "dz", "deta", "phislope", "rphislope"]
+
+        # g_loc_indices = trainset.edge_index.to(device)
+        # g_loc_values = torch.arange(g_loc_indices.size(1), dtype=torch.int64).to(device)
+        # g_loc = torch.sparse_coo_tensor(g_loc_indices, g_loc_values)
+        # g_loc = g_loc.to_sparse_csr()
+        # g_loc_t = g_loc.t().to_sparse_csr()
+        g_loc_indices = trainset.edge_index
+        g_loc_values = torch.arange(g_loc_indices.size(1), dtype=torch.int64)
+        g_loc = torch.sparse_coo_tensor(g_loc_indices, g_loc_values)
+        g_loc = g_loc.to_sparse_csr()
+        g_loc_t = g_loc.t().to_sparse_csr()
+        # trainset = trainset.to(device)
+        print(f"dataset: {dataset}", flush=True)
+        print(f"trainset: {trainset}", flush=True)
+        print(f"trainset.y: {trainset.y} sum: {trainset.y.sum()}", flush=True)
+        print(f"trainset.weights: {trainset.weights} sum: {trainset.weights.sum()}", flush=True)
+    
+        # input_dir_test = "/global/cfs/cdirs/m4439/CTD2023_results/module_map/"
+        input_dir_test = "/global/cfs/cdirs/m4439/REL2024/metric_learning_7_30/"
+        testset = GraphDataset(input_dir_test, "valset", 20, "test", hparams)
+        print(f"testset: {testset}", flush=True)
+
+        num_features = len(node_features)
+        num_classes = 2
+
+    mp.spawn(main,
+             args=(args, trainset, testset, g_loc.crow_indices(), g_loc.col_indices(), g_loc.values(), 
+                    g_loc_t.crow_indices(), g_loc_t.col_indices(), g_loc_t.values(), node_count, edge_count, 
+                    node_features, edge_features, num_features, num_classes),
+             nprocs=args.gpu,
+             join=True)
