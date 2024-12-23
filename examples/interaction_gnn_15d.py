@@ -25,6 +25,7 @@ from torch_geometric.transforms import LargestConnectedComponents
 from torch_geometric.typing import SparseTensor
 from torch_geometric.utils import add_remaining_self_loops
 from torch_scatter import scatter_add
+from torch.multiprocessing import Process
 from torchmetrics.classification import Precision, Recall, PrecisionRecallCurve, ROC, AUROC, Accuracy
 from torch.utils.data.distributed import DistributedSampler
 from torch.utils.checkpoint import checkpoint
@@ -36,6 +37,7 @@ from cagnet.samplers.utils import *
 import cagnet.nn.functional as CAGF
 import torch.nn.functional as F
 
+from datetime import timedelta
 from sparse_coo_tensor_cpp import sort_dst_proc_gpu
 from sklearn.metrics import roc_auc_score
 
@@ -735,6 +737,8 @@ def one5d_partition_mb(rank, size, batches, replication, mb_count):
 def main(local_rank, args, trainset, testset, g_loc_crows, g_loc_cols, g_loc_vals,
                     g_loc_t_crows, g_loc_t_cols, g_loc_t_vals, node_count, edge_count, 
                     node_features, edge_features, num_features, num_classes):
+
+    torch.set_num_threads(1)
     # load and preprocess dataset
     # Initialize distributed environment with SLURM
     if "SLURM_PROCID" in os.environ.keys():
@@ -750,8 +754,13 @@ def main(local_rank, args, trainset, testset, g_loc_crows, g_loc_cols, g_loc_val
     
     print(f"device_count: {torch.cuda.device_count()}")
     print(f"hostname: {socket.gethostname()}", flush=True)
+    print(f"local_rank: {local_rank}", flush=True)
+    global_rank = local_rank
+    global_size = args.gpu
     if not dist.is_initialized():
-        dist.init_process_group(backend=args.dist_backend, rank=global_rank, world_size=global_size)
+        print(f"rank: {global_rank} initializing process group", flush=True)
+        dist.init_process_group(backend=args.dist_backend, rank=global_rank, world_size=global_size, timeout=timedelta(minutes=30))
+        dist.barrier()
     rank = dist.get_rank()
     size = dist.get_world_size()
     print(f"hostname: {socket.gethostname()} rank: {rank} size: {size}", flush=True)
@@ -767,6 +776,7 @@ def main(local_rank, args, trainset, testset, g_loc_crows, g_loc_cols, g_loc_val
     g_loc_t = torch.sparse_csr_tensor(g_loc_t_crows, g_loc_t_cols, g_loc_t_vals)
     g_loc = g_loc.to(device)
     g_loc_t = g_loc_t.to(device)
+    # trainset = trainset.to(device)
 
     start_timer = torch.cuda.Event(enable_timing=True)
     stop_timer = torch.cuda.Event(enable_timing=True)
@@ -836,11 +846,13 @@ def main(local_rank, args, trainset, testset, g_loc_crows, g_loc_cols, g_loc_val
                 )
 
     if args.impl == "torch":
+        print(f"trainset.edge_index.is_shared: {trainset.edge_index.is_shared()}", flush=True)
         train_loader = ShaDowKHopSampler(trainset, 
                                             depth=args.n_layers, 
                                             num_neighbors=args.num_neighbors, 
                                             batch_size=args.batch_size, 
-                                            num_workers=16,
+                                            num_workers=1,
+                                            pin_memory=True,
                                             shuffle=False,
                                             drop_last=True)
         batch_start = rank * (len(train_loader) // size)
@@ -903,16 +915,19 @@ def main(local_rank, args, trainset, testset, g_loc_crows, g_loc_cols, g_loc_val
                 batch_counter += 1
                 batch_ids = torch.arange((i + rank) * args.batch_size, (i + rank + 1) * args.batch_size)
                 if epoch >= 1:
-                    start_time(start_timer, timing_arg=False)
+                    start_time(start_timer, timing_arg=True)
+                torch.cuda.nvtx.range_push("sample")
                 batch = train_loader.__collate__(batch_ids)
                 if epoch >= 1:
-                    model.timings["sample"].append(stop_time(start_timer, stop_timer, timing_arg=False))
+                    model.timings["sample"].append(stop_time(start_timer, stop_timer, timing_arg=True))
+                torch.cuda.nvtx.range_pop()
 
                 print(f"rank: {rank} batch_ids: {batch_ids}", flush=True)
                 print(f"batch: {batch}", flush=True)
+                print(f"batch.edge_index.is_shared: {batch.edge_index.is_shared()}", flush=True)
                 optimizer.zero_grad()
                 if epoch >= 1:
-                    start_time(start_timer, timing_arg=False)
+                    start_time(start_timer, timing_arg=True)
                 batch = batch.to(device)
                 logits = model(batch, epoch)
                 loss, pos_loss, neg_loss = model.loss_function(logits, batch)     
@@ -925,17 +940,17 @@ def main(local_rank, args, trainset, testset, g_loc_crows, g_loc_cols, g_loc_val
                                     'epoch': epoch})
                 loss.backward()
                 if epoch >= 1:
-                    model.timings["train"].append(stop_time(start_timer, stop_timer, timing_arg=False))
+                    model.timings["train"].append(stop_time(start_timer, stop_timer, timing_arg=True))
 
                 if epoch >= 1:
-                    start_time(start_timer, timing_arg=False)
+                    start_time(start_timer, timing_arg=True)
                 for W in model.parameters():
                     if W.grad is not None:
                         dist.all_reduce(W.grad.data)
                         W.grad.data /= size
                 optimizer.step()
                 if epoch >= 1:
-                    model.timings["gradsync"].append(stop_time(start_timer, stop_timer, timing_arg=False))
+                    model.timings["gradsync"].append(stop_time(start_timer, stop_timer, timing_arg=True))
             print(f"batch_counter: {batch_counter}", flush=True)
 
         elif args.impl == "cagnet":
@@ -1097,23 +1112,6 @@ def main(local_rank, args, trainset, testset, g_loc_crows, g_loc_cols, g_loc_val
             dur.append(time.time() - epoch_start)
             print(f"Epoch time: {np.sum(dur) / epoch}", flush=True)
 
-        model.eval()
-        print(f"Evaluating", flush=True)
-        with torch.no_grad():
-            model = model.cpu()
-            result, masked_auc = model.evaluate(test_loader, epoch, curr_lr[0], np.sum(dur), args.wandb, rank)
-            model = model.to(device)
-        if args.wandb:
-            if args.dataset == "ctd" and rank == 0:
-                wandb.log({'signal_effiency': result,
-                            'time': np.sum(dur)})
-            elif rank == 0:
-                wandb.log({'full_auc': result,
-                            'time': np.sum(dur)})
-        torch.cuda.synchronize()
-        dist.barrier()
-        torch.cuda.synchronize()
-
         if rank == 0 and epoch >= 1: # and (epoch % 5 == 0 or epoch == args.n_epochs - 1):
             if args.timing:
                 sample_dur = [x / 1000 for x in model.timings["sample"]]
@@ -1139,6 +1137,29 @@ def main(local_rank, args, trainset, testset, g_loc_crows, g_loc_cols, g_loc_val
                 print(f"extract: {np.sum(extract_dur) / epoch} fwdbwd: {np.sum(fwdbwd_dur) / epoch} gradsync: {np.sum(gradsync_dur) / epoch}")
                 print(f"shadow-sampling: {np.sum(shadow_sampling_dur) / epoch} shadow-selection: {np.sum(shadow_selection_dur) / epoch} shadow-extraction: {np.sum(shadow_extraction_dur) / epoch}", flush=True)
                 print(f"fwd-prelude: {np.sum(fwd_prelude_dur) / epoch} fwd-encoder: {np.sum(fwd_encoder_dur) / epoch} fwd-graphiters: {np.sum(fwd_graphiters_dur) / epoch}", flush=True)
+
+        torch.cuda.synchronize()
+        dist.barrier()
+        torch.cuda.synchronize()
+
+        model.eval()
+        print(f"Evaluating", flush=True)
+        with torch.no_grad():
+            if epoch >= 1:
+                model = model.cpu()
+                result, masked_auc = model.evaluate(test_loader, epoch, curr_lr[0], np.sum(dur), args.wandb, rank)
+                model = model.to(device)
+        if args.wandb:
+            if args.dataset == "ctd" and rank == 0:
+                wandb.log({'signal_effiency': result,
+                            'time': np.sum(dur)})
+            elif rank == 0:
+                wandb.log({'full_auc': result,
+                            'time': np.sum(dur)})
+        torch.cuda.synchronize()
+        dist.barrier()
+        torch.cuda.synchronize()
+
     total_stop = time.time()
 
 if __name__ == '__main__':
@@ -1332,6 +1353,33 @@ if __name__ == '__main__':
 
             trainset.append(data_obj)
         trainset = Batch.from_data_list(trainset)
+        trainset.x.share_memory_()
+        trainset.y.share_memory_()
+        trainset.z.share_memory_()
+        trainset.hit_id.share_memory_()
+        trainset.edge_index.share_memory_()
+        trainset.truth_map.share_memory_()
+        trainset.weights.share_memory_()
+        trainset.r.share_memory_()
+        trainset.phi.share_memory_()
+        trainset.eta.share_memory_()
+        trainset.cluster_r_1.share_memory_()
+        trainset.cluster_phi_1.share_memory_()
+        trainset.cluster_z_1.share_memory_()
+        trainset.cluster_eta_1.share_memory_()
+        trainset.cluster_r_2.share_memory_()
+        trainset.cluster_phi_2.share_memory_()
+        trainset.cluster_z_2.share_memory_()
+        trainset.cluster_eta_2.share_memory_()
+        trainset.dr.share_memory_()
+        trainset.dphi.share_memory_()
+        trainset.dz.share_memory_()
+        trainset.deta.share_memory_()
+        trainset.phislope.share_memory_()
+        trainset.rphislope.share_memory_()
+        trainset.batch.share_memory_()
+        trainset.ptr.share_memory_()
+        print(f"trainset.edge_index.is_shared: {trainset.edge_index.is_shared()}", flush=True)
         node_count = torch.max(trainset.edge_index) + 1
         edge_count = trainset.edge_index.size(1)
         node_features = ["r", "phi", "z", "eta", "cluster_r_1", "cluster_phi_1", "cluster_z_1", "cluster_eta_1", 
@@ -1351,8 +1399,6 @@ if __name__ == '__main__':
         # trainset = trainset.to(device)
         print(f"dataset: {dataset}", flush=True)
         print(f"trainset: {trainset}", flush=True)
-        print(f"trainset.y: {trainset.y} sum: {trainset.y.sum()}", flush=True)
-        print(f"trainset.weights: {trainset.weights} sum: {trainset.weights.sum()}", flush=True)
     
         # input_dir_test = "/global/cfs/cdirs/m4439/CTD2023_results/module_map/"
         input_dir_test = "/global/cfs/cdirs/m4439/REL2024/metric_learning_7_30/"
@@ -1362,9 +1408,25 @@ if __name__ == '__main__':
         num_features = len(node_features)
         num_classes = 2
 
+    torch.set_num_threads(1)
+    mp.set_start_method("spawn", force=True)
     mp.spawn(main,
-             args=(args, trainset, testset, g_loc.crow_indices(), g_loc.col_indices(), g_loc.values(), 
-                    g_loc_t.crow_indices(), g_loc_t.col_indices(), g_loc_t.values(), node_count, edge_count, 
-                    node_features, edge_features, num_features, num_classes),
+             args=(args, trainset, testset, g_loc.crow_indices(), g_loc.col_indices(), 
+                    g_loc.values(), g_loc_t.crow_indices(), g_loc_t.col_indices(), 
+                    g_loc_t.values(), node_count, edge_count, node_features, 
+                    edge_features, num_features, num_classes),
              nprocs=args.gpu,
              join=True)
+
+    # processes = []
+    # for i in range(args.gpu):
+    #     p = Process(target=main, args=(i, args, trainset, testset, 
+    #                     g_loc.crow_indices(), g_loc.col_indices(), 
+    #                     g_loc.values(), g_loc_t.crow_indices(), 
+    #                     g_loc_t.col_indices(), g_loc_t.values(), 
+    #                     node_count, edge_count, node_features, 
+    #                     edge_features, num_features, num_classes))
+    #     p.start()
+    #     processes.append(p)
+    # for p in processes:
+    #     p.join()

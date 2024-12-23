@@ -51,18 +51,18 @@ class ShaDowKHopSampler(torch.utils.data.DataLoader):
 
         if data.edge_index is not None:
             self.is_sparse_tensor = False
-            row, col = data.edge_index.cpu()
+            row, col = data.edge_index.cpu().share_memory_()
             self.adj_t = SparseTensor(
                 row=row, col=col, value=torch.arange(col.size(0)),
-                sparse_sizes=(data.num_nodes, data.num_nodes)).t()
+                sparse_sizes=(data.num_nodes, data.num_nodes)).t().share_memory_()
         else:
             self.is_sparse_tensor = True
             self.adj_t = data.adj_t.cpu()
 
         if node_idx is None:
-            node_idx = torch.arange(self.adj_t.sparse_size(0))
+            node_idx = torch.arange(self.adj_t.sparse_size(0)).share_memory_()
         elif node_idx.dtype == torch.bool:
-            node_idx = node_idx.nonzero(as_tuple=False).view(-1)
+            node_idx = node_idx.nonzero(as_tuple=False).view(-1).share_memory_()
         self.node_idx = node_idx
 
         super().__init__(node_idx.tolist(), collate_fn=self.__collate__,
@@ -104,4 +104,4 @@ class ShaDowKHopSampler(torch.utils.data.DataLoader):
             else:
                 batch[k] = v
 
-        return batch, n_id
+        return batch
