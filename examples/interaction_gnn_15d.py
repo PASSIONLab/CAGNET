@@ -42,15 +42,17 @@ from sparse_coo_tensor_cpp import sort_dst_proc_gpu
 from sklearn.metrics import roc_auc_score
 
 import socket
+import wandb
 import yaml
 
 class InteractionGNN(nn.Module):
-    def __init__(self, in_feats, n_hidden, n_classes, nb_node_layer, nb_edge_layer, n_graph_iters, 
-                                        node_features, edge_features, layernorm, batchnorm, 
-                                        hidden_activation, output_activation, 
-                                        aggr, rank, size, checkpointing, partitioning, replication, device, 
-                                        group=None, row_groups=None, col_groups=None, 
-                                        impl="cagnet", dataset="physics_ex3"):
+    def __init__(self, in_feats, n_hidden, n_classes, 
+                    nb_node_layer, nb_edge_layer, n_graph_iters, 
+                    node_features, edge_features, layernorm, batchnorm, 
+                    hidden_activation, output_activation, 
+                    aggr, checkpointing, replication, 
+                    impl="cagnet", dataset="physics_ex3"):
+
         super(InteractionGNN, self).__init__()
         # self.layers = nn.ModuleList()
         self.nb_node_layer = nb_node_layer
@@ -63,14 +65,7 @@ class InteractionGNN(nn.Module):
         self.hidden_activation = hidden_activation
         self.output_activation = output_activation
         self.aggr = aggr
-        self.rank = rank
-        self.size = size
         self.checkpointing = checkpointing
-        self.group = group
-        self.row_groups = row_groups
-        self.col_groups = col_groups
-        self.device = device
-        self.partitioning = partitioning
         self.replication = replication
         self.timings = dict()
         self.impl = impl
@@ -113,10 +108,14 @@ class InteractionGNN(nn.Module):
                 batch_norm=batchnorm,
             )
         else:
-
-                shadow_sampling_dur = [x / 1000 for x in model.timings["shadow-sampling"]]
-                shadow_selection_dur = [x / 1000 for x in model.timings["shadow-selection"]]
-                shadow_extraction_dur = [x / 1000 for x in model.timings["shadow-extraction"]]
+            self.edge_encoder = self.make_mlp(
+                input_size=2 * n_hidden,
+                sizes=[n_hidden] * nb_edge_layer,
+                output_activation=output_activation,
+                hidden_activation=hidden_activation,
+                layer_norm=layernorm,
+                batch_norm=batchnorm,
+            )
 
         torch.manual_seed(0)
         # aggr_list = ["sum", "mean", "max", "std"]
@@ -438,6 +437,8 @@ class InteractionGNN(nn.Module):
             # batch = batch.to(self.device)
             if rank == 0:
                 print(f"batch {i}: {batch}", flush=True)
+                # batch = batch.to(self.device)
+                batch = batch.cuda()
                 output = self(batch)
                 loss, pos_loss, neg_loss = self.loss_function(output, batch)
 
@@ -486,52 +487,59 @@ class InteractionGNN(nn.Module):
         # purity = val_recall.compute()
         # auc = val_auc.compute()
         print(f"val logging", flush=True)
-        if rank == 0 and wandb_arg:
-            wandb.log({
-                # "train_loss": loss,
-                "current_lr": curr_lr,
-                "eff": target_eff,
-                "target_pur": avg_tarpur,
-                "total_pur": avg_totpur,
-                "auc": target_auc,
-                "val_loss": avg_loss,
-                "epoch": epoch,
-                "time": epoch_time,
-                # "trainer/global_step": step + epoch*step
-                # "trainer/global_step": epoch
-            })
+        if rank == 0:
+            if wandb_arg:
+                pass
+                # wandb.log({
+                #     # "train_loss": loss,
+                #     "current_lr": curr_lr,
+                #     "eff": target_eff,
+                #     "target_pur": avg_tarpur,
+                #     "total_pur": avg_totpur,
+                #     "auc": target_auc,
+                #     "val_loss": avg_loss,
+                #     "epoch": epoch,
+                #     "time": epoch_time,
+                #     # "trainer/global_step": step + epoch*step
+                #     # "trainer/global_step": epoch
+                # })
+            print(f"Target Purity: {avg_tarpur}", flush=True)
+            print(f"Total Purity: {avg_totpur}", flush=True)
+            print(f"Efficiency: {target_eff}", flush=True)
+            print(f"AUC: {target_auc}", flush=True)
+
         # val_auc.reset(), val_precision.reset(), val_recall.reset()
 
         full_auc = 0.0
         masked_auc = 0.0
-        if self.dataset == "physics_ex3":
-            filename = f"{self.impl}_{self.dataset}"
-            full_auc, masked_auc = graph_roc_curve("testset", test_batches, "Interaction GNN ROC curve", filename)
-            print(f"full_auc: {full_auc} type(full_auc): {type(full_auc)}", flush=True)
-            print(f"masked_auc: {masked_auc} type(masked_auc): {type(masked_auc)}", flush=True)
-        elif False and self.dataset == "ctd":
-            filename = f"{self.impl}_{self.dataset}_edgewise"
-            plot_config = {"title": "GNN edge-wise Efficiency vs (r,z)",
-                                "filename": filename }
-            target_tracks = {"pt": [1000, np.inf],
-                                "nhits": [3, np.inf],
-                                "primary": True,
-                                # pdgId: {}
-                                "radius": [0., 260.],
-                                "eta_particle": [-4., 4.],
-                                "redundant_split_edges": False}
+        # if self.dataset == "physics_ex3":
+        #     filename = f"{self.impl}_{self.dataset}"
+        #     full_auc, masked_auc = graph_roc_curve("testset", test_batches, "Interaction GNN ROC curve", filename)
+        #     print(f"full_auc: {full_auc} type(full_auc): {type(full_auc)}", flush=True)
+        #     print(f"masked_auc: {masked_auc} type(masked_auc): {type(masked_auc)}", flush=True)
+        # elif False and self.dataset == "ctd":
+        #     filename = f"{self.impl}_{self.dataset}_edgewise"
+        #     plot_config = {"title": "GNN edge-wise Efficiency vs (r,z)",
+        #                         "filename": filename }
+        #     target_tracks = {"pt": [1000, np.inf],
+        #                         "nhits": [3, np.inf],
+        #                         "primary": True,
+        #                         # pdgId: {}
+        #                         "radius": [0., 260.],
+        #                         "eta_particle": [-4., 4.],
+        #                         "redundant_split_edges": False}
 
-            config = {"dataset": self.dataset,
-                        "score_cut": 0.5,
-                        "target_tracks": target_tracks,
-                        "stage_dir": filename }
-            signal_efficiency = gnn_efficiency_rz(test_batches, plot_config, config)
-            plot_config["vmin"] = 0.4
-            # gnn_purity_rz(test_batches, plot_config, config)
-            gnn_purity_rz(test_loader, plot_config, config)
-            full_auc = signal_efficiency
-            masked_auc = 0.0
-            print(f"signal_efficiency: {signal_efficiency}", flush=True)
+        #     config = {"dataset": self.dataset,
+        #                 "score_cut": 0.5,
+        #                 "target_tracks": target_tracks,
+        #                 "stage_dir": filename }
+        #     signal_efficiency = gnn_efficiency_rz(test_batches, plot_config, config)
+        #     plot_config["vmin"] = 0.4
+        #     # gnn_purity_rz(test_batches, plot_config, config)
+        #     gnn_purity_rz(test_loader, plot_config, config)
+        #     full_auc = signal_efficiency
+        #     masked_auc = 0.0
+        #     print(f"signal_efficiency: {signal_efficiency}", flush=True)
 
         return full_auc, masked_auc
 
@@ -734,7 +742,8 @@ def one5d_partition_mb(rank, size, batches, replication, mb_count):
     # batch_partitions = torch.split(batches, int(mb_count // size), dim=0)
     # return batch_partitions[rank]
 
-def main(local_rank, args, trainset, testset, g_loc_crows, g_loc_cols, g_loc_vals,
+def main(local_rank, args, model, trainset, testset, 
+                    g_loc_crows, g_loc_cols, g_loc_vals,
                     g_loc_t_crows, g_loc_t_cols, g_loc_t_vals, node_count, edge_count, 
                     node_features, edge_features, num_features, num_classes):
 
@@ -755,10 +764,8 @@ def main(local_rank, args, trainset, testset, g_loc_crows, g_loc_cols, g_loc_val
     print(f"device_count: {torch.cuda.device_count()}")
     print(f"hostname: {socket.gethostname()}", flush=True)
     print(f"local_rank: {local_rank}", flush=True)
-    global_rank = local_rank
-    global_size = args.gpu
     if not dist.is_initialized():
-        print(f"rank: {global_rank} initializing process group", flush=True)
+        print(f"global_rank: {global_rank} local_rank: {local_rank} size: {global_size} initializing process group", flush=True)
         dist.init_process_group(backend=args.dist_backend, rank=global_rank, world_size=global_size, timeout=timedelta(minutes=30))
         dist.barrier()
     rank = dist.get_rank()
@@ -767,9 +774,6 @@ def main(local_rank, args, trainset, testset, g_loc_crows, g_loc_cols, g_loc_val
     # torch.cuda.set_device(rank % args.gpu)
     print(f"local_rank: {local_rank}", flush=True)
     torch.cuda.set_device(local_rank)
-
-    if args.wandb and rank == 0:
-        wandb.init(project="exatrkx")
 
     device = torch.device(f'cuda:{rank % args.gpu}')
     g_loc = torch.sparse_csr_tensor(g_loc_crows, g_loc_cols, g_loc_vals)
@@ -798,32 +802,7 @@ def main(local_rank, args, trainset, testset, g_loc_crows, g_loc_cols, g_loc_val
     row_groups = None
     col_groups = None
 
-    model = InteractionGNN(num_features,
-                      args.n_hidden,
-                      num_classes,
-                      args.nb_node_layer,
-                      args.nb_edge_layer,
-                      args.n_graph_iters,
-                      node_features,
-                      edge_features,
-                      args.layernorm,
-                      args.batchnorm,
-                      args.hidden_activation,
-                      args.output_activation,
-                      args.aggr,
-                      rank,
-                      size,
-                      args.checkpointing,
-                      Partitioning.NONE,
-                      args.replication,
-                      device,
-                      row_groups=row_groups,
-                      col_groups=col_groups,
-                      impl=args.impl,
-                      dataset=args.dataset)
-    print(f"model: {model}", flush=True)
-
-    model = model.to(device)
+    # model = model.to(device)
 
     # use optimizer
     print(f"lr: {args.lr}", flush=True)
@@ -831,8 +810,8 @@ def main(local_rank, args, trainset, testset, g_loc_crows, g_loc_cols, g_loc_val
             model.parameters(),
             # lr=args.lr,
             lr=args.lr * size,
-            # betas=(0.9, 0.999),
-            betas=(1 - size * (1 - 0.9), 1 - size * (1 - 0.999)),
+            betas=(0.9, 0.999),
+            # betas=(1 - size * (1 - 0.9), 1 - size * (1 - 0.999)),
             eps=1e-08 / math.sqrt(size),
             # eps=1e-08,
             amsgrad=True,
@@ -882,7 +861,7 @@ def main(local_rank, args, trainset, testset, g_loc_crows, g_loc_cols, g_loc_val
     if rank == size - 1:
         rank_n_bulkmb = row_n_bulkmb - rank_n_bulkmb * (args.replication - 1)
 
-    print(f"rank_n_bulkmb: {rank_n_bulkmb} bulkmb: {args.n_bulkmb}", flush=True)
+    print(f"global_rank: {global_rank} rank_n_bulkmb: {rank_n_bulkmb} bulkmb: {args.n_bulkmb}", flush=True)
     torch.cuda.empty_cache()
     torch.cuda.synchronize()
 
@@ -909,22 +888,23 @@ def main(local_rank, args, trainset, testset, g_loc_crows, g_loc_cols, g_loc_val
             # for i in range(batch_start, batch_stop):
             # batch_count = 375 * 4
             # batch_count = 93
-            batch_count = 13320
-            batch_counter = 0
+            # batch_count = 13320 # train 80
+            # batch_count = 13312 # train 80 p16
+            # batch_count = 6496 # train 20
+            # batch_count = 8266 # train 80 bs3200
+            # batch_count = 103336 # train 80 bs256
+            # batch_count = 1614 # train 80 bs16348
+            batch_count = args.batchcount
             for i in range(0, batch_count, size):
-                batch_counter += 1
                 batch_ids = torch.arange((i + rank) * args.batch_size, (i + rank + 1) * args.batch_size)
                 if epoch >= 1:
                     start_time(start_timer, timing_arg=True)
-                torch.cuda.nvtx.range_push("sample")
                 batch = train_loader.__collate__(batch_ids)
                 if epoch >= 1:
                     model.timings["sample"].append(stop_time(start_timer, stop_timer, timing_arg=True))
-                torch.cuda.nvtx.range_pop()
 
-                print(f"rank: {rank} batch_ids: {batch_ids}", flush=True)
+                # print(f"rank: {rank} batch_ids: {batch_ids}", flush=True)
                 print(f"batch: {batch}", flush=True)
-                print(f"batch.edge_index.is_shared: {batch.edge_index.is_shared()}", flush=True)
                 optimizer.zero_grad()
                 if epoch >= 1:
                     start_time(start_timer, timing_arg=True)
@@ -933,11 +913,11 @@ def main(local_rank, args, trainset, testset, g_loc_crows, g_loc_cols, g_loc_val
                 loss, pos_loss, neg_loss = model.loss_function(logits, batch)     
 
                 print(f"batch {i} loss: {loss} pos_loss: {pos_loss} neg_loss: {neg_loss}", flush=True)
-                if args.wandb and rank == 0:
-                    wandb.log({'loss': loss.item(),
-                                    'pos_loss': pos_loss.item(), 
-                                    'neg_loss': neg_loss.item(), 
-                                    'epoch': epoch})
+                # if args.wandb and rank == 0:
+                #     wandb.log({'loss': loss.item(),
+                #                     'pos_loss': pos_loss.item(), 
+                #                     'neg_loss': neg_loss.item(), 
+                #                     'epoch': epoch})
                 loss.backward()
                 if epoch >= 1:
                     model.timings["train"].append(stop_time(start_timer, stop_timer, timing_arg=True))
@@ -951,7 +931,6 @@ def main(local_rank, args, trainset, testset, g_loc_crows, g_loc_cols, g_loc_val
                 optimizer.step()
                 if epoch >= 1:
                     model.timings["gradsync"].append(stop_time(start_timer, stop_timer, timing_arg=True))
-            print(f"batch_counter: {batch_counter}", flush=True)
 
         elif args.impl == "cagnet":
             batches_all = torch.arange(node_count).to(device)
@@ -960,7 +939,8 @@ def main(local_rank, args, trainset, testset, g_loc_crows, g_loc_cols, g_loc_val
             batch_count = node_count // args.batch_size # ceil(train_nid.size(0) / batch_size)
             # batch_count = 372
             print(f"before batch_count: {batch_count}", flush=True)
-            batch_count = 13320
+            # batch_count = 13320
+            batch_count = 13312
             # batch_start = rank * (batch_count // size)
             # batch_stop = min((rank + 1) * (batch_count // size), batch_count)
             print(f"node_count: {node_count}", flush=True)
@@ -1140,27 +1120,26 @@ def main(local_rank, args, trainset, testset, g_loc_crows, g_loc_cols, g_loc_val
 
         torch.cuda.synchronize()
         dist.barrier()
-        torch.cuda.synchronize()
 
-        model.eval()
-        print(f"Evaluating", flush=True)
-        with torch.no_grad():
-            if epoch >= 1:
+        if not args.skip_validation:
+            model.eval()
+            print(f"Evaluating", flush=True)
+            with torch.no_grad():
                 model = model.cpu()
-                result, masked_auc = model.evaluate(test_loader, epoch, curr_lr[0], np.sum(dur), args.wandb, rank)
+                result, masked_auc = model.evaluate(test_loader, epoch, curr_lr[0], \
+                                                        np.sum(dur), args.wandb, rank)
                 model = model.to(device)
-        if args.wandb:
-            if args.dataset == "ctd" and rank == 0:
-                wandb.log({'signal_effiency': result,
-                            'time': np.sum(dur)})
-            elif rank == 0:
-                wandb.log({'full_auc': result,
-                            'time': np.sum(dur)})
-        torch.cuda.synchronize()
-        dist.barrier()
-        torch.cuda.synchronize()
+            if args.wandb:
+                if args.dataset == "ctd" and rank == 0:
+                    wandb.log({'signal_effiency': result,
+                                'time': np.sum(dur)})
+                elif rank == 0:
+                    wandb.log({'full_auc': result,
+                                'time': np.sum(dur)})
 
-    total_stop = time.time()
+            torch.cuda.synchronize()
+            dist.barrier()
+            torch.cuda.synchronize()
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='IGNN')
@@ -1240,15 +1219,14 @@ if __name__ == '__main__':
                             help='use checkpointing')
     parser.add_argument("--warmup", type=int, default=5,
                         help="number of warmup iterations for learning rate")
+    parser.add_argument("--batchcount", type=int, default=5,
+                        help="number of warmup iterations for learning rate")
+    parser.add_argument('--skip-validation', action="store_true",
+                            help='skip validation step when expensive')
     args = parser.parse_args()
     args.samp_num = args.num_neighbors
 
-    if args.wandb:
-        import wandb
-
     print(args)
-
-    # main(args)
 
     if args.dataset == "cora" or args.dataset == "reddit":
         if args.dataset == "cora":
@@ -1283,6 +1261,9 @@ if __name__ == '__main__':
                                 x=data["x"], 
                                 y=data["y"], 
                                 z=data["z"], 
+                                r=data["r"], 
+                                phi=data["phi"], 
+                                eta=data["eta"], 
                                 edge_index=data["edge_index"], 
                                 truth_map=data["truth_map"],
                                 weights=data["weights"])
@@ -1295,18 +1276,19 @@ if __name__ == '__main__':
 
         node_count = torch.max(trainset.edge_index) + 1
         edge_count = trainset.edge_index.size(1)
-        node_features = ["z"]
+        node_features = ["r", "phi", "z"]
         edge_features = []
 
-        testset = GraphDataset(input_dir, "testset", 20, "fit", hparams)
+        testset = GraphDataset(input_dir, "testset", 10, "fit", hparams)
         print(f"testset: {testset}", flush=True)
-        num_features = 1
+        num_features = len(node_features)
         num_classes = 2
 
-        g_loc_indices = trainset.edge_index.to(device)
-        g_loc_values = torch.arange(g_loc_indices.size(1), dtype=torch.int64).to(device)
+        g_loc_indices = trainset.edge_index
+        g_loc_values = torch.arange(g_loc_indices.size(1), dtype=torch.int64)
         g_loc = torch.sparse_coo_tensor(g_loc_indices, g_loc_values)
         g_loc = g_loc.to_sparse_csr()
+        g_loc_t = g_loc.t().to_sparse_csr()
         print(f"g_loc: {g_loc}", flush=True)
 
     elif args.dataset == "ctd":
@@ -1402,31 +1384,63 @@ if __name__ == '__main__':
     
         # input_dir_test = "/global/cfs/cdirs/m4439/CTD2023_results/module_map/"
         input_dir_test = "/global/cfs/cdirs/m4439/REL2024/metric_learning_7_30/"
-        testset = GraphDataset(input_dir_test, "valset", 20, "test", hparams)
+        testset = GraphDataset(input_dir_test, "valset", 10, "test", hparams)
         print(f"testset: {testset}", flush=True)
 
         num_features = len(node_features)
         num_classes = 2
 
+    model = InteractionGNN(num_features,
+                      args.n_hidden,
+                      num_classes,
+                      args.nb_node_layer,
+                      args.nb_edge_layer,
+                      args.n_graph_iters,
+                      node_features,
+                      edge_features,
+                      args.layernorm,
+                      args.batchnorm,
+                      args.hidden_activation,
+                      args.output_activation,
+                      args.aggr,
+                      args.checkpointing,
+                      args.replication,
+                      impl=args.impl,
+                      dataset=args.dataset)
+    # model.share_memory()
+    device = torch.device('cuda:0')
+    model = model.to(device)
+    print(f"model: {model}", flush=True)
+
+    for name, param in model.named_parameters():
+        print(f"before name: {name} sum: {param.data.sum()}", flush=True)
+
+    if args.wandb and int(os.environ["SLURM_PROCID"]) == 0:
+        wandb.init(project="exatrkx")
+
     torch.set_num_threads(1)
     mp.set_start_method("spawn", force=True)
     mp.spawn(main,
-             args=(args, trainset, testset, g_loc.crow_indices(), g_loc.col_indices(), 
-                    g_loc.values(), g_loc_t.crow_indices(), g_loc_t.col_indices(), 
-                    g_loc_t.values(), node_count, edge_count, node_features, 
-                    edge_features, num_features, num_classes),
+             args=(args, model, trainset, testset, 
+                    g_loc.crow_indices(), g_loc.col_indices(), g_loc.values(), 
+                    g_loc_t.crow_indices(), g_loc_t.col_indices(), g_loc_t.values(), 
+                    node_count, edge_count, node_features, edge_features, 
+                    num_features, num_classes),
              nprocs=args.gpu,
              join=True)
 
-    # processes = []
-    # for i in range(args.gpu):
-    #     p = Process(target=main, args=(i, args, trainset, testset, 
-    #                     g_loc.crow_indices(), g_loc.col_indices(), 
-    #                     g_loc.values(), g_loc_t.crow_indices(), 
-    #                     g_loc_t.col_indices(), g_loc_t.values(), 
-    #                     node_count, edge_count, node_features, 
-    #                     edge_features, num_features, num_classes))
-    #     p.start()
-    #     processes.append(p)
-    # for p in processes:
-    #     p.join()
+    for name, param in model.named_parameters():
+        print(f"after name: {name} sum: {param.data.sum()}", flush=True)
+
+    test_loader = DataLoader(testset, batch_size=1, num_workers=1)
+
+    model.eval()
+    with torch.no_grad():
+        print(f"procid: {type(os.environ['SLURM_PROCID'])}", flush=True)
+        if int(os.environ["SLURM_PROCID"]) == 0:
+            print(f"Evaluating", flush=True)
+            # model = model.cpu()
+            model = model.cuda()
+            result, masked_auc = model.evaluate(test_loader, args.n_epochs, 0.0, \
+                                                    0.0, args.wandb, 0)
+        # model = model.to(device)
