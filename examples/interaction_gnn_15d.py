@@ -27,6 +27,7 @@ from torch_geometric.utils import add_remaining_self_loops
 from torch_scatter import scatter_add
 from torch.multiprocessing import Process
 from torchmetrics.classification import Precision, Recall, PrecisionRecallCurve, ROC, AUROC, Accuracy
+from torch.nn.parallel import DistributedDataParallel
 from torch.utils.data.distributed import DistributedSampler
 from torch.utils.checkpoint import checkpoint
 
@@ -300,6 +301,7 @@ class InteractionGNN(nn.Module):
             edge_attr = torch.stack(
                 [batch[feature] for feature in self.edge_features], dim=-1
             ).float()
+            print(f"batch: {batch} edge_attr.size: {edge_attr.size()}", flush=True)
         else:
             edge_attr = None
 
@@ -335,7 +337,7 @@ class InteractionGNN(nn.Module):
 
         # if concat
         if epoch >= 1:
-            self.timings["fwd-graphiters"].append(stop_time(start_timer, stop_timer, timing_arg=True))
+            start_time(start_timer, timing_arg=True)
         input_x = x
         input_e = e
         # outputs = []
@@ -479,7 +481,7 @@ class InteractionGNN(nn.Module):
 
         if rank == 0:
             avg_loss = sum(val_loss) / len(val_loss)
-            jarget_eff = sum(eff) / len(eff)
+            target_eff = sum(eff) / len(eff)
             avg_tarpur = sum(tar_pur) / len(tar_pur)
             avg_totpur = sum(tot_pur) / len(tot_pur)
             
@@ -742,7 +744,7 @@ def one5d_partition_mb(rank, size, batches, replication, mb_count):
     # batch_partitions = torch.split(batches, int(mb_count // size), dim=0)
     # return batch_partitions[rank]
 
-def main(local_rank, args, model, trainset, testset, 
+def main(local_rank, args, trainset, testset, 
                     g_loc_crows, g_loc_cols, g_loc_vals,
                     g_loc_t_crows, g_loc_t_cols, g_loc_t_vals, node_count, edge_count, 
                     node_features, edge_features, num_features, num_classes):
@@ -802,7 +804,29 @@ def main(local_rank, args, model, trainset, testset,
     row_groups = None
     col_groups = None
 
-    # model = model.to(device)
+    # if local_rank > 0:
+    #     model = model.to(device)
+    model = InteractionGNN(num_features,
+                      args.n_hidden,
+                      num_classes,
+                      args.nb_node_layer,
+                      args.nb_edge_layer,
+                      args.n_graph_iters,
+                      node_features,
+                      edge_features,
+                      args.layernorm,
+                      args.batchnorm,
+                      args.hidden_activation,
+                      args.output_activation,
+                      args.aggr,
+                      args.checkpointing,
+                      args.replication,
+                      impl=args.impl,
+                      dataset=args.dataset)
+    # model.share_memory()
+    print(f"model: {model}", flush=True)
+    model = model.to(device)
+    model = DistributedDataParallel(model, device_ids=[local_rank], output_device=[local_rank], find_unused_parameters=True)
 
     # use optimizer
     print(f"lr: {args.lr}", flush=True)
@@ -810,6 +834,7 @@ def main(local_rank, args, model, trainset, testset,
             model.parameters(),
             # lr=args.lr,
             lr=args.lr * size,
+            # lr=args.lr * math.sqrt(size),
             betas=(0.9, 0.999),
             # betas=(1 - size * (1 - 0.9), 1 - size * (1 - 0.999)),
             eps=1e-08 / math.sqrt(size),
@@ -826,6 +851,7 @@ def main(local_rank, args, model, trainset, testset,
 
     if args.impl == "torch":
         print(f"trainset.edge_index.is_shared: {trainset.edge_index.is_shared()}", flush=True)
+        local_batch_size = int(args.batch_size // size)
         train_loader = ShaDowKHopSampler(trainset, 
                                             depth=args.n_layers, 
                                             num_neighbors=args.num_neighbors, 
@@ -861,7 +887,7 @@ def main(local_rank, args, model, trainset, testset,
     if rank == size - 1:
         rank_n_bulkmb = row_n_bulkmb - rank_n_bulkmb * (args.replication - 1)
 
-    print(f"global_rank: {global_rank} rank_n_bulkmb: {rank_n_bulkmb} bulkmb: {args.n_bulkmb}", flush=True)
+    print(f"global_rank: {global_rank} rank_n_bulkmb: {rank_n_bulkmb} bulkmb: {args.n_bulkmb} node_count: {node_count}", flush=True)
     torch.cuda.empty_cache()
     torch.cuda.synchronize()
 
@@ -871,7 +897,7 @@ def main(local_rank, args, model, trainset, testset,
         if (args.warmup != -1) and (epoch < args.warmup):
             lr_scale = min(1.0, float(epoch + 1) / args.warmup)
             for pg in optimizer.param_groups:
-                pg["lr"] = lr_scale * args.lr * size
+                pg["lr"] = lr_scale * args.lr # * size
         # current_lr = optimizer.param_groups[0]['lr']
 
         print(f"Epoch: {epoch}", flush=True)
@@ -895,24 +921,28 @@ def main(local_rank, args, model, trainset, testset,
             # batch_count = 103336 # train 80 bs256
             # batch_count = 1614 # train 80 bs16348
             batch_count = args.batchcount
-            for i in range(0, batch_count, size):
-                batch_ids = torch.arange((i + rank) * args.batch_size, (i + rank + 1) * args.batch_size)
+            # for i in range(0, batch_count, size):
+            #     batch_ids = torch.arange((i + rank) * args.batch_size, (i + rank + 1) * args.batch_size)
+            for i in range(0, batch_count):
+                batches_start = i * args.batch_size + rank * local_batch_size
+                batches_stop = i * args.batch_size + (rank + 1) * local_batch_size
+                batch_ids = torch.arange(batches_start, batches_stop)
                 if epoch >= 1:
                     start_time(start_timer, timing_arg=True)
                 batch = train_loader.__collate__(batch_ids)
                 if epoch >= 1:
-                    model.timings["sample"].append(stop_time(start_timer, stop_timer, timing_arg=True))
+                    model.module.timings["sample"].append(stop_time(start_timer, stop_timer, timing_arg=True))
 
                 # print(f"rank: {rank} batch_ids: {batch_ids}", flush=True)
-                print(f"batch: {batch}", flush=True)
+                print(f"rank: {rank} batch: {batch}", flush=True)
                 optimizer.zero_grad()
                 if epoch >= 1:
                     start_time(start_timer, timing_arg=True)
                 batch = batch.to(device)
                 logits = model(batch, epoch)
-                loss, pos_loss, neg_loss = model.loss_function(logits, batch)     
+                loss, pos_loss, neg_loss = model.module.loss_function(logits, batch) 
 
-                print(f"batch {i} loss: {loss} pos_loss: {pos_loss} neg_loss: {neg_loss}", flush=True)
+                print(f"rank: {rank} batch {i} loss: {loss} pos_loss: {pos_loss} neg_loss: {neg_loss}", flush=True)
                 # if args.wandb and rank == 0:
                 #     wandb.log({'loss': loss.item(),
                 #                     'pos_loss': pos_loss.item(), 
@@ -920,17 +950,17 @@ def main(local_rank, args, model, trainset, testset,
                 #                     'epoch': epoch})
                 loss.backward()
                 if epoch >= 1:
-                    model.timings["train"].append(stop_time(start_timer, stop_timer, timing_arg=True))
-
-                if epoch >= 1:
-                    start_time(start_timer, timing_arg=True)
-                for W in model.parameters():
-                    if W.grad is not None:
-                        dist.all_reduce(W.grad.data)
-                        W.grad.data /= size
+                    model.module.timings["train"].append(stop_time(start_timer, stop_timer, timing_arg=True))
                 optimizer.step()
-                if epoch >= 1:
-                    model.timings["gradsync"].append(stop_time(start_timer, stop_timer, timing_arg=True))
+
+                # if epoch >= 1:
+                #     start_time(start_timer, timing_arg=True)
+                # for W in model.parameters():
+                #     if W.grad is not None:
+                #         dist.all_reduce(W.grad.data)
+                #         W.grad.data /= size
+                # if epoch >= 1:
+                #     model.timings["gradsync"].append(stop_time(start_timer, stop_timer, timing_arg=True))
 
         elif args.impl == "cagnet":
             batches_all = torch.arange(node_count).to(device)
@@ -938,9 +968,8 @@ def main(local_rank, args, model, trainset, testset,
             # batch_count = -(node_count // -args.batch_size) # ceil(train_nid.size(0) / batch_size)
             batch_count = node_count // args.batch_size # ceil(train_nid.size(0) / batch_size)
             # batch_count = 372
-            print(f"before batch_count: {batch_count}", flush=True)
             # batch_count = 13320
-            batch_count = 13312
+            batch_count = args.batchcount
             # batch_start = rank * (batch_count // size)
             # batch_stop = min((rank + 1) * (batch_count // size), batch_count)
             print(f"node_count: {node_count}", flush=True)
@@ -1019,7 +1048,11 @@ def main(local_rank, args, model, trainset, testset,
                                         edge_index=adj_matrices_bulk[i]._indices(),
                                         y=trainset.y[edge_ids_cpu],
                                         z=trainset.z[frontier_cpu],
-                                        weights=trainset.weights[edge_ids_cpu])
+                                        weights=trainset.weights[edge_ids_cpu],
+                                        r=trainset.r[frontier_cpu],
+                                        phi=trainset.phi[frontier_cpu],
+                                        eta=trainset.eta[frontier_cpu],
+                                        truth_map=trainset.truth_map)
                     elif args.dataset == "ctd":
                         batch = Batch(hit_id=trainset.hit_id[frontier_cpu],
                                             x=trainset.x[frontier_cpu], 
@@ -1081,7 +1114,7 @@ def main(local_rank, args, model, trainset, testset,
                     args.n_bulkmb = old_nbulkmb
                     rank_n_bulkmb = old_rank_nbulkmb 
                 if epoch >= 1:
-                    model.timings["train"].append(stop_time(start_timer, stop_timer, timing_arg=True))
+                    model.module.timings["train"].append(stop_time(start_timer, stop_timer, timing_arg=True))
 
         torch.cuda.synchronize()
         dist.barrier()
@@ -1094,19 +1127,19 @@ def main(local_rank, args, model, trainset, testset,
 
         if rank == 0 and epoch >= 1: # and (epoch % 5 == 0 or epoch == args.n_epochs - 1):
             if args.timing:
-                sample_dur = [x / 1000 for x in model.timings["sample"]]
-                train_dur = [x / 1000 for x in model.timings["train"]]
-                extract_dur = [x / 1000 for x in model.timings["extract"]]
-                fwdbwd_dur = [x / 1000 for x in model.timings["fwdbwd"]]
-                gradsync_dur = [x / 1000 for x in model.timings["gradsync"]]
+                sample_dur = [x / 1000 for x in model.module.timings["sample"]]
+                train_dur = [x / 1000 for x in model.module.timings["train"]]
+                extract_dur = [x / 1000 for x in model.module.timings["extract"]]
+                fwdbwd_dur = [x / 1000 for x in model.module.timings["fwdbwd"]]
+                gradsync_dur = [x / 1000 for x in model.module.timings["gradsync"]]
 
-                shadow_sampling_dur = [x / 1000 for x in model.timings["shadow-sampling"]]
-                shadow_selection_dur = [x / 1000 for x in model.timings["shadow-selection"]]
-                shadow_extraction_dur = [x / 1000 for x in model.timings["shadow-extraction"]]
+                shadow_sampling_dur = [x / 1000 for x in model.module.timings["shadow-sampling"]]
+                shadow_selection_dur = [x / 1000 for x in model.module.timings["shadow-selection"]]
+                shadow_extraction_dur = [x / 1000 for x in model.module.timings["shadow-extraction"]]
 
-                fwd_prelude_dur = [x / 1000 for x in model.timings["fwd-prelude"]]
-                fwd_encoder_dur = [x / 1000 for x in model.timings["fwd-encoder"]]
-                fwd_graphiters_dur = [x / 1000 for x in model.timings["fwd-graphiters"]]
+                fwd_prelude_dur = [x / 1000 for x in model.module.timings["fwd-prelude"]]
+                fwd_encoder_dur = [x / 1000 for x in model.module.timings["fwd-encoder"]]
+                fwd_graphiters_dur = [x / 1000 for x in model.module.timings["fwd-graphiters"]]
 
                 print(f"len(sample_dur): {len(sample_dur)}", flush=True)
                 print(f"len(train_dur): {len(train_dur)}", flush=True)
@@ -1118,8 +1151,8 @@ def main(local_rank, args, model, trainset, testset,
                 print(f"shadow-sampling: {np.sum(shadow_sampling_dur) / epoch} shadow-selection: {np.sum(shadow_selection_dur) / epoch} shadow-extraction: {np.sum(shadow_extraction_dur) / epoch}", flush=True)
                 print(f"fwd-prelude: {np.sum(fwd_prelude_dur) / epoch} fwd-encoder: {np.sum(fwd_encoder_dur) / epoch} fwd-graphiters: {np.sum(fwd_graphiters_dur) / epoch}", flush=True)
 
-        torch.cuda.synchronize()
-        dist.barrier()
+        # torch.cuda.synchronize()
+        # dist.barrier()
 
         if not args.skip_validation:
             model.eval()
@@ -1140,6 +1173,17 @@ def main(local_rank, args, model, trainset, testset,
             torch.cuda.synchronize()
             dist.barrier()
             torch.cuda.synchronize()
+
+    test_loader = DataLoader(testset, batch_size=1, num_workers=1)
+    model.eval()
+    with torch.no_grad():
+        if rank == 0:
+            print(f"Evaluating", flush=True)
+            # model = model.cpu()
+            # model = model.cuda()
+            result, masked_auc = model.module.evaluate(test_loader, args.n_epochs, 
+                                                            0.0, 0.0, args.wandb, 0)
+        # model = model.to(device)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='IGNN')
@@ -1272,6 +1316,16 @@ if __name__ == '__main__':
             trainset.append(data_obj)
         trainset = Batch.from_data_list(trainset)
         # trainset = trainset.to(device)
+        trainset.x.share_memory_()
+        trainset.y.share_memory_()
+        trainset.z.share_memory_()
+        trainset.hit_id.share_memory_()
+        trainset.edge_index.share_memory_()
+        trainset.truth_map.share_memory_()
+        trainset.weights.share_memory_()
+        trainset.r.share_memory_()
+        trainset.phi.share_memory_()
+        trainset.eta.share_memory_()
         print(f"trainset: {trainset}", flush=True)
 
         node_count = torch.max(trainset.edge_index) + 1
@@ -1301,7 +1355,7 @@ if __name__ == '__main__':
         print(f"hparams: {hparams}", flush=True)
         
         # trainset = GraphDataset(input_dir, "trainset", 4053, "fit", hparams)
-        dataset = GraphDataset(input_dir, "trainset", 80, "fit", hparams)
+        dataset = GraphDataset(input_dir, "trainset", 10, "fit", hparams)
         trainset = []
         for data in dataset:
             if data is None:
@@ -1335,32 +1389,32 @@ if __name__ == '__main__':
 
             trainset.append(data_obj)
         trainset = Batch.from_data_list(trainset)
-        trainset.x.share_memory_()
-        trainset.y.share_memory_()
-        trainset.z.share_memory_()
-        trainset.hit_id.share_memory_()
-        trainset.edge_index.share_memory_()
-        trainset.truth_map.share_memory_()
-        trainset.weights.share_memory_()
-        trainset.r.share_memory_()
-        trainset.phi.share_memory_()
-        trainset.eta.share_memory_()
-        trainset.cluster_r_1.share_memory_()
-        trainset.cluster_phi_1.share_memory_()
-        trainset.cluster_z_1.share_memory_()
-        trainset.cluster_eta_1.share_memory_()
-        trainset.cluster_r_2.share_memory_()
-        trainset.cluster_phi_2.share_memory_()
-        trainset.cluster_z_2.share_memory_()
-        trainset.cluster_eta_2.share_memory_()
-        trainset.dr.share_memory_()
-        trainset.dphi.share_memory_()
-        trainset.dz.share_memory_()
-        trainset.deta.share_memory_()
-        trainset.phislope.share_memory_()
-        trainset.rphislope.share_memory_()
-        trainset.batch.share_memory_()
-        trainset.ptr.share_memory_()
+        # trainset.x.share_memory_()
+        # trainset.y.share_memory_()
+        # trainset.z.share_memory_()
+        # trainset.hit_id.share_memory_()
+        # trainset.edge_index.share_memory_()
+        # trainset.truth_map.share_memory_()
+        # trainset.weights.share_memory_()
+        # trainset.r.share_memory_()
+        # trainset.phi.share_memory_()
+        # trainset.eta.share_memory_()
+        # trainset.cluster_r_1.share_memory_()
+        # trainset.cluster_phi_1.share_memory_()
+        # trainset.cluster_z_1.share_memory_()
+        # trainset.cluster_eta_1.share_memory_()
+        # trainset.cluster_r_2.share_memory_()
+        # trainset.cluster_phi_2.share_memory_()
+        # trainset.cluster_z_2.share_memory_()
+        # trainset.cluster_eta_2.share_memory_()
+        # trainset.dr.share_memory_()
+        # trainset.dphi.share_memory_()
+        # trainset.dz.share_memory_()
+        # trainset.deta.share_memory_()
+        # trainset.phislope.share_memory_()
+        # trainset.rphislope.share_memory_()
+        # trainset.batch.share_memory_()
+        # trainset.ptr.share_memory_()
         print(f"trainset.edge_index.is_shared: {trainset.edge_index.is_shared()}", flush=True)
         node_count = torch.max(trainset.edge_index) + 1
         edge_count = trainset.edge_index.size(1)
@@ -1384,36 +1438,12 @@ if __name__ == '__main__':
     
         # input_dir_test = "/global/cfs/cdirs/m4439/CTD2023_results/module_map/"
         input_dir_test = "/global/cfs/cdirs/m4439/REL2024/metric_learning_7_30/"
-        testset = GraphDataset(input_dir_test, "valset", 10, "test", hparams)
+        testset = GraphDataset(input_dir_test, "valset", 5, "test", hparams)
         print(f"testset: {testset}", flush=True)
 
         num_features = len(node_features)
         num_classes = 2
 
-    model = InteractionGNN(num_features,
-                      args.n_hidden,
-                      num_classes,
-                      args.nb_node_layer,
-                      args.nb_edge_layer,
-                      args.n_graph_iters,
-                      node_features,
-                      edge_features,
-                      args.layernorm,
-                      args.batchnorm,
-                      args.hidden_activation,
-                      args.output_activation,
-                      args.aggr,
-                      args.checkpointing,
-                      args.replication,
-                      impl=args.impl,
-                      dataset=args.dataset)
-    # model.share_memory()
-    device = torch.device('cuda:0')
-    model = model.to(device)
-    print(f"model: {model}", flush=True)
-
-    for name, param in model.named_parameters():
-        print(f"before name: {name} sum: {param.data.sum()}", flush=True)
 
     if args.wandb and int(os.environ["SLURM_PROCID"]) == 0:
         wandb.init(project="exatrkx")
@@ -1421,26 +1451,23 @@ if __name__ == '__main__':
     torch.set_num_threads(1)
     mp.set_start_method("spawn", force=True)
     mp.spawn(main,
-             args=(args, model, trainset, testset, 
+             args=(args, trainset, testset, 
                     g_loc.crow_indices(), g_loc.col_indices(), g_loc.values(), 
                     g_loc_t.crow_indices(), g_loc_t.col_indices(), g_loc_t.values(), 
                     node_count, edge_count, node_features, edge_features, 
                     num_features, num_classes),
              nprocs=args.gpu,
              join=True)
+    # processes = []
+    # for i in range(args.gpu):
+    #     p = Process(target=main,
+    #             args=(i, args, model, trainset, testset, 
+    #                 g_loc.crow_indices(), g_loc.col_indices(), g_loc.values(), 
+    #                 g_loc_t.crow_indices(), g_loc_t.col_indices(), g_loc_t.values(), 
+    #                 node_count, edge_count, node_features, edge_features, 
+    #                 num_features, num_classes))
+    #     p.start()
+    #     processes.append(p)
+    # for p in processes:
+    #     p.join()
 
-    for name, param in model.named_parameters():
-        print(f"after name: {name} sum: {param.data.sum()}", flush=True)
-
-    test_loader = DataLoader(testset, batch_size=1, num_workers=1)
-
-    model.eval()
-    with torch.no_grad():
-        print(f"procid: {type(os.environ['SLURM_PROCID'])}", flush=True)
-        if int(os.environ["SLURM_PROCID"]) == 0:
-            print(f"Evaluating", flush=True)
-            # model = model.cpu()
-            model = model.cuda()
-            result, masked_auc = model.evaluate(test_loader, args.n_epochs, 0.0, \
-                                                    0.0, args.wandb, 0)
-        # model = model.to(device)
