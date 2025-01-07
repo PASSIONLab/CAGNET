@@ -301,7 +301,6 @@ class InteractionGNN(nn.Module):
             edge_attr = torch.stack(
                 [batch[feature] for feature in self.edge_features], dim=-1
             ).float()
-            print(f"batch: {batch} edge_attr.size: {edge_attr.size()}", flush=True)
         else:
             edge_attr = None
 
@@ -433,12 +432,12 @@ class InteractionGNN(nn.Module):
         tar_pur = []
         tot_pur = []
 
-        print("in evaluate", flush=True)
+        print("Evaluating")
         test_batches = []
         for i, batch in enumerate(test_loader):
             # batch = batch.to(self.device)
             if rank == 0:
-                print(f"batch {i}: {batch}", flush=True)
+                print(f"batch {i}")
                 # batch = batch.to(self.device)
                 batch = batch.cuda()
                 output = self(batch)
@@ -488,7 +487,7 @@ class InteractionGNN(nn.Module):
         # efficiency = val_precision.compute()
         # purity = val_recall.compute()
         # auc = val_auc.compute()
-        print(f"val logging", flush=True)
+        print(f"Logging")
         if rank == 0:
             if wandb_arg:
                 pass
@@ -734,12 +733,13 @@ def one5d_partition(rank, size, inputs, adj_matrix, data, features, classes, rep
         inputs_loc = input_partitions[rank_c]
 
     # print(f"rank: {rank} adj_matrix_loc.size: {adj_matrix_loc.size()}", flush=True)
-    print(f"rank: {rank} inputs_loc.size: {inputs_loc.size()}", flush=True)
+    print(f"rank: {rank} inputs_loc.size: {inputs_loc.size()}")
     return inputs_loc, adj_matrix_loc, am_partitions, input_partitions
 
-def one5d_partition_mb(rank, size, batches, replication, mb_count):
+def one5d_partition_mb(rank, size, batches, replication, batch_size):
     rank_c = rank // replication
-    batch_partitions = torch.split(batches, int(mb_count // (size / replication)), dim=0)
+    # batch_partitions = torch.split(batches, int(mb_count // (size / replication)), dim=0)
+    batch_partitions = torch.split(batches, int(batch_size // (size / replication)), dim=1)
     return batch_partitions[rank_c]
     # batch_partitions = torch.split(batches, int(mb_count // size), dim=0)
     # return batch_partitions[rank]
@@ -764,17 +764,15 @@ def main(local_rank, args, trainset, testset,
     os.environ["MASTER_PORT"] = "1234"
     
     print(f"device_count: {torch.cuda.device_count()}")
-    print(f"hostname: {socket.gethostname()}", flush=True)
+    print(f"hostname: {socket.gethostname()}")
     print(f"local_rank: {local_rank}", flush=True)
     if not dist.is_initialized():
-        print(f"global_rank: {global_rank} local_rank: {local_rank} size: {global_size} initializing process group", flush=True)
+        print(f"global_rank: {global_rank} local_rank: {local_rank} size: {global_size} initializing process group")
         dist.init_process_group(backend=args.dist_backend, rank=global_rank, world_size=global_size, timeout=timedelta(minutes=30))
         dist.barrier()
     rank = dist.get_rank()
     size = dist.get_world_size()
-    print(f"hostname: {socket.gethostname()} rank: {rank} size: {size}", flush=True)
-    # torch.cuda.set_device(rank % args.gpu)
-    print(f"local_rank: {local_rank}", flush=True)
+    print(f"hostname: {socket.gethostname()} rank: {rank} size: {size}")
     torch.cuda.set_device(local_rank)
 
     device = torch.device(f'cuda:{rank % args.gpu}')
@@ -823,26 +821,47 @@ def main(local_rank, args, trainset, testset,
                       args.replication,
                       impl=args.impl,
                       dataset=args.dataset)
+    
+    param_count = 0
+    param_elems = 0
+    for param in model.parameters():
+        param_count += 1
+        param_elems += param.data.numel()
+        print(f"param.data.size: {param.data.size()}", flush=True)
+
+    print(f"param_count: {param_count}", flush=True)
+    print(f"param_elems: {param_elems}", flush=True)
+
+    param_count = 0
+    param_elems = 0
+    for name, param in model.named_parameters():
+        param_count += 1
+        param_elems += param.data.numel()
+        print(f"name: {name} param.data.size: {param.data.size()}", flush=True)
+
+    print(f"name param_count: {param_count}", flush=True)
+    print(f"name param_elems: {param_elems}", flush=True)
+
     # model.share_memory()
-    print(f"model: {model}", flush=True)
+    print(f"model: {model}")
     model = model.to(device)
     model = DistributedDataParallel(model, device_ids=[local_rank], output_device=[local_rank], find_unused_parameters=True)
 
     # use optimizer
-    print(f"lr: {args.lr}", flush=True)
+    print(f"lr: {args.lr}")
     optimizer = torch.optim.AdamW(
             model.parameters(),
-            # lr=args.lr,
-            lr=args.lr * size,
+            lr=args.lr,
+            # lr=args.lr * size,
             # lr=args.lr * math.sqrt(size),
             betas=(0.9, 0.999),
             # betas=(1 - size * (1 - 0.9), 1 - size * (1 - 0.999)),
-            eps=1e-08 / math.sqrt(size),
-            # eps=1e-08,
+            # eps=1e-08 / math.sqrt(size),
+            eps=1e-08,
             amsgrad=True,
             weight_decay=0.01
         )
-    print(f"optimizer: {optimizer}", flush=True)
+    print(f"optimizer: {optimizer}")
     scheduler = torch.optim.lr_scheduler.StepLR(
                     optimizer,
                     step_size=15,
@@ -850,7 +869,6 @@ def main(local_rank, args, trainset, testset,
                 )
 
     if args.impl == "torch":
-        print(f"trainset.edge_index.is_shared: {trainset.edge_index.is_shared()}", flush=True)
         local_batch_size = int(args.batch_size // size)
         train_loader = ShaDowKHopSampler(trainset, 
                                             depth=args.n_layers, 
@@ -865,14 +883,15 @@ def main(local_rank, args, trainset, testset,
         batch_count = len(train_loader)
         if rank == size - 1:
             batch_stop = len(train_loader)
-        print(f"batch_start: {batch_start} batch_stop: {batch_stop}", flush=True)
+        print(f"batch_start: {batch_start} batch_stop: {batch_stop}")
+        print(f"len(train_loader): {len(train_loader)}")
         # train_loader = DataLoader(trainset, 
         #                             batch_size=1, 
         #                             num_workers=32,
         #                             shuffle=False,
         #                             drop_last=True)
-        print(f"train_loader depth: {args.n_layers} nn: {args.num_neighbors} batch_size: {args.batch_size}", flush=True)
-        print(f"len(train_loader): {len(train_loader)}", flush=True)
+        print(f"train_loader depth: {args.n_layers} nn: {args.num_neighbors} batch_size: {args.batch_size}")
+        print(f"len(train_loader): {len(train_loader)}")
         # trainset.edge_index = trainset.adj_t.coo()
     test_loader = DataLoader(testset, batch_size=1, num_workers=1)
 
@@ -887,7 +906,7 @@ def main(local_rank, args, trainset, testset,
     if rank == size - 1:
         rank_n_bulkmb = row_n_bulkmb - rank_n_bulkmb * (args.replication - 1)
 
-    print(f"global_rank: {global_rank} rank_n_bulkmb: {rank_n_bulkmb} bulkmb: {args.n_bulkmb} node_count: {node_count}", flush=True)
+    print(f"global_rank: {global_rank} rank_n_bulkmb: {rank_n_bulkmb} bulkmb: {args.n_bulkmb} node_count: {node_count}")
     torch.cuda.empty_cache()
     torch.cuda.synchronize()
 
@@ -900,26 +919,13 @@ def main(local_rank, args, trainset, testset,
                 pg["lr"] = lr_scale * args.lr # * size
         # current_lr = optimizer.param_groups[0]['lr']
 
-        print(f"Epoch: {epoch}", flush=True)
+        print(f"Epoch: {epoch:04}")
         if epoch >= 1:
             epoch_start = time.time()
 
         if args.impl == "torch":
             # for i, (batch, n_id) in enumerate(train_loader):
 
-            # if size > 1:
-            #     train_loader.sampler.set_epoch(epoch)       
-            # for i, batch in enumerate(train_loader):
-            # for i in range(batch_start, batch_stop):
-            # for i in range(batch_start, batch_stop):
-            # batch_count = 375 * 4
-            # batch_count = 93
-            # batch_count = 13320 # train 80
-            # batch_count = 13312 # train 80 p16
-            # batch_count = 6496 # train 20
-            # batch_count = 8266 # train 80 bs3200
-            # batch_count = 103336 # train 80 bs256
-            # batch_count = 1614 # train 80 bs16348
             batch_count = args.batchcount
             # for i in range(0, batch_count, size):
             #     batch_ids = torch.arange((i + rank) * args.batch_size, (i + rank + 1) * args.batch_size)
@@ -933,8 +939,7 @@ def main(local_rank, args, trainset, testset,
                 if epoch >= 1:
                     model.module.timings["sample"].append(stop_time(start_timer, stop_timer, timing_arg=True))
 
-                # print(f"rank: {rank} batch_ids: {batch_ids}", flush=True)
-                print(f"rank: {rank} batch: {batch}", flush=True)
+                print(f"Rank: {rank:03} Epoch: {epoch:03d} Batch {i:07}")
                 optimizer.zero_grad()
                 if epoch >= 1:
                     start_time(start_timer, timing_arg=True)
@@ -942,7 +947,7 @@ def main(local_rank, args, trainset, testset,
                 logits = model(batch, epoch)
                 loss, pos_loss, neg_loss = model.module.loss_function(logits, batch) 
 
-                print(f"rank: {rank} batch {i} loss: {loss} pos_loss: {pos_loss} neg_loss: {neg_loss}", flush=True)
+                # print(f"rank: {rank} batch {i} loss: {loss} pos_loss: {pos_loss} neg_loss: {neg_loss}", flush=True)
                 # if args.wandb and rank == 0:
                 #     wandb.log({'loss': loss.item(),
                 #                     'pos_loss': pos_loss.item(), 
@@ -964,39 +969,28 @@ def main(local_rank, args, trainset, testset,
 
         elif args.impl == "cagnet":
             batches_all = torch.arange(node_count).to(device)
-            # batches_all = torch.randperm(node_count).to(device)
-            # batch_count = -(node_count // -args.batch_size) # ceil(train_nid.size(0) / batch_size)
-            batch_count = node_count // args.batch_size # ceil(train_nid.size(0) / batch_size)
-            # batch_count = 372
-            # batch_count = 13320
             batch_count = args.batchcount
-            # batch_start = rank * (batch_count // size)
-            # batch_stop = min((rank + 1) * (batch_count // size), batch_count)
-            print(f"node_count: {node_count}", flush=True)
-            print(f"batch_count: {batch_count}", flush=True)
 
             last_iter = False
             for b in range(0, batch_count, args.n_bulkmb):
             # for b in range(batch_start, batch_stop, args.n_bulkmb):
-                print(f"batch b: {b}", flush=True)
+                print(f"Rank: {rank:03} Batch Bulk: {b:07}")
                 if b + args.n_bulkmb > batch_count:
                     last_iter = True
                     old_nbulkmb = args.n_bulkmb
                     old_rank_nbulkmb = rank_n_bulkmb
                     args.n_bulkmb = batch_count - b
                     rank_n_bulkmb = batch_count - b
-                    # break
                 batches_start = b * args.batch_size
                 batches_stop = (b + args.n_bulkmb) * args.batch_size
-                print(f"batches_start: {batches_start} batches_stop: {batches_stop}", flush=True)
                 batches = batches_all[batches_start:batches_stop].view(args.n_bulkmb, args.batch_size)
                 # batches_loc = torch.arange(b * args.batch_size, (b + args.n_bulkmb) * args.batch_size).view(args.n_bulkmb, args.batch_size).to(device)
-                batches_loc = one5d_partition_mb(rank, size, batches, 1, args.n_bulkmb)
-                print(f"batches_loc: {batches_loc}", flush=True)
+                batches_loc = one5d_partition_mb(rank, size, batches, 1, args.batch_size)
 
                 batches_indices_rows = torch.arange(batches_loc.size(0), dtype=torch.int32, device=device)
                 batches_indices_rows = batches_indices_rows.repeat_interleave(batches_loc.size(1))
-                batches_indices_cols = batches_loc.view(-1)
+                # batches_indices_cols = batches_loc.view(-1)
+                batches_indices_cols = batches_loc.reshape(-1)
                 batches_indices = torch.stack((batches_indices_rows, batches_indices_cols))
                 batches_values = torch.cuda.FloatTensor(batches_loc.size(1) * batches_loc.size(0), 
                                                             device=device).fill_(1.0)
@@ -1019,23 +1013,25 @@ def main(local_rank, args, trainset, testset,
 
                 if epoch >= 1:
                     start_time(start_timer, timing_arg=True)
-                frontiers_bulk, adj_matrices_bulk = shadow_sampler(g_loc_t, batches_loc, args.batch_size, \
-                                                        [args.num_neighbors] * args.n_layers, args.n_bulkmb, \
-                                                        # 2, args.n_darts, \
-                                                        args.n_layers, args.n_darts, \
-                                                        rep_pass, rank, size, row_groups, \
-                                                        col_groups, args.timing, \
-                                                        model.timings, args.replicate_graph,
-                                                        epoch)
+                local_batch_size = args.batch_size // size
+                frontiers_bulk, adj_matrices_bulk = shadow_sampler(g_loc_t, 
+                                                batches_loc, local_batch_size, \
+                                                [args.num_neighbors] * args.n_layers, 
+                                                args.n_bulkmb, \
+                                                args.n_layers, args.n_darts, \
+                                                rep_pass, rank, size, row_groups, \
+                                                col_groups, args.timing, \
+                                                model.module.timings, \
+                                                args.replicate_graph, epoch)
                 if epoch >= 1:
-                    model.timings["sample"].append(stop_time(start_timer, stop_timer, timing_arg=True))
+                    model.module.timings["sample"].append(stop_time(start_timer, stop_timer, timing_arg=True))
 
                 if epoch >= 1:
                     start_time(start_timer, timing_arg=True)
                 g_loc_coo = g_loc.to_sparse_coo()
 
-                # for i in range(args.n_bulkmb):
-                for i in range(rank_n_bulkmb):
+                # for i in range(rank_n_bulkmb):
+                for i in range(args.n_bulkmb):
                     if epoch >= 1:
                         start_time(start_inner_timer, timing_arg=True)
                     adj_matrix = adj_matrices_bulk[i].to_sparse_coo()
@@ -1045,69 +1041,69 @@ def main(local_rank, args, trainset, testset,
 
                     if args.dataset == "physics_ex3":
                         batch = Batch(batch=frontiers_bulk[i], 
-                                        edge_index=adj_matrices_bulk[i]._indices(),
-                                        y=trainset.y[edge_ids_cpu],
-                                        z=trainset.z[frontier_cpu],
-                                        weights=trainset.weights[edge_ids_cpu],
-                                        r=trainset.r[frontier_cpu],
-                                        phi=trainset.phi[frontier_cpu],
-                                        eta=trainset.eta[frontier_cpu],
-                                        truth_map=trainset.truth_map)
+                                    edge_index=adj_matrices_bulk[i]._indices(),
+                                    y=trainset.y[edge_ids_cpu],
+                                    z=trainset.z[frontier_cpu],
+                                    weights=trainset.weights[edge_ids_cpu],
+                                    r=trainset.r[frontier_cpu],
+                                    phi=trainset.phi[frontier_cpu],
+                                    eta=trainset.eta[frontier_cpu],
+                                    truth_map=trainset.truth_map)
                     elif args.dataset == "ctd":
                         batch = Batch(hit_id=trainset.hit_id[frontier_cpu],
-                                            x=trainset.x[frontier_cpu], 
-                                            y=trainset.y[edge_ids_cpu], 
-                                            z=trainset.z[frontier_cpu], 
-                                            edge_index=adj_matrices_bulk[i]._indices(), 
-                                            truth_map=trainset.truth_map,
-                                            weights=trainset.weights[edge_ids_cpu],
-                                            r=trainset.r[frontier_cpu],
-                                            phi=trainset.phi[frontier_cpu],
-                                            eta=trainset.eta[frontier_cpu],
-                                            cluster_r_1=trainset.cluster_r_1[frontier_cpu],
-                                            cluster_phi_1=trainset.cluster_phi_1[frontier_cpu],
-                                            cluster_z_1=trainset.cluster_z_1[frontier_cpu],
-                                            cluster_eta_1=trainset.cluster_eta_1[frontier_cpu],
-                                            cluster_r_2=trainset.cluster_r_2[frontier_cpu],
-                                            cluster_phi_2=trainset.cluster_phi_2[frontier_cpu],
-                                            cluster_z_2=trainset.cluster_z_2[frontier_cpu],
-                                            cluster_eta_2=trainset.cluster_eta_2[frontier_cpu],
-                                            dr=trainset.dr[edge_ids_cpu],
-                                            dphi=trainset.dphi[edge_ids_cpu],
-                                            dz=trainset.dz[edge_ids_cpu],
-                                            deta=trainset.deta[edge_ids_cpu],
-                                            phislope=trainset.phislope[edge_ids_cpu],
-                                            rphislope=trainset.rphislope[edge_ids_cpu],
-                                        )
+                                    x=trainset.x[frontier_cpu], 
+                                    y=trainset.y[edge_ids_cpu], 
+                                    z=trainset.z[frontier_cpu], 
+                                    edge_index=adj_matrices_bulk[i]._indices(), 
+                                    truth_map=trainset.truth_map,
+                                    weights=trainset.weights[edge_ids_cpu],
+                                    r=trainset.r[frontier_cpu],
+                                    phi=trainset.phi[frontier_cpu],
+                                    eta=trainset.eta[frontier_cpu],
+                                    cluster_r_1=trainset.cluster_r_1[frontier_cpu],
+                                    cluster_phi_1=trainset.cluster_phi_1[frontier_cpu],
+                                    cluster_z_1=trainset.cluster_z_1[frontier_cpu],
+                                    cluster_eta_1=trainset.cluster_eta_1[frontier_cpu],
+                                    cluster_r_2=trainset.cluster_r_2[frontier_cpu],
+                                    cluster_phi_2=trainset.cluster_phi_2[frontier_cpu],
+                                    cluster_z_2=trainset.cluster_z_2[frontier_cpu],
+                                    cluster_eta_2=trainset.cluster_eta_2[frontier_cpu],
+                                    dr=trainset.dr[edge_ids_cpu],
+                                    dphi=trainset.dphi[edge_ids_cpu],
+                                    dz=trainset.dz[edge_ids_cpu],
+                                    deta=trainset.deta[edge_ids_cpu],
+                                    phislope=trainset.phislope[edge_ids_cpu],
+                                    rphislope=trainset.rphislope[edge_ids_cpu],
+                                )
                     if epoch >= 1:
-                        model.timings["extract"].append(stop_time(start_inner_timer, stop_inner_timer, timing_arg=True))
+                        model.module.timings["extract"].append(stop_time(start_inner_timer, stop_inner_timer, timing_arg=True))
 
                     if epoch >= 1:
                         start_time(start_inner_timer, timing_arg=True)
                     optimizer.zero_grad()
-                    print(f"batch: {batch}", flush=True)
                     batch = batch.to(device)
                     logits = model(batch, epoch)
 
-                    loss, pos_loss, neg_loss = model.loss_function(logits, batch)     
-                    print(f"batch {i} loss: {loss} pos_loss: {pos_loss} neg_loss: {neg_loss}", flush=True)
+                    loss, pos_loss, neg_loss = model.module.loss_function(logits, batch)
+                    # print(f"batch {i} loss: {loss} pos_loss: {pos_loss} neg_loss: {neg_loss}", flush=True)
+                    print(f"Rank: {rank:03} Epoch: {epoch:03d} Batch {(b + i):07}")
                     if args.wandb and rank == 0:
                         wandb.log({'loss': loss.item(),
                                         'pos_loss': pos_loss.item(), 
                                         'neg_loss': neg_loss.item(), 
                                         'epoch': epoch})
                     loss.backward()
-                    if epoch >= 1:
-                        model.timings["fwdbwd"].append(stop_time(start_inner_timer, stop_inner_timer, timing_arg=True))
-                    if epoch >= 1:
-                        start_time(start_inner_timer, timing_arg=True)
-                    for W in model.parameters():
-                        if W.grad is not None:
-                            dist.all_reduce(W.grad)
-                            W.grad /= size
                     optimizer.step()
                     if epoch >= 1:
-                        model.timings["gradsync"].append(stop_time(start_inner_timer, stop_inner_timer, timing_arg=True))
+                        model.module.timings["fwdbwd"].append(stop_time(start_inner_timer, stop_inner_timer, timing_arg=True))
+                    # if epoch >= 1:
+                    #     start_time(start_inner_timer, timing_arg=True)
+                    # for W in model.parameters():
+                    #     if W.grad is not None:
+                    #         dist.all_reduce(W.grad)
+                    #         W.grad /= size
+                    # if epoch >= 1:
+                    #     model.module.timings["gradsync"].append(stop_time(start_inner_timer, stop_inner_timer, timing_arg=True))
 
                 if last_iter:
                     last_iter = False
@@ -1123,7 +1119,7 @@ def main(local_rank, args, trainset, testset,
         print(f"Epoch: {epoch} lr: {curr_lr}", flush=True)
         if epoch >= 1:
             dur.append(time.time() - epoch_start)
-            print(f"Epoch time: {np.sum(dur) / epoch}", flush=True)
+            print(f"Epoch time: {(np.sum(dur) / epoch):0.03f}", flush=True)
 
         if rank == 0 and epoch >= 1: # and (epoch % 5 == 0 or epoch == args.n_epochs - 1):
             if args.timing:
@@ -1141,15 +1137,10 @@ def main(local_rank, args, trainset, testset,
                 fwd_encoder_dur = [x / 1000 for x in model.module.timings["fwd-encoder"]]
                 fwd_graphiters_dur = [x / 1000 for x in model.module.timings["fwd-graphiters"]]
 
-                print(f"len(sample_dur): {len(sample_dur)}", flush=True)
-                print(f"len(train_dur): {len(train_dur)}", flush=True)
-                print(f"len(extract_dur): {len(extract_dur)}", flush=True)
-                print(f"len(fwdbwd_dur): {len(fwdbwd_dur)}", flush=True)
-                print(f"len(gradsync_dur): {len(gradsync_dur)}", flush=True)
-                print(f"sample: {np.sum(sample_dur) / epoch} train: {np.sum(train_dur) / epoch}", flush=True)
-                print(f"extract: {np.sum(extract_dur) / epoch} fwdbwd: {np.sum(fwdbwd_dur) / epoch} gradsync: {np.sum(gradsync_dur) / epoch}")
-                print(f"shadow-sampling: {np.sum(shadow_sampling_dur) / epoch} shadow-selection: {np.sum(shadow_selection_dur) / epoch} shadow-extraction: {np.sum(shadow_extraction_dur) / epoch}", flush=True)
-                print(f"fwd-prelude: {np.sum(fwd_prelude_dur) / epoch} fwd-encoder: {np.sum(fwd_encoder_dur) / epoch} fwd-graphiters: {np.sum(fwd_graphiters_dur) / epoch}", flush=True)
+                print(f"Sample: {(np.sum(sample_dur) / epoch):0.03f} Train: {(np.sum(train_dur) / epoch):0.03f}", flush=True)
+                print(f"Extract: {(np.sum(extract_dur) / epoch):0.03f} FwdBwd: {(np.sum(fwdbwd_dur) / epoch):0.03f}")
+                print(f"ShaDow-Sampling: {(np.sum(shadow_sampling_dur) / epoch):0.03f} ShaDow-Selection: {(np.sum(shadow_selection_dur) / epoch):0.03f} ShaDow-Extraction: {(np.sum(shadow_extraction_dur) / epoch):0.03f}", flush=True)
+                print(f"Fwd-Prelude: {(np.sum(fwd_prelude_dur) / epoch):0.03f} Fwd-Encoder: {(np.sum(fwd_encoder_dur) / epoch):0.03f} Fwd-Graphiters: {(np.sum(fwd_graphiters_dur) / epoch):0.03f}", flush=True)
 
         # torch.cuda.synchronize()
         # dist.barrier()
@@ -1232,13 +1223,15 @@ if __name__ == '__main__':
     parser.add_argument('--bulk-batch-fetch', default=1, type=int,
                             help='number of minibatches to fetch features for in bulk')
     parser.add_argument('--n-darts', default=-1, type=int,
-                            help='number of darts to throw per minibatch in LADIES sampling')
+                            help='number of darts to throw per minibatch in LADIES \
+                                    sampling')
     parser.add_argument('--semibulk', default=128, type=int,
                             help='number of batches to column extract from in bulk')
     parser.add_argument('--timing', action="store_true",
                             help='whether to turn on timers')
     parser.add_argument('--baseline', action="store_true",
-                            help='whether to avoid col selection for baseline comparison')
+                            help='whether to avoid col selection for baseline \
+                                    comparison')
     parser.add_argument('--replicate-graph', action="store_true",
                             help='replicate adjacency matrix on each device')
     parser.add_argument("--nb-node-layer", type=int, default=2,
@@ -1355,7 +1348,7 @@ if __name__ == '__main__':
         print(f"hparams: {hparams}", flush=True)
         
         # trainset = GraphDataset(input_dir, "trainset", 4053, "fit", hparams)
-        dataset = GraphDataset(input_dir, "trainset", 10, "fit", hparams)
+        dataset = GraphDataset(input_dir, "trainset", 20, "fit", hparams)
         trainset = []
         for data in dataset:
             if data is None:
@@ -1389,44 +1382,39 @@ if __name__ == '__main__':
 
             trainset.append(data_obj)
         trainset = Batch.from_data_list(trainset)
-        # trainset.x.share_memory_()
-        # trainset.y.share_memory_()
-        # trainset.z.share_memory_()
-        # trainset.hit_id.share_memory_()
-        # trainset.edge_index.share_memory_()
-        # trainset.truth_map.share_memory_()
-        # trainset.weights.share_memory_()
-        # trainset.r.share_memory_()
-        # trainset.phi.share_memory_()
-        # trainset.eta.share_memory_()
-        # trainset.cluster_r_1.share_memory_()
-        # trainset.cluster_phi_1.share_memory_()
-        # trainset.cluster_z_1.share_memory_()
-        # trainset.cluster_eta_1.share_memory_()
-        # trainset.cluster_r_2.share_memory_()
-        # trainset.cluster_phi_2.share_memory_()
-        # trainset.cluster_z_2.share_memory_()
-        # trainset.cluster_eta_2.share_memory_()
-        # trainset.dr.share_memory_()
-        # trainset.dphi.share_memory_()
-        # trainset.dz.share_memory_()
-        # trainset.deta.share_memory_()
-        # trainset.phislope.share_memory_()
-        # trainset.rphislope.share_memory_()
-        # trainset.batch.share_memory_()
-        # trainset.ptr.share_memory_()
-        print(f"trainset.edge_index.is_shared: {trainset.edge_index.is_shared()}", flush=True)
+        trainset.x.share_memory_()
+        trainset.y.share_memory_()
+        trainset.z.share_memory_()
+        trainset.hit_id.share_memory_()
+        trainset.edge_index.share_memory_()
+        trainset.truth_map.share_memory_()
+        trainset.weights.share_memory_()
+        trainset.r.share_memory_()
+        trainset.phi.share_memory_()
+        trainset.eta.share_memory_()
+        trainset.cluster_r_1.share_memory_()
+        trainset.cluster_phi_1.share_memory_()
+        trainset.cluster_z_1.share_memory_()
+        trainset.cluster_eta_1.share_memory_()
+        trainset.cluster_r_2.share_memory_()
+        trainset.cluster_phi_2.share_memory_()
+        trainset.cluster_z_2.share_memory_()
+        trainset.cluster_eta_2.share_memory_()
+        trainset.dr.share_memory_()
+        trainset.dphi.share_memory_()
+        trainset.dz.share_memory_()
+        trainset.deta.share_memory_()
+        trainset.phislope.share_memory_()
+        trainset.rphislope.share_memory_()
+        trainset.batch.share_memory_()
+        trainset.ptr.share_memory_()
         node_count = torch.max(trainset.edge_index) + 1
         edge_count = trainset.edge_index.size(1)
-        node_features = ["r", "phi", "z", "eta", "cluster_r_1", "cluster_phi_1", "cluster_z_1", "cluster_eta_1", 
-                            "cluster_r_2", "cluster_phi_2", "cluster_z_2", "cluster_eta_2"]
+        node_features = ["r", "phi", "z", "eta", "cluster_r_1", "cluster_phi_1", 
+                            "cluster_z_1", "cluster_eta_1", "cluster_r_2", 
+                            "cluster_phi_2", "cluster_z_2", "cluster_eta_2"]
         edge_features = ["dr", "dphi", "dz", "deta", "phislope", "rphislope"]
 
-        # g_loc_indices = trainset.edge_index.to(device)
-        # g_loc_values = torch.arange(g_loc_indices.size(1), dtype=torch.int64).to(device)
-        # g_loc = torch.sparse_coo_tensor(g_loc_indices, g_loc_values)
-        # g_loc = g_loc.to_sparse_csr()
-        # g_loc_t = g_loc.t().to_sparse_csr()
         g_loc_indices = trainset.edge_index
         g_loc_values = torch.arange(g_loc_indices.size(1), dtype=torch.int64)
         g_loc = torch.sparse_coo_tensor(g_loc_indices, g_loc_values)
