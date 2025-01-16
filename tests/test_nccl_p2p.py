@@ -3,6 +3,7 @@ import os
 import torch
 import torch.distributed as dist
 import socket
+import torch.multiprocessing as mp
 
 def start_time(timer):
     timer.record()
@@ -12,18 +13,21 @@ def stop_time(start_timer, stop_timer):
     torch.cuda.synchronize()
     return start_timer.elapsed_time(stop_timer)
 
-def test_nccl(args):
+def test_nccl(local_rank, args):
     if "SLURM_PROCID" in os.environ.keys():
         os.environ["RANK"] = os.environ["SLURM_PROCID"]
+        global_rank = int(os.environ["RANK"]) * args.gpu + local_rank
 
     if "SLURM_NTASKS" in os.environ.keys():
         os.environ["WORLD_SIZE"] = os.environ["SLURM_NTASKS"]
+        global_size = int(os.environ["WORLD_SIZE"]) * args.gpu
 
     os.environ["MASTER_ADDR"] = args.hostname # hostname of rank 0's node
     os.environ["MASTER_PORT"] = "1234"
 
     print(f"hostname: {socket.gethostname()}", flush=True)
-    dist.init_process_group(backend="nccl")
+    # dist.init_process_group(backend="nccl")
+    dist.init_process_group(backend="nccl", rank=global_rank, world_size=global_size)
     rank = dist.get_rank()
     size = dist.get_world_size()
     torch.cuda.set_device(rank % args.gpu)
@@ -426,31 +430,61 @@ def test_nccl(args):
     #         print(f"time(ms): {seconds * 1000}")
     #         print(f"elem_count: {elem_count}")
 
-    print(f"p2p cross-node send", flush=True)
-    buffer_size = 10 * 2**30
-    # buffer_size = ((66 // 4) * 2**20 // 2) // (size - 1)
-    if rank == 0:
-        send_tensor = torch.cuda.FloatTensor(buffer_size).fill_(1.0)
-    elif rank == size - 1:
-        recv_tensor = torch.cuda.FloatTensor(buffer_size).fill_(1.0)
+    # print(f"p2p cross-node send", flush=True)
+    # buffer_size = 10 * 2**30
+    # # buffer_size = ((66 // 4) * 2**20 // 2) // (size - 1)
+    # if rank == 0:
+    #     send_tensor = torch.cuda.FloatTensor(buffer_size).fill_(1.0)
+    # elif rank == size - 1:
+    #     recv_tensor = torch.cuda.FloatTensor(buffer_size).fill_(1.0)
 
-    dist.barrier()
-    if rank == size - 1:
-        start_time(start_timer)
-    
-    if rank == 0:
-        dist.send(send_tensor, dst=size-1)
-    elif rank == size - 1:
-        dist.recv(recv_tensor, src=0)
+    # dist.barrier()
+    # if rank == size - 1:
+    #     start_time(start_timer)
+    # 
+    # if rank == 0:
+    #     dist.send(send_tensor, dst=size-1)
+    # elif rank == size - 1:
+    #     dist.recv(recv_tensor, src=0)
+    # torch.cuda.synchronize()
+    # dist.barrier()
+
+    # if rank == size - 1:
+    #     seconds = stop_time(start_timer, stop_timer) / 1000
+    #     gb_count = (buffer_size * 4) / 2**30 # assumes buffer_size is per process
+    #     bw = gb_count / seconds
+    #     print(f"gb: {gb_count} GB time: {seconds}s bw: {bw}GB/s")
+    #     print(f"time(ms): {seconds * 1000}")
+
+    print(f"allreduce", flush=True)
+    # buffer_size = 10 * 2**30
+    buffer_size = 64 * 3803
+    # send_tensor = torch.cuda.FloatTensor(64, 3803).fill_(1.0)
+    send_tensor = torch.cuda.FloatTensor(64, 27).fill_(1.0)
+    for i in range(59):
+        send_tensor = torch.cat((send_tensor, torch.cuda.FloatTensor(64, 64).fill_(1.0)), dim=1)
+
+    print(f"send_tensor.size(): {send_tensor.size()}", flush=True)
+    print(f"send_tensor.contiguous(): {send_tensor.is_contiguous()}", flush=True)
+    # warmup
+    dist.all_reduce(send_tensor)
     torch.cuda.synchronize()
     dist.barrier()
 
-    if rank == size - 1:
-        seconds = stop_time(start_timer, stop_timer) / 1000
-        gb_count = (buffer_size * 4) / 2**30 # assumes buffer_size is per process
-        bw = gb_count / seconds
-        print(f"gb: {gb_count} GB time: {seconds}s bw: {bw}GB/s")
-        print(f"time(ms): {seconds * 1000}")
+    for i in range(1):
+        if rank == 0:
+            start_time(start_timer)
+        dist.all_reduce(send_tensor)
+        torch.cuda.synchronize()
+        dist.barrier()
+
+        if rank == 0:
+            seconds = stop_time(start_timer, stop_timer) / 1000
+            gb_count = (buffer_size * 4 * size) / 2**30 # assumes buffer_size is per process
+            bw = gb_count / seconds
+            print(f"gb: {gb_count} GB time: {seconds}s bw: {bw}GB/s")
+            print(f"time(ms): {seconds * 1000}")
+        dist.barrier()
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='NCCL P2P test')
@@ -460,4 +494,7 @@ if __name__ == '__main__':
                         help="gpus per node")
 
     args = parser.parse_args()
-    test_nccl(args)
+    # torch.set_num_threads(1)
+    # test_nccl(args)
+    mp.set_start_method("spawn", force=True)
+    mp.spawn(test_nccl, args=(args,), nprocs=args.gpu, join=True)

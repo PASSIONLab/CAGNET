@@ -41,6 +41,7 @@ import torch.nn.functional as F
 from datetime import timedelta
 from sparse_coo_tensor_cpp import sort_dst_proc_gpu
 from sklearn.metrics import roc_auc_score
+from statistics import median
 
 import socket
 import wandb
@@ -76,7 +77,14 @@ class InteractionGNN(nn.Module):
         self.timings["train"] = []
         self.timings["extract"] = []
         self.timings["fwdbwd"] = []
-        self.timings["gradsync"] = []
+        self.timings["fwd"] = []
+        self.timings["bwd"] = []
+        self.timings["h2d"] = []
+        self.timings["allreduce"] = []
+        self.timings["allreduce-pt1"] = []
+        self.timings["allreduce-pt2"] = []
+        self.timings["allreduce-pt3"] = []
+        self.timings["allreduce-pt4"] = []
         self.timings["shadow-sampling"] = []
         self.timings["shadow-selection"] = []
         self.timings["shadow-extraction"] = []
@@ -290,7 +298,6 @@ class InteractionGNN(nn.Module):
 
         start_timer = torch.cuda.Event(enable_timing=True)
         stop_timer = torch.cuda.Event(enable_timing=True)
-
         if epoch >= 1:
             start_time(start_timer, timing_arg=True)
         x = torch.stack(
@@ -570,6 +577,72 @@ class InteractionGNN(nn.Module):
         #    else:
         #        print(f"Plot {plot_function} not implemented")
 
+    def ignn_allreduce(self, params, size, epoch):
+
+        start_timer = torch.cuda.Event(enable_timing=True)
+        stop_timer = torch.cuda.Event(enable_timing=True)
+
+        torch.cuda.synchronize()
+        if epoch >= 1:
+            start_time(start_timer, timing_arg=True)
+        grad_tensors = []
+        tensor_names = []
+        param_list = list(params)
+        for name, W in param_list:
+            if W.grad is not None:
+                # print(f"name: {name} W.grad.size(): {W.grad.size()} ndim: {W.grad.ndim}", flush=True)
+                if W.grad.size(0) == 64:
+                    if W.grad.ndim == 2:
+                        grad_tensors.append(W.grad)
+                        tensor_names.append(name)
+                    elif W.grad.ndim == 1:
+                        grad_tensors.append(W.grad.unsqueeze(-1))
+                        tensor_names.append(name)
+                    # else:
+                    #     print(f"tensor error: {name} W.grad.size: {W.grad.size()}")
+
+        stacked_grad_tensors = torch.cat(grad_tensors, dim=1)
+        if epoch >= 1:
+            self.timings["allreduce-pt1"].append(stop_time(start_timer, stop_timer, barrier=True, timing_arg=True))
+
+        stacked_grad_tensors = stacked_grad_tensors.contiguous()
+        torch.cuda.synchronize()
+        if epoch >= 1:
+            start_time(start_timer, timing_arg=True)
+        dist.all_reduce(stacked_grad_tensors)
+        if epoch >= 1:
+            self.timings["allreduce-pt2"].append(stop_time(start_timer, stop_timer, barrier=True, timing_arg=True))
+
+        torch.cuda.synchronize()
+        if epoch >= 1:
+            start_time(start_timer, timing_arg=True)
+        stacked_grad_tensors /= size
+        grad_tensor_idx = 0
+        name_tensor_idx = 0
+        for name, W in param_list:
+            if W.grad is not None:
+                if W.grad.size(0) == 64:
+                    name_tensor_idx += 1
+                    if W.grad.ndim == 2:
+                        W.grad = stacked_grad_tensors[:,\
+                                    grad_tensor_idx:grad_tensor_idx + W.grad.size(1)]
+                        grad_tensor_idx += W.grad.size(1)
+                    elif W.grad.ndim == 1:
+                        W.grad = stacked_grad_tensors[:,\
+                                        grad_tensor_idx:grad_tensor_idx + 1].squeeze()
+                        grad_tensor_idx += 1
+        if epoch >= 1:
+            self.timings["allreduce-pt3"].append(stop_time(start_timer, stop_timer, barrier=True, timing_arg=True))
+
+        if epoch >= 1:
+            start_time(start_timer, timing_arg=True)
+        for _, W in params:
+            if W.grad is not None and W.grad.size(0) != 64:
+                dist.all_reduce(W.grad)
+                W.grad /= size
+        if epoch >= 1:
+            self.timings["allreduce-pt4"].append(stop_time(start_timer, stop_timer, barrier=True, timing_arg=True))
+
 def get_proc_groups(rank, size, replication):
     rank_c = rank // replication
      
@@ -822,27 +895,6 @@ def main(local_rank, args, trainset, testset,
                       impl=args.impl,
                       dataset=args.dataset)
     
-    param_count = 0
-    param_elems = 0
-    for param in model.parameters():
-        param_count += 1
-        param_elems += param.data.numel()
-        print(f"param.data.size: {param.data.size()}", flush=True)
-
-    print(f"param_count: {param_count}", flush=True)
-    print(f"param_elems: {param_elems}", flush=True)
-
-    param_count = 0
-    param_elems = 0
-    for name, param in model.named_parameters():
-        param_count += 1
-        param_elems += param.data.numel()
-        print(f"name: {name} param.data.size: {param.data.size()}", flush=True)
-
-    print(f"name param_count: {param_count}", flush=True)
-    print(f"name param_elems: {param_elems}", flush=True)
-
-    # model.share_memory()
     print(f"model: {model}")
     model = model.to(device)
     model = DistributedDataParallel(model, device_ids=[local_rank], output_device=[local_rank], find_unused_parameters=True)
@@ -895,9 +947,6 @@ def main(local_rank, args, trainset, testset,
         # trainset.edge_index = trainset.adj_t.coo()
     test_loader = DataLoader(testset, batch_size=1, num_workers=1)
 
-    components_small = LargestConnectedComponents(args.batch_size - 1)
-    components_large = LargestConnectedComponents(args.batch_size)
-
     row_n_bulkmb = int(args.n_bulkmb / (size / args.replication))
     if rank == size - 1:
         row_n_bulkmb = args.n_bulkmb - row_n_bulkmb * (proc_row - 1)
@@ -937,7 +986,7 @@ def main(local_rank, args, trainset, testset,
                     start_time(start_timer, timing_arg=True)
                 batch = train_loader.__collate__(batch_ids)
                 if epoch >= 1:
-                    model.module.timings["sample"].append(stop_time(start_timer, stop_timer, timing_arg=True))
+                    model.module.timings["sample"].append(stop_time(start_timer, stop_timer, barrier=True, timing_arg=True))
 
                 print(f"Rank: {rank:03} Epoch: {epoch:03d} Batch {i:07}")
                 optimizer.zero_grad()
@@ -955,17 +1004,18 @@ def main(local_rank, args, trainset, testset,
                 #                     'epoch': epoch})
                 loss.backward()
                 if epoch >= 1:
-                    model.module.timings["train"].append(stop_time(start_timer, stop_timer, timing_arg=True))
-                optimizer.step()
+                    model.module.timings["train"].append(stop_time(start_timer, stop_timer, barrier=True, timing_arg=True))
 
                 # if epoch >= 1:
                 #     start_time(start_timer, timing_arg=True)
-                # for W in model.parameters():
-                #     if W.grad is not None:
-                #         dist.all_reduce(W.grad.data)
-                #         W.grad.data /= size
+                # # for W in model.parameters():
+                # #     if W.grad is not None:
+                # #         dist.all_reduce(W.grad.data)
+                # #         W.grad.data /= size
+                # model.ignn_allreduce(model.named_parameters(), size, epoch)
                 # if epoch >= 1:
-                #     model.timings["gradsync"].append(stop_time(start_timer, stop_timer, timing_arg=True))
+                #     model.module.timings["allreduce"].append(stop_time(start_timer, stop_timer, barrier=True, timing_arg=True))
+                optimizer.step()
 
         elif args.impl == "cagnet":
             batches_all = torch.arange(node_count).to(device)
@@ -973,7 +1023,6 @@ def main(local_rank, args, trainset, testset,
 
             last_iter = False
             for b in range(0, batch_count, args.n_bulkmb):
-            # for b in range(batch_start, batch_stop, args.n_bulkmb):
                 print(f"Rank: {rank:03} Batch Bulk: {b:07}")
                 if b + args.n_bulkmb > batch_count:
                     last_iter = True
@@ -1024,11 +1073,11 @@ def main(local_rank, args, trainset, testset,
                                                 model.module.timings, \
                                                 args.replicate_graph, epoch)
                 if epoch >= 1:
+                    torch.cuda.synchronize()
                     model.module.timings["sample"].append(stop_time(start_timer, stop_timer, timing_arg=True))
 
                 if epoch >= 1:
                     start_time(start_timer, timing_arg=True)
-                g_loc_coo = g_loc.to_sparse_coo()
 
                 # for i in range(rank_n_bulkmb):
                 for i in range(args.n_bulkmb):
@@ -1076,13 +1125,22 @@ def main(local_rank, args, trainset, testset,
                                     rphislope=trainset.rphislope[edge_ids_cpu],
                                 )
                     if epoch >= 1:
+                        torch.cuda.synchronize()
                         model.module.timings["extract"].append(stop_time(start_inner_timer, stop_inner_timer, timing_arg=True))
 
                     if epoch >= 1:
                         start_time(start_inner_timer, timing_arg=True)
                     optimizer.zero_grad()
                     batch = batch.to(device)
+                    if epoch >= 1:
+                        torch.cuda.synchronize()
+                        model.module.timings["h2d"].append(stop_time(start_inner_timer, stop_inner_timer, timing_arg=True))
+                    if epoch >= 1:
+                        start_time(start_inner_timer, timing_arg=True)
                     logits = model(batch, epoch)
+                    if epoch >= 1:
+                        torch.cuda.synchronize()
+                        model.module.timings["fwd"].append(stop_time(start_inner_timer, stop_inner_timer, timing_arg=True))
 
                     loss, pos_loss, neg_loss = model.module.loss_function(logits, batch)
                     # print(f"batch {i} loss: {loss} pos_loss: {pos_loss} neg_loss: {neg_loss}", flush=True)
@@ -1092,24 +1150,29 @@ def main(local_rank, args, trainset, testset,
                                         'pos_loss': pos_loss.item(), 
                                         'neg_loss': neg_loss.item(), 
                                         'epoch': epoch})
+                    if epoch >= 1:
+                        start_time(start_inner_timer, timing_arg=True)
                     loss.backward()
                     optimizer.step()
                     if epoch >= 1:
-                        model.module.timings["fwdbwd"].append(stop_time(start_inner_timer, stop_inner_timer, timing_arg=True))
+                        torch.cuda.synchronize()
+                        model.module.timings["bwd"].append(stop_time(start_inner_timer, stop_inner_timer, timing_arg=True))
                     # if epoch >= 1:
                     #     start_time(start_inner_timer, timing_arg=True)
-                    # for W in model.parameters():
-                    #     if W.grad is not None:
-                    #         dist.all_reduce(W.grad)
-                    #         W.grad /= size
+                    # # for W in model.parameters():
+                    # #     if W.grad is not None:
+                    # #         dist.all_reduce(W.grad)
+                    # #         W.grad /= size
+                    # # model.module.ignn_allreduce(model.named_parameters(), size, epoch)
                     # if epoch >= 1:
-                    #     model.module.timings["gradsync"].append(stop_time(start_inner_timer, stop_inner_timer, timing_arg=True))
+                    #     model.module.timings["allreduce"].append(stop_time(start_inner_timer, stop_inner_timer, timing_arg=True))
 
                 if last_iter:
                     last_iter = False
                     args.n_bulkmb = old_nbulkmb
                     rank_n_bulkmb = old_rank_nbulkmb 
                 if epoch >= 1:
+                    torch.cuda.synchronize()
                     model.module.timings["train"].append(stop_time(start_timer, stop_timer, timing_arg=True))
 
         torch.cuda.synchronize()
@@ -1121,13 +1184,21 @@ def main(local_rank, args, trainset, testset,
             dur.append(time.time() - epoch_start)
             print(f"Epoch time: {(np.sum(dur) / epoch):0.03f}", flush=True)
 
-        if rank == 0 and epoch >= 1: # and (epoch % 5 == 0 or epoch == args.n_epochs - 1):
+        # if rank == 0 and epoch >= 1: # and (epoch % 5 == 0 or epoch == args.n_epochs - 1):
+        if epoch >= 1: # and (epoch % 5 == 0 or epoch == args.n_epochs - 1):
             if args.timing:
                 sample_dur = [x / 1000 for x in model.module.timings["sample"]]
                 train_dur = [x / 1000 for x in model.module.timings["train"]]
                 extract_dur = [x / 1000 for x in model.module.timings["extract"]]
                 fwdbwd_dur = [x / 1000 for x in model.module.timings["fwdbwd"]]
-                gradsync_dur = [x / 1000 for x in model.module.timings["gradsync"]]
+                fwd_dur = [x / 1000 for x in model.module.timings["fwd"]]
+                bwd_dur = [x / 1000 for x in model.module.timings["bwd"]]
+                h2d_dur = [x / 1000 for x in model.module.timings["h2d"]]
+                allreduce_dur = [x / 1000 for x in model.module.timings["allreduce"]]
+                allreduce_pt1_dur = [x / 1000 for x in model.module.timings["allreduce-pt1"]]
+                allreduce_pt2_dur = [x / 1000 for x in model.module.timings["allreduce-pt2"]]
+                allreduce_pt3_dur = [x / 1000 for x in model.module.timings["allreduce-pt3"]]
+                allreduce_pt4_dur = [x / 1000 for x in model.module.timings["allreduce-pt4"]]
 
                 shadow_sampling_dur = [x / 1000 for x in model.module.timings["shadow-sampling"]]
                 shadow_selection_dur = [x / 1000 for x in model.module.timings["shadow-selection"]]
@@ -1137,10 +1208,16 @@ def main(local_rank, args, trainset, testset,
                 fwd_encoder_dur = [x / 1000 for x in model.module.timings["fwd-encoder"]]
                 fwd_graphiters_dur = [x / 1000 for x in model.module.timings["fwd-graphiters"]]
 
-                print(f"Sample: {(np.sum(sample_dur) / epoch):0.03f} Train: {(np.sum(train_dur) / epoch):0.03f}", flush=True)
-                print(f"Extract: {(np.sum(extract_dur) / epoch):0.03f} FwdBwd: {(np.sum(fwdbwd_dur) / epoch):0.03f}")
-                print(f"ShaDow-Sampling: {(np.sum(shadow_sampling_dur) / epoch):0.03f} ShaDow-Selection: {(np.sum(shadow_selection_dur) / epoch):0.03f} ShaDow-Extraction: {(np.sum(shadow_extraction_dur) / epoch):0.03f}", flush=True)
-                print(f"Fwd-Prelude: {(np.sum(fwd_prelude_dur) / epoch):0.03f} Fwd-Encoder: {(np.sum(fwd_encoder_dur) / epoch):0.03f} Fwd-Graphiters: {(np.sum(fwd_graphiters_dur) / epoch):0.03f}", flush=True)
+                # print(f"Sample: {(np.sum(sample_dur) / epoch):0.03f} Train: {(np.sum(train_dur) / epoch):0.03f}", flush=True)
+                # print(f"avg(allreduce_pt2_dur): {sum(allreduce_pt2_dur) / len(allreduce_pt2_dur)}", flush=True)
+                # print(f"med(allreduce_pt2_dur): {median(allreduce_pt2_dur)}", flush=True)
+                print(f"Rank: {rank} Sample: {(np.sum(sample_dur) / epoch):0.03f} Train: {(np.sum(train_dur) / epoch):0.03f} AllReduce: {(np.sum(allreduce_dur) / epoch):0.03f}", flush=True)
+                print(f"Rank: {rank} AllReducePt1: {(np.sum(allreduce_pt1_dur) / epoch):0.03f} AllReducePt2: {(np.sum(allreduce_pt2_dur) / epoch):0.03f}")
+                print(f"Rank: {rank} AllReducePt3: {(np.sum(allreduce_pt3_dur) / epoch):0.03f} AllReducePt4: {(np.sum(allreduce_pt4_dur) / epoch):0.03f}")
+                print(f"Rank: {rank} Extract: {(np.sum(extract_dur) / epoch):0.03f} FwdBwd: {(np.sum(fwdbwd_dur) / epoch):0.03f}")
+                print(f"Rank: {rank} Fwd: {(np.sum(fwd_dur) / epoch):0.03f} Bwd: {(np.sum(bwd_dur) / epoch):0.03f} H2D: {(np.sum(h2d_dur) / epoch):0.03f}")
+                print(f"Rank: {rank} ShaDow-Sampling: {(np.sum(shadow_sampling_dur) / epoch):0.03f} ShaDow-Selection: {(np.sum(shadow_selection_dur) / epoch):0.03f} ShaDow-Extraction: {(np.sum(shadow_extraction_dur) / epoch):0.03f}", flush=True)
+                print(f"Rank: {rank} Fwd-Prelude: {(np.sum(fwd_prelude_dur) / epoch):0.03f} Fwd-Encoder: {(np.sum(fwd_encoder_dur) / epoch):0.03f} Fwd-Graphiters: {(np.sum(fwd_graphiters_dur) / epoch):0.03f}", flush=True)
 
         # torch.cuda.synchronize()
         # dist.barrier()
@@ -1172,7 +1249,7 @@ def main(local_rank, args, trainset, testset,
             print(f"Evaluating", flush=True)
             # model = model.cpu()
             # model = model.cuda()
-            result, masked_auc = model.module.evaluate(test_loader, args.n_epochs, 
+            result, masked_auc = model.evaluate(test_loader, args.n_epochs, 
                                                             0.0, 0.0, args.wandb, 0)
         # model = model.to(device)
 
@@ -1348,7 +1425,7 @@ if __name__ == '__main__':
         print(f"hparams: {hparams}", flush=True)
         
         # trainset = GraphDataset(input_dir, "trainset", 4053, "fit", hparams)
-        dataset = GraphDataset(input_dir, "trainset", 20, "fit", hparams)
+        dataset = GraphDataset(input_dir, "trainset", 80, "fit", hparams)
         trainset = []
         for data in dataset:
             if data is None:
@@ -1426,7 +1503,7 @@ if __name__ == '__main__':
     
         # input_dir_test = "/global/cfs/cdirs/m4439/CTD2023_results/module_map/"
         input_dir_test = "/global/cfs/cdirs/m4439/REL2024/metric_learning_7_30/"
-        testset = GraphDataset(input_dir_test, "valset", 5, "test", hparams)
+        testset = GraphDataset(input_dir_test, "valset", 10, "test", hparams)
         print(f"testset: {testset}", flush=True)
 
         num_features = len(node_features)
@@ -1436,7 +1513,7 @@ if __name__ == '__main__':
     if args.wandb and int(os.environ["SLURM_PROCID"]) == 0:
         wandb.init(project="exatrkx")
 
-    torch.set_num_threads(1)
+    # torch.set_num_threads(1)
     mp.set_start_method("spawn", force=True)
     mp.spawn(main,
              args=(args, trainset, testset, 
