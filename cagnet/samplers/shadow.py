@@ -9,28 +9,31 @@ from sparse_coo_tensor_cpp import *
 
 timing = True
 
-def start_time(timer, timing_arg=None):
-    if timing_arg is not None:
-        start_timing = timing_arg
-    else:
-        start_timing = timing
-    if start_timing:
-        timer.record()
-
-def stop_time(start_timer, stop_timer, barrier=False, timing_arg=None):
-    if timing_arg is not None:
-        start_timing = timing_arg
-    else:
-        start_timing = timing
-    if start_timing:
-        stop_timer.record()
-        torch.cuda.synchronize()
-        time_taken = start_timer.elapsed_time(stop_timer)
-        if barrier:
-            dist.barrier()
-        return time_taken
-    else:
-        return 0.0
+# def start_time(timer, timing_arg=None):
+#     if timing_arg is not None:
+#         start_timing = timing_arg
+#     else:
+#         start_timing = timing
+#     if start_timing:
+#         timer.record()
+# 
+# def stop_time(start_timer, stop_timer, stream=None, barrier=False, timing_arg=None):
+#     if timing_arg is not None:
+#         start_timing = timing_arg
+#     else:
+#         start_timing = timing
+#     if start_timing:
+#         stop_timer.record()
+#         if stream is None:
+#             torch.cuda.synchronize()
+#         else:
+#             stream.synchronize()
+#         time_taken = start_timer.elapsed_time(stop_timer)
+#         if barrier:
+#             dist.barrier()
+#         return time_taken
+#     else:
+#         return 0.0
 
 def shadow_sampler(adj_matrix, batches, batch_size, frontier_sizes, mb_count_total, n_layers, n_darts_list, \
                         replication, rank, size, row_groups, col_groups,

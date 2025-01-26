@@ -26,7 +26,7 @@ from torch_geometric.typing import SparseTensor
 from torch_geometric.utils import add_remaining_self_loops
 from torch_scatter import scatter_add
 from torch.multiprocessing import Process
-from torchmetrics.classification import Precision, Recall, PrecisionRecallCurve, ROC, AUROC, Accuracy
+from torchmetrics.classification import Precision, Recall, F1Score, ROC, AUROC, Accuracy
 from torch.nn.parallel import DistributedDataParallel
 from torch.utils.data.distributed import DistributedSampler
 from torch.utils.checkpoint import checkpoint
@@ -52,7 +52,7 @@ class InteractionGNN(nn.Module):
                     nb_node_layer, nb_edge_layer, n_graph_iters, 
                     node_features, edge_features, layernorm, batchnorm, 
                     hidden_activation, output_activation, 
-                    aggr, checkpointing, replication, 
+                    aggr, checkpointing, replication, device,
                     impl="cagnet", dataset="physics_ex3"):
 
         super(InteractionGNN, self).__init__()
@@ -72,6 +72,7 @@ class InteractionGNN(nn.Module):
         self.timings = dict()
         self.impl = impl
         self.dataset = dataset
+        self.device = device
 
         self.timings["sample"] = []
         self.timings["train"] = []
@@ -92,7 +93,7 @@ class InteractionGNN(nn.Module):
         self.timings["fwd-encoder"] = []
         self.timings["fwd-graphiters"] = []
 
-        torch.manual_seed(0)
+        torch.manual_seed(1)
         # aggr_list = ["sum", "mean", "max", "std"]
         # self.aggregation = torch_geometric.nn.aggr.MultiAggregation(aggr_list, mode="cat")
 
@@ -126,7 +127,7 @@ class InteractionGNN(nn.Module):
                 batch_norm=batchnorm,
             )
 
-        torch.manual_seed(0)
+        torch.manual_seed(1)
         # aggr_list = ["sum", "mean", "max", "std"]
         # self.aggregation = torch_geometric.nn.aggr.MultiAggregation(aggr_list, mode="cat")
 
@@ -431,9 +432,10 @@ class InteractionGNN(nn.Module):
         """
         The gateway for the evaluation stage. This class method is called from the eval_stage.py script.
         """
-        # val_auc = AUROC(task="binary").to(self.device)
-        # val_precision = Precision(task="binary").to(self.device)
-        # val_recall = Recall(task="binary").to(self.device)    
+        val_auc = AUROC(task="binary").to(self.device)
+        val_precision = Precision(task="binary").to(self.device)
+        val_recall = Recall(task="binary").to(self.device)    
+        val_f1 = F1Score(task="binary").to(self.device)    
         val_loss = []
         eff = []
         tar_pur = []
@@ -481,9 +483,10 @@ class InteractionGNN(nn.Module):
                 eff.append(target_eff.item())
                 tar_pur.append(target_pur.item())
                 tot_pur.append(total_pur.item())
-                # val_precision.update(preds, target_truth)
-                # val_recall.update(preds, target_truth)
-                # val_auc.update(output, target_truth)
+                val_precision.update(preds, target_truth)
+                val_recall.update(preds, target_truth)
+                val_f1.update(preds, target_truth)
+                val_auc.update(output, target_truth)
 
         if rank == 0:
             avg_loss = sum(val_loss) / len(val_loss)
@@ -491,29 +494,31 @@ class InteractionGNN(nn.Module):
             avg_tarpur = sum(tar_pur) / len(tar_pur)
             avg_totpur = sum(tot_pur) / len(tot_pur)
             
-        # efficiency = val_precision.compute()
-        # purity = val_recall.compute()
-        # auc = val_auc.compute()
+        efficiency = val_precision.compute()
+        purity = val_recall.compute()
+        f1_score = val_f1.compute()
+        auc = val_auc.compute()
         print(f"Logging")
         if rank == 0:
             if wandb_arg:
-                pass
-                # wandb.log({
-                #     # "train_loss": loss,
-                #     "current_lr": curr_lr,
-                #     "eff": target_eff,
-                #     "target_pur": avg_tarpur,
-                #     "total_pur": avg_totpur,
-                #     "auc": target_auc,
-                #     "val_loss": avg_loss,
-                #     "epoch": epoch,
-                #     "time": epoch_time,
-                #     # "trainer/global_step": step + epoch*step
-                #     # "trainer/global_step": epoch
-                # })
-            print(f"Target Purity: {avg_tarpur}", flush=True)
-            print(f"Total Purity: {avg_totpur}", flush=True)
-            print(f"Efficiency: {target_eff}", flush=True)
+                wandb.log({
+                    # "train_loss": loss,
+                    "current_lr": curr_lr,
+                    "eff": efficiency,
+                    # "target_pur": avg_tarpur,
+                    "total_pur": purity,
+                    "f1_score": f1_score,
+                    "auc": auc,
+                    "val_loss": avg_loss,
+                    "epoch": epoch,
+                    "time": epoch_time,
+                    # "trainer/global_step": step + epoch*step
+                    # "trainer/global_step": epoch
+                })
+            # print(f"Target Purity: {avg_tarpur}", flush=True)
+            print(f"Total Purity: {purity}", flush=True)
+            print(f"Efficiency: {efficiency}", flush=True)
+            print(f"F1-Score: {f1_score}", flush=True)
             print(f"AUC: {target_auc}", flush=True)
 
         # val_auc.reset(), val_precision.reset(), val_recall.reset()
@@ -828,6 +833,8 @@ def main(local_rank, args, trainset, testset,
     if "SLURM_PROCID" in os.environ.keys():
         os.environ["RANK"] = os.environ["SLURM_PROCID"]
         global_rank = int(os.environ["RANK"]) * args.gpu + local_rank
+    else:
+        global_rank = local_rank
 
     if "SLURM_NTASKS" in os.environ.keys():
         os.environ["WORLD_SIZE"] = os.environ["SLURM_NTASKS"]
@@ -840,13 +847,16 @@ def main(local_rank, args, trainset, testset,
     print(f"hostname: {socket.gethostname()}")
     print(f"local_rank: {local_rank}", flush=True)
     if not dist.is_initialized():
-        print(f"global_rank: {global_rank} local_rank: {local_rank} size: {global_size} initializing process group")
+        print(f"global_rank: {global_rank} local_rank: {local_rank} size: {global_size} initializing process group", flush=True)
         dist.init_process_group(backend=args.dist_backend, rank=global_rank, world_size=global_size, timeout=timedelta(minutes=30))
         dist.barrier()
     rank = dist.get_rank()
     size = dist.get_world_size()
     print(f"hostname: {socket.gethostname()} rank: {rank} size: {size}")
     torch.cuda.set_device(local_rank)
+
+    if args.wandb and rank == 0:
+        wandb.init(project="exatrkx")
 
     device = torch.device(f'cuda:{rank % args.gpu}')
     g_loc = torch.sparse_csr_tensor(g_loc_crows, g_loc_cols, g_loc_vals)
@@ -861,9 +871,12 @@ def main(local_rank, args, trainset, testset,
     start_inner_timer = torch.cuda.Event(enable_timing=True)
     stop_inner_timer = torch.cuda.Event(enable_timing=True)
 
+    s1 = torch.cuda.Stream()
+    s2 = torch.cuda.Stream()
+
     path = osp.join(osp.dirname(osp.realpath(__file__)), '../..', 'data', args.dataset)
 
-    torch.manual_seed(0)
+    torch.manual_seed(1)
 
     proc_row = size // args.replication
     rank_row = rank // args.replication
@@ -892,6 +905,7 @@ def main(local_rank, args, trainset, testset,
                       args.aggr,
                       args.checkpointing,
                       args.replication,
+                      device,
                       impl=args.impl,
                       dataset=args.dataset)
     
@@ -1023,6 +1037,7 @@ def main(local_rank, args, trainset, testset,
 
             last_iter = False
             for b in range(0, batch_count, args.n_bulkmb):
+            # for b in range(batch_start, batch_stop, args.n_bulkmb):
                 print(f"Rank: {rank:03} Batch Bulk: {b:07}")
                 if b + args.n_bulkmb > batch_count:
                     last_iter = True
@@ -1062,6 +1077,7 @@ def main(local_rank, args, trainset, testset,
 
                 if epoch >= 1:
                     start_time(start_timer, timing_arg=True)
+                torch.cuda.nvtx.range_push("sample")
                 local_batch_size = args.batch_size // size
                 frontiers_bulk, adj_matrices_bulk = shadow_sampler(g_loc_t, 
                                                 batches_loc, local_batch_size, \
@@ -1075,88 +1091,165 @@ def main(local_rank, args, trainset, testset,
                 if epoch >= 1:
                     torch.cuda.synchronize()
                     model.module.timings["sample"].append(stop_time(start_timer, stop_timer, timing_arg=True))
+                torch.cuda.nvtx.range_pop() # sample
 
                 if epoch >= 1:
                     start_time(start_timer, timing_arg=True)
 
-                # for i in range(rank_n_bulkmb):
-                for i in range(args.n_bulkmb):
-                    if epoch >= 1:
-                        start_time(start_inner_timer, timing_arg=True)
-                    adj_matrix = adj_matrices_bulk[i].to_sparse_coo()
+                # First iteration before overlap
+                if epoch >= 1:
+                    start_time(start_inner_timer, timing_arg=True)
+                torch.cuda.nvtx.range_push("extract")
+                adj_matrix = adj_matrices_bulk[0].to_sparse_coo()
 
-                    frontier_cpu = frontiers_bulk[i].cpu()
-                    edge_ids_cpu = adj_matrix._values().cpu()
+                frontier_cpu = frontiers_bulk[0].cpu()
+                edge_ids_cpu = adj_matrix._values().cpu()
 
-                    if args.dataset == "physics_ex3":
-                        batch = Batch(batch=frontiers_bulk[i], 
-                                    edge_index=adj_matrices_bulk[i]._indices(),
-                                    y=trainset.y[edge_ids_cpu],
-                                    z=trainset.z[frontier_cpu],
-                                    weights=trainset.weights[edge_ids_cpu],
-                                    r=trainset.r[frontier_cpu],
-                                    phi=trainset.phi[frontier_cpu],
-                                    eta=trainset.eta[frontier_cpu],
-                                    truth_map=trainset.truth_map)
-                    elif args.dataset == "ctd":
-                        batch = Batch(hit_id=trainset.hit_id[frontier_cpu],
-                                    x=trainset.x[frontier_cpu], 
-                                    y=trainset.y[edge_ids_cpu], 
-                                    z=trainset.z[frontier_cpu], 
-                                    edge_index=adj_matrices_bulk[i]._indices(), 
-                                    truth_map=trainset.truth_map,
-                                    weights=trainset.weights[edge_ids_cpu],
-                                    r=trainset.r[frontier_cpu],
-                                    phi=trainset.phi[frontier_cpu],
-                                    eta=trainset.eta[frontier_cpu],
-                                    cluster_r_1=trainset.cluster_r_1[frontier_cpu],
-                                    cluster_phi_1=trainset.cluster_phi_1[frontier_cpu],
-                                    cluster_z_1=trainset.cluster_z_1[frontier_cpu],
-                                    cluster_eta_1=trainset.cluster_eta_1[frontier_cpu],
-                                    cluster_r_2=trainset.cluster_r_2[frontier_cpu],
-                                    cluster_phi_2=trainset.cluster_phi_2[frontier_cpu],
-                                    cluster_z_2=trainset.cluster_z_2[frontier_cpu],
-                                    cluster_eta_2=trainset.cluster_eta_2[frontier_cpu],
-                                    dr=trainset.dr[edge_ids_cpu],
-                                    dphi=trainset.dphi[edge_ids_cpu],
-                                    dz=trainset.dz[edge_ids_cpu],
-                                    deta=trainset.deta[edge_ids_cpu],
-                                    phislope=trainset.phislope[edge_ids_cpu],
-                                    rphislope=trainset.rphislope[edge_ids_cpu],
-                                )
-                    if epoch >= 1:
-                        torch.cuda.synchronize()
-                        model.module.timings["extract"].append(stop_time(start_inner_timer, stop_inner_timer, timing_arg=True))
+                if args.dataset == "physics_ex3":
+                    batch_train = Batch(batch=frontiers_bulk[0], 
+                                edge_index=adj_matrices_bulk[0]._indices(),
+                                y=trainset.y[edge_ids_cpu],
+                                z=trainset.z[frontier_cpu],
+                                weights=trainset.weights[edge_ids_cpu],
+                                r=trainset.r[frontier_cpu],
+                                phi=trainset.phi[frontier_cpu],
+                                eta=trainset.eta[frontier_cpu],
+                                truth_map=trainset.truth_map)
+                elif args.dataset == "ctd":
+                    batch_train = Batch(hit_id=trainset.hit_id[frontier_cpu],
+                                x=trainset.x[frontier_cpu], 
+                                y=trainset.y[edge_ids_cpu], 
+                                z=trainset.z[frontier_cpu], 
+                                edge_index=adj_matrices_bulk[0]._indices(), 
+                                truth_map=trainset.truth_map,
+                                weights=trainset.weights[edge_ids_cpu],
+                                r=trainset.r[frontier_cpu],
+                                phi=trainset.phi[frontier_cpu],
+                                eta=trainset.eta[frontier_cpu],
+                                cluster_r_1=trainset.cluster_r_1[frontier_cpu],
+                                cluster_phi_1=trainset.cluster_phi_1[frontier_cpu],
+                                cluster_z_1=trainset.cluster_z_1[frontier_cpu],
+                                cluster_eta_1=trainset.cluster_eta_1[frontier_cpu],
+                                cluster_r_2=trainset.cluster_r_2[frontier_cpu],
+                                cluster_phi_2=trainset.cluster_phi_2[frontier_cpu],
+                                cluster_z_2=trainset.cluster_z_2[frontier_cpu],
+                                cluster_eta_2=trainset.cluster_eta_2[frontier_cpu],
+                                dr=trainset.dr[edge_ids_cpu],
+                                dphi=trainset.dphi[edge_ids_cpu],
+                                dz=trainset.dz[edge_ids_cpu],
+                                deta=trainset.deta[edge_ids_cpu],
+                                phislope=trainset.phislope[edge_ids_cpu],
+                                rphislope=trainset.rphislope[edge_ids_cpu],
+                            )
+                if epoch >= 1:
+                    torch.cuda.synchronize()
+                    model.module.timings["extract"].append(stop_time(start_inner_timer, stop_inner_timer, timing_arg=True))
+                torch.cuda.nvtx.range_pop() # extract
 
-                    if epoch >= 1:
-                        start_time(start_inner_timer, timing_arg=True)
-                    optimizer.zero_grad()
-                    batch = batch.to(device)
-                    if epoch >= 1:
-                        torch.cuda.synchronize()
-                        model.module.timings["h2d"].append(stop_time(start_inner_timer, stop_inner_timer, timing_arg=True))
-                    if epoch >= 1:
-                        start_time(start_inner_timer, timing_arg=True)
-                    logits = model(batch, epoch)
-                    if epoch >= 1:
-                        torch.cuda.synchronize()
-                        model.module.timings["fwd"].append(stop_time(start_inner_timer, stop_inner_timer, timing_arg=True))
+                if epoch >= 1:
+                    start_time(start_inner_timer, timing_arg=True)
+                torch.cuda.nvtx.range_push("h2d")
+                optimizer.zero_grad()
+                batch_train = batch_train.to(device)
+                if epoch >= 1:
+                    torch.cuda.synchronize()
+                    model.module.timings["h2d"].append(stop_time(start_inner_timer, stop_inner_timer, timing_arg=True))
+                torch.cuda.nvtx.range_pop() # h2d
 
-                    loss, pos_loss, neg_loss = model.module.loss_function(logits, batch)
-                    # print(f"batch {i} loss: {loss} pos_loss: {pos_loss} neg_loss: {neg_loss}", flush=True)
-                    print(f"Rank: {rank:03} Epoch: {epoch:03d} Batch {(b + i):07}")
-                    if args.wandb and rank == 0:
-                        wandb.log({'loss': loss.item(),
-                                        'pos_loss': pos_loss.item(), 
-                                        'neg_loss': neg_loss.item(), 
-                                        'epoch': epoch})
-                    if epoch >= 1:
-                        start_time(start_inner_timer, timing_arg=True)
-                    loss.backward()
-                    optimizer.step()
-                    if epoch >= 1:
-                        torch.cuda.synchronize()
-                        model.module.timings["bwd"].append(stop_time(start_inner_timer, stop_inner_timer, timing_arg=True))
+                for i in range(1, args.n_bulkmb):
+                    with torch.cuda.stream(s1):
+                        if epoch >= 1:
+                            start_time(start_inner_timer, timing_arg=True)
+                        torch.cuda.nvtx.range_push("extract")
+                        adj_matrix = adj_matrices_bulk[i].to_sparse_coo()
+
+                        frontier_cpu = frontiers_bulk[i].cpu()
+                        edge_ids_cpu = adj_matrix._values().cpu()
+
+                        if args.dataset == "physics_ex3":
+                            batch = Batch(batch=frontiers_bulk[i], 
+                                        edge_index=adj_matrices_bulk[i]._indices(),
+                                        y=trainset.y[edge_ids_cpu],
+                                        z=trainset.z[frontier_cpu],
+                                        weights=trainset.weights[edge_ids_cpu],
+                                        r=trainset.r[frontier_cpu],
+                                        phi=trainset.phi[frontier_cpu],
+                                        eta=trainset.eta[frontier_cpu],
+                                        truth_map=trainset.truth_map)
+                        elif args.dataset == "ctd":
+                            batch = Batch(hit_id=trainset.hit_id[frontier_cpu].pin_memory(),
+                                        x=trainset.x[frontier_cpu].pin_memory(),
+                                        y=trainset.y[edge_ids_cpu].pin_memory(), 
+                                        z=trainset.z[frontier_cpu].pin_memory(), 
+                                        edge_index=adj_matrices_bulk[i]._indices(), 
+                                        truth_map=trainset.truth_map.pin_memory(),
+                                        weights=trainset.weights[edge_ids_cpu].pin_memory(),
+                                        r=trainset.r[frontier_cpu].pin_memory(),
+                                        phi=trainset.phi[frontier_cpu].pin_memory(),
+                                        eta=trainset.eta[frontier_cpu].pin_memory(),
+                                        cluster_r_1=trainset.cluster_r_1[frontier_cpu].pin_memory(),
+                                        cluster_phi_1=trainset.cluster_phi_1[frontier_cpu].pin_memory(),
+                                        cluster_z_1=trainset.cluster_z_1[frontier_cpu].pin_memory(),
+                                        cluster_eta_1=trainset.cluster_eta_1[frontier_cpu].pin_memory(),
+                                        cluster_r_2=trainset.cluster_r_2[frontier_cpu].pin_memory(),
+                                        cluster_phi_2=trainset.cluster_phi_2[frontier_cpu].pin_memory(),
+                                        cluster_z_2=trainset.cluster_z_2[frontier_cpu].pin_memory(),
+                                        cluster_eta_2=trainset.cluster_eta_2[frontier_cpu].pin_memory(),
+                                        dr=trainset.dr[edge_ids_cpu].pin_memory(),
+                                        dphi=trainset.dphi[edge_ids_cpu].pin_memory(),
+                                        dz=trainset.dz[edge_ids_cpu].pin_memory(),
+                                        deta=trainset.deta[edge_ids_cpu].pin_memory(),
+                                        phislope=trainset.phislope[edge_ids_cpu].pin_memory(),
+                                        rphislope=trainset.rphislope[edge_ids_cpu].pin_memory(),
+                                    )
+                        if epoch >= 1:
+                            s1.synchronize()
+                            model.module.timings["extract"].append(stop_time(start_inner_timer, stop_inner_timer, s1, timing_arg=True))
+                        torch.cuda.nvtx.range_pop() # extract
+
+                        if epoch >= 1:
+                            start_time(start_inner_timer, timing_arg=True)
+                        torch.cuda.nvtx.range_push("h2d")
+                        # print(f"rank: {rank} copying batch {b + i}", flush=True)
+                        optimizer.zero_grad()
+                        batch = batch.to(device)
+                        # print(f"rank: {rank} done copying batch {b + i}", flush=True)
+                        if epoch >= 1:
+                            s1.synchronize()
+                            model.module.timings["h2d"].append(stop_time(start_inner_timer, stop_inner_timer, s1, timing_arg=True))
+                        torch.cuda.nvtx.range_pop() # h2d
+                    with torch.cuda.stream(s2):
+                        if epoch >= 1:
+                            start_time(start_inner_timer, timing_arg=True)
+                        torch.cuda.nvtx.range_push("fwd")
+                        # print(f"rank: {rank} fwd batch {b + i}", flush=True)
+                        logits = model(batch_train, epoch)
+                        # print(f"rank: {rank} done fwd batch {b + i}", flush=True)
+                        if epoch >= 1:
+                            s2.synchronize()
+                            model.module.timings["fwd"].append(stop_time(start_inner_timer, stop_inner_timer, s2, timing_arg=True))
+                        torch.cuda.nvtx.range_pop() # fwd
+
+                        loss, pos_loss, neg_loss = model.module.loss_function(logits, batch_train)
+                        print(f"Rank: {rank:03} Epoch: {epoch:03d} Batch {(b + i):07}")
+                        if args.wandb and rank == 0:
+                            wandb.log({'loss': loss.item(),
+                                            'pos_loss': pos_loss.item(), 
+                                            'neg_loss': neg_loss.item(), 
+                                            'epoch': epoch})
+                        if epoch >= 1:
+                            start_time(start_inner_timer, timing_arg=True)
+                        torch.cuda.nvtx.range_push("bwd")
+                        # print(f"rank: {rank} bwd batch {b + i}", flush=True)
+                        loss.backward()
+                        optimizer.step()
+                        # print(f"rank: {rank} done bwd batch {b + i}", flush=True)
+                        if epoch >= 1:
+                            s2.synchronize()
+                            model.module.timings["bwd"].append(stop_time(start_inner_timer, stop_inner_timer, s2, timing_arg=True))
+                        torch.cuda.nvtx.range_pop() # bwd
+                    torch.cuda.synchronize()
+                    batch_train = batch
                     # if epoch >= 1:
                     #     start_time(start_inner_timer, timing_arg=True)
                     # # for W in model.parameters():
@@ -1226,10 +1319,10 @@ def main(local_rank, args, trainset, testset,
             model.eval()
             print(f"Evaluating", flush=True)
             with torch.no_grad():
-                model = model.cpu()
-                result, masked_auc = model.evaluate(test_loader, epoch, curr_lr[0], \
+                # model = model.cpu()
+                result, masked_auc = model.module.evaluate(test_loader, epoch, curr_lr[0], \
                                                         np.sum(dur), args.wandb, rank)
-                model = model.to(device)
+                # model = model.to(device)
             if args.wandb:
                 if args.dataset == "ctd" and rank == 0:
                     wandb.log({'signal_effiency': result,
@@ -1242,16 +1335,16 @@ def main(local_rank, args, trainset, testset,
             dist.barrier()
             torch.cuda.synchronize()
 
-    test_loader = DataLoader(testset, batch_size=1, num_workers=1)
-    model.eval()
-    with torch.no_grad():
-        if rank == 0:
-            print(f"Evaluating", flush=True)
-            # model = model.cpu()
-            # model = model.cuda()
-            result, masked_auc = model.evaluate(test_loader, args.n_epochs, 
-                                                            0.0, 0.0, args.wandb, 0)
-        # model = model.to(device)
+    # test_loader = DataLoader(testset, batch_size=1, num_workers=1)
+    # model.eval()
+    # with torch.no_grad():
+    #     if rank == 0:
+    #         print(f"Evaluating", flush=True)
+    #         # model = model.cpu()
+    #         # model = model.cuda()
+    #         result, masked_auc = model.module.evaluate(test_loader, args.n_epochs, 
+    #                                                             0.0, 0.0, False, 0)
+    #     # model = model.to(device)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='IGNN')
@@ -1510,10 +1603,6 @@ if __name__ == '__main__':
         num_classes = 2
 
 
-    if args.wandb and int(os.environ["SLURM_PROCID"]) == 0:
-        wandb.init(project="exatrkx")
-
-    # torch.set_num_threads(1)
     mp.set_start_method("spawn", force=True)
     mp.spawn(main,
              args=(args, trainset, testset, 
@@ -1523,16 +1612,4 @@ if __name__ == '__main__':
                     num_features, num_classes),
              nprocs=args.gpu,
              join=True)
-    # processes = []
-    # for i in range(args.gpu):
-    #     p = Process(target=main,
-    #             args=(i, args, model, trainset, testset, 
-    #                 g_loc.crow_indices(), g_loc.col_indices(), g_loc.values(), 
-    #                 g_loc_t.crow_indices(), g_loc_t.col_indices(), g_loc_t.values(), 
-    #                 node_count, edge_count, node_features, edge_features, 
-    #                 num_features, num_classes))
-    #     p.start()
-    #     processes.append(p)
-    # for p in processes:
-    #     p.join()
 
