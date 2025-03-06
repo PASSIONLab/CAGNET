@@ -765,7 +765,7 @@ def main():
         num_classes = dataset.num_classes
     elif graphname == "Reddit":
         path = osp.join(osp.dirname(osp.realpath(__file__)), '..', 'data', graphname)
-        dataset = Reddit(path, T.NormalizeFeatures())
+        dataset = Reddit(path)
         data = dataset[0]
         data = data.to(device)
         data.x.requires_grad = True
