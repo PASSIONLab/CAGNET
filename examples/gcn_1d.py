@@ -861,15 +861,10 @@ def main(args):
  
     row_indices_recv = [torch.cuda.LongTensor(device=device).resize_(counts_recv[i].int().item(),).fill_(0) for i in range(len(counts_recv))]
 
-    # row_data_recv = [torch.cuda.FloatTensor(device=self.device).resize_(counts_send[i].int().item(), inputs.size(1)).fill_(0) for i in range(len(counts_send))]
-    # start = time.time()
-#    print("all to all indices")
     dist.all_to_all(row_indices_recv, row_indices_send, group=group)
 
     model.row_indices_recv = row_indices_recv
-#    print("all to all done")
 
-    # use optimizer
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
 
     n_per_proc = math.ceil(float(inputs.size(0)) / size)
@@ -919,32 +914,8 @@ def main(args):
         print("Rank: {:05d} | Epoch {:05d} | Epoch Time(s) {:.4f} | Loss {:.4f} | Accuracy {:.4f}"\
                         .format(rank, epoch, np.mean(dur), loss.item(), acc))
     dist.barrier()
-    print(f"rank: {rank} total_time: {np.sum(dur)}", flush=True)
+    print(f"rank: {rank} Total Time: {np.sum(dur)}", flush=True)
     print(f"rank: {rank} timings: {model.timings}", flush=True)
-    """
-    # print(prof.key_averages().table(sort_by='self_cpu_time_total', row_limit=10))
-    barrier_start = time.time()
-    dist.barrier()
-    model.timings["total"] += time.time() - total_start
-    model.timings["barrier"] += time.time() - barrier_start
-    print()
-    # # acc = evaluate(model, g_loc, features_loc, labels, test_nid, ampbyp, ampbyp_dgl, degrees, col_groups[0])
-    # acc = evaluate(model, g_loc, features_loc, labels, test_nid, \
-    acc = evaluate(model, g_loc, features_loc, labels_rank, rank_test_nids, \
-                        test_mask.nonzero().squeeze().size(0), ampbyp, ampbyp_dgl, degrees, col_groups[0])
-    print("Test Accuracy {:.4f}".format(acc))
-
-    print(flush=True)
-    dist.barrier()
-    print("Timings")
-    model.timings["comp"] = model.timings["scomp"] + model.timings["dcomp"]
-    model.timings["comm"] = model.timings["bcast"] + model.timings["reduce"] + model.timings["op"]
-    # print("rank, total, scomp, dcomp, bcast, reduce, op, barrier")
-    # print(f"{rank}, {model.timings['total']}, {model.timings['scomp']}, {model.timings['dcomp']}, {model.timings['bcast']}, {model.timings['reduce']}, {model.timings['op']}, {model.timings['barrier']}")
-    print(f"rank: {rank} timings: {model.timings}")
-    """
-#    print(f"rank: {rank} {logits}")
-
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='GCN')

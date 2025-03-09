@@ -47,7 +47,7 @@ def broad_func_oned(self, graph, ampbyp, inputs):
         return z_loc
     
     start = time.time()
-    z_loc = torch.cuda.FloatTensor(ampbyp[0].size(0), inputs.size(1), device=self.device).fill_(1)
+    z_loc = torch.cuda.FloatTensor(ampbyp[0].size(0), inputs.size(1), device=self.device).fill_(0)
     
     row_indices_send = self.row_indices_send
     row_data_send = [torch.cuda.FloatTensor(device=self.device)]*self.size
@@ -66,8 +66,8 @@ def broad_func_oned(self, graph, ampbyp, inputs):
 
     start = time.time()
     for i in range(self.size):
-       inputs_mul = torch.cuda.FloatTensor( device = self.device).resize_(ampbyp[i].size(1), inputs.size(1)).fill_(0)
-       inputs_mul[row_indices_send[i]] =  row_data_recv[i]
+       inputs_mul = torch.cuda.FloatTensor(device=self.device).resize_(ampbyp[i].size(1), inputs.size(1)).fill_(0)
+       inputs_mul[row_indices_send[i]] = row_data_recv[i]
        spmm_gpu(ampbyp[i].indices()[0].int(), ampbyp[i].indices()[1].int(),
                         ampbyp[i].values(), ampbyp[i].size(0),
                         ampbyp[i].size(1), inputs_mul, z_loc)
