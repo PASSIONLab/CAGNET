@@ -1,4 +1,0 @@
-nid001780
-Warning: This is an experimental release of NCCL with an OFI plugin for use with libfabric on Perlmutter.
-In case of issues, please refer to our known issues: https://docs.nersc.gov/current/
-and open a help ticket if your issue is not listed: https://help.nersc.gov/

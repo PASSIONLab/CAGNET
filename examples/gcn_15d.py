@@ -236,7 +236,7 @@ def evaluate(model, graph, features, labels, nid, nid_count, ampbyp, group):
     model.eval()
     with torch.no_grad():
         non_eval_timings = copy.deepcopy(model.timings)
-        logits = model(graph, features, ampbyp, degrees)
+        logits = model(graph, features, ampbyp, 0) # Pass 0 in for epoch to avoid timing
         model.timings = non_eval_timings # don't include evaluation timings
 
         # # all-gather logits across ranks

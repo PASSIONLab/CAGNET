@@ -1,6 +1,7 @@
 import argparse
 from collections import defaultdict
 from itertools import accumulate
+import copy
 import math
 import os
 import os.path as osp
@@ -24,13 +25,14 @@ import cagnet.nn.functional as CAGF
 import socket
 
 class GCN(nn.Module):
-  def __init__(self, in_feats, n_hidden, n_classes, n_layers, rank, size, timers, partitioning, device,
-                    group=None, row_groups=None, col_groups=None):
+  def __init__(self, in_feats, n_hidden, n_classes, n_layers, rank, size, timers, partitioning, sparse_unaware,
+                    device, group=None, row_groups=None, col_groups=None):
     super(GCN, self).__init__()
     self.layers = nn.ModuleList()
     self.rank = rank
     self.size = size
     self.group = group
+    self.sparse_unaware = sparse_unaware
     self.device = device
     self.timers = timers
     self.partitioning = partitioning
@@ -168,11 +170,11 @@ def oned_partition(rank, size, inputs, adj_matrix, data, features, classes, devi
     print(f"rank: {rank} inputs.size: {inputs.size()}", flush=True)
     return inputs_loc, adj_matrix_loc, am_pbyp
 
-def evaluate(model, graph, features, labels, nid, nid_count, ampbyp, group):
+def evaluate(model, graph, features, labels, nid, ampbyp):
     model.eval()
     with torch.no_grad():
         non_eval_timings = copy.deepcopy(model.timings)
-        logits = model(graph, features, ampbyp, degrees)
+        logits = model(graph, features, ampbyp, 0) # Pass 0 in for epoch to avoid timing
         model.timings = non_eval_timings # don't include evaluation timings
 
         # # all-gather logits across ranks
@@ -199,8 +201,8 @@ def evaluate(model, graph, features, labels, nid, nid_count, ampbyp, group):
         else:
             correct = torch.tensor(0)
 
-        dist.all_reduce(correct, op=dist.reduce_op.SUM, group=group)
-        return correct.item() * 1.0 / nid_count
+        dist.all_reduce(correct, op=dist.reduce_op.SUM)
+        return correct.item() * 1.0 / nid.size(0)
         # return correct.item() * 1.0 / len(labels)
 
 def main(args):
@@ -230,7 +232,7 @@ def main(args):
         if args.dataset == "Cora":
             dataset = Planetoid(path, args.dataset, transform=T.NormalizeFeatures())
         elif args.dataset == "Reddit":
-            dataset = Reddit(path, transform=T.NormalizeFeatures())
+            dataset = Reddit(path)
 
         data = dataset[0]
         data = data.to(device)
@@ -259,9 +261,10 @@ def main(args):
         data.y = data.y.to(device)
     elif args.dataset == "Amazon_Small_16":
         print(f"Loading coo...", flush=True)
-        edge_index = torch.load("../../data/Amazon_Small_16/processed/amazon_large_randomized.pt")
+        edge_index = torch.load("../../data/Amazon_Small_16/processed/Amazon_Small_16.pt")
         print(f"Done loading coo", flush=True)
-        n = 14249639
+        # n = 14249639
+        n = 9430088
         num_features = 300
         num_classes = 24
         inputs = torch.rand(n, num_features)
@@ -837,6 +840,7 @@ def main(args):
                       size,
                       args.timers,
                       partitioning,
+                      args.sparse_unaware,
                       device,
                       group)
 
@@ -876,20 +880,27 @@ def main(args):
     if partitions:
         rank_train_mask = torch.split(data.train_mask, partitions, dim=0)[rank]
         labels_rank = torch.split(data.y, partitions, dim=0)[rank]
+
+        rank_val_mask = torch.split(data.val_mask, partitions, dim=0)[rank]
+        labels_rank = torch.split(data.y, partitions, dim=0)[rank]
     else:
         rank_train_mask = torch.split(data.train_mask, n_per_proc, dim=0)[rank]
         labels_rank = torch.split(data.y, n_per_proc, dim=0)[rank]
 
+        rank_val_mask = torch.split(data.val_mask, n_per_proc, dim=0)[rank]
+        labels_rank = torch.split(data.y, n_per_proc, dim=0)[rank]
+
     rank_train_nids = rank_train_mask.nonzero().squeeze()
+    rank_val_nids = rank_val_mask.nonzero().squeeze()
 
     train_nid = data.train_mask.nonzero().squeeze()
 
     torch.manual_seed(0)
-    total_start = time.time()
+    dur = []
+
     for epoch in range(args.n_epochs):
-        print(f"Epoch: {epoch}", flush=True)
-        if epoch == 1:
-            total_start = time.time()
+        if epoch >= 1:
+            epoch_start = time.time()
         model.train()
 
         # forward
@@ -902,18 +913,13 @@ def main(args):
 
         optimizer.step()
 
-        """
-        # acc = evaluate(model, g_loc, features_loc, labels, val_nid, ampbyp, ampbyp_dgl, degrees, col_groups[0])
-        # acc = evaluate(model, g_loc, features_loc, labels, val_nid, \
-        acc = evaluate(model, g_loc, features_loc, labels_rank, rank_val_nids, \
-                            val_mask.nonzero().squeeze().size(0), ampbyp, ampbyp_dgl, degrees, col_groups[0])
-        print("Rank: {:05d} | Epoch {:05d} | Time(s) {:.4f} | Loss {:.4f} | Accuracy {:.4f} | "
-              "ETputs(KTEPS) {:.2f}".format(rank, epoch, np.mean(dur), loss.item(),
-                                            acc, n_edges / np.mean(dur) / 1000), flush=True)
-        """
+        if epoch >= 1:
+            dur.append(time.time() - epoch_start)
+        acc = evaluate(model, g_loc, features_loc, labels_rank, rank_val_nids, ampbyp)
+        print("Rank: {:05d} | Epoch {:05d} | Epoch Time(s) {:.4f} | Loss {:.4f} | Accuracy {:.4f}"\
+                        .format(rank, epoch, np.mean(dur), loss.item(), acc))
     dist.barrier()
-    total_stop = time.time()
-    print(f"rank: {rank} total_time: {total_stop - total_start}", flush=True)
+    print(f"rank: {rank} total_time: {np.sum(dur)}", flush=True)
     print(f"rank: {rank} timings: {model.timings}", flush=True)
     """
     # print(prof.key_averages().table(sort_by='self_cpu_time_total', row_limit=10))
@@ -978,6 +984,8 @@ if __name__ == '__main__':
                             help='turn on timers')
     parser.add_argument('--partitions', default='', type=str,
                             help='text file for unequal partitions')
+    parser.add_argument('--sparse-unaware', action="store_true",
+                            help='use sparsity-unaware implementation')
     args = parser.parse_args()
     print(args)
 

@@ -20,33 +20,32 @@ def stop_time(self, range_name, start, barrier=True):
         self.timings["barrier"] += time.time() - start
         
 def broad_func_oned(self, graph, ampbyp, inputs):
-    # """ # this is the old function
     
-    n_per_proc = math.ceil(float(graph.size(0) / self.size))
+    if self.sparse_unaware:
+        # """ # this is the old function
+        n_per_proc = math.ceil(float(graph.size(0) / self.size))
 
-    z_loc = torch.cuda.FloatTensor(ampbyp[0].size(0), inputs.size(1), device=self.device).fill_(0)
+        z_loc = torch.cuda.FloatTensor(ampbyp[0].size(0), inputs.size(1), device=self.device).fill_(0)
+        
+        inputs_recv = torch.cuda.FloatTensor(n_per_proc, inputs.size(1), device=self.device).fill_(0)
+
+        for i in range(self.size):
+            if i == self.rank:
+                inputs_recv = inputs.clone()
+            elif i == self.size - 1:
+                inputs_recv = torch.cuda.FloatTensor(ampbyp[i].size(1), \
+                                                            inputs.size(1), \
+                                                            device=self.device).fill_(0)
+            start = time.time()
+            dist.broadcast(inputs_recv, src=i, group=self.group)
+            stop_time(self, "bcast", start)
+            start = time.time()
+            spmm_gpu(ampbyp[i].indices()[0].int(), ampbyp[i].indices()[1].int(), 
+                            ampbyp[i].values(), ampbyp[i].size(0), 
+                            ampbyp[i].size(1), inputs_recv, z_loc)
+            stop_time(self, "spmm_gpu", start)
+        return z_loc
     
-    inputs_recv = torch.cuda.FloatTensor(n_per_proc, inputs.size(1), device=self.device).fill_(0)
-
-    for i in range(self.size):
-        if i == self.rank:
-            inputs_recv = inputs.clone()
-        elif i == self.size - 1:
-            inputs_recv = torch.cuda.FloatTensor(ampbyp[i].size(1), \
-                                                        inputs.size(1), \
-                                                        device=self.device).fill_(0)
-        start = time.time()
-        dist.broadcast(inputs_recv, src=i, group=self.group)
-        stop_time(self, "bcast", start)
-        start = time.time()
-        spmm_gpu(ampbyp[i].indices()[0].int(), ampbyp[i].indices()[1].int(), 
-                        ampbyp[i].values(), ampbyp[i].size(0), 
-                        ampbyp[i].size(1), inputs_recv, z_loc)
-        stop_time(self, "spmm_gpu", start)
-    return z_loc
-    # """
-
-    """
     start = time.time()
     z_loc = torch.cuda.FloatTensor(ampbyp[0].size(0), inputs.size(1), device=self.device).fill_(1)
     
@@ -76,7 +75,6 @@ def broad_func_oned(self, graph, ampbyp, inputs):
     #del inputs_mul
     #torch.cuda.empty_cache()
     return z_loc
-    """
 
 def broad_func_one5d(self, graph, ampbyp, inputs):
     

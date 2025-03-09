@@ -37,3 +37,4 @@ examples/sp-aware/
 examples/wandb/
 examples/*.png
 examples/job*
+examples/tmp*
