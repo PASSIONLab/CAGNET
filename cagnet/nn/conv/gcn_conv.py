@@ -4,6 +4,7 @@ import torch.distributed as dist
 import torch.nn as nn
 import time
 
+from torch.nn import functional as F, init
 from cagnet.partitionings import Partitioning
 from sparse_coo_tensor_cpp import sparse_coo_tensor_gpu, spmm_gpu
 
@@ -22,7 +23,7 @@ def stop_time(self, range_name, start, barrier=True):
 def broad_func_oned(self, graph, ampbyp, inputs):
     
     if self.sparse_unaware:
-        # """ # this is the old function
+        # this is the old function
         n_per_proc = math.ceil(float(graph.size(0) / self.size))
 
         z_loc = torch.cuda.FloatTensor(ampbyp[0].size(0), inputs.size(1), device=self.device).fill_(0)
@@ -43,6 +44,7 @@ def broad_func_oned(self, graph, ampbyp, inputs):
             spmm_gpu(ampbyp[i].indices()[0].int(), ampbyp[i].indices()[1].int(), 
                             ampbyp[i].values(), ampbyp[i].size(0), 
                             ampbyp[i].size(1), inputs_recv, z_loc)
+
             stop_time(self, "spmm_gpu", start)
         return z_loc
     
@@ -837,10 +839,13 @@ class GCNConv(nn.Module):
     def __init__(self, in_feats, out_feats, partitioning, device):
         super(GCNConv, self).__init__()
 
-        weight_nonleaf = torch.rand(in_feats, out_feats, requires_grad=True)
-        weight_nonleaf = weight_nonleaf.to(device)
-        weight_nonleaf.retain_grad()
-        self.weight = nn.Parameter(weight_nonleaf)
+        # weight_nonleaf = torch.rand(in_feats, out_feats, requires_grad=True)
+        # init.kaiming_uniform_(weight_nonleaf, a=math.sqrt(5))
+        # weight_nonleaf = weight_nonleaf.to(device)
+        # weight_nonleaf.retain_grad()
+        # self.weight = nn.Parameter(weight_nonleaf)
+        self.weight = nn.Parameter(torch.empty(in_feats, out_feats, device=device))
+        init.kaiming_uniform_(self.weight, a=math.sqrt(5))
         self.partitioning = partitioning
 
     def forward(self, gcn, graph, inputs, ampbyp=None):

@@ -47,6 +47,21 @@ def log_softmax(self, x, partitioning, dim=1):
     elif partitioning == Partitioning.TWOD:
         return LogSoftmaxTWOD.apply(self, x)
 
+def nll_loss(logits_rank, labels_rank, node_count, total_classes, partitioning, rank, group, size, \
+                            train_mask=None, partitions=None):
+    # print(f"logits_rank: {logits_rank}")
+    # print(f"labels_rank: {labels_rank}")
+    if partitioning == Partitioning.ONED or partitioning == Partitioning.ONE5D:
+        loss = F.nll_loss(logits_rank, labels_rank, reduction="sum") 
+        # print(loss)
+        loss_recv = []
+        for i in range(size):
+            loss_recv.append(torch.cuda.FloatTensor(1))
+        dist.all_gather(loss_recv, loss, group)
+        loss_recv[rank] = loss
+        loss = sum(loss_recv) / node_count
+        return loss
+
 def cross_entropy(logits_rank, labels_rank, node_count, total_classes, partitioning, rank, group, size, \
                             train_mask=None, partitions=None):
     # print(f"logits_rank: {logits_rank}")
@@ -56,8 +71,6 @@ def cross_entropy(logits_rank, labels_rank, node_count, total_classes, partition
         # print(loss)
         loss_recv = []
         for i in range(size):
-          #  print(f"loss: {loss.size()}")
-
             loss_recv.append(torch.cuda.FloatTensor(1))
         dist.all_gather(loss_recv, loss, group)
         loss_recv[rank] = loss

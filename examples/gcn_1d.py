@@ -21,6 +21,7 @@ import torch_sparse
 from cagnet.nn.conv import GCNConv
 from cagnet.partitionings import Partitioning
 import cagnet.nn.functional as CAGF
+import torch.nn.functional as F
 
 import socket
 
@@ -49,12 +50,17 @@ class GCN(nn.Module):
   def forward(self, graph, inputs, ampbyp, epoch):
     h = inputs
     self.epoch = epoch
-    for l, layer in enumerate(self.layers):
-      h = layer(self, graph, h, ampbyp)
-      if l != len(self.layers) - 1:
-        h = CAGF.relu(h, self.partitioning)
+    # for l, layer in enumerate(self.layers):
+    #   h = layer(self, graph, h, ampbyp)
+    #   if l != len(self.layers) - 1:
+    #     h = CAGF.relu(h, self.partitioning)
 
-    h = CAGF.log_softmax(self, h, self.partitioning, dim=1)
+    # h = CAGF.log_softmax(self, h, self.partitioning, dim=1)
+
+    h = self.layers[0](self, graph, h, ampbyp)
+    h = F.relu(h)
+    h = self.layers[1](self, graph, h, ampbyp)
+    h = F.log_softmax(h, dim=1)
     return h
 
 # Normalize all elements according to KW's normalization rule
@@ -170,7 +176,7 @@ def oned_partition(rank, size, inputs, adj_matrix, data, features, classes, devi
     print(f"rank: {rank} inputs.size: {inputs.size()}", flush=True)
     return inputs_loc, adj_matrix_loc, am_pbyp
 
-def evaluate(model, graph, features, labels, nid, ampbyp):
+def evaluate(model, graph, features, labels, val_nid, test_nid, ampbyp):
     model.eval()
     with torch.no_grad():
         non_eval_timings = copy.deepcopy(model.timings)
@@ -193,17 +199,30 @@ def evaluate(model, graph, features, labels, nid, ampbyp):
 
         # logits = torch.cat(logits_recv)
 
-        logits = logits[nid]
-        labels = labels[nid]
+        val_logits = logits[val_nid]
+        val_labels = labels[val_nid]
+        test_logits = logits[test_nid]
+        test_labels = labels[test_nid]
         if logits.size(0) > 0:
-            _, indices = torch.max(logits, dim=1)
-            correct = torch.sum(indices == labels)
+            _, indices = torch.max(val_logits, dim=1)
+            val_correct = torch.sum(indices == val_labels)
+            _, indices = torch.max(test_logits, dim=1)
+            test_correct = torch.sum(indices == test_labels)
         else:
-            correct = torch.tensor(0)
+            val_correct = torch.tensor(0)
+            test_correct = torch.tensor(0)
 
-        dist.all_reduce(correct, op=dist.reduce_op.SUM)
-        return correct.item() * 1.0 / nid.size(0)
-        # return correct.item() * 1.0 / len(labels)
+        val_total = torch.tensor(val_nid.size(0)).to(model.device)
+        test_total = torch.tensor(test_nid.size(0)).to(model.device)
+
+        dist.all_reduce(val_correct, op=dist.reduce_op.SUM)
+        dist.all_reduce(test_correct, op=dist.reduce_op.SUM)
+        dist.all_reduce(val_total, op=dist.reduce_op.SUM)
+        dist.all_reduce(test_total, op=dist.reduce_op.SUM)
+
+        val_acc = val_correct.item() * 1.0 / val_total.item()
+        test_acc = test_correct.item() * 1.0 / test_total.item()
+        return val_acc, test_acc
 
 def main(args):
     # Initialize distributed environment with SLURM
@@ -220,7 +239,6 @@ def main(args):
     rank = dist.get_rank()
     size = dist.get_world_size()
     print(f"hostname: {socket.gethostname()} rank: {rank} size: {size}", flush=True)
-    print(rank % args.gpu)
     torch.cuda.set_device(rank % args.gpu)
 
     # load and preprocess dataset
@@ -243,6 +261,29 @@ def main(args):
         edge_index = data.edge_index
         num_features = dataset.num_features
         num_classes = dataset.num_classes
+        adj_matrix = edge_index
+    elif args.dataset == "Cora_16":
+        dataset = torch.load("../../data/Cora_16/processed/data.pt")
+
+        data = Data()
+        data.x = dataset["x"]
+        data.y = dataset["y"]
+        data.edge_index = dataset["edge_index"]
+        data.train_mask = dataset["train_mask"]
+        data.val_mask = dataset["val_mask"]
+        data.test_mask = dataset["test_mask"]
+        data = data.to(device)
+
+        data.x.requires_grad = True
+        inputs = data.x.to(device)
+        # inputs.requires_grad = True
+        # Normalize features
+        inputs = F.normalize(inputs, p=1, dim=1)
+
+        data.y = data.y.to(device)
+        edge_index = data.edge_index
+        num_features = data.x.size(1)
+        num_classes = torch.max(data.y).item() + 1
         adj_matrix = edge_index
     elif args.dataset == "Amazon":
         print(f"Loading coo...", flush=True)
@@ -502,7 +543,7 @@ def main(args):
         data.y = data.y.to(device)
     elif args.dataset == "Amazon_Large_16":
         print(f"Loading coo...", flush=True)
-        edge_index = torch.load("/pscratch/sd/j/jinimukh/Amazon_Large_16/processed/amazon_large_randomized.pt")
+        edge_index = torch.load("/global/cfs/cdirs/m1982/alokt/data/Amazon_Large_16/processed/data.pt")
         print(f"Done loading coo", flush=True)
         n = 14249639
         num_features = 300
@@ -815,7 +856,6 @@ def main(args):
     if args.partitions:
         partitions_file = open(args.partitions, "r")
         partitions_data = partitions_file.read().strip()
-        print(partitions_data)
         partitions = [int(x) for x in partitions_data.split("\n")]
 
     print(f"partitioning...", flush=True)
@@ -828,10 +868,10 @@ def main(args):
     g_loc = g_loc.to(device)
     for i in range(len(ampbyp)):
         ampbyp[i] = ampbyp[i].t().coalesce().to(device)
-
+    print("done copying", flush=True)
 
     # create GCN model
-    torch.manual_seed(0)
+    torch.manual_seed(1)
     model = GCN(num_features,
                       args.n_hidden,
                       num_classes,
@@ -865,7 +905,7 @@ def main(args):
 
     model.row_indices_recv = row_indices_recv
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+    optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
 
     n_per_proc = math.ceil(float(inputs.size(0)) / size)
 
@@ -875,22 +915,31 @@ def main(args):
     if partitions:
         rank_train_mask = torch.split(data.train_mask, partitions, dim=0)[rank]
         labels_rank = torch.split(data.y, partitions, dim=0)[rank]
+        rank_train_nids = rank_train_mask.nonzero().squeeze()
 
-        rank_val_mask = torch.split(data.val_mask, partitions, dim=0)[rank]
-        labels_rank = torch.split(data.y, partitions, dim=0)[rank]
+        if "val_mask" in data and "test_mask" in data:
+            rank_val_mask = torch.split(data.val_mask, partitions, dim=0)[rank]
+            labels_rank = torch.split(data.y, partitions, dim=0)[rank]
+            rank_val_nids = rank_val_mask.nonzero().squeeze()
+
+            rank_test_mask = torch.split(data.test_mask, partitions, dim=0)[rank]
+            rank_test_nids = rank_test_mask.nonzero().squeeze()
     else:
         rank_train_mask = torch.split(data.train_mask, n_per_proc, dim=0)[rank]
         labels_rank = torch.split(data.y, n_per_proc, dim=0)[rank]
+        rank_train_nids = rank_train_mask.nonzero().squeeze()
 
-        rank_val_mask = torch.split(data.val_mask, n_per_proc, dim=0)[rank]
-        labels_rank = torch.split(data.y, n_per_proc, dim=0)[rank]
+        if "val_mask" in data and "test_mask" in data:
+            rank_val_mask = torch.split(data.val_mask, n_per_proc, dim=0)[rank]
+            labels_rank = torch.split(data.y, n_per_proc, dim=0)[rank]
+            rank_val_nids = rank_val_mask.nonzero().squeeze()
 
-    rank_train_nids = rank_train_mask.nonzero().squeeze()
-    rank_val_nids = rank_val_mask.nonzero().squeeze()
+            rank_test_mask = torch.split(data.test_mask, n_per_proc, dim=0)[rank]
+            rank_test_nids = rank_test_mask.nonzero().squeeze()
+
 
     train_nid = data.train_mask.nonzero().squeeze()
 
-    torch.manual_seed(0)
     dur = []
 
     for epoch in range(args.n_epochs):
@@ -898,24 +947,34 @@ def main(args):
             epoch_start = time.time()
         model.train()
 
+        optimizer.zero_grad()
         # forward
         logits = model(g_loc, features_loc, ampbyp, epoch)
-        loss = CAGF.cross_entropy(logits[rank_train_nids], labels_rank[rank_train_nids], train_nid.size(0), \
+        loss = CAGF.nll_loss(logits[rank_train_nids], labels_rank[rank_train_nids], train_nid.size(0), \
                                         num_classes, partitioning, rank, group, size)
+        # loss = F.nll_loss(logits[data.train_mask.bool()], data.y[data.train_mask.bool()])
 
-        optimizer.zero_grad()
         loss.backward()
 
         optimizer.step()
 
         if epoch >= 1:
             dur.append(time.time() - epoch_start)
-        acc = evaluate(model, g_loc, features_loc, labels_rank, rank_val_nids, ampbyp)
-        print("Rank: {:05d} | Epoch {:05d} | Epoch Time(s) {:.4f} | Loss {:.4f} | Accuracy {:.4f}"\
-                        .format(rank, epoch, np.mean(dur), loss.item(), acc))
+
+        if "val_mask" in data and "test_mask" in data:
+            val_acc, test_acc = evaluate(model, g_loc, features_loc, labels_rank, rank_val_nids, 
+                                            rank_test_nids, ampbyp)
+        else:
+            val_acc = 0.00
+            test_acc = 0.00
+
+        if rank == 0:
+            print("Rank: {:04d} | Epoch {:04d} | Epoch Time(s) {:.4f} | Loss {:.4f} | Val Accuracy {:.4f} | "\
+                            "Test Accuracy {:.4f}"\
+                            .format(rank, epoch, np.mean(dur), loss.item(), val_acc, test_acc))
     dist.barrier()
-    print(f"rank: {rank} Total Time: {np.sum(dur)}", flush=True)
-    print(f"rank: {rank} timings: {model.timings}", flush=True)
+    print("Rank: {:04d} Total Time: {:.4f}".format(rank, np.sum(dur)))
+    # print(f"Rank: {rank} Timings: {model.timings}", flush=True)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='GCN')
