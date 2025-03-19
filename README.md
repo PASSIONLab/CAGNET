@@ -3,6 +3,7 @@
 This branch contains implementations for CAGNET's full-batch training pipeline (SC'20). 
 
 For CAGNET's minibatch training pipeline (MLSys'24), please refer to the `distributed-sampling` branch.
+
 For CAGNET's sparsity-aware pipeline (ICPP'24), please refer to the `sparsity-exp` branch.
 
 ## Description
