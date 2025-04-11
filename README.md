@@ -77,6 +77,8 @@ To train a dataset not included here, users must first 1) partition the graph wi
 
 `python mtx_to_coo.py --mtx-file <path_to_mtx>`
 
+To shuffle the training set mask, validation mask, and test mask for datasets, please refer to `shuffle_data.py`
+
 ## Citation
 
 To cite our ICPP'24 work, please use:

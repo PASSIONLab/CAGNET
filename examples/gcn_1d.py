@@ -347,20 +347,31 @@ def main(args):
         inputs.requires_grad = True
         data.y = data.y.to(device)
     elif args.dataset == "Reddit_4":
+        dataset = torch.load("../../data/Reddit_4/processed/data.pt")
+        print(dataset)
         print(f"Loading coo...", flush=True)
-        edge_index = torch.load("/pscratch/sd/j/jinimukh/Reddit_4_graph_vb/processed/amazon_large_randomized.pt")
+        edge_index = torch.load("/global/cfs/cdirs/m1982/alokt/data/Reddit_4/processed/reddit-reordered-k4m1u1c10r2.mtx.pt")
         print(f"Done loading coo", flush=True)
         n = 232965
         num_features = 602
         num_classes = 41
-        inputs = torch.rand(n, num_features)
         data = Data()
-        data.y = torch.rand(n).uniform_(0, num_classes - 1).long()
-        data.train_mask = torch.ones(n).long()
-        adj_matrix = edge_index.t_()
+        data.x = dataset["x"]
+        data.y = dataset["y"]
+        data.edge_index = dataset["edge_index"]
+        data.train_mask = dataset["train_mask"]
+        data.val_mask = dataset["val_mask"]
+        data.test_mask = dataset["test_mask"]
         data = data.to(device)
-        inputs.requires_grad = True
+
+        data.x.requires_grad = True
+        inputs = data.x.to(device)
+
         data.y = data.y.to(device)
+        edge_index = data.edge_index
+        num_features = data.x.size(1)
+        num_classes = torch.max(data.y).item() + 1
+        adj_matrix = edge_index
     elif args.dataset == "Reddit_8":
         print(f"Loading coo...", flush=True)
         edge_index = torch.load("/pscratch/sd/j/jinimukh/Reddit_8_graph_vb/processed/amazon_large_randomized.pt")
@@ -393,7 +404,7 @@ def main(args):
         data.y = data.y.to(device)
     elif args.dataset == "Reddit_16":
         print(f"Loading coo...", flush=True)
-        edge_index = torch.load("/pscratch/sd/j/jinimukh/Reddit_16_graph_vb/processed/amazon_large_randomized.pt")
+        edge_index = torch.load("/global/cfs/cdirs/m1982/alokt/data/Reddit_16/processed/reddit-reordered-k16m1u1c10r2.mtx.pt")
         print(f"Done loading coo", flush=True)
         n = 232965
         num_features = 602
@@ -401,7 +412,10 @@ def main(args):
         inputs = torch.rand(n, num_features)
         data = Data()
         data.y = torch.rand(n).uniform_(0, num_classes - 1).long()
-        data.train_mask = torch.ones(n).long()
+        # data.train_mask = torch.ones(n).long()
+        data.train_mask = torch.load("/global/cfs/cdirs/m1982/alokt/data/Reddit_16/processed/train_mask.pt")
+        data.val_mask = torch.load("/global/cfs/cdirs/m1982/alokt/data/Reddit_16/processed/val_mask.pt")
+        data.test_mask = torch.load("/global/cfs/cdirs/m1982/alokt/data/Reddit_16/processed/test_mask.pt")
         adj_matrix = edge_index.t_()
         data = data.to(device)
         inputs.requires_grad = True
@@ -711,7 +725,7 @@ def main(args):
 
     elif args.dataset == "Protein_16":
         print(f"Loading coo...", flush=True)
-        edge_index = torch.load("/pscratch/sd/j/jinimukh/Protein_16/processed/amazon_large_randomized.pt")
+        edge_index = torch.load("/global/cfs/cdirs/m1982/alokt/data/Protein_16/processed/subgraph3_iso_vs_iso_30_70length_ALL.m100.propermm-reordered-k16m1u0c10r2.mtx.pt")
         print(f"Done loading coo", flush=True)
         n = 8745542   
         num_features = 300
